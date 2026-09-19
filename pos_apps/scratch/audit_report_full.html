@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Audit Arsitektur & Analisis Bisnis Sistem POS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4;
+      margin: 18mm 16mm 20mm 16mm;
+      @bottom-right {
+        content: counter(page);
+        font-size: 8pt;
+        font-family: 'Inter', sans-serif;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover / Header */
+    .document-header {
+      border-bottom: 3px solid #1e3a8a;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    .badge-report {
+      display: inline-block;
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      background-color: #dbeafe;
+      color: #1e40af;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    h1.doc-title {
+      font-size: 19pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 6px 0;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-subtitle {
+      font-size: 10pt;
+      color: #475569;
+      margin: 0 0 12px 0;
+      font-weight: 500;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 8pt;
+    }
+
+    .meta-item strong {
+      display: block;
+      color: #64748b;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .meta-item span {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    /* Section Headings */
+    h2.section-title {
+      font-size: 12.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-left: 4px solid #1e3a8a;
+      padding-left: 10px;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+      page-break-after: avoid;
+    }
+
+    h3.subsection-title {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      text-align: justify;
+    }
+
+    /* Cards & Boxes */
+    .card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      page-break-inside: avoid;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 9.5pt;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .callout {
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+
+    .callout-warning {
+      background: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+
+    .callout-danger {
+      background: #fef2f2;
+      border-left: 3px solid #ef4444;
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin: 12px 0 16px 0;
+      page-break-inside: auto;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+
+    thead {
+      display: table-header-group;
+    }
+
+    th {
+      background-color: #0f172a;
+      color: #ffffff;
+      font-weight: 600;
+      text-align: left;
+      padding: 7px 9px;
+      border: 1px solid #0f172a;
+      font-size: 7.5pt;
+      letter-spacing: 0.02em;
+    }
+
+    td {
+      padding: 6px 9px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+      line-height: 1.45;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    /* Badges */
+    .status-badge {
+      display: inline-block;
+      font-size: 6.8pt;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-implemented { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .status-partial { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .status-ui { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .status-notfound { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .status-stub { background-color: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+
+    /* Code & Mono */
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+    }
+
+    code {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0 12px 0;
+      line-height: 1.4;
+      page-break-inside: avoid;
+    }
+
+    ul, ol {
+      margin: 0 0 10px 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== HEADER ==================== -->
+  <div class="document-header">
+    <span class="badge-report">Technical & Architecture Audit Report</span>
+    <h1 class="doc-title">EXISTING POS SYSTEM AUDIT</h1>
+    <div class="doc-subtitle">Analisis Mendalam Arsitektur, Model Data, Alur Transaksi, & Kesiapan Multi-Tenant SaaS POS</div>
+    
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>Peran Auditor</strong>
+        <span>Lead Software & System Architect</span>
+      </div>
+      <div class="meta-item">
+        <strong>Fase Pengembangan</strong>
+        <span>~70% Matang (Core Retail Active)</span>
+      </div>
+      <div class="meta-item">
+        <strong>Target Platform</strong>
+        <span>Multi-Tenant SaaS (Retail, F&B, Services)</span>
+      </div>
+      <div class="meta-item">
+        <strong>Metode Audit</strong>
+        <span>Read-Only Source & Database Discovery</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SECTION A ==================== -->
+  <h2 class="section-title">A. Executive Summary</h2>
+  <p>
+    Sistem yang diaudit saat ini adalah <strong>Point of Sale (POS) berbasis Web dengan kapabilitas Multi-Outlet dan modul SaaS Tenant Management</strong>. Fokus operasional sistem yang telah berjalan nyata berada pada model bisnis <strong>General Retail & Quick-Service Counter</strong>.
+  </p>
+  <p>
+    Sistem berada pada fase transisi evolusioner dari aplikasi <em>single-merchant</em> menjadi <em>multi-tenant SaaS platform</em>. Mesin transaksi penjualan, manajemen shift kasir (X-Report & Z-Report), kartu stok mutasi pergudangan, alokasi produk antar cabang, dan portal registrasi tenant Level 1 Superadmin telah beroperasi dengan solid dan teruji secara integrasi transaksi database ACID.
+  </p>
+  <p>
+    Namun, kesiapan untuk industri <strong>F&B lanjutan</strong> (Kitchen Display System/KDS, Resep Bahan Baku/BOM, manajemen denah meja interaktif) dan <strong>Services</strong> (Booking/Appointment, penugasan teknisi, komisi staf) <strong>belum diimplementasikan pada database maupun logika backend</strong>, melainkan baru berstatus label antarmuka (UI only) atau catatan teks bebas.
+  </p>
+
+  <!-- ==================== SECTION B ==================== -->
+  <h2 class="section-title">B. Technology Stack</h2>
+  <div class="card">
+    <div class="card-title">1. Frontend Application</div>
+    <ul>
+      <li><strong>Framework & Runtime:</strong> React 19.2.8 (Single Page Application) dengan TypeScript 6.0.2</li>
+      <li><strong>Build Tool & Bundler:</strong> Vite 8.3.0 dengan reverse proxy <code>/api</code> ke port 5001</li>
+      <li><strong>Styling & UI Components:</strong> Tailwind CSS 3.4.19, PostCSS 8.5.28, Lucide React Icons 1.46.0</li>
+      <li><strong>State Management:</strong> Local Component State (React Hooks) dipadu Browser LocalStorage (Token JWT & Session User)</li>
+      <li><strong>Routing Architecture:</strong> Client-side Hash Router manual (<code>#pos</code>, <code>#superadmin</code>, <code>#landing</code>, <code>#register</code>)</li>
+      <li><strong>Dokumen & Thermal Printer:</strong> jsPDF 4.2.1 untuk kalkulasi dimensi struk thermal 58mm/80mm</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">2. Backend API & Services</div>
+    <ul>
+      <li><strong>Runtime & Framework:</strong> Node.js dengan Express 4.21.0 dan TypeScript 5.6.2</li>
+      <li><strong>API Protocol:</strong> RESTful API JSON over HTTP</li>
+      <li><strong>Validasi Input:</strong> Zod 3.23.8 (Skema validasi ketat di seluruh endpoint POST/PUT)</li>
+      <li><strong>Keamanan & Otentikasi:</strong> JSON Web Token (jsonwebtoken 9.0.3) dengan hash kata sandi bcryptjs 2.4.3</li>
+      <li><strong>Email Service:</strong> Nodemailer 10.0.10 terhubung ke SMTP server</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">3. Database & Infrastruktur Data</div>
+    <ul>
+      <li><strong>Database Engine:</strong> PostgreSQL</li>
+      <li><strong>Object-Relational Mapping (ORM):</strong> Prisma Client 5.22.0</li>
+      <li><strong>Skema & Migrasi:</strong> Prisma Schema (<code>schema.prisma</code>) dengan 18 entitas relasional</li>
+      <li><strong>Infrastruktur Operasional:</strong> Server Daemon lokal (Port 5001) terhubung ke PostgreSQL lokal</li>
+    </ul>
+  </div>
+
+  <!-- ==================== SECTION C ==================== -->
+  <div class="page-break"></div>
+  <h2 class="section-title">C. Project Structure</h2>
+  <pre>pos_project/pos_apps/
+├── client/                               # FRONTEND REACT APPLICATION
+│   ├── src/
+│   │   ├── components/                   # Modal & Komponen Reusable
+│   │   │   ├── saas/                     # OnboardingWizardModal.tsx
+│   │   │   ├── PaymentModal.tsx          # Pembayaran Tunai, QRIS, Split Payment
+│   │   │   ├── ProductModal.tsx          # Form Tambah/Edit Produk & Kustomisasi
+│   │   │   ├── StockTransferModal.tsx    # Form Mutasi Transfer Stok Antar-Cabang
+│   │   │   ├── CloseShiftModal.tsx       # Tutup Shift Kasir & Rekonsiliasi Kas
+│   │   │   └── OrderSuccessModal.tsx     # Pratinjau Struk, WhatsApp, & Cetak Ulang
+│   │   ├── pages/                        # Tampilan Halaman Utama
+│   │   │   ├── SaasLandingPage.tsx       # Landing Page Publik & Pendaftaran Calon Klien
+│   │   │   ├── LoginPage.tsx             # Mesin Kasir Login (PIN) & Portal Pemilik (Email)
+│   │   │   ├── SuperadminDashboardPage.tsx # Portal Level 1 Platform Superadmin
+│   │   │   ├── PosTerminalView.tsx       # Terminal Kasir (Katalog, Keranjang, Hold Order)
+│   │   │   ├── InventoryView.tsx         # Manajemen Stok, Kartu Stok, Mutasi Transfer
+│   │   │   ├── ProductsView.tsx          # Manajemen Master Katalog & Kategori
+│   │   │   ├── OrdersView.tsx            # Riwayat & Pelacakan Faktur Transaksi
+│   │   │   ├── FinancialReportView.tsx   # Laporan Finansial, HPP, & Laba Kotor
+│   │   │   └── ShiftsAuditView.tsx       # Log Audit Sesi Kerja Kasir
+│   │   ├── services/api.ts               # HTTP Client Terpusat untuk Seluruh API
+│   │   ├── types/                        # Definisi Tipe TypeScript Antarmuka
+│   │   └── utils/                        # Generator Struk PDF, Validasi WA, Export CSV
+│   └── package.json
+│
+├── server/                               # BACKEND NODE.JS EXPRESS APPLICATION
+│   ├── prisma/
+│   │   ├── schema.prisma                 # Skema Database Relasional (18 Model)
+│   │   └── seed.ts                       # Database Seeder Data Awal
+│   ├── src/
+│   │   ├── controllers/                  # Logika Bisnis per Domain
+│   │   │   ├── auth.controller.ts        # Otentikasi Email, PIN Kasir, Device Pairing
+│   │   │   ├── inventory.controller.ts   # Stok Masuk/Keluar, Opname, Transfer Cabang
+│   │   │   ├── order.controller.ts       # Engine Checkout, Split Pay, Hold Order
+│   │   │   ├── outlet.controller.ts      # Manajemen Cabang, Gudang, & Dynamic Fees
+│   │   │   ├── platform.controller.ts    # Portal Superadmin, Approval, Impersonasi
+│   │   │   ├── product.controller.ts     # Master Produk, Barcode, SKU, Stok Cabang
+│   │   │   ├── report.controller.ts      # Analitik Laba Kotor, HPP, Arus Kas
+│   │   │   ├── saas.controller.ts        # Registrasi Mandiri & Onboarding Wizard
+│   │   │   └── shift.controller.ts       # Manajemen Shift Kasir, X-Report, Z-Report
+│   │   ├── middlewares/                  # Auth Middleware & Tenant Context Resolver
+│   │   └── services/mail.service.ts      # Pengiriman Struk via Email SMTP
+│   └── package.json</pre>
+
+  <!-- ==================== SECTION D ==================== -->
+  <h2 class="section-title">D. Existing Modules & Feature Inventory</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Modul</th>
+        <th style="width: 20%;">Fitur</th>
+        <th style="width: 15%;">Status</th>
+        <th style="width: 25%;">Bukti / Lokasi Kode</th>
+        <th style="width: 25%;">Catatan Arsitektur</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Authentication</strong></td>
+        <td>Login Email & Password</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>auth.controller.ts:34</code></td>
+        <td>Case-insensitive email, enkripsi bcrypt</td>
+      </tr>
+      <tr>
+        <td><strong>Authentication</strong></td>
+        <td>Login PIN Kasir (6 Digit)</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>auth.controller.ts:133</code></td>
+        <td>Otorisasi cepat staf tanpa password panjang</td>
+      </tr>
+      <tr>
+        <td><strong>Authentication</strong></td>
+        <td>Device Pairing Mesin Kasir</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>auth.controller.ts:285</code></td>
+        <td>Kombinasi Slug/Email/WA + PIN Pemilik</td>
+      </tr>
+      <tr>
+        <td><strong>SaaS Platform</strong></td>
+        <td>Registrasi Mandiri Tenant</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>saas.controller.ts:56</code></td>
+        <td>Akun awal berstatus <code>PENDING</code></td>
+      </tr>
+      <tr>
+        <td><strong>SaaS Platform</strong></td>
+        <td>Approval & Impersonasi</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>platform.controller.ts:241</code></td>
+        <td>Superadmin dapat inspeksi akun klien langsung</td>
+      </tr>
+      <tr>
+        <td><strong>Product Master</strong></td>
+        <td>Master Produk, Barcode, SKU</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>product.controller.ts:192</code></td>
+        <td>Unique barcode & SKU per tenant</td>
+      </tr>
+      <tr>
+        <td><strong>Product Master</strong></td>
+        <td>Varian Produk (Size/Warna)</td>
+        <td><span class="status-badge status-notfound">Not Found</span></td>
+        <td><code>schema.prisma:284</code></td>
+        <td>Tidak ada tabel variant / sub-SKU</td>
+      </tr>
+      <tr>
+        <td><strong>Product Master</strong></td>
+        <td>Custom Modifiers (Topping/Opsi)</td>
+        <td><span class="status-badge status-partial">Partially</span></td>
+        <td><code>ProductModal.tsx:448</code></td>
+        <td>Disimpan sebagai JSON string di <code>description</code></td>
+      </tr>
+      <tr>
+        <td><strong>POS / Sales</strong></td>
+        <td>Engine Checkout Transaksi</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>order.controller.ts:88</code></td>
+        <td>Atomik: Order, Item, Bayar, & Potong Stok</td>
+      </tr>
+      <tr>
+        <td><strong>POS / Sales</strong></td>
+        <td>Split Payment (Tunai + QRIS)</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>order.controller.ts:259</code></td>
+        <td>Dukungan kombinasi pembayaran non-tunai</td>
+      </tr>
+      <tr>
+        <td><strong>POS / Sales</strong></td>
+        <td>Hold Order (Antrean Tertahan)</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>order.controller.ts:532</code></td>
+        <td>Simpan snapshot keranjang ke <code>hold_orders</code></td>
+      </tr>
+      <tr>
+        <td><strong>POS / Sales</strong></td>
+        <td>Pajak & Biaya Tambahan Dinamis</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>outlet.controller.ts:140</code></td>
+        <td>PB1 Resto, PPN, atau Service Charge cabang</td>
+      </tr>
+      <tr>
+        <td><strong>Shift Kasir</strong></td>
+        <td>Buka Shift, Kas Awal, X-Report</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>shift.controller.ts:21</code></td>
+        <td>Mencegah transaksi sebelum shift kasir dibuka</td>
+      </tr>
+      <tr>
+        <td><strong>Shift Kasir</strong></td>
+        <td>Tutup Shift & Z-Report</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>shift.controller.ts:233</code></td>
+        <td>Rekonsiliasi otomatis selisih fisik vs sistem</td>
+      </tr>
+      <tr>
+        <td><strong>Inventory</strong></td>
+        <td>Stok Masuk, Keluar, & Opname</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>inventory.controller.ts:35</code></td>
+        <td>Mencatat kartu stok mutasi lengkap</td>
+      </tr>
+      <tr>
+        <td><strong>Inventory</strong></td>
+        <td>Mutasi Transfer Antar Cabang</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>inventory.controller.ts:414</code></td>
+        <td>Atomik transfer dari gudang ke toko</td>
+      </tr>
+      <tr>
+        <td><strong>Inventory</strong></td>
+        <td>Resep / BOM Bahan Baku</td>
+        <td><span class="status-badge status-notfound">Not Found</span></td>
+        <td><code>schema.prisma</code></td>
+        <td>Belum ada pemotongan bahan baku F&B</td>
+      </tr>
+      <tr>
+        <td><strong>Purchasing</strong></td>
+        <td>Purchase Order (PO) Formal</td>
+        <td><span class="status-badge status-stub">Stub / Note</span></td>
+        <td><code>inventory.controller.ts:65</code></td>
+        <td>Hanya input string <code>poNumber</code> di catatan</td>
+      </tr>
+      <tr>
+        <td><strong>Customer CRM</strong></td>
+        <td>Database Pelanggan / Member</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>customer.controller.ts:28</code></td>
+        <td>Pelacakan akumulasi belanja dan kunjungan</td>
+      </tr>
+      <tr>
+        <td><strong>Reporting</strong></td>
+        <td>Laba Kotor & Analisis HPP</td>
+        <td><span class="status-badge status-implemented">Implemented</span></td>
+        <td><code>report.controller.ts:9</code></td>
+        <td>Gross Sales, Net Revenue, COGS, Margin %</td>
+      </tr>
+      <tr>
+        <td><strong>F&B Specific</strong></td>
+        <td>Manajemen Denah Meja (Table Map)</td>
+        <td><span class="status-badge status-ui">UI Only</span></td>
+        <td><code>PosTerminalView.tsx:1346</code></td>
+        <td>Hanya field teks nama/nomor meja di pesanan</td>
+      </tr>
+      <tr>
+        <td><strong>F&B Specific</strong></td>
+        <td>Kitchen Display System (KDS)</td>
+        <td><span class="status-badge status-notfound">Not Found</span></td>
+        <td>N/A</td>
+        <td>Belum ada antrean layar dapur / bar</td>
+      </tr>
+      <tr>
+        <td><strong>Services Specific</strong></td>
+        <td>Appointment & Booking</td>
+        <td><span class="status-badge status-notfound">Not Found</span></td>
+        <td>N/A</td>
+        <td>Belum ada reservasi waktu layanan jasa</td>
+      </tr>
+      <tr>
+        <td><strong>Services Specific</strong></td>
+        <td>Komisi Teknisi / Pegawai</td>
+        <td><span class="status-badge status-notfound">Not Found</span></td>
+        <td>N/A</td>
+        <td>Belum ada perhitungan bagi hasil pegawai</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== SECTION E ==================== -->
+  <div class="page-break"></div>
+  <h2 class="section-title">E. Business Domain Model</h2>
+  <p>
+    Skema database tersusun atas <strong>18 Entitas Utama</strong> yang terbagi ke dalam dua tingkatan: <em>SaaS Platform Level</em> dan <em>Merchant/Store Operational Level</em>:
+  </p>
+  <ul>
+    <li><strong>SaaS Platform Domain:</strong> <code>PlatformUser</code> (Superadmin & Support), <code>Tenant</code> (Badan usaha klien), <code>SubscriptionPlan</code> (Paket langganan), <code>TenantSubscription</code> (Masa aktif lisensi), <code>SaaSInvoice</code> (Tagihan), dan <code>SaaSPayment</code> (Bukti bayar lisensi).</li>
+    <li><strong>Store Organization Domain:</strong> <code>Outlet</code> (Cabang toko atau Gudang Pusat dengan <code>isWarehouse: true</code>), <code>User</code> (Staf toko: Admin, Supervisor, Warehouse, Cashier).</li>
+    <li><strong>Catalog & Inventory Domain:</strong> <code>Category</code>, <code>Product</code> (Master barang, SKU, Barcode, HPP, Base Price), <code>OutletProduct</code> (Stok fisik riil dan harga khusus per cabang), dan <code>StockMovement</code> (Kartu stok riwayat mutasi).</li>
+    <li><strong>Sales & Cashiering Domain:</strong> <code>Shift</code> (Sesi kerja kasir & saldo laci kas), <code>Order</code> (Header transaksi penjualan & nomor invoice), <code>OrderItem</code> (Rincian barang & snapshot HPP), <code>Payment</code> (Rincian pembayaran tunai/QRIS), dan <code>HoldOrder</code> (Penyimpanan antrean sementara).</li>
+    <li><strong>Customer CRM Domain:</strong> <code>Customer</code> (Profil member, kontak WhatsApp, riwayat akumulasi belanja).</li>
+  </ul>
+
+  <!-- ==================== SECTION F ==================== -->
+  <h2 class="section-title">F. Sales / POS Transaction Flow</h2>
+  <div class="callout">
+    <strong>Alur Eksekusi Checkout Kasir (Code-Verified):</strong>
+    <ol style="margin-top: 6px; margin-bottom: 0;">
+      <li><strong>Terminal Kasir:</strong> Kasir memilih item atau memindai barcode. Jika produk memiliki kustomisasi, client membaca JSON modifier pada deskripsi.</li>
+      <li><strong>Biaya & Diskon:</strong> Subtotal dihitung, dikurangi diskon item/global, ditambah <code>serviceCharge</code> dan pajak dinamis (persentase / nominal dari <code>feesConfig</code> outlet).</li>
+      <li><strong>Pembayaran:</strong> Kasir memilih Tunai, QRIS, atau Split Payment (keduanya). Jika QRIS, kasir memasukkan nomor referensi; jika Tunai, sistem memvalidasi uang cukup dan menghitung kembalian.</li>
+      <li><strong>Backend Validation (POST /api/orders/checkout):</strong> Zod memvalidasi payload, mengecek status shift aktif kasir, dan mengambil stok riil dari <code>outlet_products</code>. Jika ada item yang stoknya kurang dari kuantitas belanja, transaksi langsung ditolak (HTTP 400).</li>
+      <li><strong>Database Transaction (ACID):</strong> Prisma mengeksekusi secara atomik:
+        <ul>
+          <li>Membuat record <code>Order</code> dengan nomor invoice unik (format: <code>INV/YYYYMMDD/OUT/0001</code>).</li>
+          <li>Membuat baris <code>OrderItem</code> dengan snapshot HPP (<code>costPrice</code>) dan harga jual saat itu.</li>
+          <li>Membuat record <code>Payment</code>.</li>
+          <li>Memperbarui akumulasi belanja & visit count pada <code>Customer</code> jika terdaftar.</li>
+          <li>Mengurangi nilai stok pada <code>outlet_products</code> (<code>decrement</code>).</li>
+          <li>Membuat baris kartu stok <code>StockMovement</code> bertipe <code>SALE_OUT</code> dengan kuantitas negatif.</li>
+        </ul>
+      </li>
+      <li><strong>Post-Checkout:</strong> Frontend memunculkan modal sukses, menyediakan cetak struk thermal via PDF (58mm/80mm), kirim struk email SMTP, atau tautan WhatsApp.</li>
+    </ol>
+  </div>
+
+  <!-- ==================== SECTION G ==================== -->
+  <h2 class="section-title">G. Inventory & Warehouse Deep Audit</h2>
+  <ul>
+    <li><strong>Penyimpanan Nilai Stok:</strong> Stok tidak dihitung ulang secara dinamis dari nol, melainkan <strong>disimpan sebagai kolom skalar</strong> (<code>outlet_products.stock</code>). Setiap pergerakan stok melakukan mutasi langsung pada angka ini serentak dengan pembuatan entri kartu stok.</li>
+    <li><strong>Kartu Stok (Ledger):</strong> Entitas <code>StockMovement</code> mencatat 6 jenis mutasi: <code>PURCHASE_IN</code>, <code>SALE_OUT</code>, <code>DAMAGE_OUT</code>, <code>TRANSFER_IN</code>, <code>TRANSFER_OUT</code>, dan <code>ADJUSTMENT</code>. Kartu stok mencatat siapa staf yang melakukan aksi, cabang terkait, kuantitas delta, dan catatan alasan. Namun, tabel ini <strong>tidak menyimpan saldo sebelum dan saldo sesudah (balance after)</strong>.</li>
+    <li><strong>Mutasi Transfer Cabang:</strong> Menggunakan transaksi atomik: cabang pengirim berkurang dan dicatat <code>TRANSFER_OUT</code>, cabang penerima bertambah dan dicatat <code>TRANSFER_IN</code>.</li>
+    <li><strong>Ketiadaan Fitur Manufaktur/F&B:</strong> Tidak ditemukan tabel resep (Recipe), Bill of Materials (BOM), bahan baku, atau konversi satuan (misal: 1 Box = 24 Pcs). Penjualan produk memotong stok produk itu sendiri secara 1:1.</li>
+  </ul>
+
+  <!-- ==================== SECTION H ==================== -->
+  <div class="page-break"></div>
+  <h2 class="section-title">H. Database & Data Model Analysis</h2>
+  <div class="card">
+    <div class="card-title">Analisis Keamanan & Integritas Relasional</div>
+    <p>
+      Skema relasional di <code>schema.prisma</code> memiliki struktur yang kokoh dengan indeks majemuk yang baik (seperti kombinasi unik barcode per tenant dan stok per produk-outlet). 
+    </p>
+    <div class="callout-danger">
+      <strong>Temuan Kritis: Kolom <code>tenantId</code> Masih Nullable</strong><br>
+      Pada sebagian besar tabel operasional (<code>outlets</code>, <code>users</code>, <code>categories</code>, <code>products</code>, <code>orders</code>, <code>shifts</code>, <code>customers</code>), kolom <code>tenantId</code> bertipe <code>String?</code> (Nullable). Hal ini awalnya diterapkan demi kompatibilitas mundur (non-breaking) saat migrasi dari demo toko tunggal. Namun, untuk arsitektur multi-tenant sejati, hal ini membuka risiko celah keamanan data jika ada query Prisma yang lupa menyertakan klausul <code>where: { tenantId }</code>.
+    </div>
+  </div>
+
+  <!-- ==================== SECTION I ==================== -->
+  <h2 class="section-title">I. API Architecture</h2>
+  <ul>
+    <li><strong>Konsistensi REST:</strong> Pengelompokan endpoint sangat bersih menurut batas domain modul (<code>/api/auth</code>, <code>/api/products</code>, <code>/api/inventory</code>, <code>/api/orders</code>, <code>/api/shifts</code>, <code>/api/reports</code>, <code>/api/customers</code>, <code>/api/outlets</code>, <code>/api/platform</code>, <code>/api/saas</code>).</li>
+    <li><strong>Format Response Standar:</strong> Semua endpoint merespons dengan envelope standar: <code>{ status: 'success' | 'error', message?: string, data?: any, errors?: any }</code>.</li>
+    <li><strong>Ketiadaan Idempotency Key:</strong> Endpoint <code>POST /api/orders/checkout</code> belum memiliki pengecekan <em>Idempotency-Key</em> pada header, sehingga berpotensi menimbulkan transaksi ganda jika terjadi *network retry* saat jaringan kasir tidak stabil.</li>
+  </ul>
+
+  <!-- ==================== SECTION J ==================== -->
+  <h2 class="section-title">J. Frontend Architecture</h2>
+  <ul>
+    <li><strong>Sistem Tab Terpadu:</strong> Antarmuka kasir dan manajemen menggunakan satu layout induk <code>DashboardPage.tsx</code> yang menampilkan modul berdasarkan hak akses role pengguna.</li>
+    <li><strong>Keterbatasan State Management:</strong> Frontend belum mengadopsi global state manager (seperti Zustand atau Redux) maupun caching client (seperti TanStack Query). Data selalu diambil ulang (*refetch*) saat berpindah tab.</li>
+    <li><strong>Penyimpanan Kustomisasi Modifiers:</strong> Form pembuatan produk meng-encode data opsi tambahan (level gula, topping) ke dalam format JSON string di kolom teks <code>product.description</code>, yang kemudian di-parse ulang oleh frontend di <code>api.ts</code>.</li>
+  </ul>
+
+  <!-- ==================== SECTION K ==================== -->
+  <h2 class="section-title">K. Authentication & Authorization</h2>
+  <div class="card">
+    <div class="card-title">Model Otorisasi Berlapis (2-Level Hierarchy)</div>
+    <table style="margin-top: 6px;">
+      <thead>
+        <tr>
+          <th>Tingkat</th>
+          <th>Peran (Role)</th>
+          <th>Mekanisme Masuk</th>
+          <th>Cakupan Akses</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Level 1 (Platform SaaS)</strong></td>
+          <td><code>SUPER_ADMIN</code>, <code>SUPPORT_AGENT</code>, <code>FINANCE_ADMIN</code></td>
+          <td>Email + Kata Sandi di portal <code>#superadmin</code></td>
+          <td>Semua data tenant klien, verifikasi pendaftaran, billing invoice, & impersonasi</td>
+        </tr>
+        <tr>
+          <td><strong>Level 2 (Pemilik Toko)</strong></td>
+          <td><code>ADMIN</code> (Owner)</td>
+          <td>Email + Kata Sandi di tab Portal Pemilik</td>
+          <td>Full control toko klien: kelola cabang, staf, katalog, dan laporan laba</td>
+        </tr>
+        <tr>
+          <td><strong>Level 2 (Operasional Toko)</strong></td>
+          <td><code>SUPERVISOR</code>, <code>WAREHOUSE</code>, <code>CASHIER</code></td>
+          <td>Device Pairing Toko + PIN 6-Digit pribadi</td>
+          <td>Terisolasi pada modul penugasan (Kasir: POS & Shift; Gudang: Mutasi Stok)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ==================== SECTION L ==================== -->
+  <h2 class="section-title">L. Multi-Outlet Analysis</h2>
+  <p>
+    Arsitektur Multi-Outlet telah <strong>beroperasi penuh secara riil</strong>:
+  </p>
+  <ul>
+    <li>Setiap penyewa (tenant) dapat mendaftarkan banyak cabang fisik toko dan fasilitas gudang logistik.</li>
+    <li>Pengguna kasir dan petugas gudang terikat permanen ke cabang penugasannya (<code>user.outletId</code>), sementara Owner/Supervisor dapat beralih konteks cabang melalui dropdown dinamis.</li>
+    <li>Produk memiliki harga khusus dan saldo stok independen di masing-masing cabang melalui tabel penghubung <code>outlet_products</code>.</li>
+    <li>Laporan penjualan dan analitik laba dapat ditampilkan per cabang tunggal maupun konsolidasi seluruh cabang perusahaan (<code>outletId = 'ALL'</code>).</li>
+  </ul>
+
+  <!-- ==================== SECTION M ==================== -->
+  <div class="page-break"></div>
+  <h2 class="section-title">M. SaaS / Multi-Tenant Readiness</h2>
+  <div class="callout">
+    <strong>Tingkat Kesiapan Domain SaaS:</strong>
+    <ul>
+      <li><strong>Isolasi Akun Klien (Tenant):</strong> <span class="status-badge status-implemented">Ready</span> — Pendaftaran mandiri, status langganan (Trial 14 hari, Active, Suspended) berjalan baik.</li>
+      <li><strong>Isolasi Katalog Produk:</strong> <span class="status-badge status-implemented">Ready</span> — Barcode dan SKU telah diproteksi unik hanya di dalam cakupan tenant yang sama.</li>
+      <li><strong>Isolasi Transaksi & Riwayat:</strong> <span class="status-badge status-partial">Partially Ready</span> — Order menyimpan <code>tenantId</code>, namun skema database masih memperbolehkan nilai null.</li>
+      <li><strong>Isolasi Stok Cabang:</strong> <span class="status-badge status-partial">Partially Ready</span> — Tabel <code>outlet_products</code> bergantung pada foreign key <code>Outlet</code> untuk mengidentifikasi tenant.</li>
+      <li><strong>Enforcement Lisensi:</strong> <span class="status-badge status-partial">Partially Ready</span> — Middleware <code>verifyTenantLicense</code> sudah memblokir tenant bersatus <code>SUSPENDED</code>, tetapi penguncian otomatis saat masa trial habis belum dipicu oleh cron worker otomatis.</li>
+    </ul>
+  </div>
+
+  <!-- ==================== SECTION N ==================== -->
+  <h2 class="section-title">N. Core vs Business-Specific Classification</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Domain Klasifikasi</th>
+        <th style="width: 45%;">Fitur yang Telah Dibangun</th>
+        <th style="width: 30%;">Status Kesiapan Ekstensi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Core POS (Universal)</strong></td>
+        <td>Otentikasi, PIN Kasir, Shift Management (X/Z Report), Engine Checkout, Split Pay, Dynamic Tax/Fee, Struk PDF.</td>
+        <td><strong>Sangat Siap.</strong> Dapat langsung dipakai lintas industri Retail, F&B, dan Jasa.</td>
+      </tr>
+      <tr>
+        <td><strong>Retail-Specific</strong></td>
+        <td>Barcode scanner, SKU internal, Alokasi stok gudang vs toko, Kartu stok mutasi, Mutasi transfer cabang, HPP & margin laba.</td>
+        <td><strong>Telah Beroperasi Lengkap.</strong> Model bisnis sistem saat ini adalah murni retail.</td>
+      </tr>
+      <tr>
+        <td><strong>F&B-Specific</strong></td>
+        <td>Hold order nomor meja (parsial), saluran pesanan Dine-In/Takeaway/Ojol, modal custom opsi minuman (parsial).</td>
+        <td><strong>Perlu Pengembangan Lanjut.</strong> Belum ada KDS dapur, resep bahan baku, dan denah meja interaktif.</td>
+      </tr>
+      <tr>
+        <td><strong>Services-Specific</strong></td>
+        <td>Opsi item non-fisik (<code>hasStock: false</code> via metadata description).</td>
+        <td><strong>Belum Dibangun.</strong> Belum ada sistem booking waktu, penugasan staf teknisi, dan komisi jasa.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== SECTION O & P ==================== -->
+  <h2 class="section-title">O. Integrations & P. Reporting</h2>
+  <div class="card">
+    <div class="card-title">Status Integrasi Eksternal</div>
+    <ul>
+      <li><strong>Email Gateway:</strong> SMTP Nodemailer aktif di backend untuk pengiriman nota transaksi digital dan notifikasi persetujuan akun klien.</li>
+      <li><strong>WhatsApp:</strong> Menggunakan client-side deep-link (<code>api.whatsapp.com/send</code>). Belum terhubung ke WhatsApp Cloud API resmi (Meta Business Platform).</li>
+      <li><strong>Payment Gateway (QRIS):</strong> Simulasi manual (kasir menginput nomor referensi transaksi atau auto-mock). Belum terpasang webhook otomatis Midtrans/Xendit.</li>
+      <li><strong>Hardware Printer:</strong> Menggunakan generator PDF 58mm/80mm di browser. Belum ada driver koneksi langsung WebUSB atau Bluetooth ESC/POS.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Kemampuan Pelaporan Finansial</div>
+    <p>
+      Endpoint <code>/api/reports/financial</code> menyediakan rekapitulasi komprehensif berbasis data transaksi nyata:
+    </p>
+    <ul>
+      <li><strong>Kalkulasi Omzet:</strong> Gross Sales, Net Revenue, Total Diskon, Pajak, dan Biaya Layanan.</li>
+      <li><strong>Analisis Profitabilitas:</strong> Total Cost of Goods Sold (HPP barang terjual), Gross Profit nominal, dan Margin Keuntungan (%).</li>
+      <li><strong>Arus Kas Pembayaran:</strong> Pembagian volume dan omzet dari metode Tunai vs QRIS.</li>
+      <li><strong>Performa Produk & Kategori:</strong> Peringkat produk terlaris berdasarkan kuantitas unit terjual dan kontribusi nominal rupiah.</li>
+    </ul>
+  </div>
+
+  <!-- ==================== SECTION Q & R ==================== -->
+  <div class="page-break"></div>
+  <h2 class="section-title">Q. Technical Debt & R. Hardcoded Assumptions</h2>
+  <div class="callout-danger">
+    <strong>Daftar Technical Debt Utama:</strong>
+    <ol>
+      <li><strong>Metadata Modifiers Disimpan di Kolom Deskripsi:</strong> Menyimpan opsi makanan/minuman sebagai JSON string di kolom teks <code>description</code> menyulitkan pelaporan analitik SQL dan menutup kemungkinan integrasi pemotongan stok bahan baku di tingkat basis data.</li>
+      <li><strong>Nullable <code>tenantId</code> pada Skema Database:</strong> Berpotensi memicu kebocoran data jika developer membuat endpoint baru tanpa menyertakan filter tenant secara manual.</li>
+      <li><strong>Kopling Erat Checkout & Pemotongan Stok Langsung:</strong> Alur kasir saat ini memotong stok bersamaan dengan pembayaran. Ini tidak kompatibel dengan alur F&B restoran (makan dulu, bayar di akhir saat kasir) maupun alur Jasa (booking/DP dulu, pengerjaan, pelunasan kemudian).</li>
+    </ol>
+  </div>
+
+  <div class="callout-warning">
+    <strong>Asumsi Bisnis yang Tertanam Keras (Hardcoded):</strong>
+    <ul>
+      <li><strong>Satuan Default:</strong> Standar default unit barang di database adalah <code>"Pcs"</code>.</li>
+      <li><strong>Tipe Bisnis Default:</strong> Default tipe bisnis tenant terisi <code>"Retail"</code>.</li>
+      <li><strong>Saluran Penjualan:</strong> Nama saluran di database mengadopsi istilah F&B (<code>DINE_IN</code>, <code>TAKEAWAY</code>, <code>GOFOOD</code>, <code>GRABFOOD</code>), belum mengakomodasi istilah jasa (seperti <em>Walk-in</em> atau <em>Home Service</em>).</li>
+    </ul>
+  </div>
+
+  <!-- ==================== SECTION S, T, U ==================== -->
+  <h2 class="section-title">S. Reusable Existing Components</h2>
+  <ul>
+    <li><strong>Shift Management Engine (<code>shift.controller.ts</code>):</strong> Logika pembukaan kas awal, rekonsiliasi kas riil, penghitungan selisih laci, dan pencetakan Z-Report dapat langsung dipakai di seluruh industri.</li>
+    <li><strong>Dynamic Fee & Tax Engine (<code>outlet.controller.ts</code>):</strong> Konfigurasi persentase/nominal pajak dan biaya layanan per cabang sangat fleksibel untuk mengakomodasi regulasi PB1 Resto 10% maupun PPN Retail 11%.</li>
+    <li><strong>Inter-Branch Inventory Transfer Engine (<code>inventory.controller.ts</code>):</strong> Modul transfer stok multi-cabang dengan transaksi atomik dan pencatatan kartu stok ganda sudah sangat rapi.</li>
+    <li><strong>Superadmin Platform & Impersonasi (<code>platform.controller.ts</code>):</strong> Fondasi pengelolaan penyewa SaaS Level 1 yang siap dikembangkan untuk skala ratusan tenant.</li>
+  </ul>
+
+  <h2 class="section-title">T. Information Gaps</h2>
+  <ul>
+    <li><strong>Technical Unknowns:</strong> Berapa target throughput transaksi per detik yang diharapkan untuk arsitektur SaaS final? Apakah isolasi tenant akan tetap dipertahankan dengan model *Shared Database* (kolom tenantId) atau direncanakan migrasi ke *Multi-Schema / Database-per-tenant*?</li>
+    <li><strong>Business Unknowns:</strong> Apakah modul F&B dan modul Services akan dipasarkan sebagai paket langganan terpisah (Add-on berbayar) atau terintegrasi langsung di satu paket Well POS Pro? Bagaimana aturan komisi staf untuk lini bisnis jasa yang diinginkan?</li>
+  </ul>
+
+  <h2 class="section-title">U. Recommended NEXT ANALYSIS STEPS</h2>
+  <div class="callout">
+    <strong>Langkah Analisis Arsitektur Lanjutan yang Direkomendasikan:</strong>
+    <ol>
+      <li><strong>Analisis Dekopling Alur Pemesanan & Pembayaran:</strong> Merumuskan arsitektur di mana pembuatan pesanan (Order/Bill), pengiriman ke bagian produksi (Dapur/Teknisi), dan penyelesaian pembayaran (Payment/Settlement) dapat berjalan secara independen.</li>
+      <li><strong>Analisis Skema Relasional untuk Varian & Modifiers:</strong> Merancang tabel <code>ProductVariant</code> (Matrix Ukuran/Warna) dan <code>ProductModifier</code> untuk menggantikan penyimpanan format JSON pada kolom deskripsi.</li>
+      <li><strong>Analisis Skema Resep Bahan Baku (Recipe & Bill of Materials):</strong> Merumuskan desain data konversi satuan (Kg ke Gram, Liter ke ml) dan pengurangan otomatis persediaan bahan mentah saat menu F&B terjual.</li>
+      <li><strong>Analisis Pengetatan Isolasi Data Tenant (Strict Multi-Tenancy):</strong> Merancang rencana migrasi skema database agar seluruh entitas operasional mewajibkan <code>tenantId NOT NULL</code> dengan dukungan Prisma Client Extension untuk isolasi query otomatis.</li>
+      <li><strong>Analisis Kebutuhan Modul Jasa (Appointments & Staff Commissions):</strong> Merumuskan struktur data jadwal kalender layanan jasa, durasi pengerjaan, dan formula pembagian komisi karyawan per jenis layanan.</li>
+    </ol>
+  </div>
+
+  <div style="margin-top: 32px; padding-top: 12px; border-top: 1px solid #cbd5e1; font-size: 7.5pt; color: #64748b; display: flex; justify-content: space-between;">
+    <span>Well POS SaaS Platform — Architecture & Business Discovery Audit Report</span>
+    <span>Dokumen Rahasia & Internal Perusahaan</span>
+  </div>
+
+</body>
+</html>

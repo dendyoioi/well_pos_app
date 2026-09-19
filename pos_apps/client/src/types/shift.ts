@@ -1,0 +1,94 @@
+export type ShiftStatus = 'OPEN' | 'CLOSED';
+
+export interface Shift {
+  id: string;
+  outletId: string;
+  cashierId: string;
+  startTime: string;
+  endTime?: string | null;
+  startingCash: number;
+  expectedCash?: number | null;
+  actualCash?: number | null;
+  difference?: number | null;
+  status: ShiftStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  outlet?: {
+    name: string;
+    address?: string | null;
+    phone?: string | null;
+  };
+  cashier?: {
+    name: string;
+    email?: string | null;
+  };
+  stats?: {
+    totalOrders: number;
+    cashSalesTotal: number;
+    cashSalesCount: number;
+    qrisSalesTotal: number;
+    qrisSalesCount: number;
+    totalRevenue: number;
+    expectedCash: number;
+  };
+}
+
+export interface XReportData {
+  reportType: string;
+  shiftId: string;
+  status: ShiftStatus;
+  startTime: string;
+  generatedAt: string;
+  outlet: {
+    name: string;
+    address?: string | null;
+  };
+  cashier: string;
+  cashDrawer: {
+    startingCash: number;
+    cashSales: number;
+    expectedCashInDrawer: number;
+  };
+  paymentSummary: {
+    cashSales: number;
+    qrisSales: number;
+    netRevenue: number;
+  };
+  transactionSummary: {
+    totalOrders: number;
+    totalGrossSales: number;
+    totalDiscounts: number;
+    totalTax: number;
+    totalService: number;
+  };
+  recentOrders: Array<{
+    invoiceNumber: string;
+    createdAt: string;
+    grandTotal: number;
+    paymentMethod: string;
+  }>;
+}
+
+export interface ZReportData {
+  reportType: string;
+  shiftId: string;
+  startTime: string;
+  endTime: string;
+  outlet: string;
+  cashier: string;
+  cashDrawer: {
+    startingCash: number;
+    totalCashSales: number;
+    expectedCash: number;
+    actualCash: number;
+    difference: number;
+    differenceLabel: string;
+  };
+  nonCashSummary: {
+    totalQrisSales: number;
+    totalRevenue: number;
+  };
+  totalTransactions: number;
+  notes?: string | null;
+}
