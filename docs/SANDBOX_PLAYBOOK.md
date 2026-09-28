@@ -512,3 +512,11 @@ Alur Transaksi:
   *Solusi*: Jalankan `npm run seed:sandbox`. Seeder sandbox secara default otomatis membuka sesi shift kasir dengan modal Rp 200.000 siap checkout.
 * **Q: Ingin menambahkan menu produk baru dengan resep custom?**  
   *Solusi*: Masuk ke Backoffice Owner di menu *Katalog Produk* atau tambahkan definisi resep di `pos_apps/server/prisma/seed.sandbox.ts`.
+* **Q: Database Supabase error 500 atau kolom tidak ditemukan setelah push kode baru?**  
+  *Solusi*: Render hanya menjalankan `prisma generate`, bukan migrasi DDL otomatis. Jalankan patch DDL langsung ke Supabase via `DIRECT_URL` (Port 5432) atau `npx prisma db push`.
+* **Q: Server remote lambat saat pertama kali diakses setelah lama idle?**  
+  *Solusi*: Ini adalah *cold start* Render Free Tier (~50 detik). Sistem sudah dilengkapi GitHub Actions keep-alive setiap 10 menit, namun jika job GitHub tertunda, beri jeda 30-50 detik pada request pertama.
+* **Q: Perubahan kode terbaru tidak muncul di domain Vercel (well-pos-app.vercel.app)?**  
+  *Solusi*: Vercel Production hanya mendeploy commit dari branch `main`. Pastikan branch `dev` telah di-merge ke `main` dan di-push ke GitHub (`git checkout main && git merge dev && git push origin main`).
+* **Q: Database Supabase tidak bisa diakses sama sekali (Connection Refused)?**  
+  *Solusi*: Proyek Supabase free tier tidur jika 7 hari tidak aktif. Masuk ke [Supabase Dashboard](https://supabase.com/dashboard) dan klik tombol "Restore project".

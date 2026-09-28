@@ -530,10 +530,27 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
 15. **Protokol Pengujian Browser Playwright Lokal**:
     - Browser testing Playwright telah terkonfigurasi dan terpasang secara lokal pada environment pengguna.
     - AI Agent dan Developer dilarang bergantung pada subagent yang mendownload driver Playwright secara remote dari CDN eksternal yang rentan kendala jaringan/404; seluruh pengujian browser wajib dijalankan via CLI/runner lokal.
+16. **Protokol Early Warning Migrasi Database & Cloud Deployment**:
+    - **Wajib DDL Sync Supabase**: Render CI/CD tidak menjalankan DDL migrasi otomatis. Setiap perubahan skema Prisma wajib dipatch ke Supabase via `DIRECT_URL` (Port 5432) sebelum kode di-push.
+    - **Dual Port Supabase**: Gunakan Port 6543 (PgBouncer) untuk query runtime aplikasi, dan Port 5432 (Direct) untuk DDL/migrasi.
+    - **Vercel Main-Branch Rule**: Fitur produksi hanya akan live di `well-pos-app.vercel.app` jika branch `dev` telah di-merge ke branch `main`.
 
 ---
 
-## 11. ROADMAP PRODUK & TAHAPAN PENGEMBANGAN BERIKUTNYA
+## 11. PROTOKOL INFRASTRUKTUR CLOUD & EARLY WARNING SYSTEM (RENDER, SUPABASE, VERCEL)
+
+Topologi server aktif saat ini menggunakan arsitektur *Zero-Cost Bootstrap Multi-Cloud*:
+
+| Komponen | Platform & Region | Spesifikasi / Konfigurasi | Batasan Kritis (*Hard Limits*) & Early Warning |
+| :--- | :--- | :--- | :--- |
+| **Frontend SPA** | **Vercel** *(Global/SG)* | React 19 + Vite (`well-pos-app.vercel.app`) | • Auto-deploy hanya aktif untuk branch **`main`**.<br>• Perubahan di branch `dev` tidak akan tampil di domain utama sebelum di-merge.<br>• Caching browser agresif pada smartphone kasir: butuh hard reload jika update baru dirilis. |
+| **Backend API** | **Render** *(Singapore)* | Node 20 + Express (`wellpos-api-dev.onrender.com`) | • **Cold Start (~50s)** jika idle 15 menit. Dicegah dengan GitHub Actions cron pinger tiap 10 menit.<br>• **Batas 750 jam/bulan per akun**: Jangan jalankan web service gratis lain di akun Render yang sama.<br>• **RAM 512 MB & Ephemeral Disk**: Hindari query tanpa paging dan dilarang simpan upload permanen di disk lokal. |
+| **Database** | **Supabase** *(AWS SG)* | PostgreSQL 16 Managed (Port 6543 / 5432) | • **Inactivity Pausing**: Database akan tidur jika tidak ada query selama 7 hari berturut-turut (restore manual via Supabase Dashboard).<br>• **Render Tidak Menjalankan Migrasi**: Skema baru di `schema.prisma` wajib dipatch manual ke Supabase via Port 5432.<br>• Port 6543 (PgBouncer) menolak query DDL (`CREATE TYPE`, `ALTER TABLE`). |
+| **Keep-Alive Bot** | **GitHub Actions** | Workflow `.github/workflows/keep_alive.yml` | Pinger cron tiap 10 menit ke `/api/health` Render agar container backend tidak tidur. |
+
+---
+
+## 12. ROADMAP PRODUK & TAHAPAN PENGEMBANGAN BERIKUTNYA
 
 Rencana pengembangan sprint produk berikutnya (Fase 2 WhatsApp Gateway, Fase 3 Midtrans QRIS/VA, Fase 4 Perangkat Keras Thermal ESC/POS) dikelola secara terpusat pada dokumen:
 👉 [`docs/epics/00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md`](./epics/00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md#upcoming-roadmap)

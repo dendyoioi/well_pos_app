@@ -93,11 +93,16 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
   └── Fitur Unggulan: Samakan semua dengan sistem, kalkulasi delta (+/-) real-time, estimasi dampak finansial HPP, dan filter selisih.
 
 [2026-09-28] LIVE CLOUD DEPLOYMENT: VERCEL + RENDER + SUPABASE (ZERO-COST BOOTSTRAP STACK)
-  ├── Frontend Web (SPA): Live di Vercel (https://well-pos-app.vercel.app) dengan auto-deploy branch dev & main.
-  ├── Backend API Engine: Live di Render Singapore (https://wellpos-api-dev.onrender.com) dengan auto health-check.
-  ├── Database Cloud: PostgreSQL 16 Managed di Supabase Singapore (ap-southeast-1) terhubung via connection pooler (port 6543).
+  ├── Frontend Web (SPA): Live di Vercel (https://well-pos-app.vercel.app) tracking branch main (dev for preview).
+  ├── Backend API Engine: Live di Render Singapore (https://wellpos-api-dev.onrender.com) auto-deploy via GitHub.
+  ├── Database Cloud: PostgreSQL 16 Managed di Supabase Singapore (ap-southeast-1) terhubung via connection pooler (port 6543) & direct (port 5432).
   ├── Reverse-Proxy /api: Terintegrasi via Vercel rewrites (zero CORS configuration).
-  └── Multi-Branch Topology: Terkoneksi ke Git branch dev (Staging/Sandbox) dan main (Produksi).
+  ├── Bot Keep-Alive: GitHub Actions cron (.github/workflows/keep_alive.yml) ping Render tiap 10 menit untuk mencegah cold start.
+  └── ⚠️ Early Warning System & Hard Limits:
+      1. Supabase DDL: Render TIDAK menjalankan migrasi DDL otomatis. Setiap migrasi schema.prisma WAJIB di-patch via Port 5432 sebelum deploy.
+      2. Supabase Inactivity: Database auto-pause jika tidak ada query 7 hari (restore via Supabase Dashboard).
+      3. Render 750h Limit: Maksimal 750 jam/bulan per akun. Jangan pasang service web gratis lain di akun yang sama.
+      4. Vercel Production Rule: Perubahan hanya aktif di well-pos-app.vercel.app setelah di-merge ke branch main.
 ===============================================================
 ```
 

@@ -82,6 +82,12 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
    - Default baris per halaman adalah **10**, dengan opsi pilihan **10 / 25 / 50 / 100**. Wajib menyertakan indikator rentang data aktif (`Menampilkan X - Y dari Z`) dan auto-reset ke halaman 1 saat pencarian/filter diubah.
 8. 🧪 **PENGUJIAN BROWSER PLAYWRIGHT LOKAL**:
    - Playwright telah terinstal secara lokal di lingkungan pengguna. Segala pemeriksaan/automasi berbasis Playwright wajib dijalankan secara lokal (CLI/script lokal), bukan mengunduh binary eksternal secara berulang dari server cloud remote yang rentan error jaringan/404.
+9. ⚠️ **ATURAN MIGRASI & EARLY WARNING INFRASTRUKTUR CLOUD (RENDER, SUPABASE, VERCEL)**:
+   - **Wajib Patch Skema Supabase Sebelum Push**: Render CI/CD hanya menjalankan `prisma generate`, BUKAN `prisma db push/migrate`. Setiap penambahan model, enum, atau kolom baru di `schema.prisma` WAJIB dipatch terlebih dahulu ke remote Supabase via `DIRECT_URL` (Port 5432) sebelum kode dideploy, untuk mencegah crash HTTP 500 runtime (*schema mismatch*).
+   - **Port 6543 (PgBouncer) vs Port 5432 (Direct)**: Port 6543 adalah mode transaction pooler yang menolak DDL (`ALTER TABLE`, `CREATE TYPE`). Seluruh migrasi skema wajib diarahkan ke Port 5432.
+   - **Supabase 7-Day Inactivity Warning**: Jika proyek Supabase free tier tidak menerima request selama 7 hari, database akan tidur (*paused*). Jika API throw `Connection refused`, ingatkan User untuk me-restore proyek di Dashboard Supabase.
+   - **Render 750h Limit & Cold Start**: Render Free Tier memiliki batas 750 jam/bulan per akun dan dapat mengalami cold start (~50 detik) jika pinger cron GitHub Actions tertunda. Dilarang menambah web service gratis lain di akun Render yang sama agar kuota tidak habis di pertengahan bulan.
+   - **Vercel Production Deployment Rule**: Domain utama `well-pos-app.vercel.app` terikat secara ketat ke branch `main`. Push ke branch `dev` TIDAK mengupdate website produksi. Fitur baru baru aktif di produksi setelah di-merge ke `main`.
 
 ---
 
