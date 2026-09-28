@@ -6,6 +6,8 @@ import {
   closeShift,
   getShiftHistory,
   getShiftById,
+  recordCashMovement,
+  getCashMovements,
 } from '../controllers/shift.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { tenantContext, verifyTenantLicense } from '../middlewares/saas.middleware';
@@ -21,5 +23,7 @@ shiftRouter.post('/start', startShift);
 shiftRouter.get('/current', getCurrentShift);
 shiftRouter.get('/x-report', getXReport);
 shiftRouter.post('/close', closeShift);
+shiftRouter.post('/cash-movement', recordCashMovement);
+shiftRouter.get('/cash-movements', getCashMovements);
 shiftRouter.get('/', getShiftHistory);
 shiftRouter.get('/:id', getShiftById);

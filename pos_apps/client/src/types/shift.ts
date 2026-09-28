@@ -30,8 +30,11 @@ export interface Shift {
     qrisSalesTotal: number;
     qrisSalesCount: number;
     totalRevenue: number;
+    totalCashOut?: number;
+    totalCashIn?: number;
     expectedCash: number;
   };
+  cashMovements?: any[];
 }
 
 export interface XReportData {
@@ -48,8 +51,11 @@ export interface XReportData {
   cashDrawer: {
     startingCash: number;
     cashSales: number;
+    totalCashOut?: number;
+    totalCashIn?: number;
     expectedCashInDrawer: number;
   };
+  cashMovements?: any[];
   paymentSummary: {
     cashSales: number;
     qrisSales: number;
@@ -80,11 +86,14 @@ export interface ZReportData {
   cashDrawer: {
     startingCash: number;
     totalCashSales: number;
+    totalCashOut?: number;
+    totalCashIn?: number;
     expectedCash: number;
     actualCash: number;
     difference: number;
     differenceLabel: string;
   };
+  cashMovements?: any[];
   nonCashSummary: {
     totalQrisSales: number;
     totalRevenue: number;

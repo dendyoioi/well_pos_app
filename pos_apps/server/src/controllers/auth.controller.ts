@@ -178,6 +178,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          canCashOut: user.canCashOut ?? false,
           hasPin: !!user.pinHash,
           tenantId: user.tenantId,
           tenant: user.tenant
@@ -248,6 +249,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
         email: true,
         role: true,
         userCode: true,
+        canCashOut: true,
         pinHash: true,
         tenantId: true,
         outletId: true,
@@ -318,6 +320,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
           email: user.email,
           role: user.role,
           userCode: user.userCode,
+          canCashOut: (user as any).canCashOut ?? false,
           hasPin: !!user.pinHash,
           tenantId: user.tenantId,
           outlet: user.outlet,
@@ -388,6 +391,7 @@ export const getProfile = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        canCashOut: user.canCashOut ?? false,
         hasPin: !!user.pinHash,
         tenantId: user.tenantId,
         tenant: user.tenant

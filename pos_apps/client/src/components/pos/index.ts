@@ -4,3 +4,4 @@ export * from './ProductCatalogGrid';
 export * from './OrderCartSidebar';
 export * from './HoldOrdersModal';
 export * from './OpenTabsModal';
+export * from './PosMobileView';

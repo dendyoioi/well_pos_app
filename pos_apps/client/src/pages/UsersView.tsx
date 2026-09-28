@@ -38,6 +38,7 @@ interface StaffUser {
   isActive: boolean;
   createdAt: string;
   outletId?: string | null;
+  canCashOut?: boolean;
   outlet?: {
     id: string;
     name: string;
@@ -89,6 +90,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
     pin: '',
     role: 'CASHIER',
     outletId: '',
+    canCashOut: false,
     isActive: true,
   });
   const [formError, setFormError] = useState<string | null>(null);
@@ -174,6 +176,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
       pin: '',
       role: roles.length > 0 ? roles[0].name : 'CASHIER',
       outletId: outlets.length > 0 ? outlets[0].id : '',
+      canCashOut: false,
       isActive: true,
     });
     setFormError(null);
@@ -194,6 +197,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
       pin: '',
       role: u.role,
       outletId: u.outletId || u.outlet?.id || '',
+      canCashOut: u.canCashOut ?? false,
       isActive: u.isActive,
     });
     setFormError(null);
@@ -252,6 +256,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           pin: formData.pin || '1234',
           role: formData.role,
           outletId: formData.outletId || null,
+          canCashOut: formData.canCashOut,
         });
 
         if (res.status === 'success') {
@@ -268,6 +273,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           role: formData.role,
           pin: formData.pin || null,
           outletId: formData.outletId || null,
+          canCashOut: formData.canCashOut,
           isActive: formData.isActive,
         };
         // Hanya kirim userCode jika benar-benar diubah oleh user
@@ -718,6 +724,29 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                 </div>
               </label>
             </div>
+
+            {/* Izin Pengeluaran Kas (Petty Cash Out) */}
+            <div className="pt-4 border-t border-slate-100">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.canCashOut}
+                  onChange={(e) => setFormData({ ...formData, canCashOut: e.target.checked })}
+                  className="w-4 h-4 mt-0.5 text-blue-900 rounded-md border-slate-300 focus:ring-blue-900 cursor-pointer"
+                />
+                <div>
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                    <span>Izinkan Pengeluaran Kasir (Kas Keluar / Petty Cash)</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+                      Hak Akses Kasir
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    Jika diaktifkan, staf ini dapat mencatat pengeluaran uang tunai dari kasir (seperti iuran lingkungan, belanja bahan toko mendesak, dsb.). Nominal pengeluaran akan otomatis memotong uang kas yang diharapkan saat tutup shift (Z-Report).
+                  </div>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* ACTION BUTTONS (STICKY OR FOOTER) */}
@@ -974,9 +1003,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
 
                       {/* Peran */}
                       <td className="py-3.5 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${badge.color}`}>
-                          {badge.label}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${badge.color}`}>
+                            {badge.label}
+                          </span>
+                          {(u.canCashOut || ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(u.role)) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="Kasir berhak mencatat pengeluaran uang kas">
+                              💸 Bisa Kas Keluar
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Penugasan Outlet Toko */}

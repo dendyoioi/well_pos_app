@@ -71,6 +71,7 @@ model Tenant {
   refunds               Refund[]
   refundItems           RefundItem[]
   shifts                Shift[]
+  cashMovements         CashMovement[]
   customers             Customer[]
   idempotencyRecords    IdempotencyRecord[]
   subscriptions         TenantSubscription[]
@@ -199,6 +200,7 @@ model User {
   passwordHash String?   @map("password_hash")
   pinHash      String?   @map("pin_hash") // Nullable per OD-13.3-03 (Bcrypt hash of operational PIN; NULL for PIN-less users)
   role         Role      @default(CASHIER)
+  canCashOut   Boolean   @default(false) @map("can_cash_out")
   isActive     Boolean   @default(true) @map("is_active")
   lastLoginAt  DateTime? @map("last_login_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -208,6 +210,7 @@ model User {
   outlet         Outlet?           @relation(fields: [outletId], references: [id], onDelete: Restrict)
   orders         Order[]           @relation("CashierUser")
   shifts         Shift[]
+  cashMovements  CashMovement[]
   createdLedgers InventoryLedger[] @relation("ActorUser")
   createdPOs          PurchaseOrder[] @relation("POCreatedByUser")
   dispatchedTransfers StockTransfer[] @relation("TransferDispatchedByUser")
@@ -243,6 +246,7 @@ model Outlet {
   storageLocations StorageLocation[]
   orders           Order[]
   shifts           Shift[]
+  cashMovements    CashMovement[]
   purchaseOrders   PurchaseOrder[]
   sourceTransfers  StockTransfer[]   @relation("TransferSourceOutlet")
   targetTransfers  StockTransfer[]   @relation("TransferTargetOutlet")
@@ -273,9 +277,36 @@ model Shift {
   outlet Outlet  @relation(fields: [outletId], references: [id], onDelete: Restrict)
   user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
   orders Order[]
+  cashMovements CashMovement[]
 
   @@index([tenantId, outletId, status])
   @@map("shifts")
+}
+
+model CashMovement {
+  id        String           @id @default(uuid())
+  tenantId  String           @map("tenant_id")
+  outletId  String           @map("outlet_id")
+  shiftId   String           @map("shift_id")
+  userId    String           @map("user_id")
+  type      CashMovementType @default(CASH_OUT)
+  category  String
+  amount    Decimal          @db.Decimal(15, 2)
+  notes     String
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, shiftId])
+  @@map("cash_movements")
+}
+
+enum CashMovementType {
+  CASH_OUT
+  CASH_IN
 }
 
 model Customer {

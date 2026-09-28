@@ -59,6 +59,12 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
     description: 'Mencetak ulang struk nota atau mengirimkan e-receipt ke pelanggan',
     category: 'REGISTER_SALES',
   },
+  {
+    id: 'sales_cash_expense',
+    label: 'Catat Kas Keluar / Pengeluaran Kasir',
+    description: 'Mencatat pengeluaran uang tunai operasional (iuran lingkungan, belanja toko, dll.) langsung dari kas kasir',
+    category: 'REGISTER_SALES',
+  },
 
   // 2. Menu, Katalog & Resep
   {
@@ -218,6 +224,7 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
       'sales_void',
       'sales_drawer',
       'sales_reprint',
+      'sales_cash_expense',
       'menu_view',
       'menu_manage',
       'menu_modifiers',

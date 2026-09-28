@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ShiftStatus, PaymentMethod } from '@prisma/client';
+import { ShiftStatus, PaymentMethod, CashMovementType } from '@prisma/client';
 import { prisma } from '../config/prisma';
 
 const startShiftSchema = z.object({
@@ -12,6 +12,13 @@ const startShiftSchema = z.object({
 const closeShiftSchema = z.object({
   actualCash: z.number().min(0, 'Uang fisik di laci tidak boleh negatif'),
   notes: z.string().optional(),
+});
+
+const cashMovementSchema = z.object({
+  type: z.enum(['CASH_OUT', 'CASH_IN']).default('CASH_OUT'),
+  category: z.string().min(1, 'Kategori mutasi kas wajib dipilih/diisi'),
+  amount: z.number().positive('Nominal mutasi kas harus lebih besar dari 0'),
+  notes: z.string().min(3, 'Keterangan mutasi kas minimal 3 karakter'),
 });
 
 /**
@@ -168,8 +175,30 @@ export const getCurrentShift = async (req: Request, res: Response) => {
     );
     const totalOrders = countRows[0]?.count || 0;
 
+    // Ambil mutasi kas (pengeluaran kasir & kas masuk tambahan)
+    const cashMovements = await prisma.cashMovement.findMany({
+      where: {
+        shiftId: activeShift.id,
+        tenantId: activeShift.tenantId,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    let totalCashOut = 0;
+    let totalCashIn = 0;
+    cashMovements.forEach((cm) => {
+      if (cm.type === 'CASH_OUT') {
+        totalCashOut += Number(cm.amount);
+      } else if (cm.type === 'CASH_IN') {
+        totalCashIn += Number(cm.amount);
+      }
+    });
+
     const startingCash = Number(activeShift.startingCash);
-    const expectedCash = startingCash + cashSalesTotal;
+    const expectedCash = startingCash + cashSalesTotal + totalCashIn - totalCashOut;
 
     return res.status(200).json({
       status: 'success',
@@ -184,8 +213,11 @@ export const getCurrentShift = async (req: Request, res: Response) => {
           qrisSalesTotal,
           qrisSalesCount,
           totalRevenue: cashSalesTotal + qrisSalesTotal,
+          totalCashOut,
+          totalCashIn,
           expectedCash,
         },
+        cashMovements,
       },
     });
   } catch (error: any) {
@@ -262,8 +294,30 @@ export const getXReport = async (req: Request, res: Response) => {
       }
     });
 
+    // Ambil riwayat mutasi kas shift
+    const cashMovements = await prisma.cashMovement.findMany({
+      where: {
+        shiftId: activeShift.id,
+        tenantId: activeShift.tenantId,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    let totalCashOut = 0;
+    let totalCashIn = 0;
+    cashMovements.forEach((cm) => {
+      if (cm.type === 'CASH_OUT') {
+        totalCashOut += Number(cm.amount);
+      } else if (cm.type === 'CASH_IN') {
+        totalCashIn += Number(cm.amount);
+      }
+    });
+
     const startingCash = Number(activeShift.startingCash);
-    const expectedCashInDrawer = startingCash + totalCashSales;
+    const expectedCashInDrawer = startingCash + totalCashSales + totalCashIn - totalCashOut;
     const netRevenue = totalCashSales + totalQrisSales;
 
     const recentOrders = Array.from(orderMap.values()).slice(0, 10);
@@ -284,8 +338,11 @@ export const getXReport = async (req: Request, res: Response) => {
         cashDrawer: {
           startingCash,
           cashSales: totalCashSales,
+          totalCashOut,
+          totalCashIn,
           expectedCashInDrawer,
         },
+        cashMovements,
         paymentSummary: {
           cashSales: totalCashSales,
           qrisSales: totalQrisSales,
@@ -374,8 +431,30 @@ export const closeShift = async (req: Request, res: Response) => {
     );
     const totalOrders = countRows[0]?.count || 0;
 
+    // Ambil mutasi kas pada shift ini
+    const cashMovements = await prisma.cashMovement.findMany({
+      where: {
+        shiftId: activeShift.id,
+        tenantId: activeShift.tenantId,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    let totalCashOut = 0;
+    let totalCashIn = 0;
+    cashMovements.forEach((cm) => {
+      if (cm.type === 'CASH_OUT') {
+        totalCashOut += Number(cm.amount);
+      } else if (cm.type === 'CASH_IN') {
+        totalCashIn += Number(cm.amount);
+      }
+    });
+
     const startingCash = Number(activeShift.startingCash);
-    const expectedCash = startingCash + totalCashSales;
+    const expectedCash = startingCash + totalCashSales + totalCashIn - totalCashOut;
     const difference = actualCash - expectedCash; // Selisih: positif (lebih), negatif (kurang), 0 (cocok)
 
     const endTime = new Date();
@@ -388,7 +467,7 @@ export const closeShift = async (req: Request, res: Response) => {
         actualEnding: actualCash,
         cashDifference: difference,
         status: ShiftStatus.CLOSED,
-        notes: notes || `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`,
+        notes: notes || `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Kas keluar: Rp ${totalCashOut.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`,
       },
       include: {
         outlet: true,
@@ -409,12 +488,15 @@ export const closeShift = async (req: Request, res: Response) => {
         cashDrawer: {
           startingCash,
           totalCashSales,
+          totalCashOut,
+          totalCashIn,
           expectedCash,
           actualCash,
           difference,
           differenceLabel:
             difference === 0 ? 'COCOK (Pas)' : difference > 0 ? 'LEBIH (+)' : 'KURANG (-)',
         },
+        cashMovements,
         nonCashSummary: {
           totalQrisSales,
           totalRevenue: totalCashSales + totalQrisSales,
@@ -527,6 +609,24 @@ export const getShiftById = async (req: Request, res: Response) => {
       }
     });
 
+    const cashMovements = await prisma.cashMovement.findMany({
+      where: {
+        shiftId: shift.id,
+        tenantId: shift.tenantId,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    let totalCashOut = 0;
+    let totalCashIn = 0;
+    cashMovements.forEach((cm) => {
+      if (cm.type === 'CASH_OUT') totalCashOut += Number(cm.amount);
+      else if (cm.type === 'CASH_IN') totalCashIn += Number(cm.amount);
+    });
+
     return res.status(200).json({
       status: 'success',
       data: {
@@ -536,6 +636,9 @@ export const getShiftById = async (req: Request, res: Response) => {
         expectedCash: shift.expectedEnding !== null ? Number(shift.expectedEnding) : null,
         actualCash: shift.actualEnding !== null ? Number(shift.actualEnding) : null,
         difference: shift.cashDifference !== null ? Number(shift.cashDifference) : null,
+        totalCashOut,
+        totalCashIn,
+        cashMovements,
         stats: {
           totalOrders: orderSet.size,
           cashSales,
@@ -547,6 +650,186 @@ export const getShiftById = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error saat memuat detail shift:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memuat detail shift' });
+  }
+};
+
+/**
+ * Controller: Catat Mutasi Kas / Pengeluaran Kasir (Petty Cash Out)
+ * @route POST /api/shifts/cash-movement
+ */
+export const recordCashMovement = async (req: Request, res: Response) => {
+  try {
+    const parseResult = cashMovementSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi mutasi kas gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const cashierId = req.user?.id;
+    if (!cashierId) {
+      return res.status(401).json({ status: 'error', message: 'Kasir belum terautentikasi' });
+    }
+
+    // Periksa hak akses pengeluaran kas kasir
+    // User berhak jika: role OWNER / ADMIN / SUPERVISOR ATAU canCashOut === true
+    const user = await prisma.user.findUnique({
+      where: { id: cashierId },
+      select: { role: true, canCashOut: true, name: true, tenantId: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'Pengguna tidak ditemukan' });
+    }
+
+    const hasPermission =
+      ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(user.role) || user.canCashOut === true;
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Anda tidak memiliki hak akses untuk mencatat pengeluaran kas. Hubungi Owner atau Supervisor untuk memberikan izin.',
+      });
+    }
+
+    // Ambil shift aktif yang terikat ketat dengan tenant kasir
+    const activeShift = await prisma.shift.findFirst({
+      where: {
+        userId: cashierId,
+        ...(user.tenantId ? { tenantId: user.tenantId } : {}),
+        status: ShiftStatus.OPEN,
+      },
+      include: { outlet: true },
+    });
+
+    if (!activeShift) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Tidak ada sesi shift aktif. Buka shift terlebih dahulu sebelum mencatat pengeluaran kas.',
+      });
+    }
+
+    const { type, category, amount, notes } = parseResult.data;
+
+    const movement = await prisma.cashMovement.create({
+      data: {
+        tenantId: activeShift.tenantId,
+        outletId: activeShift.outletId,
+        shiftId: activeShift.id,
+        userId: cashierId,
+        type: type as CashMovementType,
+        category,
+        amount,
+        notes,
+      },
+      include: {
+        user: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: type === 'CASH_OUT' ? 'Pengeluaran kas berhasil dicatat' : 'Kas masuk berhasil dicatat',
+      data: movement,
+    });
+  } catch (error: any) {
+    console.error('Error saat mencatat mutasi kas:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mencatat mutasi kas' });
+  }
+};
+
+/**
+ * Controller: Daftar Riwayat Mutasi Kas Shift (Strict Tenant & Staff Boundary)
+ * @route GET /api/shifts/cash-movements
+ */
+export const getCashMovements = async (req: Request, res: Response) => {
+  try {
+    const cashierId = req.user?.id;
+    const userTenantId = req.user?.tenantId;
+    const userRole = req.user?.role;
+    if (!cashierId || !userTenantId) {
+      return res.status(401).json({ status: 'error', message: 'Kasir belum terautentikasi' });
+    }
+
+    const { shiftId } = req.query;
+
+    let targetShiftId = shiftId as string | undefined;
+    if (!targetShiftId) {
+      const activeShift = await prisma.shift.findFirst({
+        where: {
+          userId: cashierId,
+          tenantId: userTenantId,
+          status: ShiftStatus.OPEN,
+        },
+        select: { id: true },
+      });
+      targetShiftId = activeShift?.id;
+    } else {
+      // Keamanan Ketat: Jika query param shiftId diberikan:
+      // 1. Wajib cocok dengan tenantId pengguna aktif (mencegah kebocoran lintas tenant)
+      // 2. Jika bukan Owner/Admin/Supervisor, kasir biasa hanya boleh melihat shift miliknya sendiri
+      const isPrivileged = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(userRole || '');
+      const validShift = await prisma.shift.findFirst({
+        where: {
+          id: targetShiftId,
+          tenantId: userTenantId,
+          ...(!isPrivileged ? { userId: cashierId } : {}),
+        },
+        select: { id: true },
+      });
+
+      if (!validShift) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Akses ditolak: Shift tidak ditemukan atau Anda tidak memiliki akses ke data shift ini',
+        });
+      }
+    }
+
+    if (!targetShiftId) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          movements: [],
+          totalCashOut: 0,
+          totalCashIn: 0,
+        },
+        message: 'Tidak ada sesi shift aktif',
+      });
+    }
+
+    // Query mutasi kas terisolasi dengan filter tenantId & shiftId
+    const movements = await prisma.cashMovement.findMany({
+      where: {
+        shiftId: targetShiftId,
+        tenantId: userTenantId,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    let totalCashOut = 0;
+    let totalCashIn = 0;
+    movements.forEach((m) => {
+      if (m.type === 'CASH_OUT') totalCashOut += Number(m.amount);
+      else if (m.type === 'CASH_IN') totalCashIn += Number(m.amount);
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        movements,
+        totalCashOut,
+        totalCashIn,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error saat mengambil mutasi kas:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil riwayat mutasi kas' });
   }
 };
 

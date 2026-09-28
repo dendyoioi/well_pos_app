@@ -428,6 +428,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
           <PosTerminalView
             activeOutlet={activeOutlet}
             currentUserRole={user.role}
+            currentUser={user}
             onOutletFeesUpdated={handleUpdateOutletFees}
             appendOrderData={appendOrderData}
             onClearAppendOrder={() => setAppendOrderData(null)}
@@ -1038,6 +1039,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
           <PosTerminalView
             activeOutlet={activeOutlet}
             currentUserRole={user.role}
+            currentUser={user}
             onOutletFeesUpdated={handleUpdateOutletFees}
             appendOrderData={appendOrderData}
             onClearAppendOrder={() => setAppendOrderData(null)}

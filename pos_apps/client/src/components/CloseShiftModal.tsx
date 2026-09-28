@@ -36,7 +36,11 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   // Kalkulasi data kasir saat ini
   const startingCash = currentShift ? Number(currentShift.startingCash) : 0;
   const cashSales = currentShift?.stats?.cashSalesTotal || 0;
-  const expectedCash = startingCash + cashSales;
+  const totalCashOut = currentShift?.stats?.totalCashOut || 0;
+  const totalCashIn = currentShift?.stats?.totalCashIn || 0;
+  const expectedCash = currentShift?.stats?.expectedCash !== undefined
+    ? currentShift.stats.expectedCash
+    : (startingCash + cashSales + totalCashIn - totalCashOut);
   const difference = actualCash - expectedCash;
 
   useEffect(() => {
@@ -142,6 +146,22 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                   Rp {cashSales.toLocaleString('id-ID')}
                 </span>
               </div>
+              {totalCashIn > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
+                  <span className="font-bold text-emerald-600">
+                    Rp {totalCashIn.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
+              {totalCashOut > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-rose-600 font-semibold">(-) Pengeluaran Kasir (Kas Keluar):</span>
+                  <span className="font-bold text-rose-600">
+                    - Rp {totalCashOut.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-xs pt-2 border-t border-slate-200 font-extrabold">
                 <span className="text-slate-900">Total Seharusnya Ada di Laci:</span>
                 <span className="text-sm text-blue-900">
@@ -308,6 +328,18 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                   <span className="text-slate-600">(+) Penjualan Tunai:</span>
                   <span>Rp {zReportData.cashDrawer.totalCashSales.toLocaleString('id-ID')}</span>
                 </div>
+                {zReportData.cashDrawer.totalCashIn && zReportData.cashDrawer.totalCashIn > 0 ? (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
+                    <span>Rp {zReportData.cashDrawer.totalCashIn.toLocaleString('id-ID')}</span>
+                  </div>
+                ) : null}
+                {zReportData.cashDrawer.totalCashOut && zReportData.cashDrawer.totalCashOut > 0 ? (
+                  <div className="flex justify-between text-rose-700">
+                    <span>(-) Pengeluaran Kasir:</span>
+                    <span>- Rp {zReportData.cashDrawer.totalCashOut.toLocaleString('id-ID')}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200">
                   <span>Kas Seharusnya (Expected):</span>
                   <span>Rp {zReportData.cashDrawer.expectedCash.toLocaleString('id-ID')}</span>
@@ -333,6 +365,21 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Rincian Pengeluaran Kasir jika ada */}
+              {zReportData.cashMovements && zReportData.cashMovements.length > 0 && (
+                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                    RINCIAN PENGELUARAN KASIR
+                  </div>
+                  {zReportData.cashMovements.map((m: any) => (
+                    <div key={m.id} className="flex justify-between text-slate-600">
+                      <span className="truncate max-w-[180px]">{m.category} ({m.notes})</span>
+                      <span className="font-mono">{m.type === 'CASH_OUT' ? '-' : '+'} Rp {Number(m.amount).toLocaleString('id-ID')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Non Cash Summary */}
               <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-3">

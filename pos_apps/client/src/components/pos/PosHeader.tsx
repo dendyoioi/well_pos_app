@@ -12,6 +12,8 @@ import {
   QrCode,
   Globe,
   ChevronDown,
+  ArrowDownCircle,
+  Smartphone,
 } from 'lucide-react';
 import type { Outlet, SalesChannelConfig } from '../../types/outlet';
 import { normalizeSalesChannels } from '../../types/outlet';
@@ -33,9 +35,11 @@ export interface PosHeaderProps {
   onOpenStartShift: () => void;
   onOpenCloseShift: () => void;
   onOpenXReport: () => void;
+  onOpenCashExpense?: () => void;
   onOpenSupervisorFees?: () => void;
   currentUserRole?: string;
   channelsConfig?: SalesChannelConfig[];
+  onToggleHandheldMode?: () => void;
 }
 
 export const PosHeader: React.FC<PosHeaderProps> = ({
@@ -52,9 +56,11 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   onOpenStartShift,
   onOpenCloseShift,
   onOpenXReport,
+  onOpenCashExpense,
   onOpenSupervisorFees,
   currentUserRole,
   channelsConfig,
+  onToggleHandheldMode,
 }) => {
   const [onlineDropdownOpen, setOnlineDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -294,9 +300,35 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           </Button>
         )}
 
+        {/* Toggle Mode Handheld / HP */}
+        {onToggleHandheldMode && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Smartphone className="w-3.5 h-3.5 text-blue-900" />}
+            onClick={onToggleHandheldMode}
+            className="text-xs"
+            title="Beralih ke Tampilan Handheld Smartphone (6.8 Inch)"
+          >
+            <span className="hidden sm:inline">Mode HP</span>
+          </Button>
+        )}
+
         {/* Shift Actions */}
         {currentShift ? (
           <>
+            {onOpenCashExpense && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<ArrowDownCircle className="w-3.5 h-3.5 text-rose-600" />}
+                onClick={onOpenCashExpense}
+                className="text-xs border-rose-200 hover:bg-rose-50 text-rose-700 font-bold"
+                title="Catat Pengeluaran Uang Kasir (Petty Cash Out)"
+              >
+                <span>Kas Keluar</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

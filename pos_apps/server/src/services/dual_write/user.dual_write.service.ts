@@ -80,15 +80,16 @@ export class UserDualWriteService extends BaseDualWriteService {
       // 2. MUTATION VIA PARAMETERIZED RAW SQL (OD-14.1-02)
       const userId = crypto.randomUUID();
       const isActive = dto.isActive !== undefined ? dto.isActive : true;
+      const canCashOut = dto.canCashOut !== undefined ? dto.canCashOut : false;
 
       await this.executeRaw(
         tx,
         `INSERT INTO "users" (
           "id", "outlet_id", "name", "email", "password_hash",
-          "role", "is_active", "created_at", "updated_at", "tenant_id", "user_code", "pin_hash"
+          "role", "is_active", "created_at", "updated_at", "tenant_id", "user_code", "pin_hash", "can_cash_out"
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6::"Role", $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8, $9, $10
+          $6::"Role", $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8, $9, $10, $11
         );`,
         userId,
         dto.outletId || null,
@@ -99,7 +100,8 @@ export class UserDualWriteService extends BaseDualWriteService {
         isActive,
         tenantId,
         userCode,
-        pinHash
+        pinHash,
+        canCashOut
       );
 
       const userRecord = {
@@ -111,6 +113,7 @@ export class UserDualWriteService extends BaseDualWriteService {
         outletId: dto.outletId || null,
         userCode,
         hasPin: pinHash !== null,
+        canCashOut,
         isActive,
       };
 
@@ -165,7 +168,7 @@ export class UserDualWriteService extends BaseDualWriteService {
       // Fetch existing user
       const existing = await this.queryRaw<any>(
         tx,
-        `SELECT id, name, email, password_hash, role, outlet_id, is_active 
+        `SELECT id, name, email, password_hash, role, outlet_id, is_active, can_cash_out 
          FROM "users" 
          WHERE "id" = $1 AND "tenant_id" = $2;`,
         userId,
@@ -183,6 +186,7 @@ export class UserDualWriteService extends BaseDualWriteService {
       const role = dto.role !== undefined ? dto.role : current.role;
       const outletId = dto.outletId !== undefined ? (dto.outletId || null) : current.outlet_id;
       const isActive = dto.isActive !== undefined ? dto.isActive : current.is_active;
+      const canCashOut = dto.canCashOut !== undefined ? dto.canCashOut : (current.can_cash_out ?? false);
 
       // Update user with Parameterized Raw SQL
       let targetAffected = 0;
@@ -192,8 +196,9 @@ export class UserDualWriteService extends BaseDualWriteService {
           `UPDATE "users" 
            SET "name" = $1, "email" = $2, "password_hash" = $3,
                "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6, "pin_hash" = $7,
+               "can_cash_out" = $8,
                "updated_at" = CURRENT_TIMESTAMP
-           WHERE "id" = $8 AND "tenant_id" = $9;`,
+           WHERE "id" = $9 AND "tenant_id" = $10;`,
           name,
           email,
           passwordHash,
@@ -201,6 +206,7 @@ export class UserDualWriteService extends BaseDualWriteService {
           outletId,
           isActive,
           pinHashUpdate,
+          canCashOut,
           userId,
           tenantId
         );
@@ -211,21 +217,23 @@ export class UserDualWriteService extends BaseDualWriteService {
           `UPDATE "users" 
            SET "name" = $1, "email" = $2, "password_hash" = $3,
                "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6,
+               "can_cash_out" = $7,
                "updated_at" = CURRENT_TIMESTAMP
-           WHERE "id" = $7 AND "tenant_id" = $8;`,
+           WHERE "id" = $8 AND "tenant_id" = $9;`,
           name,
           email,
           passwordHash,
           role,
           outletId,
           isActive,
+          canCashOut,
           userId,
           tenantId
         );
       }
 
       return {
-        legacyData: { id: userId, name, email, role, outletId, isActive },
+        legacyData: { id: userId, name, email, role, outletId, isActive, canCashOut },
         targetSynced: true,
         targetRecordsAffected: targetAffected,
         targetDetails: { userId, pinHashUpdated: pinHashUpdate !== undefined },

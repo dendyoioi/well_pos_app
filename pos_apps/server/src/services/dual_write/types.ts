@@ -169,6 +169,7 @@ export interface CreateUserDTO {
   outletId?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;
+  canCashOut?: boolean;
   isActive?: boolean;
 }
 
@@ -182,6 +183,7 @@ export interface UpdateUserDTO {
   outletId?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;
+  canCashOut?: boolean;
   isActive?: boolean;
 }
 

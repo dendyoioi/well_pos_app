@@ -349,6 +349,13 @@ Well POS menerapkan sistem hak akses berbasis domain fungsional operasional nyat
    - **Simpan & Kirim Dapur (Bayar Nanti / Open Tab)**: Khusus pesanan Dine In (makan di tempat dengan meja), kasir dapat mengirim pesanan ke dapur dengan status `paymentStatus: 'UNPAID'` via `POST /api/orders/open-tab`.
    - **Pelunasan Meja Terisi**: Kasir dapat memantau seluruh meja belum lunas lewat modal `OpenTabsModal` ("Tagihan Meja"), menarik kembali pesanan ke kasir (menambah item menu), atau langsung menyelesaikan pembayaran (`existingOrderId` via `salesDualWriteService.processCheckout`).
 
+4. **Pengeluaran Kasir Dinamis & Petty Cash Laci (Kas Masuk / Kas Keluar)**:
+   - Kasir yang diberikan izin oleh Owner (`canCashOut: true` atau memiliki peran Owner/Admin/Supervisor) dapat mencatat mutasi kas operasional (`CashMovement`) langsung dari laci kasir saat shift berjalan (contoh: iuran lingkungan/sampah, belanja darurat toko seperti es batu/gas, ongkir kurir, dsb).
+   - Pengaturan hak akses kasir dikelola secara granular oleh Owner di Backoffice Manajemen Staf (`UsersView.tsx` toggle *Izinkan Pengeluaran Kasir*).
+   - Seluruh mutasi kas secara otomatis memperhitungkan saldo laci kasir:
+     $$\text{Estimasi Kas Akhir} = \text{Modal Awal} + \text{Penjualan Tunai} + \text{Total Kas Masuk} - \text{Total Kas Keluar}$$
+   - Laporan berjalan (X-Report) dan rekonsiliasi tutup shift (Z-Report) menyajikan rincian pengeluaran kasir per kategori & keterangan, mengeliminasi selisih kas fiktif (*phantom cash discrepancies*).
+
 ### 7.5 Arsitektur Alokasi Menu Multi-Outlet & Routing Bahan Baku Gudang (EPIC-21)
 Pemisahan domain data operasional antara **Tingkat Tenant (Master Pusat)** dan **Tingkat Outlet (Toko Aktif)**:
 

@@ -16,6 +16,7 @@ import {
   OrderCartSidebar,
   HoldOrdersModal,
   OpenTabsModal,
+  PosMobileView,
 } from '../components/pos';
 import { VoucherSelectionModal } from '../components/pos/VoucherSelectionModal';
 import { SplitBillModal } from '../components/pos/SplitBillModal';
@@ -24,17 +25,20 @@ import { OrderSuccessModal } from '../components/OrderSuccessModal';
 import { StartShiftModal } from '../components/StartShiftModal';
 import { XReportModal } from '../components/XReportModal';
 import { CloseShiftModal } from '../components/CloseShiftModal';
+import { CashExpenseModal } from '../components/CashExpenseModal';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
 import { OnDemandFeesPickerModal } from '../components/OnDemandFeesPickerModal';
 import { ProductModifierModal } from '../components/ProductModifierModal';
 import { usePlan } from '../hooks/usePlan';
 import { useDialog } from '../context/DialogContext';
-import { api, customerApi } from '../services/api';
+import { api, customerApi, authStorage } from '../services/api';
+import type { User } from '../types/auth';
 
 interface PosTerminalViewProps {
   activeOutlet?: Outlet | null;
   currentUserRole?: string;
+  currentUser?: User | null;
   onOutletFeesUpdated?: (fees: OutletFee[]) => void;
   appendOrderData?: Order | null;
   onClearAppendOrder?: () => void;
@@ -45,6 +49,7 @@ interface PosTerminalViewProps {
 export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   activeOutlet,
   currentUserRole,
+  currentUser,
   onOutletFeesUpdated,
   appendOrderData,
   onClearAppendOrder,
@@ -83,6 +88,22 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     }, 4000);
     return () => clearTimeout(timer);
   }, [scanMessage]);
+
+  // Screen width & Handheld view state (Optimized for 6.8" portrait smartphone)
+  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  const [handheldModeOverride, setHandheldModeOverride] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isHandheld = handheldModeOverride !== null ? handheldModeOverride : isMobileScreen;
 
   // View Mode: 'grid' vs 'compact'
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
@@ -431,6 +452,14 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [startShiftModalOpen, setStartShiftModalOpen] = useState<boolean>(false);
   const [closeShiftModalOpen, setCloseShiftModalOpen] = useState<boolean>(false);
   const [xReportModalOpen, setXReportModalOpen] = useState<boolean>(false);
+  const [cashExpenseModalOpen, setCashExpenseModalOpen] = useState<boolean>(false);
+
+  // Deteksi izin kas keluar kasir (Owner, Admin, Supervisor, atau Kasir dengan canCashOut = true)
+  const activeUser = currentUser || authStorage.getUser();
+  const canCashOut = Boolean(
+    activeUser &&
+    (['OWNER', 'ADMIN', 'SUPERVISOR'].includes(activeUser.role) || activeUser.canCashOut === true)
+  );
 
   // Payment & Checkout State
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -1257,71 +1286,17 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
   return (
     <div className="flex flex-col h-[calc(100vh-6.5rem)] overflow-hidden bg-slate-100 font-sans">
-      {/* 1. Header Bar: Outlet, Shift, Actions */}
-      <PosHeader
-        activeOutlet={activeOutlet}
-        currentShift={currentShift}
-        orderChannel={orderChannel}
-        onChangeOrderChannel={(ch) => setOrderChannel(ch)}
-        heldOrdersCount={holdOrders.length}
-        onOpenHeldOrders={() => setHoldOrdersModalOpen(true)}
-        openTabsCount={openTabs.length}
-        onOpenOpenTabs={() => setOpenTabsModalOpen(true)}
-        qrOrdersCount={unpaidQrOrders.length}
-        onOpenQrOrders={() => setQrOrdersModalOpen(true)}
-        onOpenStartShift={() => setStartShiftModalOpen(true)}
-        onOpenCloseShift={() => setCloseShiftModalOpen(true)}
-        onOpenXReport={() => setXReportModalOpen(true)}
-        onOpenSupervisorFees={() => {
-          setSupervisorInitialTab('TAX');
-          setSupervisorFeesModalOpen(true);
-        }}
-        currentUserRole={currentUserRole}
-        channelsConfig={activeOutlet?.channelsConfig || undefined}
-      />
-
-      {/* 2. Main Workspace: Split Catalog Grid & Order Cart */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Column: Category Pills, Search & Product Catalog */}
-        <div className="flex-1 flex flex-col p-3 sm:p-4 overflow-hidden gap-3">
-          <CategoryFilterPills
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={(catId) => setSelectedCategory(catId)}
-            searchQuery={searchBarcode}
-            onSearchChange={(q) => setSearchBarcode(q)}
-            onSearchSubmit={() => {
-              if (filteredProducts.length === 1) {
-                handleProductSelect(filteredProducts[0]);
-                setSearchBarcode('');
-              }
-            }}
-            viewMode={viewMode}
-            onToggleViewMode={(mode) => setViewMode(mode)}
-            scanMessage={scanMessage}
-            onClearScanMessage={() => setScanMessage(null)}
-          />
-
-          <ProductCatalogGrid
-            products={filteredProducts}
-            onSelectProduct={handleProductSelect}
-            viewMode={viewMode}
-            loading={loading}
-          />
-        </div>
-
-        {/* Right Column: Order Cart Sidebar */}
-        <OrderCartSidebar
-          cart={cart}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-          onClearCart={handleClearCart}
+      {isHandheld ? (
+        <PosMobileView
+          activeOutlet={activeOutlet}
+          currentShift={currentShift}
+          currentUserRole={currentUserRole}
+          canCashOut={canCashOut}
           orderChannel={orderChannel}
+          onChangeOrderChannel={(ch) => setOrderChannel(ch)}
           tableNumber={tableNumber}
           onChangeTableNumber={(t) => setTableNumber(t)}
-          onlineOrderId={onlineOrderId}
-          onChangeOnlineOrderId={(id) => setOnlineOrderId(id)}
-          availableTables={tables}
+          tables={tables}
           customerName={customerName}
           onChangeCustomerName={(name) => setCustomerName(name)}
           customerPhone={customerPhone}
@@ -1329,43 +1304,163 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           selectedCustomer={selectedCustomer}
           onSelectCustomer={(cust) => setSelectedCustomer(cust)}
           customers={customers}
-          globalDiscount={globalDiscount}
-          onChangeGlobalDiscount={(disc) => setGlobalDiscount(disc)}
-          activeFees={outletFees}
-          onDemandQuantities={onDemandQuantities}
-          onOpenOnDemandPicker={() => {
-            refreshOutletFees(true);
-            setOnDemandPickerOpen(true);
-          }}
-          onHoldOrder={handleHoldOrder}
-          onSplitBill={handleSplitBill}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(catId) => setSelectedCategory(catId)}
+          searchQuery={searchBarcode}
+          onSearchChange={(q) => setSearchBarcode(q)}
+          products={products}
+          filteredProducts={filteredProducts}
+          loading={loading}
+          onSelectProduct={handleProductSelect}
+          cart={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={handleClearCart}
+          subtotal={cartSubtotal}
+          discountAmount={cartDiscount + promoDiscount}
+          taxAmount={autoFeesTotal}
+          serviceChargeAmount={0}
+          cartGrandTotal={cartGrandTotal}
           onOpenPayment={() => setPaymentModalOpen(true)}
-          disabledPayment={cart.length === 0 || !currentShift}
-          currentShift={currentShift}
-          onOpenStartShift={() => setStartShiftModalOpen(true)}
           onSaveOpenTab={handleSaveOpenTab}
-          activeOpenTab={activeOpenTab}
-          onClearOpenTab={() => {
-            setActivePulledOrder(null);
-            setActiveOpenTab(null);
-            setCart([]);
-            setCustomerName('');
-            setCustomerPhone('');
-            setTableNumber('');
-            setScanMessage(null);
-          }}
-          activePulledOrder={activePulledOrder}
-          onCancelPulledOrder={handleCancelPulledOrder}
-          occupiedTablesMap={occupiedTablesMap}
-          onSelectOccupiedTable={handleSelectOccupiedTable}
+          onHoldOrder={handleHoldOrder}
+          holdOrdersCount={holdOrders.length}
+          onOpenHeldOrders={() => setHoldOrdersModalOpen(true)}
+          openTabsCount={openTabs.length}
+          onOpenOpenTabs={() => setOpenTabsModalOpen(true)}
+          qrOrdersCount={unpaidQrOrders.length}
+          onOpenQrOrders={() => setQrOrdersModalOpen(true)}
+          onOpenStartShift={() => setStartShiftModalOpen(true)}
+          onOpenCloseShift={() => setCloseShiftModalOpen(true)}
+          onOpenXReport={() => setXReportModalOpen(true)}
+          onOpenCashExpense={canCashOut ? () => setCashExpenseModalOpen(true) : undefined}
+          onToggleDesktopMode={() => setHandheldModeOverride(false)}
           appliedPromotion={appliedPromotion}
-          onOpenPromotionModal={() => setVoucherModalOpen(true)}
+          onOpenVoucherPicker={() => setVoucherModalOpen(true)}
           onRemovePromotion={() => {
             setAppliedPromotion(null);
             setScanMessage('Kupon promo telah dilepas.');
           }}
+          globalDiscount={globalDiscount}
+          onChangeGlobalDiscount={(disc) => setGlobalDiscount(disc)}
+          activeFees={outletFees}
         />
-      </div>
+      ) : (
+        <>
+          {/* 1. Header Bar: Outlet, Shift, Actions */}
+          <PosHeader
+            activeOutlet={activeOutlet}
+            currentShift={currentShift}
+            orderChannel={orderChannel}
+            onChangeOrderChannel={(ch) => setOrderChannel(ch)}
+            heldOrdersCount={holdOrders.length}
+            onOpenHeldOrders={() => setHoldOrdersModalOpen(true)}
+            openTabsCount={openTabs.length}
+            onOpenOpenTabs={() => setOpenTabsModalOpen(true)}
+            qrOrdersCount={unpaidQrOrders.length}
+            onOpenQrOrders={() => setQrOrdersModalOpen(true)}
+            onOpenStartShift={() => setStartShiftModalOpen(true)}
+            onOpenCloseShift={() => setCloseShiftModalOpen(true)}
+            onOpenXReport={() => setXReportModalOpen(true)}
+            onOpenCashExpense={canCashOut ? () => setCashExpenseModalOpen(true) : undefined}
+            onOpenSupervisorFees={() => {
+              setSupervisorInitialTab('TAX');
+              setSupervisorFeesModalOpen(true);
+            }}
+            currentUserRole={currentUserRole}
+            channelsConfig={activeOutlet?.channelsConfig || undefined}
+            onToggleHandheldMode={() => setHandheldModeOverride(true)}
+          />
+
+          {/* 2. Main Workspace: Split Catalog Grid & Order Cart */}
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            {/* Left Column: Category Pills, Search & Product Catalog */}
+            <div className="flex-1 flex flex-col p-3 sm:p-4 overflow-hidden gap-3">
+              <CategoryFilterPills
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={(catId) => setSelectedCategory(catId)}
+                searchQuery={searchBarcode}
+                onSearchChange={(q) => setSearchBarcode(q)}
+                onSearchSubmit={() => {
+                  if (filteredProducts.length === 1) {
+                    handleProductSelect(filteredProducts[0]);
+                    setSearchBarcode('');
+                  }
+                }}
+                viewMode={viewMode}
+                onToggleViewMode={(mode) => setViewMode(mode)}
+                scanMessage={scanMessage}
+                onClearScanMessage={() => setScanMessage(null)}
+              />
+
+              <ProductCatalogGrid
+                products={filteredProducts}
+                onSelectProduct={handleProductSelect}
+                viewMode={viewMode}
+                loading={loading}
+              />
+            </div>
+
+            {/* Right Column: Order Cart Sidebar */}
+            <OrderCartSidebar
+              cart={cart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              orderChannel={orderChannel}
+              tableNumber={tableNumber}
+              onChangeTableNumber={(t) => setTableNumber(t)}
+              onlineOrderId={onlineOrderId}
+              onChangeOnlineOrderId={(id) => setOnlineOrderId(id)}
+              availableTables={tables}
+              customerName={customerName}
+              onChangeCustomerName={(name) => setCustomerName(name)}
+              customerPhone={customerPhone}
+              onChangeCustomerPhone={(phone) => setCustomerPhone(phone)}
+              selectedCustomer={selectedCustomer}
+              onSelectCustomer={(cust) => setSelectedCustomer(cust)}
+              customers={customers}
+              globalDiscount={globalDiscount}
+              onChangeGlobalDiscount={(disc) => setGlobalDiscount(disc)}
+              activeFees={outletFees}
+              onDemandQuantities={onDemandQuantities}
+              onOpenOnDemandPicker={() => {
+                refreshOutletFees(true);
+                setOnDemandPickerOpen(true);
+              }}
+              onHoldOrder={handleHoldOrder}
+              onSplitBill={handleSplitBill}
+              onOpenPayment={() => setPaymentModalOpen(true)}
+              disabledPayment={cart.length === 0 || !currentShift}
+              currentShift={currentShift}
+              onOpenStartShift={() => setStartShiftModalOpen(true)}
+              onSaveOpenTab={handleSaveOpenTab}
+              activeOpenTab={activeOpenTab}
+              onClearOpenTab={() => {
+                setActivePulledOrder(null);
+                setActiveOpenTab(null);
+                setCart([]);
+                setCustomerName('');
+                setCustomerPhone('');
+                setTableNumber('');
+                setScanMessage(null);
+              }}
+              activePulledOrder={activePulledOrder}
+              onCancelPulledOrder={handleCancelPulledOrder}
+              occupiedTablesMap={occupiedTablesMap}
+              onSelectOccupiedTable={handleSelectOccupiedTable}
+              appliedPromotion={appliedPromotion}
+              onOpenPromotionModal={() => setVoucherModalOpen(true)}
+              onRemovePromotion={() => {
+                setAppliedPromotion(null);
+                setScanMessage('Kupon promo telah dilepas.');
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {/* =========================================================================
           MODALS & DIALOGS
@@ -1434,6 +1529,14 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           <XReportModal
             isOpen={xReportModalOpen}
             onClose={() => setXReportModalOpen(false)}
+          />
+          <CashExpenseModal
+            isOpen={cashExpenseModalOpen}
+            onClose={() => setCashExpenseModalOpen(false)}
+            currentShift={currentShift}
+            onExpenseRecorded={() => {
+              loadCurrentShift();
+            }}
           />
         </>
       )}

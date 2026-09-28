@@ -26,6 +26,7 @@ export interface User {
   hasPin?: boolean;
   tenantId?: string | null;
   outletId?: string | null;
+  canCashOut?: boolean;
   outlet?: Outlet | null;
   tenant?: { id: string; name: string; phone?: string | null; slug?: string } | null;
   subscription?: TenantSubscriptionInfo | null;

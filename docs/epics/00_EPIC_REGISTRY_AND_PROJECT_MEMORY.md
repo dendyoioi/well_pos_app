@@ -763,6 +763,42 @@ FOKUS 4: SANITASI MULTI-TENANCY & INISIALISASI TENANT BARU (COMPLETED ✅)
       ├── Penyelarasan `outlet.controller.ts` saat pembuatan outlet baru tanpa feesConfig agar tidak menyuntikkan pajak aktif secara sepihak.
       └── Verifikasi kartu metrik dan switch pada `TaxesSettingsView.tsx`: Menampilkan status `0% (Non-aktif)` dan `Status Pajak Kasir: NON-AKTIF (Bebas Pajak)` untuk toko baru.
 ================================================================================
+FOKUS 5: PENGELUARAN KASIR DINAMIS & PETTY CASH LACI (COMPLETED ✅)
+  ├── 1. Skema Database & Permission Model Granular:
+  │   ├── Kolom Baru `users.can_cash_out` (Boolean @default(false)): Kontrol izin per kasir dari Backoffice Staf.
+  │   ├── Model Baru `CashMovement`: Tipe `CASH_OUT` / `CASH_IN` terikat dengan Shift, Outlet, Tenant, dan User kasir pencatat.
+  │   ├── Enum & Parameterized DDL: Ditambahkan secara aman ke DB PostgreSQL lokal tanpa menghapus tabel riwayat.
+  │   └── Dual-Write Support: Penyelarasan `UserDualWriteService` dan permission controller.
+  ├── 2. Backend Shift & Financial Reconciliation Engine:
+  │   ├── Endpoint `POST /api/shifts/cash-movement`: Validasi shift aktif, izin kasir (`canCashOut` / `sales_cash_expense`), dan pencatatan mutasi kas laci.
+  │   ├── Endpoint `GET /api/shifts/cash-movements`: Mengambil riwayat mutasi kas pada shift aktif.
+  │   └── Integrasi Formula Kas Laci pada Shift, X-Report, dan Z-Report:
+  │       Expected Cash = Modal Awal + Penjualan Tunai + Kas Masuk - Kas Keluar.
+  ├── 3. Antarmuka Backoffice Manajemen Staf (UsersView.tsx):
+  │   ├── Toggle switch dinamis "Izinkan Pengeluaran Kasir (Kas Keluar / Petty Cash)" di form tambah/edit staf.
+  │   └── Badge status "Bisa Kas Keluar" pada tabel staf untuk staf yang diberikan izin.
+  └── 4. Antarmuka Kasir POS Terminal & Laporan Slip:
+      ├── Modal Kas Keluar / Kas Masuk (`CashExpenseModal.tsx`): Kategori pengeluaran (Iuran Lingkungan/Sampah, Belanja Darurat Toko, Ongkir Kurir, Operasional Lainnya), input rupiah terformat `<CurrencyInput />`, catatan wajib, dan tabel riwayat pengeluaran shift aktif.
+      ├── Tombol "Kas Keluar" di header kasir (`PosHeader.tsx`): Tampil kondisional hanya untuk pengguna dengan hak akses (`OWNER`, `ADMIN`, `SUPERVISOR`, atau `canCashOut === true`).
+      ├── Pembaruan Slip X-Report (`XReportModal.tsx`): Menampilkan rincian baris (+) Kas Masuk, (-) Pengeluaran Kasir, dan estimasi kas di laci.
+      └── Pembaruan Slip Z-Report (`CloseShiftModal.tsx`): Rekonsiliasi kas laci memperhitungkan pengeluaran kasir, menampilkan rincian beban operasional, dan menghitung selisih kas fisik secara akurat.
+================================================================================
+FOKUS 6: ANTARMUKA HANDHELD MOBILE POS (SMARTPHONE 6.8" PORTRAIT) (COMPLETED ✅)
+  ├── 1. Deteksi Adaptif & Sakelar Mode Layar (Auto + Manual Toggle):
+  │   ├── Auto-detect: Layar smartphone (`width < 768px`) otomatis beralih ke layout Handheld.
+  │   └── Manual Toggle: Tombol "Mode HP" di header desktop dan tombol "Beralih ke Desktop" di menu hamburger mobile.
+  ├── 2. Komponen Dedicated Handheld (`PosMobileView.tsx`):
+  │   ├── Sticky Top Navigation: Header ringkas nama outlet, indikator shift dot, pill kanal pesanan (Dine In / Takeaway / Ojol), dan hamburger menu.
+  │   ├── Carousel Kategori Geser (Swipeable): Pill kategori horizontal dengan badge jumlah produk.
+  │   ├── Grid Produk 2 Kolom Ramah Jempol (Thumb-Friendly): Kartu compact, badge kuantitas keranjang (`2x`), harga tebal, dan tombol `+` responsif.
+  │   ├── Floating Action Cart Bar: Menempel di bawah saat ada pesanan (`X Item Dipilih | Rp Total -> [Periksa Pesanan]`).
+  │   └── Interactive Bottom Sheet Drawer: Geser naik dari bawah untuk cek pesanan, stepper kuantitas, catatan meja/pelanggan, voucher diskon, dan tombol bayar instan.
+  └── 3. Quick Action Drawer Kasir Mobile:
+      ├── Akses satu-klik Buka/Tutup Shift, X-Report, dan Kas Keluar / Petty Cash langsung dari smartphone.
+      └── Integrasi counter antrean (Hold Orders, Tagihan Meja Terisi, dan Pesanan QR).
+================================================================================
 ```
+
+
 
 

@@ -29,6 +29,7 @@ const createUserSchema = z.object({
   pin: z.string().min(4, 'PIN minimal 4 digit').max(6, 'PIN maksimal 6 digit').regex(/^\d{4,6}$/, 'PIN harus berupa angka'),
   role: z.string().default('CASHIER'),
   outletId: z.string().uuid().optional().nullable(),
+  canCashOut: z.boolean().optional(),
 });
 
 const updateUserSchema = z.object({
@@ -40,6 +41,7 @@ const updateUserSchema = z.object({
   role: z.string().optional(),
   isActive: z.boolean().optional(),
   outletId: z.string().uuid().optional().nullable(),
+  canCashOut: z.boolean().optional(),
 });
 
 /**
@@ -61,6 +63,7 @@ export const getUsers = async (req: Request, res: Response) => {
         name: true,
         email: true,
         role: true,
+        canCashOut: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -171,6 +174,7 @@ export const createUser = async (req: Request, res: Response) => {
           pin,
           role: systemRole,
           outletId: assignedOutletId,
+          canCashOut: parseResult.data.canCashOut ?? false,
           isActive: true,
         },
         { tx, tenantId, actorUserId: req.user?.id }
@@ -185,6 +189,7 @@ export const createUser = async (req: Request, res: Response) => {
         name: true,
         email: true,
         role: true,
+        canCashOut: true,
         isActive: true,
         createdAt: true,
         outlet: {
@@ -310,6 +315,7 @@ export const updateUser = async (req: Request, res: Response) => {
           role: targetRole,
           isActive,
           outletId,
+          canCashOut: parseResult.data.canCashOut,
         },
         { tx, tenantId, actorUserId: req.user?.id }
       );
@@ -322,6 +328,7 @@ export const updateUser = async (req: Request, res: Response) => {
         name: true,
         email: true,
         role: true,
+        canCashOut: true,
         isActive: true,
         updatedAt: true,
         outlet: {

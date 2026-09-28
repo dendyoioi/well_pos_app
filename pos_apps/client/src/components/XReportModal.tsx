@@ -175,6 +175,22 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                     Rp {data.cashDrawer.cashSales.toLocaleString('id-ID')}
                   </span>
                 </div>
+                {data.cashDrawer.totalCashIn && data.cashDrawer.totalCashIn > 0 ? (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">(+) Kas Masuk:</span>
+                    <span className="font-semibold text-emerald-700">
+                      +Rp {data.cashDrawer.totalCashIn.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                ) : null}
+                {data.cashDrawer.totalCashOut && data.cashDrawer.totalCashOut > 0 ? (
+                  <div className="flex justify-between text-rose-700">
+                    <span className="text-slate-600">(-) Pengeluaran Kasir:</span>
+                    <span className="font-semibold text-rose-700">
+                      -Rp {data.cashDrawer.totalCashOut.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between pt-1 border-t border-slate-200 font-extrabold text-blue-950">
                   <span>Estimasi Kas di Laci:</span>
                   <span className="text-sm">
@@ -182,6 +198,23 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                   </span>
                 </div>
               </div>
+
+              {/* Rincian Pengeluaran Kasir jika ada */}
+              {data.cashMovements && data.cashMovements.length > 0 && (
+                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                    RINCIAN PENGELUARAN KASIR
+                  </div>
+                  {data.cashMovements.map((m: any) => (
+                    <div key={m.id} className="flex justify-between text-slate-600">
+                      <span className="truncate max-w-[180px]">{m.category} ({m.notes})</span>
+                      <span className={`font-mono font-medium ${m.type === 'CASH_OUT' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {m.type === 'CASH_OUT' ? '-' : '+'}Rp {Number(m.amount).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Payment Summary */}
               <div className="space-y-1.5 border-b border-dashed border-slate-300 pb-3">

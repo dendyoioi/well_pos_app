@@ -730,6 +730,27 @@ export const api = {
     return res.json();
   },
 
+  recordCashMovement: async (data: { type?: 'CASH_OUT' | 'CASH_IN'; category: string; amount: number; notes: string }): Promise<any> => {
+    const res = await fetch('/api/shifts/cash-movement', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getCashMovements: async (shiftId?: string): Promise<any> => {
+    const query = new URLSearchParams();
+    if (shiftId) query.append('shiftId', shiftId);
+    const res = await fetch(`/api/shifts/cash-movements?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
   // ----------------------------------------------------
   // LAPORAN FINANSIAL & AKUNTANSI SEDERHANA
   // ----------------------------------------------------
@@ -763,6 +784,7 @@ export const api = {
     pin: string;
     role: string;
     outletId?: string | null;
+    canCashOut?: boolean;
   }): Promise<any> => {
     const res = await fetch('/api/users', {
       method: 'POST',
@@ -786,6 +808,7 @@ export const api = {
       role?: string;
       isActive?: boolean;
       outletId?: string | null;
+      canCashOut?: boolean;
     }
   ): Promise<any> => {
     const res = await fetch(`/api/users/${id}`, {
