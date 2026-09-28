@@ -4,24 +4,11 @@ import { prisma } from '../config/prisma';
 let cachedDefaultTenantId: string | null = null;
 
 /**
- * Helper untuk mendapatkan Default Tenant ID (Toko Maju Jaya)
+ * Helper untuk mendapatkan Default Tenant ID (DEPRECATED: Dimatikan per R-09)
+ * Jangan digunakan dalam alur request runtime - setiap request wajib memiliki konteks tenant eksplisit.
  */
 export const getDefaultTenantId = async (): Promise<string> => {
-  if (cachedDefaultTenantId) return cachedDefaultTenantId;
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug: 'toko-maju-jaya' },
-    select: { id: true },
-  });
-  if (tenant) {
-    cachedDefaultTenantId = tenant.id;
-    return tenant.id;
-  }
-  const firstTenant = await prisma.tenant.findFirst({ select: { id: true } });
-  if (firstTenant) {
-    cachedDefaultTenantId = firstTenant.id;
-    return firstTenant.id;
-  }
-  throw new Error('Default tenant tidak ditemukan di database');
+  throw new Error('DEPRECATED (R-09): Automatic fallback ke default tenant telah dinonaktifkan. Sediakan tenantId eksplisit.');
 };
 
 /**
@@ -30,28 +17,38 @@ export const getDefaultTenantId = async (): Promise<string> => {
  * Sumber prioritas:
  * 1. req.user.tenantId (dari JWT token)
  * 2. Header 'x-tenant-id' atau query 'tenantId'
- * 3. Fallback otomatis ke Default Tenant (ramah pengujian lokal dan non-breaking)
+ * 
+ * Sesuai Mandat R-09: Fallback otomatis ke default tenant telah DIHAPUS.
+ * Request tanpa identitas tenant valid ditolak dengan HTTP 401 Unauthorized.
  */
 export const tenantContext = async (
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ) => {
   try {
-    let resolvedTenantId =
-      req.user?.tenantId ||
+    const user = (req as any).user;
+    const resolvedTenantId =
+      user?.tenantId ||
       (req.headers['x-tenant-id'] as string) ||
       (req.query.tenantId as string);
 
     if (!resolvedTenantId) {
-      resolvedTenantId = await getDefaultTenantId();
+      return res.status(401).json({
+        status: 'error',
+        code: 'TENANT_IDENTIFIER_REQUIRED',
+        message: 'Akses ditolak: Identitas tenant wajib disertakan (via token otentikasi, header x-tenant-id, atau query tenantId)',
+      });
     }
 
-    req.tenantId = resolvedTenantId;
+    (req as any).tenantId = resolvedTenantId;
     next();
   } catch (error) {
     console.error('Error saat menentukan konteks tenant:', error);
-    next();
+    return res.status(500).json({
+      status: 'error',
+      message: 'Terjadi kesalahan saat memvalidasi konteks tenant',
+    });
   }
 };
 
@@ -66,34 +63,32 @@ export const verifyTenantLicense = async (
   next: NextFunction
 ) => {
   try {
-    const tenantId = req.tenantId || req.user?.tenantId;
+    const user = (req as any).user;
+    const tenantId = (req as any).tenantId || user?.tenantId;
     if (!tenantId) {
       return next();
     }
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        id: true,
-        status: true,
-        businessName: true,
-        trialEndsAt: true,
-      },
-    });
+    const tenants = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, status, business_name FROM "tenants" WHERE id = $1 LIMIT 1;`,
+      tenantId
+    );
 
-    if (!tenant) {
+    if (!tenants || tenants.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'Data tenant tidak ditemukan dalam sistem Well POS',
       });
     }
 
+    const tenant = tenants[0];
+
     // Blokir hanya jika secara eksplisit SUSPENDED
     if (tenant.status === 'SUSPENDED') {
       return res.status(403).json({
         status: 'error',
         code: 'SUBSCRIPTION_LOCKED',
-        message: `Masa aktif Well POS untuk "${tenant.businessName}" telah berakhir atau dibekukan. Silakan lakukan pembayaran tagihan untuk membuka akses operasional kasir.`,
+        message: `Masa aktif Well POS untuk "${tenant.business_name || 'Tenant'}" telah berakhir atau dibekukan. Silakan lakukan pembayaran tagihan untuk membuka akses operasional kasir.`,
       });
     }
 

@@ -7,6 +7,7 @@ import {
   Plus,
   Minus,
   RotateCcw,
+  RefreshCw,
   Check,
   Sparkles,
   Settings,
@@ -20,6 +21,8 @@ interface OnDemandFeesPickerModalProps {
   currentQuantities: Record<string, number>;
   onConfirm: (quantities: Record<string, number>) => void;
   onOpenManageFees?: () => void;
+  onRefresh?: () => Promise<void> | void;
+  isRefreshing?: boolean;
 }
 
 export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = ({
@@ -29,6 +32,8 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
   currentQuantities,
   onConfirm,
   onOpenManageFees,
+  onRefresh,
+  isRefreshing = false,
 }) => {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,8 +42,9 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
     if (isOpen) {
       setQuantities({ ...currentQuantities });
       setSearchQuery('');
+      onRefresh?.();
     }
-  }, [isOpen, currentQuantities]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -150,6 +156,18 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
             />
           </div>
 
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={() => onRefresh()}
+              disabled={isRefreshing}
+              title="Sinkronkan daftar kemasan terbaru dari server"
+              className="p-2 bg-white border border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center transition-all shadow-xs disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-blue-900 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+
           {onOpenManageFees && (
             <button
               type="button"
@@ -174,9 +192,37 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
               <p className="text-sm font-bold text-slate-600">
                 {searchQuery ? 'Tidak ada kemasan yang sesuai pencarian' : 'Belum ada biaya on-demand yang aktif'}
               </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Gunakan tombol kelola untuk menambahkan daftar kemasan toko Anda.
+              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                {searchQuery
+                  ? 'Coba gunakan kata kunci pencarian yang lain.'
+                  : 'Gunakan tombol kelola untuk mengaktifkan kemasan atau tombol sinkronisasi untuk memperbarui data kasir.'}
               </p>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                {onRefresh && (
+                  <button
+                    type="button"
+                    onClick={() => onRefresh()}
+                    disabled={isRefreshing}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span>Sinkronkan Sekarang</span>
+                  </button>
+                )}
+                {onOpenManageFees && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenManageFees();
+                    }}
+                    className="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Kelola Kemasan</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             filteredFees.map((fee) => {

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { StockMovementType } from '@prisma/client';
 import { prisma } from '../config/prisma';
+import { catalogDualWriteService } from '../services/dual_write';
+import { catalogReadAdapter, isReadFromTargetEnabled } from '../services/read_adapters';
 
 // Skema validasi pembuatan produk baru
 const createProductSchema = z.object({
@@ -21,15 +23,15 @@ const createProductSchema = z.object({
 
 // Skema validasi update produk
 const updateProductSchema = z.object({
-  barcode: z.string().min(3).optional(),
-  sku: z.string().min(3).optional(),
+  barcode: z.string().min(3).optional().nullable(),
+  sku: z.string().min(3).optional().nullable(),
   name: z.string().min(2).optional(),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional().nullable(),
   costPrice: z.number().min(0).optional(),
   basePrice: z.number().min(0).optional(),
-  unit: z.string().optional(),
-  description: z.string().optional(),
-  imageUrl: z.string().optional(),
+  unit: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
   minStockAlert: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });
@@ -42,118 +44,51 @@ export const getProducts = async (req: Request, res: Response) => {
   try {
     const { search, categoryId, outletId: queryOutletId, isActive } = req.query;
 
+    // Fix T1: Hapus req.query.tenantId — user input tidak boleh override JWT context
+    let userTenantId: string | undefined = req.user?.tenantId || req.tenantId || (req.headers['x-tenant-id'] as string);
+
     // Tentukan outlet yang menjadi konteks stok
     let targetOutletId = (queryOutletId as string) || req.user?.outletId;
     if (!targetOutletId) {
-      const defaultOutlet = await prisma.outlet.findFirst({ select: { id: true } });
+      const defaultOutlet = userTenantId
+        ? await prisma.outlet.findFirst({
+            where: { tenantId: userTenantId },
+            select: { id: true },
+          })
+        : null;
       targetOutletId = defaultOutlet?.id;
     }
 
-    const currentOutlet = targetOutletId
-      ? await prisma.outlet.findUnique({
-          where: { id: targetOutletId },
-          select: { id: true, isWarehouse: true, warehouseId: true, tenantId: true },
-        })
-      : null;
+    // Fix K3: Jika tenantId masih kosong, tolak request dengan 401 — jangan fallback ke tenant pertama
+    if (!userTenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
 
-    let warehouseId: string | null = null;
-    if (currentOutlet && !currentOutlet.isWarehouse) {
-      if (currentOutlet.warehouseId) {
-        warehouseId = currentOutlet.warehouseId;
-      } else if (currentOutlet.tenantId) {
-        const wh = await prisma.outlet.findFirst({
-          where: { tenantId: currentOutlet.tenantId, isWarehouse: true },
-          select: { id: true },
+    // Fix T1 & Cross-Tenant Isolation: Pastikan outlet yang diminta adalah milik tenant yang sedang login
+    if (targetOutletId) {
+      const outletBelongsToTenant = await prisma.outlet.findFirst({
+        where: { id: targetOutletId, tenantId: userTenantId },
+        select: { id: true },
+      });
+      if (!outletBelongsToTenant) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Akses outlet ditolak: Cabang toko tidak terdaftar di bawah akun bisnis Anda',
         });
-        warehouseId = wh?.id || null;
       }
     }
 
-    const outletIdsToQuery = [targetOutletId, warehouseId].filter(Boolean) as string[];
-
-    const userTenantId = req.user?.tenantId;
-    const where: any = {};
-    if (userTenantId) {
-      where.tenantId = userTenantId;
-    }
-
-    // Filter aktif/nonaktif: 'all' menampilkan semua, 'true' hanya aktif, 'false' hanya nonaktif
-    if (isActive === 'all') {
-      // Tidak ada filter isActive
-    } else if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
-    } else {
-      where.isActive = true;
-    }
-
-    // Filter cabang / outlet jika diberikan
-    if (queryOutletId && typeof queryOutletId === 'string') {
-      where.outletProducts = {
-        some: { outletId: queryOutletId },
-      };
-    }
-
-    // Filter kategori
-    if (categoryId && typeof categoryId === 'string') {
-      where.categoryId = categoryId;
-    }
-
-    // Pencarian realtime (Nama, Barcode, atau SKU)
-    if (search && typeof search === 'string') {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { barcode: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    const products = await prisma.product.findMany({
-      where,
-      include: {
-        category: {
-          select: { id: true, name: true },
-        },
-        outletProducts: outletIdsToQuery.length > 0
-          ? {
-              where: { outletId: { in: outletIdsToQuery } },
-              select: { outletId: true, stock: true, minStockAlert: true, price: true },
-            }
-          : false,
-      },
-      orderBy: { name: 'asc' },
+    const result = await catalogReadAdapter.getProducts({
+      tenantId: userTenantId || '',
+      outletId: targetOutletId,
+      categoryId: categoryId as string,
+      search: search as string,
+      isActive: isActive as string,
     });
-
-    const formattedProducts = products.map((p) => {
-      const outletStock = p.outletProducts?.find((op) => op.outletId === targetOutletId);
-      const whStock = warehouseId ? p.outletProducts?.find((op) => op.outletId === warehouseId) : null;
-      return {
-        id: p.id,
-        barcode: p.barcode,
-        sku: p.sku,
-        name: p.name,
-        description: p.description,
-        costPrice: Number(p.costPrice),
-        basePrice: Number(p.basePrice),
-        price: outletStock?.price ? Number(outletStock.price) : Number(p.basePrice),
-        unit: p.unit,
-        imageUrl: p.imageUrl,
-        isActive: p.isActive,
-        category: p.category,
-        stock: outletStock?.stock ?? 0,
-        warehouseStock: whStock ? whStock.stock : null,
-        minStockAlert: outletStock?.minStockAlert ?? 5,
-        isLowStock: (outletStock?.stock ?? 0) <= (outletStock?.minStockAlert ?? 5),
-        createdAt: p.createdAt,
-      };
-    });
-
     return res.status(200).json({
       status: 'success',
-      data: formattedProducts,
-      meta: {
-        total: formattedProducts.length,
-        outletId: targetOutletId,
-      },
+      data: result.data,
+      meta: result.meta,
     });
   } catch (error) {
     console.error('Error saat mengambil data produk:', error);
@@ -171,40 +106,39 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // Fix T1: Hapus req.query.tenantId
+    let userTenantId: string | undefined = req.user?.tenantId || req.tenantId || (req.headers['x-tenant-id'] as string);
+    // Fix B4: Jika tidak ada outletId di query param, fallback ke outletId dari JWT (req.user.outletId).
+    // Mencegah kasir outlet A membaca detail produk outlet B secara lintas-outlet.
+    const queryOutletId = (req.query.outletId as string) || req.user?.outletId || undefined;
 
-    const userTenantId = req.user?.tenantId;
-    const product = await prisma.product.findFirst({
-      where: {
-        id,
-        ...(userTenantId ? { tenantId: userTenantId } : {}),
-      },
-      include: {
-        category: true,
-        outletProducts: {
-          include: { outlet: { select: { id: true, name: true } } },
-        },
-      },
-    });
+    if (!userTenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
 
-    if (!product) {
+    if (queryOutletId) {
+      const outletBelongsToTenant = await prisma.outlet.findFirst({
+        where: { id: queryOutletId, tenantId: userTenantId },
+        select: { id: true },
+      });
+      if (!outletBelongsToTenant) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Akses outlet ditolak: Cabang toko tidak terdaftar di bawah akun bisnis Anda',
+        });
+      }
+    }
+
+    const item = await catalogReadAdapter.getProductById(userTenantId || '', id, queryOutletId);
+    if (!item) {
       return res.status(404).json({
         status: 'error',
         message: 'Produk tidak ditemukan',
       });
     }
-
-    const outletStock = product.outletProducts?.[0];
-
     return res.status(200).json({
       status: 'success',
-      data: {
-        ...product,
-        costPrice: Number(product.costPrice),
-        basePrice: Number(product.basePrice),
-        stock: outletStock?.stock ?? 0,
-        minStockAlert: outletStock?.minStockAlert ?? 5,
-        isLowStock: (outletStock?.stock ?? 0) <= (outletStock?.minStockAlert ?? 5),
-      },
+      data: item,
     });
   } catch (error) {
     console.error('Error saat mengambil detail produk:', error);
@@ -245,43 +179,55 @@ export const createProduct = async (req: Request, res: Response) => {
       outletId,
     } = parseResult.data;
 
-    const userTenantId = req.user?.tenantId;
+    let userTenantId = req.user?.tenantId || req.tenantId;
+
+    // Tentukan outlet target
+    let targetOutletId = outletId || req.user?.outletId;
+    if (!targetOutletId) {
+      const defaultOutlet = userTenantId
+        ? await prisma.outlet.findFirst({
+            where: { tenantId: userTenantId },
+            select: { id: true },
+          })
+        : null;
+      targetOutletId = defaultOutlet?.id;
+    }
+
+    if (!userTenantId && targetOutletId) {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: targetOutletId },
+        select: { tenantId: true },
+      });
+      userTenantId = outlet?.tenantId;
+    }
+    // Fix K3: Jangan fallback ke findFirst() — return 401 jika tenantId masih kosong
+    if (!userTenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
 
     // Cek duplikasi barcode atau SKU untuk tenant ini
-    const existingSku = await prisma.product.findFirst({
-      where: {
-        sku,
-        ...(userTenantId ? { tenantId: userTenantId } : {}),
-      },
-    });
-    if (existingSku) {
+    const existingSku = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id FROM "products" WHERE sku = $1 AND ($2::text IS NULL OR tenant_id = $2) LIMIT 1;`,
+      sku,
+      userTenantId || null
+    );
+    if (existingSku.length > 0) {
       return res.status(400).json({
         status: 'error',
         message: `SKU "${sku}" sudah digunakan oleh produk lain di toko Anda`,
       });
     }
 
-    const existingBarcode = await prisma.product.findFirst({
-      where: {
-        barcode,
-        ...(userTenantId ? { tenantId: userTenantId } : {}),
-      },
-    });
-    if (existingBarcode) {
+    const existingBarcode = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id FROM "product_variants" WHERE barcode = $1 AND ($2::text IS NULL OR tenant_id = $2) LIMIT 1;`,
+      barcode,
+      userTenantId || null
+    );
+    if (existingBarcode.length > 0) {
       return res.status(400).json({
         status: 'error',
         message: `Barcode "${barcode}" sudah digunakan oleh produk lain di toko Anda`,
       });
-    }
-
-    // Tentukan outlet target
-    let targetOutletId = outletId || req.user?.outletId;
-    if (!targetOutletId) {
-      const defaultOutlet = await prisma.outlet.findFirst({
-        where: req.user?.tenantId ? { tenantId: req.user.tenantId } : undefined,
-        select: { id: true },
-      });
-      targetOutletId = defaultOutlet?.id;
     }
 
     if (!targetOutletId) {
@@ -291,50 +237,61 @@ export const createProduct = async (req: Request, res: Response) => {
       });
     }
 
-    // Gunakan Prisma transaction untuk menjaga integritas data
+    // Gunakan Dual-Write Service untuk sinkronisasi atomik ke target schema
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Buat master produk
-      const newProduct = await tx.product.create({
-        data: {
-          tenantId: req.user?.tenantId || undefined,
-          barcode,
-          sku,
+      const dwResult = await catalogDualWriteService.createProduct(
+        {
           name,
+          sku,
+          barcode,
           categoryId,
           costPrice,
           basePrice,
           unit,
-          description,
-          imageUrl,
-          isActive: true,
-        },
-      });
-
-      // 2. Alokasikan stok cabang
-      const outletStock = await tx.outletProduct.create({
-        data: {
-          outletId: targetOutletId,
-          productId: newProduct.id,
-          stock: initialStock,
+          description: description || null,
+          imageUrl: imageUrl || null,
+          initialStock,
           minStockAlert,
+          outletId: targetOutletId,
+        },
+        { tx, tenantId: userTenantId!, actorUserId: req.user?.id }
+      );
+
+      // Alokasikan produk otomatis ke outlet target (EPIC-19)
+      await tx.outletProduct.upsert({
+        where: {
+          outletId_productId: {
+            outletId: targetOutletId,
+            productId: dwResult.legacyData.id,
+          },
+        },
+        update: { isAvailable: true },
+        create: {
+          tenantId: userTenantId!,
+          outletId: targetOutletId,
+          productId: dwResult.legacyData.id,
+          isAvailable: true,
         },
       });
 
-      // 3. Jika ada stok awal, catat mutasi kartu stok
-      if (initialStock > 0 && req.user?.id) {
-        await tx.stockMovement.create({
-          data: {
-            outletId: targetOutletId,
-            productId: newProduct.id,
-            userId: req.user.id,
-            type: StockMovementType.PURCHASE_IN,
-            quantity: initialStock,
-            notes: 'Saldo stok awal pembuatan produk',
-          },
-        });
-      }
+      const balanceRows = await tx.$queryRawUnsafe<any[]>(
+        `SELECT COALESCE(ib.quantity_on_hand, 0) as stock, COALESCE(ii.reorder_point, 5) as "minStockAlert"
+         FROM "product_variants" pv
+         JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
+         JOIN "storage_locations" sl ON sl.outlet_id = $1 AND sl.is_default = true
+         LEFT JOIN "inventory_balances" ib ON ib.inventory_item_id = ii.id AND ib.storage_location_id = sl.id
+         WHERE pv.product_id = $2 AND pv.is_active = true LIMIT 1;`,
+        targetOutletId,
+        dwResult.legacyData.id
+      );
+      const outletStock = balanceRows && balanceRows.length > 0
+        ? { stock: Number(balanceRows[0].stock), minStockAlert: Number(balanceRows[0].minStockAlert) }
+        : { stock: initialStock, minStockAlert };
 
-      return { product: newProduct, outletStock };
+      return {
+        product: dwResult.legacyData,
+        outletStock,
+      };
     });
 
     return res.status(201).json({
@@ -387,76 +344,100 @@ export const updateProduct = async (req: Request, res: Response) => {
       isActive,
     } = parseResult.data;
 
-    const userTenantId = req.user?.tenantId;
-    const existing = await prisma.product.findFirst({
-      where: {
-        id,
-        ...(userTenantId ? { tenantId: userTenantId } : {}),
-      },
-    });
-    if (!existing) {
+    let userTenantId = req.user?.tenantId || req.tenantId;
+    if (!userTenantId) {
+      const prodRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT tenant_id FROM "products" WHERE id = $1 LIMIT 1;`,
+        id
+      );
+      userTenantId = prodRows[0]?.tenant_id;
+    }
+
+    const existingRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT p.id, pv.barcode, p.sku 
+       FROM "products" p
+       LEFT JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
+       WHERE p.id = $1 AND ($2::text IS NULL OR p.tenant_id = $2) 
+       LIMIT 1;`,
+      id,
+      userTenantId || null
+    );
+    if (!existingRows || existingRows.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'Produk tidak ditemukan',
       });
     }
+    const existing = existingRows[0];
 
     // Cek duplikasi jika barcode / sku diubah untuk tenant ini
     if (sku && sku !== existing.sku) {
-      const dup = await prisma.product.findFirst({
-        where: {
-          sku,
-          id: { not: id },
-          ...(userTenantId ? { tenantId: userTenantId } : {}),
-        },
-      });
-      if (dup) {
+      const dupRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id FROM "products" WHERE sku = $1 AND id != $2 AND ($3::text IS NULL OR tenant_id = $3) LIMIT 1;`,
+        sku,
+        id,
+        userTenantId || null
+      );
+      if (dupRows.length > 0) {
         return res.status(400).json({ status: 'error', message: `SKU "${sku}" sudah digunakan` });
       }
     }
 
     if (barcode && barcode !== existing.barcode) {
-      const dup = await prisma.product.findFirst({
-        where: {
-          barcode,
-          id: { not: id },
-          ...(userTenantId ? { tenantId: userTenantId } : {}),
-        },
-      });
-      if (dup) {
+      const dupRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id FROM "product_variants" WHERE barcode = $1 AND product_id != $2 AND ($3::text IS NULL OR tenant_id = $3) LIMIT 1;`,
+        barcode,
+        id,
+        userTenantId || null
+      );
+      if (dupRows.length > 0) {
         return res.status(400).json({ status: 'error', message: `Barcode "${barcode}" sudah digunakan` });
       }
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      const p = await tx.product.update({
-        where: { id },
-        data: {
-          barcode,
-          sku,
+      await catalogDualWriteService.updateProduct(
+        id,
+        {
           name,
-          categoryId,
+          sku: sku || undefined,
+          barcode: barcode || undefined,
+          categoryId: categoryId || undefined,
           costPrice,
           basePrice,
-          unit,
-          description,
-          imageUrl,
+          unit: unit || undefined,
+          description: description || null,
+          imageUrl: imageUrl || null,
           isActive,
         },
-      });
+        { tx, tenantId: userTenantId!, actorUserId: req.user?.id }
+      );
 
-      // Update minStockAlert jika disertakan
+      // Update minStockAlert jika disertakan (target: inventory_items.reorder_point)
       if (minStockAlert !== undefined) {
-        const targetOutletId = req.user?.outletId;
-        if (targetOutletId) {
-          await tx.outletProduct.updateMany({
-            where: { productId: id, outletId: targetOutletId },
-            data: { minStockAlert },
-          });
-        }
+        await tx.$queryRawUnsafe(
+          `UPDATE "inventory_items" ii
+           SET "reorder_point" = $1, "updated_at" = CURRENT_TIMESTAMP
+           FROM "product_variants" pv
+           WHERE pv.product_id = $2 AND ii.id = pv.inventory_item_id;`,
+          minStockAlert,
+          id
+        );
       }
 
-      return p;
+      const prodRows = await tx.$queryRawUnsafe<any[]>(
+        `SELECT p.id, p.category_id as "categoryId", pv.barcode, p.sku, p.name, p.description,
+                COALESCE(ii.average_cost, 0) as "costPrice", COALESCE(pv.price, 0) as "basePrice", p.unit,
+                p.image_url as "imageUrl", p.is_active as "isActive", p.created_at as "createdAt",
+                p.updated_at as "updatedAt", p.tenant_id as "tenantId", p.type
+         FROM "products" p
+         LEFT JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
+         LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
+         WHERE p.id = $1
+         LIMIT 1;`,
+        id
+      );
+      return prodRows[0];
     });
 
     return res.status(200).json({
@@ -514,26 +495,38 @@ export const getProductDeleteInfo = async (req: Request, res: Response) => {
       });
       if (outlet) outletName = outlet.name;
 
-      const outletProd = await prisma.outletProduct.findUnique({
-        where: {
-          outletId_productId: {
-            outletId,
-            productId: id,
-          },
-        },
-      });
-      currentStock = outletProd?.stock ?? 0;
+      const balanceRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT COALESCE(ib.quantity_on_hand, 0) as stock
+         FROM "product_variants" pv
+         JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
+         JOIN "storage_locations" sl ON sl.outlet_id = $1 AND sl.is_default = true
+         LEFT JOIN "inventory_balances" ib ON ib.inventory_item_id = ii.id AND ib.storage_location_id = sl.id
+         WHERE pv.product_id = $2 AND pv.is_active = true
+         LIMIT 1;`,
+        outletId,
+        id
+      );
+      currentStock = Number(balanceRows[0]?.stock ?? 0);
 
-      transactionCount = await prisma.orderItem.count({
-        where: {
-          productId: id,
-          order: { outletId },
-        },
-      });
+      const countRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT count(*)::int as count 
+         FROM "order_items" oi
+         JOIN "orders" o ON o.id = oi.order_id
+         JOIN "product_variants" pv ON pv.id = oi.product_variant_id
+         WHERE pv.product_id = $1 AND o.outlet_id = $2;`,
+        id,
+        outletId
+      );
+      transactionCount = countRows[0]?.count ?? 0;
     } else {
-      transactionCount = await prisma.orderItem.count({
-        where: { productId: id },
-      });
+      const countRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT count(*)::int as count 
+         FROM "order_items" oi
+         JOIN "product_variants" pv ON pv.id = oi.product_variant_id
+         WHERE pv.product_id = $1;`,
+        id
+      );
+      transactionCount = countRows[0]?.count ?? 0;
     }
 
     return res.status(200).json({
@@ -566,7 +559,15 @@ export const deleteProduct = async (req: Request, res: Response) => {
     const { id } = req.params;
     const outletId = (req.query.outletId as string) || (req.body.outletId as string);
 
-    const userTenantId = req.user?.tenantId;
+    let userTenantId = req.user?.tenantId || req.tenantId;
+    if (!userTenantId) {
+      const prodRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT tenant_id FROM "products" WHERE id = $1 LIMIT 1;`,
+        id
+      );
+      userTenantId = prodRows[0]?.tenant_id;
+    }
+
     const existing = await prisma.product.findFirst({
       where: {
         id,
@@ -587,19 +588,17 @@ export const deleteProduct = async (req: Request, res: Response) => {
         select: { name: true },
       });
 
-      const deletedOutletProduct = await prisma.outletProduct.deleteMany({
-        where: {
-          outletId,
-          productId: id,
-        },
-      });
-
-      if (deletedOutletProduct.count === 0) {
-        return res.status(404).json({
-          status: 'error',
-          message: 'Produk tidak terhubung dengan cabang ini',
-        });
-      }
+      // Target schema: Hapus record saldo dari inventory_balances untuk outlet ini
+      await prisma.$queryRawUnsafe(
+        `DELETE FROM "inventory_balances" ib
+         USING "product_variants" pv, "storage_locations" sl
+         WHERE pv.product_id = $1
+           AND ib.inventory_item_id = pv.inventory_item_id
+           AND ib.storage_location_id = sl.id
+           AND sl.outlet_id = $2;`,
+        id,
+        outletId
+      );
 
       return res.status(200).json({
         status: 'success',
@@ -607,10 +606,13 @@ export const deleteProduct = async (req: Request, res: Response) => {
       });
     }
 
-    // Jika tanpa outletId: Soft-delete global
-    await prisma.product.update({
-      where: { id },
-      data: { isActive: false },
+    // Jika tanpa outletId: Soft-delete global via Dual-Write
+    await prisma.$transaction(async (tx) => {
+      return await catalogDualWriteService.deleteProduct(id, {
+        tx,
+        tenantId: userTenantId!,
+        actorUserId: req.user?.id,
+      });
     });
 
     return res.status(200).json({
@@ -656,16 +658,21 @@ export const bulkProductAction = async (req: Request, res: Response) => {
 
     if (action === 'DELETE') {
       if (outletId) {
-        const deleted = await prisma.outletProduct.deleteMany({
-          where: {
-            outletId,
-            productId: { in: productIds },
-          },
-        });
+        const deletedBalances = await prisma.$queryRawUnsafe<any[]>(
+          `DELETE FROM "inventory_balances" ib
+           USING "product_variants" pv, "storage_locations" sl
+           WHERE pv.product_id = ANY($1::text[])
+             AND ib.inventory_item_id = pv.inventory_item_id
+             AND ib.storage_location_id = sl.id
+             AND sl.outlet_id = $2
+           RETURNING ib.id;`,
+          productIds,
+          outletId
+        );
 
         return res.status(200).json({
           status: 'success',
-          message: `Berhasil melepas ${deleted.count} produk dari cabang ini. Riwayat transaksi masa lalu tetap aman.`,
+          message: `Berhasil melepas ${deletedBalances.length} produk dari cabang ini. Riwayat transaksi masa lalu tetap aman.`,
         });
       }
 
@@ -756,27 +763,35 @@ export const getAvailableProductsForOutlet = async (req: Request, res: Response)
       });
     }
 
-    const where: any = {
-      outletProducts: {
-        none: { outletId },
-      },
-    };
-
-    if (search && typeof search === 'string') {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { barcode: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-      ];
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Konteks tenant tidak ditemukan',
+      });
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      include: {
-        category: { select: { id: true, name: true } },
-      },
-      orderBy: { name: 'asc' },
-    });
+    const searchFilter = (search && typeof search === 'string') ? search : null;
+    const products = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT p.id, p.name, pv.barcode, pv.sku, pv.price as "basePrice", COALESCE(ii.average_cost, 0) as "costPrice",
+              p.unit, p.image_url as "imageUrl", json_build_object('id', c.id, 'name', c.name) as category
+       FROM "products" p
+       JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
+       LEFT JOIN "categories" c ON c.id = p.category_id
+       LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
+       WHERE p.is_active = true
+         AND p.tenant_id = $3
+         AND NOT EXISTS (
+           SELECT 1 FROM "outlet_products" op
+           WHERE op.outlet_id = $1 AND op.product_id = p.id AND op.is_available = true
+         )
+         AND ($2::text IS NULL OR p.name ILIKE '%' || $2 || '%' OR pv.sku ILIKE '%' || $2 || '%' OR pv.barcode ILIKE '%' || $2 || '%')
+       ORDER BY p.name ASC;`,
+      outletId,
+      searchFilter,
+      tenantId
+    );
 
     return res.status(200).json({
       status: 'success',
@@ -828,29 +843,63 @@ export const assignProductsToOutlet = async (req: Request, res: Response) => {
     }
 
     const { outletId, assignments } = parseResult.data;
+    const userTenantId = req.user?.tenantId || (req as any).tenantId;
 
-    const created = await prisma.$transaction(
-      assignments.map((item) =>
-        prisma.outletProduct.upsert({
-          where: {
-            outletId_productId: {
-              outletId,
-              productId: item.productId,
-            },
-          },
-          update: {
-            stock: item.initialStock,
-            price: item.customPrice,
-          },
-          create: {
+    const slRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, tenant_id FROM "storage_locations" WHERE outlet_id = $1 AND is_default = true LIMIT 1;`,
+      outletId
+    );
+    const storageLocation = slRows[0];
+    const tenantIdToUse = storageLocation ? storageLocation.tenant_id : userTenantId;
+
+    for (const item of assignments) {
+      // 1. Hubungkan produk ke outlet toko via outlet_products (EPIC-19)
+      await prisma.outletProduct.upsert({
+        where: {
+          outletId_productId: {
             outletId,
             productId: item.productId,
-            stock: item.initialStock,
-            price: item.customPrice,
           },
-        })
-      )
-    );
+        },
+        update: {
+          isAvailable: true,
+          priceOverride: item.customPrice || null,
+        },
+        create: {
+          tenantId: tenantIdToUse,
+          outletId,
+          productId: item.productId,
+          isAvailable: true,
+          priceOverride: item.customPrice || null,
+        },
+      });
+
+      // 2. Alokasikan saldo stok awal di storage location jika ada
+      if (storageLocation) {
+        const variantRows = await prisma.$queryRawUnsafe<any[]>(
+          `SELECT id, inventory_item_id, tenant_id FROM "product_variants" WHERE product_id = $1 AND is_active = true LIMIT 1;`,
+          item.productId
+        );
+        if (variantRows.length > 0 && variantRows[0].inventory_item_id) {
+          const iiId = variantRows[0].inventory_item_id;
+          const tenantId = variantRows[0].tenant_id;
+          const balanceId = crypto.randomUUID();
+          await prisma.$queryRawUnsafe(
+            `INSERT INTO "inventory_balances" (
+               id, tenant_id, inventory_item_id, storage_location_id, inventory_batch_id,
+               quantity_on_hand, quantity_reserved, updated_at
+             ) VALUES ($1, $2, $3, $4, null, $5, 0, CURRENT_TIMESTAMP)
+             ON CONFLICT ("tenant_id", "inventory_item_id", "storage_location_id") WHERE "inventory_batch_id" IS NULL
+             DO UPDATE SET "quantity_on_hand" = EXCLUDED."quantity_on_hand", "updated_at" = CURRENT_TIMESTAMP;`,
+            balanceId,
+            tenantId,
+            iiId,
+            storageLocation.id,
+            item.initialStock || 0
+          );
+        }
+      }
+    }
 
     // Pastikan master product juga aktif ketika dihubungkan ke cabang
     await prisma.product.updateMany({
@@ -860,7 +909,7 @@ export const assignProductsToOutlet = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       status: 'success',
-      message: `Berhasil menambahkan ${created.length} produk ke cabang ini`,
+      message: `Berhasil menambahkan ${assignments.length} produk ke cabang ini`,
     });
   } catch (error) {
     console.error('Error saat menghubungkan produk ke outlet:', error);

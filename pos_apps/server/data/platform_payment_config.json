@@ -1,0 +1,13 @@
+{
+  "qris": {
+    "enabled": true,
+    "merchantName": "WELL POS PLATFORM HQ",
+    "nmid": "ID1020030040050",
+    "bankName": "Bank Central Asia (BCA)",
+    "accountNumber": "8830129381",
+    "accountHolder": "PT Well POS Solusi",
+    "imageUrl": "https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C",
+    "notes": "Pindai kode QRIS di atas menggunakan GoPay, OVO, Dana, ShopeePay, BCA Mobile, Livin by Mandiri, atau m-Banking apa pun. Saldo token otomatis langsung bertambah setelah konfirmasi.",
+    "updatedAt": "2026-09-27T12:00:00.000Z"
+  }
+}

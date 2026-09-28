@@ -4,8 +4,10 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SaasLandingPage } from './pages/SaasLandingPage';
 import { SuperadminDashboardPage } from './pages/SuperadminDashboardPage';
+import { CustomerQrMenuView } from './pages/CustomerQrMenuView';
 import { api, authStorage } from './services/api';
 import type { User } from './types/auth';
+import { DialogProvider } from './context/DialogContext';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -65,9 +67,22 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
 
-  // View routing: 'landing' (SaaS Website Calon Klien) | 'pos-login' (Mesin Kasir Login) | 'superadmin' (Level 1 Internal Portal)
-  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin'>(() => {
+  // View routing: 'landing' | 'pos-login' | 'superadmin' | 'menu'
+  const [menuParams, setMenuParams] = useState<{ outletId: string; table: string }>(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#menu')) {
+      const qIdx = hash.indexOf('?');
+      if (qIdx !== -1) {
+        const p = new URLSearchParams(hash.slice(qIdx));
+        return { outletId: p.get('outletId') || '', table: p.get('table') || '01' };
+      }
+    }
+    return { outletId: '', table: '01' };
+  });
+
+  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu'>(() => {
     const hash = window.location.hash.toLowerCase();
+    if (hash.startsWith('#menu')) return 'menu';
     if (hash === '#pos' || hash === '#login') return 'pos-login';
     if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) return 'superadmin';
     return 'landing';
@@ -76,10 +91,22 @@ export const App: React.FC = () => {
   // Listen to hash changes for deep linking
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.toLowerCase();
-      if (hash === '#pos' || hash === '#login') setViewMode('pos-login');
-      else if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) setViewMode('superadmin');
-      else if (hash === '#landing' || hash === '') setViewMode('landing');
+      const hash = window.location.hash;
+      const lower = hash.toLowerCase();
+      if (lower.startsWith('#menu')) {
+        const qIdx = hash.indexOf('?');
+        if (qIdx !== -1) {
+          const p = new URLSearchParams(hash.slice(qIdx));
+          setMenuParams({ outletId: p.get('outletId') || '', table: p.get('table') || '01' });
+        }
+        setViewMode('menu');
+      } else if (lower === '#pos' || lower === '#login') {
+        setViewMode('pos-login');
+      } else if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(lower)) {
+        setViewMode('superadmin');
+      } else if (lower === '#landing' || lower === '') {
+        setViewMode('landing');
+      }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -146,60 +173,76 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div>
-        {/* JIKA USER MERCHANT LOGIN, TAMPILKAN DASHBOARD POS */}
-        {user ? (
-          <div>
-            {(user as any).isImpersonated && (
-              <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md sticky top-0 z-50 border-b border-amber-500">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">⚠️</span>
-                  <span>
-                    Mode Inspeksi Superadmin: Anda sedang melihat toko{' '}
-                    <strong>{(user as any).businessName || user.outlet?.name}</strong>. Seluruh data operasional ini nyata milik klien.
-                  </span>
+      <DialogProvider>
+        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
+          {/* JIKA MODE BUKU MENU QR, TAMPILKAN HALAMAN PELANGGAN */}
+          {viewMode === 'menu' ? (
+            <div className="flex-1 flex flex-col">
+              <CustomerQrMenuView
+                outletId={menuParams.outletId || user?.outletId || user?.outlet?.id || ''}
+                tableCode={menuParams.table}
+              />
+            </div>
+          ) : user ? (
+            /* JIKA USER MERCHANT LOGIN, TAMPILKAN DASHBOARD POS */
+            <div className="flex-1 flex flex-col">
+              {(user as any).isImpersonated && (
+                <div className="bg-amber-400 text-slate-950 px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-md sticky top-0 z-50 border-b border-amber-500">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⚠️</span>
+                    <span>
+                      Mode Inspeksi Superadmin: Anda sedang mengaudit toko{' '}
+                      <strong>{(user as any).businessName || user.outlet?.name}</strong>. Seluruh data operasional ini nyata milik klien.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      authStorage.clearSession();
+                      setUser(null);
+                      navigateTo('superadmin');
+                    }}
+                    className="bg-slate-950 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                  >
+                    &larr; Keluar &amp; Kembali ke Superadmin
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    authStorage.clearSession();
-                    setUser(null);
-                    navigateTo('superadmin');
-                  }}
-                  className="bg-slate-950 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm"
-                >
-                  &larr; Kembali ke Platform Superadmin
-                </button>
-              </div>
-            )}
-            <DashboardPage
-              user={user}
-              onLogout={handleLogout}
-              onUserChange={(updatedUser) => setUser(updatedUser)}
-            />
-          </div>
-        ) : viewMode === 'superadmin' ? (
-          /* LEVEL 1: SUPERADMIN PLATFORM DASHBOARD */
-          <SuperadminDashboardPage
-            onBackToLanding={() => navigateTo('landing')}
-            onOpenPos={() => navigateTo('pos-login')}
-            onImpersonateSuccess={(impersonatedUser) => handleLoginSuccess(impersonatedUser)}
-          />
-        ) : viewMode === 'pos-login' ? (
-          /* LEVEL 2: TERMINAL MESIN KASIR LOGIN */
-          <LoginPage
-            onLoginSuccess={handleLoginSuccess}
-            onGoToLanding={() => navigateTo('landing')}
-            onGoToSuperadmin={() => navigateTo('superadmin')}
-          />
-        ) : (
-          /* WEBSITE PUBLIK SAAS KOMPREHENSIF UNTUK CALON KLIEN */
-          <SaasLandingPage
-            onOpenPos={() => navigateTo('pos-login')}
-            onOpenSuperadmin={() => navigateTo('superadmin')}
-          />
-        )}
-      </div>
+              )}
+              <DashboardPage
+                user={user}
+                onLogout={handleLogout}
+                onUserChange={(updatedUser) => setUser(updatedUser)}
+              />
+            </div>
+          ) : viewMode === 'superadmin' ? (
+            /* LEVEL 1: SUPERADMIN PLATFORM DASHBOARD */
+            <div className="flex-1 flex flex-col">
+              <SuperadminDashboardPage
+                onBackToLanding={() => navigateTo('landing')}
+                onOpenPos={() => navigateTo('pos-login')}
+                onImpersonateSuccess={(impersonatedUser) => handleLoginSuccess(impersonatedUser)}
+              />
+            </div>
+          ) : viewMode === 'pos-login' ? (
+            /* LEVEL 2: TERMINAL MESIN KASIR LOGIN */
+            <div className="flex-1 flex flex-col">
+              <LoginPage
+                onLoginSuccess={handleLoginSuccess}
+                onGoToLanding={() => navigateTo('landing')}
+                onGoToSuperadmin={() => navigateTo('superadmin')}
+              />
+            </div>
+          ) : (
+            /* WEBSITE PUBLIK SAAS KOMPREHENSIF UNTUK CALON KLIEN */
+            <div className="flex-1 flex flex-col">
+              <SaasLandingPage
+                onOpenPos={() => navigateTo('pos-login')}
+                onOpenSuperadmin={() => navigateTo('superadmin')}
+              />
+            </div>
+          )}
+        </div>
+      </DialogProvider>
     </ErrorBoundary>
   );
 };

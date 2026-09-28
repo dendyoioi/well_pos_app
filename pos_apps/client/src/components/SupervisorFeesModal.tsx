@@ -13,10 +13,14 @@ import {
   Star,
   Edit2,
   Check,
+  Utensils,
 } from 'lucide-react';
 import type { Outlet, OutletFee, FeeType, FeeChannelScope, FeeCategory } from '../types/outlet';
+import { normalizeOutletFees } from '../types/outlet';
 import { api } from '../services/api';
 import { ConfirmModal } from './ConfirmModal';
+import { CurrencyInput } from './ui/CurrencyInput';
+import { useDialog } from '../context/DialogContext';
 
 interface SupervisorFeesModalProps {
   isOpen: boolean;
@@ -25,6 +29,7 @@ interface SupervisorFeesModalProps {
   onSaved: (updatedFees: OutletFee[]) => void;
   isDirectAuthorized?: boolean; // True if opened by Admin/Owner directly without PIN
   currentUserRole?: string;
+  initialTab?: 'TAX' | 'SERVICE' | 'PACKAGING';
 }
 
 export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
@@ -34,7 +39,9 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
   onSaved,
   isDirectAuthorized = false,
   currentUserRole,
+  initialTab = 'TAX',
 }) => {
+  const dialog = useDialog();
   const isRoleDirect =
     isDirectAuthorized ||
     currentUserRole === 'ADMIN' ||
@@ -46,8 +53,8 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
 
-  // Active Sub-tab in Modal: Tax & Service (Automatic) vs Packaging & On-Demand (Manual Kasir)
-  const [activeTab, setActiveTab] = useState<'TAX_SERVICE' | 'ON_DEMAND'>('TAX_SERVICE');
+  // Active Sub-tab in Modal: Tax vs Service vs Packaging
+  const [activeTab, setActiveTab] = useState<'TAX' | 'SERVICE' | 'PACKAGING'>('TAX');
 
   // Fees State
   const [fees, setFees] = useState<OutletFee[]>([]);
@@ -66,6 +73,9 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState<string>('');
 
+  // Delete Fee State (Hoisted to top to strictly preserve Hook call order)
+  const [feeToDelete, setFeeToDelete] = useState<OutletFee | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       setPinAuthorized(isRoleDirect);
@@ -75,92 +85,12 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
       setErrorMessage(null);
       setShowAddForm(false);
       setEditingTitleId(null);
+      setFeeToDelete(null);
+      setActiveTab(initialTab || 'TAX');
 
-      if (outlet.feesConfig && Array.isArray(outlet.feesConfig) && outlet.feesConfig.length > 0) {
-        // Normalize categories & quickAccess for backward compatibility
-        const normalized: OutletFee[] = outlet.feesConfig.map((f, idx) => {
-          const isTaxOrService =
-            f.type === 'PERCENTAGE' || ['fee_tax', 'fee_service'].includes(f.id);
-          const category: FeeCategory =
-            f.category || (isTaxOrService ? 'DEFAULT_TAX_SERVICE' : 'ON_DEMAND_PACKAGING');
-          const isQuickAccess =
-            f.isQuickAccess !== undefined
-              ? f.isQuickAccess
-              : category === 'ON_DEMAND_PACKAGING' && idx <= 3;
-          return {
-            ...f,
-            category,
-            isQuickAccess,
-          };
-        });
-        setFees(normalized);
-      } else {
-        // Default standard initial fees
-        setFees([
-          {
-            id: 'fee_tax',
-            name: 'PPN / PB1 Pajak',
-            type: 'PERCENTAGE',
-            rate: 10,
-            channelScope: 'ALL',
-            isActive: true,
-            category: 'DEFAULT_TAX_SERVICE',
-          },
-          {
-            id: 'fee_service',
-            name: 'Biaya Layanan (Service Charge)',
-            type: 'PERCENTAGE',
-            rate: 5,
-            channelScope: 'DINE_IN',
-            isActive: false,
-            category: 'DEFAULT_TAX_SERVICE',
-          },
-          {
-            id: 'fee_plastic_s',
-            name: 'Plastik / Kresek Sedang',
-            type: 'FIXED',
-            rate: 500,
-            channelScope: 'ALL',
-            isActive: true,
-            category: 'ON_DEMAND_PACKAGING',
-            isQuickAccess: true,
-          },
-          {
-            id: 'fee_box',
-            name: 'Box Kemasan / Mika',
-            type: 'FIXED',
-            rate: 2000,
-            channelScope: 'ALL',
-            isActive: true,
-            category: 'ON_DEMAND_PACKAGING',
-            isQuickAccess: true,
-          },
-          {
-            id: 'fee_paperbag',
-            name: 'Paper Bag Kraft',
-            type: 'FIXED',
-            rate: 3000,
-            channelScope: 'ALL',
-            isActive: true,
-            category: 'ON_DEMAND_PACKAGING',
-            isQuickAccess: true,
-          },
-          {
-            id: 'fee_cutlery',
-            name: 'Set Sendok & Garpu Higienis',
-            type: 'FIXED',
-            rate: 1000,
-            channelScope: 'ALL',
-            isActive: true,
-            category: 'ON_DEMAND_PACKAGING',
-            isQuickAccess: true,
-          },
-        ]);
-      }
+      setFees(normalizeOutletFees(outlet.feesConfig));
     }
-  }, [isOpen, outlet, isDirectAuthorized]);
-
-  if (!isOpen) return null;
+  }, [isOpen, outlet, isDirectAuthorized, initialTab]);
 
   // Handle PIN verification
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -194,7 +124,11 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
         (f) => f.category === 'ON_DEMAND_PACKAGING' && f.isQuickAccess
       ).length;
       if (activeQuickCount >= 4) {
-        alert('Maksimal 4 kemasan/biaya yang dapat dipin ke Akses Cepat Keranjang Kasir.');
+        dialog.alert({
+          title: 'Batas Akses Cepat',
+          message: 'Maksimal 4 kemasan/biaya yang dapat dipin ke Akses Cepat Keranjang Kasir.',
+          variant: 'warning',
+        });
         return;
       }
     }
@@ -233,8 +167,6 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
     );
   };
 
-  const [feeToDelete, setFeeToDelete] = useState<OutletFee | null>(null);
-
   // Delete Fee via ConfirmModal
   const executeDeleteFee = () => {
     if (feeToDelete) {
@@ -248,9 +180,10 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
     e.preventDefault();
     if (!newFeeName.trim()) return;
 
-    const isTaxTab = activeTab === 'TAX_SERVICE';
-    const category: FeeCategory = isTaxTab ? 'DEFAULT_TAX_SERVICE' : 'ON_DEMAND_PACKAGING';
-    const type: FeeType = isTaxTab ? newFeeType : 'FIXED';
+    const isTaxTab = activeTab === 'TAX';
+    const isServiceTab = activeTab === 'SERVICE';
+    const category: FeeCategory = activeTab === 'PACKAGING' ? 'ON_DEMAND_PACKAGING' : 'DEFAULT_TAX_SERVICE';
+    const type: FeeType = activeTab === 'PACKAGING' ? 'FIXED' : newFeeType;
 
     const newFee: OutletFee = {
       id: `fee_${Date.now()}`,
@@ -260,12 +193,12 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
       channelScope: newFeeChannel,
       isActive: true,
       category,
-      isQuickAccess: !isTaxTab, // Default true for new on-demand item if slots available
+      isQuickAccess: activeTab === 'PACKAGING',
     };
 
     setFees((prev) => [...prev, newFee]);
     setNewFeeName('');
-    setNewFeeRate(isTaxTab ? 10 : 1000);
+    setNewFeeRate(isTaxTab ? 10 : isServiceTab ? 5 : 1000);
     setShowAddForm(false);
   };
 
@@ -296,10 +229,29 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
     }
   };
 
+  // Helper filtering kanonikal
+  const isTax = (f: OutletFee) =>
+    f.id === 'fee_tax' ||
+    (f.category === 'DEFAULT_TAX_SERVICE' &&
+      (f.name.toLowerCase().includes('pajak') ||
+        f.name.toLowerCase().includes('pb1') ||
+        f.name.toLowerCase().includes('ppn') ||
+        f.name.toLowerCase().includes('pbjt')));
+  const isService = (f: OutletFee) => f.category !== 'ON_DEMAND_PACKAGING' && !isTax(f);
+  const isPackaging = (f: OutletFee) => f.category === 'ON_DEMAND_PACKAGING';
+
   // Filtered by active tab
-  const taxFees = fees.filter((f) => f.category === 'DEFAULT_TAX_SERVICE');
-  const onDemandFees = fees.filter((f) => f.category === 'ON_DEMAND_PACKAGING');
-  const displayedFees = activeTab === 'TAX_SERVICE' ? taxFees : onDemandFees;
+  const taxFees = fees.filter(isTax);
+  const serviceFees = fees.filter(isService);
+  const packagingFees = fees.filter(isPackaging);
+  const displayedFees =
+    activeTab === 'TAX'
+      ? taxFees
+      : activeTab === 'SERVICE'
+      ? serviceFees
+      : packagingFees;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
@@ -320,7 +272,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-blue-200/90 font-medium">
-                Cabang: <span className="text-white font-bold">{outlet.name}</span>
+                Outlet Toko: <span className="text-white font-bold">{outlet.name}</span>
               </p>
             </div>
           </div>
@@ -398,22 +350,22 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
         ) : (
           /* Main Tabbed Fee Configuration Screen */
           <div className="flex-1 flex flex-col min-h-0">
-            {/* 2 Tabs Header */}
-            <div className="p-2 bg-slate-100 border-b border-slate-200 flex gap-1.5 shrink-0">
+            {/* 3 Tabs Header: Pajak vs Layanan vs Kemasan */}
+            <div className="p-2 bg-slate-100 border-b border-slate-200 flex gap-1.5 shrink-0 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => {
-                  setActiveTab('TAX_SERVICE');
+                  setActiveTab('TAX');
                   setShowAddForm(false);
                 }}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                  activeTab === 'TAX_SERVICE'
+                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  activeTab === 'TAX'
                     ? 'bg-white text-blue-950 shadow-sm border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
-                <Building2 className="w-4 h-4 text-blue-900" />
-                <span>Biaya Toko & Pajak (Otomatis)</span>
+                <Building2 className="w-3.5 h-3.5 text-blue-900" />
+                <span>Pajak (PB1)</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-900 font-extrabold">
                   {taxFees.length}
                 </span>
@@ -422,19 +374,38 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setActiveTab('ON_DEMAND');
+                  setActiveTab('SERVICE');
                   setShowAddForm(false);
                 }}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                  activeTab === 'ON_DEMAND'
-                    ? 'bg-white text-blue-950 shadow-sm border border-slate-200'
+                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  activeTab === 'SERVICE'
+                    ? 'bg-white text-emerald-950 shadow-sm border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
-                <ShoppingBag className="w-4 h-4 text-emerald-600" />
-                <span>Kemasan & On-Demand (Manual Kasir)</span>
+                <Utensils className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Biaya Layanan &amp; Kurir</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-900 font-extrabold">
-                  {onDemandFees.length}
+                  {serviceFees.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('PACKAGING');
+                  setShowAddForm(false);
+                }}
+                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  activeTab === 'PACKAGING'
+                    ? 'bg-white text-amber-950 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                <span>Kemasan Kasir</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 font-extrabold">
+                  {packagingFees.length}
                 </span>
               </button>
             </div>
@@ -446,14 +417,18 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                 <Sliders className="w-4 h-4 text-blue-900 mt-0.5 shrink-0" />
                 <div>
                   <span className="font-bold">
-                    {activeTab === 'TAX_SERVICE'
-                      ? 'Pajak & Layanan Toko Terhitung Otomatis:'
-                      : 'Kemasan & Layanan Tambahan (On-Demand):'}
+                    {activeTab === 'TAX'
+                      ? 'Pajak Daerah Restoran (PB1 / PBJT):'
+                      : activeTab === 'SERVICE'
+                      ? 'Biaya Layanan & Operasional Restoran:'
+                      : 'Kemasan & Wadah Bawa Pulang (On-Demand):'}
                   </span>
                   <p className="text-slate-600 mt-0.5 leading-relaxed">
-                    {activeTab === 'TAX_SERVICE'
-                      ? 'Biaya ini otomatis dihitung dari subtotal produk jika keranjang terisi. Anda dapat mengedit judul nama biaya, tarif %, dan saluran yang berlaku.'
-                      : 'Biaya kemasan dipilih kasir sesuai pesanan pelanggan. Tandai ⭐ Akses Cepat pada 4 kemasan terfavorit untuk tampil langsung di depan keranjang kasir.'}
+                    {activeTab === 'TAX'
+                      ? 'Pajak dipungut otomatis saat checkout dan disetorkan ke Bapenda (bukan hak/omzet restoran).'
+                      : activeTab === 'SERVICE'
+                      ? 'Biaya operasional tambahan yang menjadi pendapatan toko (Service Charge, Ongkir Kurir Toko, Platform).'
+                      : 'Biaya kemasan dipilih kasir sesuai pesanan. Tandai ⭐ Akses Cepat pada 4 kemasan terfavorit untuk tampil di keranjang kasir.'}
                   </p>
                 </div>
               </div>
@@ -469,7 +444,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
               {saveSuccess && (
                 <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fadeIn">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Perubahan konfigurasi biaya cabang berhasil disimpan!</span>
+                  <span>Perubahan konfigurasi biaya toko berhasil disimpan!</span>
                 </div>
               )}
 
@@ -544,8 +519,13 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                               className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700 outline-none cursor-pointer"
                             >
                               <option value="ALL">Semua Saluran</option>
-                              <option value="DINE_IN">Hanya Dine In</option>
-                              <option value="TAKEAWAY">Hanya Takeaway</option>
+                              <option value="DINE_IN">Makan di Tempat (Dine In)</option>
+                              <option value="TAKEAWAY">Bawa Pulang (Take Away)</option>
+                              <option value="DELIVERY">Kurir Toko (Delivery)</option>
+                              <option value="ONLINE_DELIVERY">Semua Mitra Online</option>
+                              <option value="GOFOOD">Khusus GoFood</option>
+                              <option value="GRABFOOD">Khusus GrabFood</option>
+                              <option value="SHOPEEFOOD">Khusus ShopeeFood</option>
                             </select>
                           ) : (
                             fee.isQuickAccess && (
@@ -561,16 +541,28 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                           <div className="flex items-center gap-1.5 text-xs text-slate-600">
                             <span className="font-medium">Tarif / Harga:</span>
-                            {fee.type === 'FIXED' && <span className="text-slate-400 font-bold">Rp</span>}
-                            <input
-                              type="number"
-                              min={0}
-                              value={fee.rate}
-                              onChange={(e) => updateFeeRate(fee.id, Number(e.target.value))}
-                              className="w-24 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-blue-950 focus:border-blue-900 outline-none"
-                            />
-                            {fee.type === 'PERCENTAGE' && (
-                              <span className="font-extrabold text-blue-900">%</span>
+                            {fee.type === 'FIXED' ? (
+                              <div className="w-32">
+                                <CurrencyInput
+                                  value={fee.rate}
+                                  onChange={(val) => updateFeeRate(fee.id, val)}
+                                  inputClassName="py-1 text-xs font-bold text-right pl-14 rounded-lg"
+                                  prefixClassName="text-[10px] py-0.5 px-1.5"
+                                  placeholder="0"
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={fee.rate}
+                                  onChange={(e) => updateFeeRate(fee.id, Number(e.target.value))}
+                                  className="w-20 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-blue-950 focus:border-blue-900 outline-none"
+                                />
+                                <span className="font-extrabold text-blue-900">%</span>
+                              </>
                             )}
                             {fee.category === 'ON_DEMAND_PACKAGING' && (
                               <span className="text-slate-400 text-[11px]">/ pcs</span>
@@ -618,8 +610,8 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                           />
                         </button>
 
-                        {/* Delete button (only custom or on-demand items) */}
-                        {!['fee_tax', 'fee_service'].includes(fee.id) && (
+                        {/* Delete button (bisa hapus semua biaya kecuali pajak utama) */}
+                        {fee.id !== 'fee_tax' && (
                           <button
                             type="button"
                             onClick={() => setFeeToDelete(fee)}
@@ -643,8 +635,10 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <h5 className="font-bold text-xs text-blue-950 uppercase tracking-wider">
-                      {activeTab === 'TAX_SERVICE'
-                        ? '+ Tambah Biaya Toko / Pajak Baru'
+                      {activeTab === 'TAX'
+                        ? '+ Tambah Komponen Pajak Daerah Baru'
+                        : activeTab === 'SERVICE'
+                        ? '+ Tambah Biaya Layanan / Kurir Baru'
                         : '+ Tambah Kemasan / Biaya On-Demand Baru'}
                     </h5>
                     <button
@@ -658,17 +652,21 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      {activeTab === 'TAX_SERVICE'
-                        ? 'Nama Biaya / Pajak (Bebas Diedit)'
-                        : 'Nama Kemasan / Layanan Tambahan'}
+                      {activeTab === 'TAX'
+                        ? 'Nama Komponen Pajak'
+                        : activeTab === 'SERVICE'
+                        ? 'Nama Biaya Layanan / Operasional'
+                        : 'Nama Kemasan / Wadah Kasir'}
                     </label>
                     <input
                       type="text"
                       required
                       placeholder={
-                        activeTab === 'TAX_SERVICE'
-                          ? 'Contoh: PB1 Daerah 10%, Service Charge VIP'
-                          : 'Contoh: Kantong Plastik Jumbo, Box Dus Besar, Sendok Kayu'
+                        activeTab === 'TAX'
+                          ? 'Contoh: PB1 Pajak Restoran Daerah 10%'
+                          : activeTab === 'SERVICE'
+                          ? 'Contoh: Service Charge Meja, Ongkir Kurir Toko'
+                          : 'Contoh: Kantong Plastik Jumbo, Box Dus Besar'
                       }
                       value={newFeeName}
                       onChange={(e) => setNewFeeName(e.target.value)}
@@ -676,8 +674,8 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                     />
                   </div>
 
-                  <div className={`grid ${activeTab === 'TAX_SERVICE' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
-                    {activeTab === 'TAX_SERVICE' ? (
+                  <div className={`grid ${activeTab !== 'PACKAGING' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+                    {activeTab !== 'PACKAGING' ? (
                       <>
                         <div>
                           <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -702,8 +700,13 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                             className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium outline-none"
                           >
                             <option value="ALL">Semua Saluran</option>
-                            <option value="DINE_IN">Dine In</option>
-                            <option value="TAKEAWAY">Takeaway</option>
+                            <option value="DINE_IN">Makan di Tempat (Dine In)</option>
+                            <option value="TAKEAWAY">Bawa Pulang (Take Away)</option>
+                            <option value="DELIVERY">Kurir Toko (Delivery)</option>
+                            <option value="ONLINE_DELIVERY">Semua Mitra Online</option>
+                            <option value="GOFOOD">Khusus GoFood</option>
+                            <option value="GRABFOOD">Khusus GrabFood</option>
+                            <option value="SHOPEEFOOD">Khusus ShopeeFood</option>
                           </select>
                         </div>
                       </>
@@ -723,18 +726,32 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        {activeTab === 'TAX_SERVICE'
+                        {activeTab !== 'PACKAGING'
                           ? `Tarif (${newFeeType === 'PERCENTAGE' ? '%' : 'Rp'})`
                           : 'Harga per Pcs (Rp)'}
                       </label>
-                      <input
-                        type="number"
-                        min={0}
-                        required
-                        value={newFeeRate}
-                        onChange={(e) => setNewFeeRate(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold outline-none focus:border-blue-900"
-                      />
+                      {activeTab !== 'PACKAGING' && newFeeType === 'PERCENTAGE' ? (
+                        <div className="relative flex items-center">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            required
+                            value={newFeeRate}
+                            onChange={(e) => setNewFeeRate(Number(e.target.value))}
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold outline-none focus:border-blue-900 pr-8"
+                          />
+                          <span className="absolute right-3 font-black text-blue-900 text-xs">%</span>
+                        </div>
+                      ) : (
+                        <CurrencyInput
+                          value={newFeeRate}
+                          onChange={(val) => setNewFeeRate(val)}
+                          inputClassName="py-2 text-xs font-bold text-right"
+                          placeholder="0"
+                          required
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -760,14 +777,16 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                   onClick={() => {
                     setShowAddForm(true);
                     setNewFeeName('');
-                    setNewFeeRate(activeTab === 'TAX_SERVICE' ? 10 : 1000);
+                    setNewFeeRate(activeTab === 'TAX' ? 10 : activeTab === 'SERVICE' ? 5 : 1000);
                   }}
                   className="w-full py-2.5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 text-slate-600 hover:text-blue-900 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <Plus className="w-4 h-4" />
                   <span>
-                    {activeTab === 'TAX_SERVICE'
-                      ? 'Tambah Biaya Pajak / Layanan Baru'
+                    {activeTab === 'TAX'
+                      ? 'Tambah Komponen Pajak Baru'
+                      : activeTab === 'SERVICE'
+                      ? 'Tambah Biaya Layanan / Kurir Baru'
                       : 'Tambah Jenis Kemasan / Biaya On-Demand Baru'}
                   </span>
                 </button>

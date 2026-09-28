@@ -3,13 +3,22 @@ import { X, ArrowDownRight, ArrowUpRight, SlidersHorizontal, Check, AlertCircle,
 import type { Product } from '../types/product';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
+import { CurrencyInput } from './ui/CurrencyInput';
 
 interface StockMovementModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  products: Product[];
+  products?: Product[];
   defaultProduct?: Product | null;
+  defaultIngredient?: {
+    id: string;
+    itemCode?: string;
+    name: string;
+    canonicalUom: string;
+    averageCost?: number;
+    stock?: number;
+  } | null;
   defaultType?: 'IN' | 'OUT' | 'ADJUST';
   outletId?: string;
 }
@@ -18,8 +27,9 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  products,
+  products = [],
   defaultProduct,
+  defaultIngredient,
   defaultType = 'IN',
   outletId,
 }) => {
@@ -42,7 +52,10 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
 
   useEffect(() => {
     setType(defaultType);
-    if (defaultProduct) {
+    if (defaultIngredient) {
+      setActualStock(defaultIngredient.stock || 0);
+      setNewCostPrice(String(defaultIngredient.averageCost || ''));
+    } else if (defaultProduct) {
       setSelectedProductId(defaultProduct.id);
       setActualStock(defaultProduct.stock);
       setNewCostPrice(String(defaultProduct.costPrice || ''));
@@ -72,70 +85,119 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
         }
       }).catch((err) => console.error('Gagal mengambil daftar outlet:', err));
     }
-  }, [defaultProduct, defaultType, products, isOpen, outletId]);
+  }, [defaultProduct, defaultIngredient, defaultType, products, isOpen, outletId]);
 
   useEffect(() => {
-    if (currentProduct) {
+    if (currentProduct && !defaultIngredient) {
       setActualStock(currentProduct.stock);
       setNewCostPrice(String(currentProduct.costPrice || ''));
     }
-  }, [selectedProductId]);
+  }, [selectedProductId, defaultIngredient]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProductId) return;
+    if (!defaultIngredient && !selectedProductId) return;
 
     setError(null);
     setLoading(true);
 
     try {
-      if (type === 'IN') {
-        const res = await api.recordStockIn({
-          productId: selectedProductId,
-          quantity: Number(quantity),
-          notes,
-          poNumber: poNumber.trim() || undefined,
-          supplierName: supplierName.trim() || undefined,
-          newCostPrice: newCostPrice ? Number(newCostPrice) : undefined,
-          outletId: targetOutletId || outletId,
-        });
-        if (res.status === 'success') {
-          onSuccess();
-          onClose();
+      if (defaultIngredient) {
+        // Alur Mutasi Bahan Baku Mentah
+        if (type === 'IN') {
+          const res = await api.recordStockIn({
+            inventoryItemId: defaultIngredient.id,
+            quantity: Number(quantity),
+            notes,
+            poNumber: poNumber.trim() || undefined,
+            supplierName: supplierName.trim() || undefined,
+            newCostPrice: newCostPrice ? Number(newCostPrice) : undefined,
+            outletId: targetOutletId || outletId,
+          });
+          if (res.status === 'success') {
+            onSuccess();
+            onClose();
+          } else {
+            setError(res.message || 'Gagal mencatat stok masuk');
+          }
+        } else if (type === 'OUT') {
+          const currentBal = Number(defaultIngredient.stock || 0);
+          const res = await api.recordStockAdjustment({
+            inventoryItemId: defaultIngredient.id,
+            actualStock: Math.max(0, currentBal - Number(quantity)),
+            notes: notes ? `Stok keluar: ${notes}` : 'Barang rusak / terbuang',
+            outletId: targetOutletId || outletId,
+          });
+          if (res.status === 'success') {
+            onSuccess();
+            onClose();
+          } else {
+            setError(res.message || 'Gagal mencatat stok keluar');
+          }
         } else {
-          setError(res.message || 'Gagal mencatat stok masuk');
-        }
-      } else if (type === 'OUT') {
-        const res = await api.recordStockOut({
-          productId: selectedProductId,
-          quantity: Number(quantity),
-          notes,
-          outletId: targetOutletId || outletId,
-        });
-        if (res.status === 'success') {
-          onSuccess();
-          onClose();
-        } else {
-          setError(res.message || 'Gagal mencatat stok keluar');
+          const res = await api.recordStockAdjustment({
+            inventoryItemId: defaultIngredient.id,
+            actualStock: Number(actualStock),
+            notes: notes || 'Opname fisik dapur/gudang',
+            outletId: targetOutletId || outletId,
+          });
+          if (res.status === 'success') {
+            onSuccess();
+            onClose();
+          } else {
+            setError(res.message || 'Gagal mencatat penyesuaian stok');
+          }
         }
       } else {
-        const res = await api.recordStockAdjustment({
-          productId: selectedProductId,
-          actualStock: Number(actualStock),
-          notes,
-          outletId: targetOutletId || outletId,
-        });
-        if (res.status === 'success') {
-          onSuccess();
-          onClose();
+        // Alur Mutasi Produk Jadi Retail
+        if (type === 'IN') {
+          const res = await api.recordStockIn({
+            productId: selectedProductId,
+            quantity: Number(quantity),
+            notes,
+            poNumber: poNumber.trim() || undefined,
+            supplierName: supplierName.trim() || undefined,
+            newCostPrice: newCostPrice ? Number(newCostPrice) : undefined,
+            outletId: targetOutletId || outletId,
+          });
+          if (res.status === 'success') {
+            onSuccess();
+            onClose();
+          } else {
+            setError(res.message || 'Gagal mencatat stok masuk');
+          }
+        } else if (type === 'OUT') {
+          const res = await api.recordStockOut({
+            productId: selectedProductId,
+            quantity: Number(quantity),
+            notes,
+            outletId: targetOutletId || outletId,
+          });
+          if (res.status === 'success') {
+            onSuccess();
+            onClose();
+          } else {
+            setError(res.message || 'Gagal mencatat stok keluar');
+          }
         } else {
-          setError(res.message || 'Gagal mencatat penyesuaian stok');
+          const res = await api.recordStockAdjustment({
+            productId: selectedProductId,
+            actualStock: Number(actualStock),
+            notes,
+            outletId: targetOutletId || outletId,
+          });
+          if (res.status === 'success') {
+            onSuccess();
+            onClose();
+          } else {
+            setError(res.message || 'Gagal mencatat penyesuaian stok');
+          }
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan');
+      setError(err.message || 'Terjadi kesalahan sistem');
     } finally {
       setLoading(false);
     }
@@ -218,7 +280,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-bold text-slate-700">
-                  {type === 'IN' ? 'Lokasi Penerimaan Stok (Gudang / Cabang) *' : 'Lokasi Cabang / Gudang *'}
+                  {type === 'IN' ? 'Lokasi Penerimaan Stok (Gudang / Outlet Toko) *' : 'Lokasi Toko / Gudang *'}
                 </label>
                 {outlets.find((o) => o.id === targetOutletId)?.isWarehouse && (
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
@@ -233,39 +295,59 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
               >
                 {outlets.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.isWarehouse ? '🏭 [Gudang Pusat]' : '🏪 [Cabang]'} {o.name}
+                    {o.isWarehouse ? '🏭 [Gudang Pusat]' : '🏪 [Toko]'} {o.name}
                   </option>
                 ))}
               </select>
               <p className="text-[10px] text-slate-500 mt-1">
                 {type === 'IN'
-                  ? 'Anda dapat menerima barang langsung di Gudang Pusat untuk kemudian ditransfer, atau langsung di cabang tertentu.'
+                  ? 'Anda dapat menerima barang langsung di Gudang Pusat untuk kemudian ditransfer, atau langsung di outlet toko tertentu.'
                   : 'Pilih lokasi di mana perubahan stok fisik ini terjadi.'}
               </p>
             </div>
           )}
 
-          {/* Pilih Produk */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Pilih Produk *
-            </label>
-            <select
-              required
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none"
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  [{p.sku}] {p.name} (Stok saat ini: {p.stock} {p.unit})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Pilih Produk atau Info Bahan Baku */}
+          {defaultIngredient ? (
+            <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
+                  Bahan Baku Mentah F&amp;B
+                </span>
+                <h4 className="text-sm font-extrabold text-blue-950">{defaultIngredient.name}</h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  Kode: {defaultIngredient.itemCode || '-'} • Satuan: {defaultIngredient.canonicalUom}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 block">Stok Saat Ini</span>
+                <span className="text-sm font-black text-blue-900">
+                  {defaultIngredient.stock || 0} {defaultIngredient.canonicalUom}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Pilih Produk *
+              </label>
+              <select
+                required
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none"
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    [{p.sku}] {p.name} (Stok saat ini: {p.stock} {p.unit})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Info Stok Saat Ini */}
-          {currentProduct && (
+          {/* Info Stok Saat Ini untuk Produk */}
+          {!defaultIngredient && currentProduct && (
             <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl flex items-center justify-between text-xs text-blue-950 font-semibold">
               <span>Stok Riil Sistem Sekarang:</span>
               <span className="font-extrabold text-sm text-blue-900">
@@ -278,7 +360,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
           {type === 'ADJUST' ? (
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Stok Fisik Hasil Opname *
+                Stok Fisik Hasil Opname ({defaultIngredient ? defaultIngredient.canonicalUom : (currentProduct?.unit || 'Satuan')}) *
               </label>
               <input
                 type="number"
@@ -288,11 +370,15 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
                 onChange={(e) => setActualStock(Number(e.target.value))}
                 className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none font-bold"
               />
-              {currentProduct && (
+              {defaultIngredient ? (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Selisih: {actualStock - (defaultIngredient.stock || 0) > 0 ? `+${actualStock - (defaultIngredient.stock || 0)}` : actualStock - (defaultIngredient.stock || 0)} {defaultIngredient.canonicalUom}
+                </p>
+              ) : currentProduct ? (
                 <p className="text-[11px] text-slate-500 mt-1">
                   Selisih: {actualStock - currentProduct.stock > 0 ? `+${actualStock - currentProduct.stock}` : actualStock - currentProduct.stock} {currentProduct.unit}
                 </p>
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="space-y-3">
@@ -347,19 +433,13 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
                     <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
                       Perbarui Harga Modal Beli (HPP Satuan):
                     </label>
-                    <div className="relative">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">
-                        Rp
-                      </span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={newCostPrice}
-                        onChange={(e) => setNewCostPrice(e.target.value)}
-                        placeholder="Biarkan kosong jika tidak ada perubahan HPP"
-                        className="w-full pl-8 pr-2.5 py-1.5 bg-white border border-slate-300 focus:border-blue-900 rounded-xl text-xs text-slate-800 font-bold outline-none"
-                      />
-                    </div>
+                    <CurrencyInput
+                      value={newCostPrice}
+                      onChange={(val) => setNewCostPrice(val > 0 ? String(val) : '')}
+                      inputClassName="py-1.5 text-xs text-slate-800 font-bold text-right"
+                      prefixClassName="text-[11px] py-0.5 px-1.5"
+                      placeholder="Biarkan kosong jika tidak ada perubahan HPP"
+                    />
                     <span className="text-[10px] text-slate-400 mt-0.5 block">
                       Harga modal saat ini: Rp {Number(currentProduct?.costPrice || 0).toLocaleString('id-ID')}
                     </span>

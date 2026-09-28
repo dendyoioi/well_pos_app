@@ -10,11 +10,14 @@ import {
   FileSpreadsheet,
   FileText,
   Filter,
+  Calendar,
+  ChevronDown,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import type { Outlet } from '../types/outlet';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
 import { OrderSuccessModal } from '../components/OrderSuccessModal';
+import { TablePagination } from '../components/TablePagination';
 import { generateSalesRecapPdf } from '../utils/salesRecapPdf';
 import { exportOrdersToCsv } from '../utils/salesExportCsv';
 import { api } from '../services/api';
@@ -22,6 +25,24 @@ import { api } from '../services/api';
 interface OrdersViewProps {
   activeOutlet?: Outlet | null;
   onAppendOrder?: (order: Order) => void;
+}
+
+type DatePreset = 'all' | 'today' | '7days' | '30days' | 'thismonth' | 'custom';
+const PRESET_LABELS: Record<DatePreset, string> = {
+  all: 'Semua Periode',
+  today: 'Hari Ini',
+  '7days': '7 Hari Terakhir',
+  '30days': '30 Hari Terakhir',
+  thismonth: 'Bulan Ini',
+  custom: 'Kustom Tanggal',
+};
+
+import { toLocalDateStr, computePresetDateRange } from '../utils/date';
+
+function getPresetRange(preset: DatePreset): { start?: string; end?: string } {
+  if (preset === 'all') return {};
+  const { startStr, endStr } = computePresetDateRange(preset as any);
+  return { start: startStr, end: endStr };
 }
 
 export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOrder }) => {
@@ -32,15 +53,45 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const loadOrders = async (targetChannel?: string) => {
+  // Date Filter State
+  const [datePreset, setDatePreset] = useState<DatePreset>('thismonth');
+  const [customStart, setCustomStart] = useState(toLocalDateStr(new Date()));
+  const [customEnd, setCustomEnd] = useState(toLocalDateStr(new Date()));
+  const [showDateDrop, setShowDateDrop] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const loadOrders = async (
+    targetChannel?: string,
+    targetPreset?: DatePreset,
+    startD?: string,
+    endD?: string
+  ) => {
     setLoading(true);
     try {
       const channelParam = targetChannel !== undefined ? targetChannel : selectedChannel;
+      const currentPreset = targetPreset !== undefined ? targetPreset : datePreset;
+
+      let sDate: string | undefined;
+      let eDate: string | undefined;
+      if (currentPreset === 'custom') {
+        sDate = startD !== undefined ? startD : customStart;
+        eDate = endD !== undefined ? endD : customEnd;
+      } else {
+        const range = getPresetRange(currentPreset);
+        sDate = range.start;
+        eDate = range.end;
+      }
+
       const res = await api.getOrders({
         search: search.trim() || undefined,
         channel: channelParam,
         outletId: activeOutlet?.id,
-        limit: 100,
+        startDate: sDate,
+        endDate: eDate,
+        limit: 200,
       });
       if (res.status === 'success') {
         setOrders(res.data);
@@ -55,6 +106,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   useEffect(() => {
     loadOrders();
   }, [activeOutlet?.id]);
+
+  // Reset pagination ke halaman 1 saat filter atau pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedChannel, datePreset, customStart, customEnd]);
+
+  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedOrders = orders.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +270,80 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
             <option value="DELIVERY">📦 Kurir / Delivery</option>
           </select>
         </div>
+
+        {/* Dropdown Filter Periode / Tanggal */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowDateDrop((v) => !v)}
+            className="flex items-center gap-2 bg-white border border-slate-200 hover:border-blue-900/30 rounded-xl px-3 py-2 shrink-0 shadow-2xs text-xs font-bold text-slate-700 transition-all cursor-pointer h-full"
+          >
+            <Calendar className="w-4 h-4 text-blue-900 shrink-0" />
+            <span>{datePreset !== 'custom' ? PRESET_LABELS[datePreset] : `${customStart} s/d ${customEnd}`}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+
+          {showDateDrop && (
+            <div className="absolute right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 min-w-[210px] p-2 animate-in fade-in zoom-in-95">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2.5 py-1 mb-1">
+                Pilih Periode Transaksi
+              </div>
+              {(['thismonth', 'today', '7days', '30days', 'all', 'custom'] as DatePreset[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    setDatePreset(p);
+                    if (p !== 'custom') {
+                      setShowDateDrop(false);
+                      loadOrders(selectedChannel, p);
+                    }
+                  }}
+                  className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                    datePreset === p
+                      ? 'bg-blue-50 text-blue-900'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {PRESET_LABELS[p]}
+                </button>
+              ))}
+
+              {datePreset === 'custom' && (
+                <div className="mt-2 pt-2 border-t border-slate-100 flex flex-col gap-2 p-1">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Dari Tanggal:</label>
+                    <input
+                      type="date"
+                      value={customStart}
+                      onChange={(e) => setCustomStart(e.target.value)}
+                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-1.5 outline-none focus:border-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Sampai Tanggal:</label>
+                    <input
+                      type="date"
+                      value={customEnd}
+                      onChange={(e) => setCustomEnd(e.target.value)}
+                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-1.5 outline-none focus:border-blue-900"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDateDrop(false);
+                      loadOrders(selectedChannel, 'custom', customStart, customEnd);
+                    }}
+                    className="w-full mt-1 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                  >
+                    Terapkan Rentang
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -240,7 +377,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {orders.map((order) => {
+                {paginatedOrders.map((order) => {
                   const payment = order.payments?.[0];
                   const chKey = (order.channel || 'DINE_IN') as OrderChannel;
                   const chInfo = ORDER_CHANNEL_LABELS[chKey] || {
@@ -327,6 +464,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Pagination Riwayat Transaksi */}
+        {!loading && orders.length > 0 && (
+          <TablePagination
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            totalItems={orders.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="transaksi"
+          />
         )}
       </div>
 

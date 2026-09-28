@@ -14,7 +14,16 @@ import { saasRouter } from './routes/saas.routes';
 import { platformRouter } from './routes/platform.routes';
 import { customerRouter } from './routes/customer.routes';
 import outletRouter from './routes/outlet.routes';
+import { recipeRouter } from './routes/recipe.routes';
+import { modifierRouter } from './routes/modifier.routes';
+import { supplierRouter } from './routes/supplier.routes';
+import { purchaseOrderRouter } from './routes/purchase_order.routes';
+import { stockTransferRouter } from './routes/stock_transfer.routes';
+import { promotionRouter } from './routes/promotion.routes';
+import qrMenuRouter from './routes/qr_menu.routes';
 import { prisma } from './config/prisma';
+
+import { securityHeaders, authRateLimiter } from './middlewares/security.middleware';
 
 // Muat environment variables dari .env
 dotenv.config();
@@ -23,24 +32,44 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware global
-app.use(cors());
+app.use(securityHeaders);
+// Fix T3: CORS dengan whitelist origin — mencegah request dari domain asing
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map(s => s.trim());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Izinkan request tanpa origin (contoh: Postman, server-to-server) di development
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin '${origin}' tidak diizinkan`));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routing API
 app.use('/api/health', healthRouter);
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authRateLimiter, authRouter);
 app.use('/api/saas', saasRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/outlets', outletRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/products', productRouter);
+app.use('/api/recipes', recipeRouter);
+app.use('/api/modifiers', modifierRouter);
 app.use('/api/inventory', inventoryRouter);
+app.use('/api/suppliers', supplierRouter);
+app.use('/api/purchasing/orders', purchaseOrderRouter);
+app.use('/api/transfers', stockTransferRouter);
+app.use('/api/promotions', promotionRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/customers', customerRouter);
 app.use('/api/shifts', shiftRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/users', userRouter);
+app.use('/api/qr-menu', qrMenuRouter);
 
 // Root endpoint info
 app.get('/', (_req: Request, res: Response) => {
@@ -72,17 +101,20 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Jalankan Server
-const server = app.listen(PORT, () => {
-  console.log(`=========================================`);
-  console.log(`🚀 POS Server aktif di http://localhost:${PORT}`);
-  console.log(`🩺 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🏢 SaaS Onboarding:`);
-  console.log(`   - POST /api/saas/register (Registrasi Mandiri Klien)`);
-  console.log(`   - POST /api/saas/onboarding (Setup Profil & 5 Produk Sampel)`);
-  console.log(`   - GET  /api/saas/subscription (Status Lisensi & Sisa Hari)`);
-  console.log(`=========================================`);
-});
+// Jalankan Server jika dieksekusi secara langsung (bukan di-import oleh test suite)
+let server: any = null;
+if (process.env.NODE_ENV !== 'test' && require.main === module) {
+  server = app.listen(PORT, () => {
+    console.log(`=========================================`);
+    console.log(`🚀 POS Server aktif di http://localhost:${PORT}`);
+    console.log(`🩺 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`🏢 SaaS Onboarding:`);
+    console.log(`   - POST /api/saas/register (Registrasi Mandiri Klien)`);
+    console.log(`   - POST /api/saas/onboarding (Setup Profil & 5 Produk Sampel)`);
+    console.log(`   - GET  /api/saas/subscription (Status Lisensi & Sisa Hari)`);
+    console.log(`=========================================`);
+  });
+}
 
 // Penanganan Graceful Shutdown
 const shutdown = async () => {
@@ -97,4 +129,5 @@ const shutdown = async () => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
+export { app };
 export default app;

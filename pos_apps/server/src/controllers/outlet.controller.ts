@@ -1,17 +1,35 @@
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
+import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../config/prisma';
+import { locationDualWriteService } from '../services/dual_write';
 
 // Skema Biaya Dinamis Outlet
-const feeItemSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1, 'Nama biaya tidak boleh kosong'),
-  type: z.enum(['PERCENTAGE', 'FIXED']),
-  rate: z.number().min(0, 'Nilai biaya tidak boleh negatif'),
-  channelScope: z.enum(['ALL', 'DINE_IN', 'TAKEAWAY', 'GOFOOD', 'GRABFOOD', 'SHOPEEFOOD', 'DELIVERY']).default('ALL'),
-  isActive: z.boolean().default(true),
-});
+const feeItemSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().min(1, 'Nama biaya tidak boleh kosong'),
+    type: z.enum(['PERCENTAGE', 'FIXED']),
+    rate: z.number().min(0, 'Nilai biaya tidak boleh negatif'),
+    channelScope: z
+      .enum([
+        'ALL',
+        'DINE_IN',
+        'TAKEAWAY',
+        'GOFOOD',
+        'GRABFOOD',
+        'SHOPEEFOOD',
+        'DELIVERY',
+        'ONLINE_DELIVERY',
+      ])
+      .default('ALL'),
+    isActive: z.boolean().default(true),
+    category: z.enum(['DEFAULT_TAX_SERVICE', 'ON_DEMAND_PACKAGING']).optional(),
+    isQuickAccess: z.boolean().optional(),
+  })
+  .passthrough();
 
 const updateFeesSchema = z.object({
   feesConfig: z.array(feeItemSchema),
@@ -23,6 +41,7 @@ const createOutletSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   isWarehouse: z.boolean().optional(),
+  warehouseId: z.string().uuid().nullable().optional(),
   feesConfig: z.array(feeItemSchema).optional(),
 });
 
@@ -31,6 +50,7 @@ const updateOutletSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   isWarehouse: z.boolean().optional(),
+  warehouseId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional(),
   receiptConfig: z.object({
     paperSize: z.enum(['58mm', '80mm']).default('58mm'),
@@ -56,7 +76,6 @@ export const getOutlets = async (req: Request, res: Response) => {
           select: {
             users: true,
             orders: true,
-            outletProducts: true,
           },
         },
       },
@@ -81,9 +100,12 @@ export const getOutletById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
 
     const outlet = await prisma.outlet.findFirst({
-      where: { id, ...(tenantId ? { tenantId } : {}) },
+      where: { id, tenantId },
       include: {
         users: {
           select: {
@@ -124,7 +146,7 @@ export const createOutlet = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
-    if (userRole !== Role.ADMIN) {
+    if (userRole !== Role.ADMIN && userRole !== Role.OWNER) {
       return res.status(403).json({
         status: 'error',
         message: 'Hanya pemilik usaha (Owner / Admin) yang dapat menambah cabang baru',
@@ -140,26 +162,38 @@ export const createOutlet = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, address, phone, isWarehouse, feesConfig } = parseResult.data;
+    const { name, address, phone, isWarehouse, warehouseId, feesConfig } = parseResult.data;
 
     // Cek kuota outlet dari langganan aktif
-    const activeSub = await prisma.tenantSubscription.findFirst({
-      where: { tenantId, isActive: true },
-      include: { plan: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    let maxOutlets = 100;
+    let planName = 'Aktif';
+    try {
+      const activeSubs = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT sp.max_outlets, sp.name as plan_name 
+         FROM tenant_subscriptions ts 
+         JOIN subscription_plans sp ON ts.plan_id = sp.id 
+         WHERE ts.tenant_id = $1 AND ts.is_active = true 
+         ORDER BY ts.created_at DESC LIMIT 1`,
+        tenantId
+      );
+      if (activeSubs.length > 0) {
+        maxOutlets = activeSubs[0].max_outlets ?? 100;
+        planName = activeSubs[0].plan_name ?? 'Aktif';
+      }
+    } catch {
+      maxOutlets = 100;
+    }
 
-    const maxOutlets = activeSub?.plan?.maxOutlets || 1;
     const currentOutletCount = await prisma.outlet.count({ where: { tenantId } });
 
     if (currentOutletCount >= maxOutlets) {
       return res.status(403).json({
         status: 'error',
-        message: `Batas cabang untuk paket ${activeSub?.plan?.name || 'Anda'} telah tercapai (Maksimal ${maxOutlets} cabang). Silakan upgrade paket untuk menambah cabang.`,
+        message: `Batas cabang untuk paket ${planName} telah tercapai (Maksimal ${maxOutlets} cabang). Silakan upgrade paket untuk menambah cabang.`,
       });
     }
 
-    // Default Fees Config jika tidak disediakan
+    // Default Fees Config jika tidak disediakan (default belum tersetting / non-aktif)
     const defaultFees = feesConfig || [
       {
         id: 'fee_tax',
@@ -167,7 +201,7 @@ export const createOutlet = async (req: Request, res: Response) => {
         type: 'PERCENTAGE',
         rate: 10,
         channelScope: 'ALL',
-        isActive: true,
+        isActive: false,
       },
       {
         id: 'fee_service',
@@ -175,7 +209,7 @@ export const createOutlet = async (req: Request, res: Response) => {
         type: 'PERCENTAGE',
         rate: 5,
         channelScope: 'DINE_IN',
-        isActive: true,
+        isActive: false,
       },
       {
         id: 'fee_box',
@@ -183,39 +217,67 @@ export const createOutlet = async (req: Request, res: Response) => {
         type: 'FIXED',
         rate: 2000,
         channelScope: 'TAKEAWAY',
-        isActive: true,
+        isActive: false,
       },
     ];
 
     const newOutlet = await prisma.$transaction(async (tx) => {
-      const outlet = await tx.outlet.create({
-        data: {
-          tenantId,
+      const dwResult = await locationDualWriteService.createOutlet(
+        {
           name,
-          address: address || null,
-          phone: phone || null,
+          address: address || undefined,
+          phone: phone || undefined,
           isWarehouse: isWarehouse ?? false,
           feesConfig: defaultFees,
-          isActive: true,
         },
-      });
+        { tx, tenantId, actorUserId: req.user?.id }
+      );
+
+      const outlet = dwResult.legacyData;
+
+      if (warehouseId) {
+        await tx.outlet.update({
+          where: { id: outlet.id },
+          data: { warehouseId },
+        });
+        outlet.warehouseId = warehouseId;
+      }
 
       // Duplikasi master produk ke OutletProduct cabang baru (stok awal 0)
-      const tenantProducts = await tx.product.findMany({
-        where: { tenantId, isActive: true },
-        select: { id: true, basePrice: true },
-      });
+      // serta sinkronisasi inventory_balances (0) di default storage location
+      const tenantProducts = await tx.$queryRawUnsafe<any[]>(
+        `SELECT p.id, p.base_price, ii.id as "inventoryItemId"
+         FROM "products" p
+         LEFT JOIN "product_variants" pv ON pv.product_id = p.id AND pv.tenant_id = $1
+         LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id AND ii.tenant_id = $1
+         WHERE p.tenant_id = $1 AND p.is_active = true;`,
+        tenantId
+      );
 
-      if (tenantProducts.length > 0) {
-        await tx.outletProduct.createMany({
-          data: tenantProducts.map((p) => ({
-            outletId: outlet.id,
-            productId: p.id,
-            stock: 0,
-            price: p.basePrice,
-            minStockAlert: 5,
-          })),
-        });
+      const slRows = await tx.$queryRawUnsafe<any[]>(
+        `SELECT id FROM "storage_locations" WHERE outlet_id = $1 AND is_default = true LIMIT 1;`,
+        outlet.id
+      );
+      const defaultStorageLocId = slRows[0]?.id;
+
+      for (const p of tenantProducts) {
+
+        if (defaultStorageLocId && p.inventoryItemId) {
+          const balanceId = locationDualWriteService.generateDeterministicUuid(
+            `${p.inventoryItemId}:${defaultStorageLocId}:unbatched_balance`
+          );
+          await tx.$queryRawUnsafe(
+            `INSERT INTO "inventory_balances" (
+               id, tenant_id, inventory_item_id, storage_location_id, inventory_batch_id,
+               quantity_on_hand, quantity_reserved, updated_at
+             ) VALUES ($1, $2, $3, $4, null, 0, 0, CURRENT_TIMESTAMP)
+             ON CONFLICT (id) DO NOTHING;`,
+            balanceId,
+            tenantId,
+            p.inventoryItemId,
+            defaultStorageLocId
+          );
+        }
       }
 
       return outlet;
@@ -278,12 +340,15 @@ export const updateOutletFees = async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId || req.tenantId;
     const userRole = req.user?.role;
 
-    // Hanya ADMIN atau SUPERVISOR yang diizinkan mengubah biaya
-    if (userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Hanya Supervisor atau Owner yang memiliki hak akses mengelola biaya toko',
-      });
+    // Hanya OWNER, ADMIN atau SUPERVISOR yang diizinkan mengubah biaya langsung,
+    // Kasir wajib menyertakan PIN Supervisor
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      if (!req.body.supervisorPin) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Hanya Supervisor atau Owner yang memiliki hak akses mengelola biaya toko, atau masukkan PIN Supervisor yang valid',
+        });
+      }
     }
 
     const parseResult = updateFeesSchema.safeParse(req.body);
@@ -297,18 +362,27 @@ export const updateOutletFees = async (req: Request, res: Response) => {
 
     const { feesConfig, supervisorPin } = parseResult.data;
 
-    // Jika diakses oleh kasir yang meminta otorisasi PIN Supervisor
+    // Jika diakses oleh kasir yang meminta otorisasi PIN Supervisor atau jika PIN disertakan
     if (supervisorPin) {
-      const spvUser = await prisma.user.findFirst({
+      const spvCandidates = await prisma.user.findMany({
         where: {
           tenantId: tenantId || undefined,
-          pin: supervisorPin,
-          role: { in: [Role.SUPERVISOR, Role.ADMIN] },
+          role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
           isActive: true,
+          pinHash: { not: null },
         },
+        select: { id: true, pinHash: true },
       });
 
-      if (!spvUser) {
+      let spvValid = false;
+      for (const spv of spvCandidates) {
+        if (spv.pinHash && (await bcrypt.compare(supervisorPin, spv.pinHash))) {
+          spvValid = true;
+          break;
+        }
+      }
+
+      if (!spvValid) {
         return res.status(401).json({
           status: 'error',
           message: 'PIN Supervisor tidak valid atau akun dinonaktifkan',
@@ -316,20 +390,112 @@ export const updateOutletFees = async (req: Request, res: Response) => {
       }
     }
 
-    const updated = await prisma.outlet.update({
-      where: { id },
-      data: {
-        feesConfig,
-      },
-    });
+    if (tenantId) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "outlets" SET fees_config = $1::jsonb, updated_at = NOW() WHERE id = $2 AND tenant_id = $3;`,
+        JSON.stringify(feesConfig),
+        id,
+        tenantId
+      );
+    } else {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "outlets" SET fees_config = $1::jsonb, updated_at = NOW() WHERE id = $2;`,
+        JSON.stringify(feesConfig),
+        id
+      );
+    }
 
     return res.status(200).json({
       status: 'success',
       message: 'Konfigurasi biaya & pajak berhasil diperbarui',
-      data: updated.feesConfig,
+      data: feesConfig,
     });
   } catch (error) {
     console.error('Error saat memperbarui biaya outlet:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memperbarui biaya outlet' });
   }
 };
+
+/**
+ * Update Sales Channels Configuration (Kanal Penjualan & Mitra Online)
+ * PUT /api/outlets/:id/channels
+ */
+export const updateOutletChannels = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user?.role;
+
+    // Hanya OWNER, ADMIN atau SUPERVISOR yang diizinkan mengubah kanal penjualan
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Hanya Owner, Admin, atau Supervisor yang memiliki hak akses mengelola kanal penjualan',
+      });
+    }
+
+    const { channelsConfig } = req.body;
+    if (!Array.isArray(channelsConfig)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Format channelsConfig harus berupa array',
+      });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE "outlets" SET channels_config = $1::jsonb, updated_at = NOW() WHERE id = $2;`,
+      JSON.stringify(channelsConfig),
+      id
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Konfigurasi kanal penjualan berhasil diperbarui',
+      data: channelsConfig,
+    });
+  } catch (error) {
+    console.error('Error saat memperbarui kanal outlet:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui kanal penjualan' });
+  }
+};
+
+/**
+ * Update Payment Configuration (QRIS Statis, dsb)
+ * PUT /api/outlets/:id/payment-config
+ */
+export const updateOutletPaymentConfig = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user?.role;
+
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Hanya Owner, Admin, atau Supervisor yang memiliki hak akses mengelola pengaturan pembayaran',
+      });
+    }
+
+    const { paymentConfig } = req.body;
+    if (!paymentConfig || typeof paymentConfig !== 'object') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Format paymentConfig tidak valid',
+      });
+    }
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE "outlets" SET payment_config = $1::jsonb, updated_at = NOW() WHERE id = $2;`,
+      JSON.stringify(paymentConfig),
+      id
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Pengaturan pembayaran berhasil diperbarui',
+      data: paymentConfig,
+    });
+  } catch (error) {
+    console.error('Error saat memperbarui pengaturan pembayaran outlet:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui pengaturan pembayaran' });
+  }
+};
+

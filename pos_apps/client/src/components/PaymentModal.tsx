@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { X, Banknote, QrCode, Split, CheckCircle, AlertCircle, ArrowRight, Lock, UserCheck, Users } from 'lucide-react';
 import type { PaymentPayload, PaymentMethodType } from '../types/order';
 import type { Customer } from '../types/customer';
+import type { Outlet } from '../types/outlet';
 import { usePlan } from '../hooks/usePlan';
 import { UpgradeModal } from './UpgradeModal';
+import { CurrencyInput } from './ui/CurrencyInput';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -14,6 +16,7 @@ interface PaymentModalProps {
   selectedCustomer?: Customer | null;
   customerName?: string;
   onOpenCustomerPicker?: () => void;
+  outlet?: Outlet | null;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -25,6 +28,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   selectedCustomer,
   customerName,
   onOpenCustomerPicker,
+  outlet,
 }) => {
   const { isFree } = usePlan();
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
@@ -38,6 +42,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [splitCashTendered, setSplitCashTendered] = useState<number>(Math.round(grandTotal / 2));
   const [splitQrisPaid, setSplitQrisPaid] = useState(false);
   const [splitQrisRef, setSplitQrisRef] = useState('');
+  const qrisConfig = outlet?.paymentConfig?.qris;
 
   useEffect(() => {
     if (isOpen) {
@@ -77,12 +82,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       onCheckout({
         method: 'CASH',
         amountPaid: Number(amountPaid),
+        changeGiven: changeGiven,
       });
     } else if (method === 'QRIS') {
+      if (!qrisPaid) return;
       onCheckout({
         method: 'QRIS',
         amountPaid: grandTotal,
-        qrisReference: qrisRef || `QRIS-${Date.now().toString().slice(-6)}`,
+        qrisReference: qrisRef.trim() || undefined,
       });
     } else if (method === 'SPLIT') {
       if (isSplitCashInsufficient || !splitQrisPaid) return;
@@ -95,7 +102,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {
           method: 'QRIS',
           amountPaid: Number(splitQrisPortion),
-          qrisReference: splitQrisRef || `QRIS-SPLIT-${Date.now().toString().slice(-6)}`,
+          qrisReference: splitQrisRef.trim() || undefined,
         },
       ];
       onCheckout(payments[0], payments);
@@ -296,21 +303,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
               {/* Input Uang Diterima */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Uang Tunai Diterima:
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
-                    Rp
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(Number(e.target.value))}
-                    className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl pl-10 pr-4 py-3 text-lg font-black transition-all outline-none"
-                  />
-                </div>
+                <CurrencyInput
+                  label="Uang Tunai Diterima:"
+                  value={amountPaid}
+                  onChange={(val) => setAmountPaid(val)}
+                  inputClassName="py-3 text-lg font-black text-right text-slate-900 focus:border-blue-900"
+                  prefixClassName="text-sm font-bold"
+                  placeholder="0"
+                  autoFocus
+                />
               </div>
 
               {/* Uang Kembalian Box */}
@@ -342,62 +343,101 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           {/* KONTEN TAB QRIS */}
           {method === 'QRIS' && (
-            <div className="space-y-4 text-center">
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
-                <div className="w-44 h-44 bg-white p-3 border-2 border-slate-300 rounded-2xl shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-                  <div className="grid grid-cols-6 gap-1.5 w-full h-full p-1 opacity-80">
-                    {[...Array(36)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`rounded-xs ${
-                          (i % 2 === 0 && i % 3 !== 0) || i < 6 || i > 28
-                            ? 'bg-blue-950'
-                            : 'bg-slate-200'
-                        }`}
+            <div className="space-y-4">
+              {/* QRIS Static Display */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+                <div className="w-56 bg-white p-3.5 border-2 border-slate-300 rounded-2xl shadow-md flex flex-col items-center justify-between">
+                  <div className="w-full flex items-center justify-between px-1 border-b border-slate-100 pb-1">
+                    <span className="text-[10px] font-black tracking-wider text-rose-700">QRIS</span>
+                    <span className="text-[9px] font-mono text-slate-500 font-bold">
+                      {qrisConfig?.nmid ? `NMID: ${qrisConfig.nmid}` : ''}
+                    </span>
+                  </div>
+
+                  <div className="text-center w-full px-1 py-1">
+                    <p className="text-[11px] font-black text-slate-900 truncate uppercase">
+                      {qrisConfig?.merchantName || outlet?.name || ''}
+                    </p>
+                    {qrisConfig?.bankName && (
+                      <p className="text-[9px] text-slate-400 font-semibold">{qrisConfig.bankName}</p>
+                    )}
+                  </div>
+
+                  {qrisConfig?.imageUrl ? (
+                    <div className="w-44 h-44 bg-white p-1 rounded-xl flex items-center justify-center overflow-hidden my-1 border border-slate-100">
+                      <img
+                        src={qrisConfig.imageUrl}
+                        alt="Barcode QRIS Toko"
+                        className="w-full h-full object-contain"
                       />
-                    ))}
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="px-2 py-1 bg-white border border-slate-300 rounded-md shadow-sm text-[10px] font-black text-blue-950">
-                      QRIS POS
                     </div>
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-500 mt-3 font-medium">
-                  Scan QR menggunakan BCA, GoPay, OVO, Dana, atau mobile banking lainnya.
-                </p>
-
-                <div className="mt-3 w-full">
-                  {!qrisPaid ? (
-                    <button
-                      type="button"
-                      onClick={() => setQrisPaid(true)}
-                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Simulasikan Pembayaran QRIS Sukses</span>
-                    </button>
                   ) : (
-                    <div className="p-2.5 bg-emerald-100 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5">
-                      <CheckCircle className="w-4 h-4 text-emerald-700" />
-                      <span>Pembayaran QRIS Berhasil Diterima!</span>
+                    <div className="w-44 h-44 bg-slate-100 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center my-1 gap-2">
+                      <QrCode className="w-10 h-10 text-slate-300" />
+                      <p className="text-[10px] text-slate-400 font-semibold text-center px-2">
+                        Upload QRIS statis di<br />Pengaturan › Metode Pembayaran
+                      </p>
                     </div>
                   )}
+
+                  <div className="w-full bg-blue-50 py-1.5 px-2.5 rounded-lg border border-blue-100 flex items-center justify-between mt-1">
+                    <span className="text-[10px] text-blue-950 font-bold">Total:</span>
+                    <span className="text-xs font-black text-blue-950 font-mono">
+                      Rp {grandTotal.toLocaleString('id-ID')}
+                    </span>
+                  </div>
                 </div>
+
+                <p className="text-xs text-slate-500 mt-3 font-medium text-center">
+                  {qrisConfig?.imageUrl
+                    ? 'Tunjukkan barcode QRIS di atas kepada konsumen untuk di-scan.'
+                    : 'Belum ada QR yang dikonfigurasi. Hubungi pengelola toko.'}
+                </p>
               </div>
 
-              <div className="text-left">
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nomor Referensi QRIS (Opsional):
-                </label>
-                <input
-                  type="text"
-                  value={qrisRef}
-                  onChange={(e) => setQrisRef(e.target.value)}
-                  placeholder="misal: QRIS-982341"
-                  className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs transition-all outline-none"
-                />
+              {/* Konfirmasi Manual Pembayaran */}
+              <div className="space-y-3">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium">
+                  Setelah pelanggan menyelesaikan scan QRIS, konfirmasikan pembayaran di bawah ini.
+                </div>
+
+                {!qrisPaid ? (
+                  <button
+                    type="button"
+                    onClick={() => setQrisPaid(true)}
+                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Konfirmasi Pembayaran QRIS Diterima</span>
+                  </button>
+                ) : (
+                  <div className="p-3 bg-emerald-100 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-800 flex items-center justify-between gap-2 animate-fadeIn">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span>Pembayaran QRIS Telah Dikonfirmasi</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setQrisPaid(false); setQrisRef(''); }}
+                      className="text-[10px] text-emerald-600 hover:text-rose-600 font-semibold underline cursor-pointer shrink-0"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nomor Referensi Transaksi / RRN (Opsional):
+                  </label>
+                  <input
+                    type="text"
+                    value={qrisRef}
+                    onChange={(e) => setQrisRef(e.target.value)}
+                    placeholder="Contoh: 240924123456 (dari notif bank)"
+                    className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs font-mono transition-all outline-none"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -417,23 +457,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <Banknote className="w-4 h-4 text-blue-900" />
                     <span>Porsi Tunai</span>
                   </div>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                      Rp
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={grandTotal}
-                      value={splitCashPortion}
-                      onChange={(e) => {
-                        const val = Math.min(grandTotal, Math.max(0, Number(e.target.value)));
-                        setSplitCashPortion(val);
-                        setSplitCashTendered(val);
-                      }}
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-8 pr-2 py-2 text-sm font-black outline-none"
-                    />
-                  </div>
+                  <CurrencyInput
+                    value={splitCashPortion}
+                    max={grandTotal}
+                    onChange={(val) => {
+                      setSplitCashPortion(val);
+                      setSplitCashTendered(val);
+                    }}
+                    inputClassName="py-1.5 text-sm font-black text-right outline-none"
+                    placeholder="0"
+                  />
                 </div>
 
                 {/* Porsi QRIS (Auto-calculated) */}
@@ -450,21 +483,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
               {/* Input Uang Tunai Fisik Diterima */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  Uang Fisik Tunai Diterima Pelanggan:
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
-                    Rp
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={splitCashTendered}
-                    onChange={(e) => setSplitCashTendered(Number(e.target.value))}
-                    className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-4 py-2.5 text-base font-black outline-none"
-                  />
-                </div>
+                <CurrencyInput
+                  label="Uang Fisik Tunai Diterima Pelanggan:"
+                  value={splitCashTendered}
+                  onChange={(val) => setSplitCashTendered(val)}
+                  inputClassName="py-2.5 text-base font-black text-right"
+                  prefixClassName="text-sm font-bold"
+                  placeholder="0"
+                />
 
                 {/* Kembalian Tunai */}
                 <div
@@ -483,7 +509,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
               </div>
 
-              {/* QRIS Status Verifikasi */}
+              {/* Konfirmasi QRIS Porsi Split (Manual) */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-700">
@@ -491,10 +517,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </span>
                   {splitQrisPaid ? (
                     <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" /> Lunas
+                      <CheckCircle className="w-3.5 h-3.5" /> Dikonfirmasi
                     </span>
                   ) : (
-                    <span className="text-amber-700 font-bold">Menunggu Pembayaran</span>
+                    <span className="text-amber-700 font-bold">Menunggu Konfirmasi</span>
                   )}
                 </div>
 
@@ -502,10 +528,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setSplitQrisPaid(true)}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Konfirmasi QRIS Sebesar Rp {splitQrisPortion.toLocaleString('id-ID')}</span>
+                    <span>Konfirmasi QRIS Rp {splitQrisPortion.toLocaleString('id-ID')} Diterima</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -513,15 +539,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       type="text"
                       value={splitQrisRef}
                       onChange={(e) => setSplitQrisRef(e.target.value)}
-                      placeholder="Ref QRIS (opsional, misal: QR-8899)"
-                      className="flex-1 bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-1.5 text-xs outline-none"
+                      placeholder="Ref/RRN QRIS (Opsional)"
+                      className="flex-1 bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-1.5 text-xs font-mono outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => setSplitQrisPaid(false)}
-                      className="px-2.5 py-1.5 text-slate-500 hover:text-rose-600 text-xs font-semibold"
+                      className="px-2.5 py-1.5 text-slate-500 hover:text-rose-600 text-xs font-semibold cursor-pointer"
                     >
-                      Batal
+                      Reset
                     </button>
                   </div>
                 )}
@@ -574,4 +600,3 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     </div>
   );
 };
-

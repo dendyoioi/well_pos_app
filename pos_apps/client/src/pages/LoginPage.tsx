@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Store,
   Mail,
@@ -14,6 +14,8 @@ import {
   Check,
   LogOut,
   UserCheck,
+  ChevronDown,
+  User,
 } from 'lucide-react';
 import { PinNumpad } from '../components/PinNumpad';
 import {
@@ -39,16 +41,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   // Paired Device Context
   const [pairedDevice, setPairedDevice] = useState<PairedDeviceContext | null>(null);
   const [activeCashiers, setActiveCashiers] = useState<
-    Array<{ id: string; name: string; role: string; email: string }>
+    Array<{ id: string; name: string; role: string; email: string; userCode?: string }>
   >([]);
   const [selectedCashier, setSelectedCashier] = useState<{
     id: string;
     name: string;
+    role: string;
     email: string;
+    userCode?: string;
   } | null>(null);
+  const [isCashierDropdownOpen, setIsCashierDropdownOpen] = useState(false);
+  const cashierDropdownRef = useRef<HTMLDivElement>(null);
 
   // Device Pairing Form State
-  const [storeIdentifier, setStoreIdentifier] = useState('');
+  const [tenantSlug, setTenantSlug] = useState('');          // ID Toko (slug) untuk pairing
+  const [staffCode, setStaffCode] = useState('');            // ID Staff Owner/SPV untuk pairing
   const [authPin, setAuthPin] = useState('');
   const [rememberDevice, setRememberDevice] = useState(true);
   const [availableOutlets, setAvailableOutlets] = useState<
@@ -60,9 +67,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     slug: string;
   } | null>(null);
   const [selectedOutletId, setSelectedOutletId] = useState('');
+  const [pendingLoginAuth, setPendingLoginAuth] = useState<{ token: string; user: AuthUser } | null>(null);
 
   // Cashier PIN Numpad State
   const [pin, setPin] = useState('');
+  const [cashierStaffCode, setCashierStaffCode] = useState(''); // ID Staff kasir saat login PIN
+  const [isStaffCodeConfirmed, setIsStaffCodeConfirmed] = useState(false); // step 1 selesai?
 
   // Backoffice Email/Password State
   const [email, setEmail] = useState('');
@@ -97,6 +107,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
+  // Tutup dropdown kasir saat klik di luar komponen
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cashierDropdownRef.current && !cashierDropdownRef.current.contains(event.target as Node)) {
+        setIsCashierDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'OWNER': return 'Owner';
+      case 'ADMIN': return 'Admin';
+      case 'SUPERVISOR': return 'Supervisor';
+      case 'CASHIER': return 'Kasir';
+      case 'WAREHOUSE': return 'Gudang';
+      default: return role;
+    }
+  };
+
   // Handle Pairing Step 1 (Validate Store Identifier + Owner/SPV PIN)
   const handlePairDevice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,16 +137,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setLoading(true);
 
     try {
-      const res = await api.pairDevice(storeIdentifier, authPin);
+      const res = await api.pairDevice(tenantSlug.trim().toLowerCase(), staffCode, authPin);
       if (res.status === 'success' && res.data) {
         const { tenant, outlets } = res.data;
 
         if (!outlets || outlets.length === 0) {
-          setError('Toko ini belum memiliki cabang toko aktif untuk kasir.');
+          setError('Toko ini belum memiliki outlet toko aktif untuk kasir.');
           return;
         }
 
-        // Jika hanya ada 1 cabang toko, langsung pairing otomatis
+        // Jika login session otomatis disertakan (kasir atau staf langsung login)
+        if (res.data.token && res.data.user) {
+          const userOutletId = res.data.user.outletId;
+          const assignedOutlet = outlets.find((o: any) => o.id === userOutletId);
+
+          if (assignedOutlet || outlets.length === 1) {
+            const chosenOutlet = assignedOutlet || outlets[0];
+            const newContext: PairedDeviceContext = {
+              tenantId: tenant.id,
+              tenantName: tenant.businessName,
+              tenantSlug: tenant.slug,
+              outletId: chosenOutlet.id,
+              outletName: chosenOutlet.name,
+              pairedAt: new Date().toISOString(),
+            };
+
+            if (rememberDevice) {
+              pairedDeviceStorage.set(newContext);
+            }
+            setPairedDevice(newContext);
+            authStorage.saveSession(res.data.token, res.data.user);
+            onLoginSuccess(res.data.user);
+            return;
+          }
+
+          // Jika user multi-outlet tanpa outlet spesifik, simpan auth untuk setelah memilih outlet
+          setPendingLoginAuth({ token: res.data.token, user: res.data.user });
+        }
+
+        // Jika hanya ada 1 outlet toko, langsung pairing otomatis
         if (outlets.length === 1) {
           const singleOutlet = outlets[0];
           const newContext: PairedDeviceContext = {
@@ -133,7 +194,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           setSuccessMessage(`Perangkat berhasil terhubung ke ${tenant.businessName} - ${singleOutlet.name}`);
           loadCashiers(newContext.tenantId, newContext.outletId);
         } else {
-          // Jika memiliki multi-cabang, tampilkan pilihan cabang
+          // Jika memiliki multi-outlet, tampilkan pilihan toko
           setPairingTenant(tenant);
           setAvailableOutlets(outlets);
           setSelectedOutletId(outlets[0].id);
@@ -170,6 +231,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setPairedDevice(newContext);
     setPairingTenant(null);
     setAvailableOutlets([]);
+
+    if (pendingLoginAuth) {
+      authStorage.saveSession(pendingLoginAuth.token, pendingLoginAuth.user);
+      onLoginSuccess(pendingLoginAuth.user);
+      return;
+    }
+
     setSuccessMessage(`Perangkat berhasil terhubung ke ${newContext.tenantName} - ${newContext.outletName}`);
     loadCashiers(newContext.tenantId, newContext.outletId);
   };
@@ -180,7 +248,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setPairedDevice(null);
     setActiveCashiers([]);
     setSelectedCashier(null);
+    setIsCashierDropdownOpen(false);
     setPin('');
+    setCashierStaffCode('');
+    setIsStaffCodeConfirmed(false);
     setSuccessMessage(null);
     setError(null);
   };
@@ -195,7 +266,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     try {
       const res = await api.loginWithPin(
         activePin,
-        selectedCashier?.email,
+        cashierStaffCode && cashierStaffCode !== 'CHIP' ? cashierStaffCode.trim() : undefined,
+        selectedCashier?.email,                 // Fallback: email (cara lama)
         pairedDevice?.outletId,
         pairedDevice?.tenantId
       );
@@ -204,7 +276,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         authStorage.saveSession(res.data.token, res.data.user);
         onLoginSuccess(res.data.user);
       } else {
-        setError(res.message || 'PIN kasir tidak sesuai atau akun tidak aktif');
+        setError(res.message || 'ID Staff atau PIN kasir tidak sesuai');
         setPin('');
       }
     } catch (err: any) {
@@ -213,6 +285,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  // Konfirmasi ID Staff selesai diinput, pindah ke step PIN
+  const handleConfirmStaffCode = () => {
+    if (!cashierStaffCode || cashierStaffCode.length === 0) return;
+    setIsStaffCodeConfirmed(true);
+    setPin('');
   };
 
   // Handle Email & Password Backoffice Login
@@ -314,16 +393,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Feedback Alerts */}
         {error && (
-          <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2.5 text-rose-700 text-xs sm:text-sm animate-shake">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2.5 text-rose-700 text-xs sm:text-sm animate-shake">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="p-1 text-rose-400 hover:text-rose-700 hover:bg-rose-100 rounded-lg transition-colors shrink-0"
+              aria-label="Tutup notifikasi error"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs font-medium">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{successMessage}</span>
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-2 text-emerald-800 text-xs font-medium">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessMessage(null)}
+              className="p-1 text-emerald-500 hover:text-emerald-800 hover:bg-emerald-100 rounded-lg transition-colors shrink-0"
+              aria-label="Tutup notifikasi sukses"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -351,7 +450,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-600 font-medium mt-0.5">
-                        Cabang: <strong className="text-blue-900">{pairedDevice.outletName}</strong>
+                        Toko: <strong className="text-blue-900">{pairedDevice.outletName}</strong>
                       </p>
                     </div>
                   </div>
@@ -367,73 +466,161 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </button>
                 </div>
 
-                {/* Cashier Selector Chips (Optional Quick Pick) */}
+                {/* Cashier Selector Dropdown / Selected State */}
                 {activeCashiers.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5 px-0.5">
-                      <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                        <UserCheck className="w-3 h-3 text-blue-900" />
-                        Pilih Petugas Kasir (Opsional):
-                      </span>
-                      {selectedCashier && (
+                  <div className="relative" ref={cashierDropdownRef}>
+                    {!selectedCashier ? (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <UserCheck className="w-3.5 h-3.5 text-blue-900" />
+                            Pilih Nama Kasir:
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            (Opsional / input ID di numpad)
+                          </span>
+                        </label>
+
                         <button
                           type="button"
-                          onClick={() => setSelectedCashier(null)}
-                          className="text-[10px] text-slate-400 hover:text-rose-500 font-medium"
+                          onClick={() => setIsCashierDropdownOpen(!isCashierDropdownOpen)}
+                          className="w-full bg-white border border-slate-300 hover:border-blue-900 focus:border-blue-900 text-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm flex items-center justify-between transition-all shadow-2xs group"
                         >
-                          Hapus Pilihan
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-                      {activeCashiers.map((c) => {
-                        const isSelected = selectedCashier?.id === c.id;
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => setSelectedCashier(isSelected ? null : c)}
-                            className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
-                              isSelected
-                                ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          <div className="flex items-center gap-2.5 text-slate-500">
+                            <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center">
+                              <User className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-medium text-slate-600">-- Pilih Kasir yang Bertugas --</span>
+                          </div>
+                          <ChevronDown
+                            className={`w-4 h-4 text-slate-400 group-hover:text-blue-900 transition-transform duration-200 ${
+                              isCashierDropdownOpen ? 'rotate-180 text-blue-900' : ''
                             }`}
-                          >
-                            {c.name}
-                            <span className="text-[10px] opacity-70 ml-1">
-                              ({c.role === 'ADMIN' ? 'Owner' : 'Kasir'})
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                          />
+                        </button>
+
+                        {/* Dropdown Popover List */}
+                        {isCashierDropdownOpen && (
+                          <div className="absolute z-30 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100 animate-fadeIn">
+                            {activeCashiers.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCashier(c);
+                                  setCashierStaffCode(c.userCode || 'CHIP');
+                                  setIsStaffCodeConfirmed(true);
+                                  setPin('');
+                                  setIsCashierDropdownOpen(false);
+                                }}
+                                className="w-full px-3.5 py-2.5 text-left hover:bg-blue-50/70 flex items-center justify-between transition-colors group"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-900 flex items-center justify-center font-bold text-xs shrink-0 transition-colors">
+                                    {c.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="truncate">
+                                    <p className="text-xs font-bold text-slate-800 group-hover:text-blue-950 truncate">
+                                      {c.name}
+                                    </p>
+                                    {c.userCode && (
+                                      <p className="text-[10px] text-slate-400 font-mono">
+                                        ID Staff: {c.userCode}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ml-2 ${
+                                    c.role === 'OWNER'
+                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                      : c.role === 'SUPERVISOR'
+                                      ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                      : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  }`}
+                                >
+                                  {getRoleLabel(c.role)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Elegant Selected Cashier Card */
+                      <div className="p-3 bg-blue-50/90 border border-blue-200/90 rounded-2xl flex items-center justify-between shadow-2xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                            {selectedCashier.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="truncate">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-blue-950 truncate">
+                                {selectedCashier.name}
+                              </span>
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                  selectedCashier.role === 'OWNER'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : selectedCashier.role === 'SUPERVISOR'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-blue-200/80 text-blue-900'
+                                }`}
+                              >
+                                {getRoleLabel(selectedCashier.role)}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-blue-900/70 font-mono mt-0.5">
+                              {selectedCashier.userCode ? `ID: ${selectedCashier.userCode} • ` : ''}Siap input PIN
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCashier(null);
+                            setCashierStaffCode('');
+                            setIsStaffCodeConfirmed(false);
+                            setPin('');
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-rose-600 bg-white hover:bg-rose-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-rose-200 font-semibold transition-all shadow-2xs shrink-0 ml-2"
+                          title="Ganti staf kasir"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Ganti Kasir</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Interactive Numpad */}
+                {/* Two-Step Numpad: ID Staff → PIN (tidak ada keyboard OS) */}
                 <div className="pt-1">
-                  <p className="text-center text-xs text-slate-500 mb-1 font-medium">
-                    {selectedCashier
-                      ? `Masukkan 6-digit PIN untuk ${selectedCashier.name}:`
-                      : 'Masukkan 6-digit PIN Kasir Toko:'}
-                  </p>
                   <PinNumpad
                     pin={pin}
                     onPinChange={setPin}
                     onSubmit={handlePinSubmit}
                     loading={loading}
+                    staffCode={selectedCashier ? undefined : cashierStaffCode}
+                    onStaffCodeChange={selectedCashier ? undefined : (code) => {
+                      setCashierStaffCode(code);
+                    }}
+                    onConfirmStaffCode={selectedCashier ? undefined : handleConfirmStaffCode}
+                    isStaffConfirmed={selectedCashier ? true : isStaffCodeConfirmed}
+                    maxStaffCodeLength={5}
                   />
                 </div>
               </div>
             ) : pairingTenant ? (
-              // KONDISI B: LANGKAH 2 MULTI-CABANG (PILIH CABANG TOKO)
+              // KONDISI B: LANGKAH 2 MULTI-OUTLET (PILIH OUTLET TOKO)
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
                   <h3 className="text-sm font-extrabold text-blue-950 mb-1">
-                    Pilih Cabang untuk Terminal Ini
+                    Pilih Toko untuk Terminal Ini
                   </h3>
                   <p className="text-xs text-slate-600">
-                    Toko <strong>{pairingTenant.businessName}</strong> memiliki beberapa cabang ritel. Tentukan cabang mana yang menggunakan mesin kasir ini.
+                    Toko <strong>{pairingTenant.businessName}</strong> memiliki beberapa outlet toko. Tentukan outlet toko mana yang menggunakan mesin kasir ini.
                   </p>
                 </div>
 
@@ -492,33 +679,60 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-blue-950">
                   <Smartphone className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold">Hubungkan Mesin Kasir ke Toko</p>
+                    <p className="font-bold">Buka & Hubungkan Mesin Kasir ke Toko</p>
                     <p className="text-slate-600 mt-0.5 leading-relaxed text-[11px]">
-                      Masukkan ID Toko (Slug), Email Pemilik, atau No. WhatsApp terdaftar, beserta PIN Pemilik untuk mengenali perangkat ini.
+                      Masukkan <strong>ID Toko</strong>, <strong>ID Staff</strong>, dan <strong>PIN Cepat</strong> Anda untuk langsung login & menghubungkan perangkat kasir ini ke toko.
                     </p>
                   </div>
                 </div>
 
+                {/* Field 1: ID Toko (slug) */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ID Toko / Email Pemilik / No. WhatsApp:
+                    ID Toko (Company Slug):
                   </label>
                   <div className="relative">
                     <Store className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       required
-                      value={storeIdentifier}
-                      onChange={(e) => setStoreIdentifier(e.target.value)}
-                      placeholder="Contoh: kopi-nusantara, nama@email.com, atau 0812..."
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-medium"
+                      value={tenantSlug}
+                      onChange={(e) => setTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                      placeholder="Contoh: ura-coffee"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    ID Toko dapat dilihat di halaman Pengaturan Toko atau diberikan oleh Owner.
+                  </p>
+                </div>
+
+                {/* Field 2: ID Staff */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    ID Staff (5-Digit):
+                  </label>
+                  <div className="relative">
+                    <UserCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      required
+                      maxLength={10}
+                      value={staffCode}
+                      onChange={(e) => setStaffCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Contoh: 42031"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono font-bold tracking-widest"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    ID Staff terdiri dari 5 digit angka (terdaftar di Kelola Staf).
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    PIN Otorisasi Pemilik / SPV (6-Digit):
+                    PIN Cepat (6-Digit):
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -546,7 +760,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     htmlFor="rememberDevice"
                     className="text-xs text-slate-700 font-medium cursor-pointer select-none"
                   >
-                    Kenali & Ingat Perangkat Ini (Tidak perlu input ID Toko lagi)
+                    Kenali &amp; Ingat Perangkat Ini (Tidak perlu input ulang saat restart)
                   </label>
                 </div>
 
@@ -566,6 +780,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </button>
               </form>
             )}
+
           </div>
         )}
 
@@ -575,7 +790,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {activeTab === 'backoffice' && (
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 mb-1">
-              Khusus Pemilik Toko, Supervisor, atau Administrator untuk akses Backoffice (Laporan Keuangan, Stok Gudang, Multi-Cabang & Manajemen Staf).
+              Khusus Pemilik Toko, Supervisor, atau Administrator untuk akses Backoffice (Laporan Keuangan, Stok Gudang, Multi-Store &amp; Manajemen Staf).
             </div>
 
             <div>
@@ -626,6 +841,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </>
               )}
             </button>
+
+            <div className="mt-4 text-center text-xs text-slate-500">
+              Belum memiliki akun merchant?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onGoToLanding) onGoToLanding();
+                  window.location.hash = 'register';
+                }}
+                className="font-bold text-blue-900 hover:text-blue-950 underline transition-colors"
+              >
+                Daftar Gratis Sekarang
+              </button>
+            </div>
           </form>
         )}
       </div>

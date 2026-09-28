@@ -49,7 +49,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
             <div>
               <p className="text-xs font-black text-amber-950">{featureHighlight} Terkunci</p>
               <p className="text-[11px] text-amber-800/90 mt-0.5 leading-normal">
-                Akun Anda saat ini menggunakan paket <strong>FREE</strong>. Untuk operasional kasir multi-cabang tanpa batasan, beralihlah ke paket <strong>PRO</strong>.
+                Akun Anda saat ini menggunakan paket <strong>FREE</strong>. Untuk operasional kasir multi-outlet tanpa batasan, beralihlah ke paket <strong>PRO</strong>.
               </p>
             </div>
           </div>
@@ -87,24 +87,23 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
                 <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                   <Check className="w-3 h-3 stroke-[3]" />
                 </div>
-                <span>Hingga 5 Cabang Toko & 99 Kasir.</span>
+                <span>Hingga 5 Outlet Toko & 99 Kasir.</span>
               </li>
             </ul>
           </div>
 
           {/* Action Button */}
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                alert('Silakan hubungi WhatsApp Support Well POS (0812-3456-7890) atau hubungi tim administrator untuk mengaktifkan paket PRO!');
-                onClose();
-              }}
+            <a
+              href="https://wa.me/6281234567890?text=Halo%20Well%20POS,%20saya%20tertarik%20upgrade%20ke%20Paket%20PRO"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
               className="w-full py-3 px-4 bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-800 hover:to-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
             >
               <Zap className="w-4 h-4 text-amber-300" />
-              <span>Upgrade ke Paket PRO Sekarang</span>
-            </button>
+              <span>Hubungi Sales / Upgrade ke Paket PRO</span>
+            </a>
 
             <button
               type="button"

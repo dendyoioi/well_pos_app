@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'SUPERVISOR' | 'WAREHOUSE' | 'CASHIER';
+export type UserRole = 'OWNER' | 'ADMIN' | 'SUPERVISOR' | 'WAREHOUSE' | 'CASHIER';
 
 export interface Outlet {
   id: string;
@@ -20,12 +20,14 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  userCode?: string | null;
   role: UserRole;
   pin?: string | null;
+  hasPin?: boolean;
   tenantId?: string | null;
   outletId?: string | null;
   outlet?: Outlet | null;
-  tenant?: { id: string; name: string } | null;
+  tenant?: { id: string; name: string; phone?: string | null; slug?: string } | null;
   subscription?: TenantSubscriptionInfo | null;
 }
 
@@ -39,3 +41,44 @@ export interface AuthResponse {
     user: User;
   };
 }
+
+export type PermissionCategory =
+  | 'REGISTER_SALES'
+  | 'CATALOG_RECIPES'
+  | 'INVENTORY_STOCK'
+  | 'REPORTS_FINANCIAL'
+  | 'SETTINGS_GOVERNANCE';
+
+export interface PermissionDefinition {
+  id: string;
+  label: string;
+  description: string;
+  category: PermissionCategory;
+}
+
+export interface RolePermissions {
+  id: string;
+  name: string;
+  description?: string;
+  status: boolean;
+  isDefault?: boolean;
+  staffCount?: number;
+  permissions?: string[];
+  functionalPermissions?: {
+    WEB: string[];
+    POS: string[];
+    HANDHELD: string[];
+    IOS: string[];
+  };
+  businessPermissions?: {
+    orderDiscount?: {
+      maxPercent: number;
+      maxAmount: number;
+    };
+    productDiscount?: {
+      maxPercent: number;
+      maxAmount: number;
+    };
+  };
+}
+

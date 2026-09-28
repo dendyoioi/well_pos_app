@@ -6,6 +6,11 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  getRoles,
+  getSystemPermissions,
+  createRole,
+  updateRole,
+  deleteRole,
 } from '../controllers/user.controller';
 
 const router = Router();
@@ -13,12 +18,19 @@ const router = Router();
 // Semua rute user manajemen memerlukan autentikasi login
 router.use(authenticate);
 
-// Hanya ADMIN dan SUPERVISOR yang dapat melihat daftar pengguna
-router.get('/', authorize(Role.ADMIN, Role.SUPERVISOR), getUsers);
+// Role & Permission Management (Harus sebelum /:id)
+router.get('/roles/permissions', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getSystemPermissions);
+router.get('/roles', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getRoles);
+router.post('/roles', authorize(Role.OWNER, Role.ADMIN), createRole);
+router.put('/roles/:id', authorize(Role.OWNER, Role.ADMIN), updateRole);
+router.delete('/roles/:id', authorize(Role.OWNER, Role.ADMIN), deleteRole);
 
-// Hanya ADMIN yang dapat menambah, mengedit, dan menghapus staf
-router.post('/', authorize(Role.ADMIN), createUser);
-router.put('/:id', authorize(Role.ADMIN), updateUser);
-router.delete('/:id', authorize(Role.ADMIN), deleteUser);
+// Hanya OWNER, ADMIN dan SUPERVISOR yang dapat melihat daftar pengguna
+router.get('/', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getUsers);
+
+// Hanya OWNER dan ADMIN yang dapat menambah, mengedit, dan menghapus staf
+router.post('/', authorize(Role.OWNER, Role.ADMIN), createUser);
+router.put('/:id', authorize(Role.OWNER, Role.ADMIN), updateUser);
+router.delete('/:id', authorize(Role.OWNER, Role.ADMIN), deleteUser);
 
 export default router;

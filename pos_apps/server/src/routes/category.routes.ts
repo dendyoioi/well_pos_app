@@ -9,7 +9,7 @@ import { authenticate } from '../middlewares/auth.middleware';
 
 export const categoryRouter = Router();
 
-categoryRouter.get('/', getCategories);
+categoryRouter.get('/', authenticate, getCategories);
 categoryRouter.post('/', authenticate, createCategory);
 categoryRouter.put('/:id', authenticate, updateCategory);
 categoryRouter.delete('/:id', authenticate, deleteCategory);

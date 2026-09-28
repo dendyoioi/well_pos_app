@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Trash2, Info, X } from 'lucide-react';
+import { AlertTriangle, Trash2, Info, X, CheckCircle2 } from 'lucide-react';
 
 export interface ConfirmModalProps {
   isOpen: boolean;
@@ -9,8 +9,9 @@ export interface ConfirmModalProps {
   message: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: 'danger' | 'warning' | 'info' | 'success';
   loading?: boolean;
+  isAlert?: boolean;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -19,12 +20,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Ya, Lanjutkan',
+  confirmText,
   cancelText = 'Batal',
   variant = 'danger',
   loading = false,
+  isAlert = false,
 }) => {
   if (!isOpen) return null;
+
+  const effectiveConfirmText = confirmText || (isAlert ? 'Mengerti' : 'Ya, Lanjutkan');
 
   const variantStyles = {
     danger: {
@@ -42,10 +46,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       icon: <Info className="w-6 h-6 stroke-[2.5]" />,
       btnConfirm: 'bg-blue-900 hover:bg-blue-800 text-white shadow-blue-900/20',
     },
+    success: {
+      bgIcon: 'bg-emerald-100 text-emerald-600 border-emerald-200',
+      icon: <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />,
+      btnConfirm: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20',
+    },
   }[variant];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden animate-scaleUp">
         {/* Header with Icon */}
         <div className="p-6 pb-4 flex items-start justify-between">
@@ -58,7 +67,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <div>
               <h3 className="font-black text-blue-950 text-base sm:text-lg leading-snug">{title}</h3>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Konfirmasi Tindakan
+                {isAlert ? 'Pemberitahuan Sistem' : 'Konfirmasi Tindakan'}
               </span>
             </div>
           </div>
@@ -81,14 +90,16 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         {/* Action Buttons */}
         <div className="p-6 pt-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onClose}
-            className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer"
-          >
-            {cancelText}
-          </button>
+          {!isAlert && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onClose}
+              className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer"
+            >
+              {cancelText}
+            </button>
+          )}
           <button
             type="button"
             disabled={loading}
@@ -98,7 +109,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {loading && (
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            <span>{confirmText}</span>
+            <span>{effectiveConfirmText}</span>
           </button>
         </div>
       </div>

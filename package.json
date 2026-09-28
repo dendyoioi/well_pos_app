@@ -1,0 +1,28 @@
+{
+  "name": "well-pos-workspace",
+  "version": "1.0.0",
+  "description": "Well POS — Multi-Tenant SaaS Point of Sale, Inventory Ledger & Supply Chain Platform",
+  "private": true,
+  "scripts": {
+    "dev:sandbox": "./run-sandbox.sh",
+    "seed:sandbox": "npm run seed:sandbox --prefix pos_apps/server",
+    "seed:testbed": "npm run seed:testbed --prefix pos_apps/server",
+    "test:sandbox": "npm run test:sandbox --prefix pos_apps/server",
+    "test:smoke": "npm run test:smoke --prefix pos_apps/server",
+    "dev:server": "npm run dev --prefix pos_apps/server",
+    "dev:client": "npm run dev --prefix pos_apps/client",
+    "build:client": "npm run build --prefix pos_apps/client",
+    "build:server": "npm run build --prefix pos_apps/server"
+  },
+  "keywords": [
+    "pos",
+    "point-of-sale",
+    "saas",
+    "multi-tenant",
+    "inventory",
+    "fnb",
+    "retail"
+  ],
+  "author": "Well POS Team",
+  "license": "ISC"
+}

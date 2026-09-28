@@ -10,6 +10,20 @@ import {
   impersonateTenant,
   resetTenantOwnerPassword,
   getPlatformPlans,
+  toggleOutletStatus,
+  getPlatformInvoices,
+  verifyPlatformInvoicePayment,
+  triggerLicenseLifecycleEvaluation,
+  getPlatformUsers,
+  createPlatformUser,
+  updatePlatformUser,
+  deletePlatformUser,
+  getPlatformPromos,
+  createPlatformPromo,
+  togglePlatformPromo,
+  deletePlatformPromo,
+  getPlatformPaymentSettings,
+  updatePlatformPaymentSettings,
 } from '../controllers/platform.controller';
 
 export const platformRouter = Router();
@@ -26,7 +40,32 @@ platformRouter.patch('/tenants/:id/status', authenticatePlatform, updateTenantSt
 platformRouter.put('/tenants/:id/subscription', authenticatePlatform, updateTenantSubscription);
 platformRouter.patch('/tenants/:id/subscription', authenticatePlatform, updateTenantSubscription);
 platformRouter.post('/tenants/:id/impersonate', authenticatePlatform, impersonateTenant);
+platformRouter.patch('/outlets/:id/status', authenticatePlatform, toggleOutletStatus);
 platformRouter.post('/tenants/:id/reset-password', authenticatePlatform, resetTenantOwnerPassword);
 platformRouter.get('/plans', authenticatePlatform, getPlatformPlans);
 
+// Rute Invoice & Billing SaaS
+platformRouter.get('/invoices', authenticatePlatform, getPlatformInvoices);
+platformRouter.post('/invoices/:id/verify-payment', authenticatePlatform, verifyPlatformInvoicePayment);
+
+// Rute Manajemen Tim Staff Platform (RBAC)
+platformRouter.get('/users', authenticatePlatform, getPlatformUsers);
+platformRouter.post('/users', authenticatePlatform, createPlatformUser);
+platformRouter.patch('/users/:id', authenticatePlatform, updatePlatformUser);
+platformRouter.delete('/users/:id', authenticatePlatform, deletePlatformUser);
+
+// Rute Master Promo SaaS Platform (B2B)
+platformRouter.get('/promos', authenticatePlatform, getPlatformPromos);
+platformRouter.post('/promos', authenticatePlatform, createPlatformPromo);
+platformRouter.patch('/promos/:id/toggle', authenticatePlatform, togglePlatformPromo);
+platformRouter.delete('/promos/:id', authenticatePlatform, deletePlatformPromo);
+
+// Rute Konfigurasi Pembayaran & QRIS Statis Platform
+platformRouter.get('/payment-config', authenticatePlatform, getPlatformPaymentSettings);
+platformRouter.put('/payment-config', authenticatePlatform, updatePlatformPaymentSettings);
+
+// Rute Lifecycle Worker & Auto-Suspension Trigger
+platformRouter.post('/subscriptions/evaluate-lifecycle', authenticatePlatform, triggerLicenseLifecycleEvaluation);
+
 export default platformRouter;
+

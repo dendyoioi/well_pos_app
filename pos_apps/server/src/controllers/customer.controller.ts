@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { PaymentStatus, PointTxType } from '@prisma/client';
 import { prisma } from '../config/prisma';
+import { loyaltyService } from '../services/loyalty.service';
 
 // Skema validasi input tambah/edit pelanggan
 const customerSchema = z.object({
@@ -57,12 +59,12 @@ export const getCustomers = async (req: Request, res: Response) => {
     }
 
     // Tentukan kolom pengurutan yang aman
-    const validSortFields = ['name', 'totalSpent', 'visitCount', 'createdAt'];
+    const validSortFields = ['name', 'points', 'createdAt'];
     const resolvedSortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
     const orderBy: any = { [resolvedSortField]: sortOrder };
 
     // Ambil data pelanggan dan total hitungan secara paralel
-    const [customers, totalRecords, summaryAggregate, repeatMembers] = await Promise.all([
+    const [customers, totalRecords, totalCustomers, ordersAgg, repeatMembersCount] = await Promise.all([
       prisma.customer.findMany({
         where: whereClause,
         orderBy,
@@ -70,22 +72,28 @@ export const getCustomers = async (req: Request, res: Response) => {
         take: limit,
       }),
       prisma.customer.count({ where: whereClause }),
-      prisma.customer.aggregate({
-        where: tenantId ? { tenantId } : {},
-        _sum: { totalSpent: true, visitCount: true },
-        _count: { id: true },
-      }),
-      prisma.customer.count({
+      prisma.customer.count({ where: tenantId ? { tenantId } : {} }),
+      prisma.order.aggregate({
         where: {
           ...(tenantId ? { tenantId } : {}),
-          visitCount: { gt: 1 },
+          customerId: { not: null },
+          paymentStatus: PaymentStatus.PAID,
         },
+        _sum: { totalAmount: true },
+        _count: { id: true },
       }),
+      prisma.$queryRawUnsafe<any[]>(
+        `SELECT customer_id FROM "orders" 
+         WHERE customer_id IS NOT NULL ${tenantId ? 'AND tenant_id = $1' : ''} 
+         GROUP BY customer_id 
+         HAVING COUNT(id) > 1;`,
+        ...(tenantId ? [tenantId] : [])
+      ),
     ]);
 
-    const totalCustomers = summaryAggregate._count.id || 0;
-    const totalRevenueFromCustomers = Number(summaryAggregate._sum.totalSpent || 0);
-    const totalVisits = summaryAggregate._sum.visitCount || 0;
+    const totalRevenueFromCustomers = Number(ordersAgg._sum.totalAmount || 0);
+    const totalVisits = ordersAgg._count.id || 0;
+    const activeRepeatMembers = Array.isArray(repeatMembersCount) ? repeatMembersCount.length : 0;
     const avgSpendPerCustomer = totalCustomers > 0 ? Math.round(totalRevenueFromCustomers / totalCustomers) : 0;
 
     return res.status(200).json({
@@ -95,7 +103,7 @@ export const getCustomers = async (req: Request, res: Response) => {
         totalCustomers,
         totalRevenueFromCustomers,
         totalVisits,
-        activeRepeatMembers: repeatMembers,
+        activeRepeatMembers,
         avgSpendPerCustomer,
       },
       pagination: {
@@ -136,7 +144,7 @@ export const getCustomerById = async (req: Request, res: Response) => {
           select: {
             id: true,
             invoiceNumber: true,
-            grandTotal: true,
+            totalAmount: true,
             paymentStatus: true,
             createdAt: true,
             outlet: { select: { name: true } },
@@ -202,17 +210,21 @@ export const createCustomer = async (req: Request, res: Response) => {
       }
     }
 
+    // Fix K3: Jangan fallback ke tenant pertama — tolak dengan 401
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
     const finalCode = code?.trim() || (await generateCustomerCode(tenantId));
 
     const newCustomer = await prisma.customer.create({
       data: {
-        tenantId: tenantId || null,
+        tenantId: tenantId,
         code: finalCode,
         name: name.trim(),
         phone: phone?.trim() || null,
         email: email?.trim() || null,
         address: address?.trim() || null,
-        notes: notes?.trim() || null,
       },
     });
 
@@ -292,7 +304,6 @@ export const updateCustomer = async (req: Request, res: Response) => {
         phone: phone !== undefined ? (phone?.trim() || null) : existing.phone,
         email: email !== undefined ? (email?.trim() || null) : existing.email,
         address: address !== undefined ? (address?.trim() || null) : existing.address,
-        notes: notes !== undefined ? (notes?.trim() || null) : existing.notes,
       },
     });
 
@@ -361,3 +372,99 @@ export const deleteCustomer = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Controller: Riwayat mutasi poin loyalitas pelanggan
+ * @route GET /api/customers/:id/points-history
+ */
+export const getCustomerPointsHistory = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant context is required' });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: { id, tenantId },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        tier: true,
+        loyaltyPoints: true,
+        totalSpent: true,
+        visitCount: true,
+      },
+    });
+
+    if (!customer) {
+      return res.status(404).json({ status: 'error', message: 'Pelanggan tidak ditemukan' });
+    }
+
+    const ledgers = await prisma.customerPointLedger.findMany({
+      where: { customerId: id, tenantId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            totalAmount: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      customer,
+      data: ledgers,
+    });
+  } catch (error: any) {
+    console.error('Error in getCustomerPointsHistory:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat riwayat poin pelanggan', error: error.message });
+  }
+};
+
+/**
+ * Controller: Penyesuaian poin loyalitas manual oleh manajer/admin
+ * @route POST /api/customers/:id/adjust-points
+ */
+export const adjustCustomerPoints = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant context is required' });
+    }
+
+    const adjustSchema = z.object({
+      deltaPoints: z.number().int().refine((val) => val !== 0, 'Perubahan poin tidak boleh 0'),
+      notes: z.string().min(1, 'Catatan penyesuaian wajib diisi'),
+      type: z.nativeEnum(PointTxType).optional().default(PointTxType.MANUAL_ADJUSTMENT),
+    });
+
+    const { deltaPoints, notes, type } = adjustSchema.parse(req.body);
+
+    const result = await loyaltyService.adjustPoints(tenantId, id, deltaPoints, notes, type);
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Poin pelanggan berhasil disesuaikan (${deltaPoints > 0 ? '+' : ''}${deltaPoints} poin)`,
+      data: result,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ status: 'error', message: error.errors[0].message, errors: error.errors });
+    }
+    console.error('Error in adjustCustomerPoints:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal menyesuaikan poin pelanggan' });
+  }
+};
+

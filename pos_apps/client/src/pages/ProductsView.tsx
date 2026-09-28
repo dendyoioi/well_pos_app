@@ -15,27 +15,28 @@ import {
   FolderSync,
   Power,
   X,
-  ShoppingBag,
   Infinity as InfinityIcon,
-  Warehouse,
+  ShoppingBag,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import { ProductModal } from '../components/ProductModal';
-import { CategoryModal } from '../components/CategoryModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { AssignCatalogProductModal } from '../components/AssignCatalogProductModal';
+import { TablePagination } from '../components/TablePagination';
 import { api } from '../services/api';
 
 interface ProductsViewProps {
   userRole?: string;
   outletId?: string;
   onProductCountChange?: (count: number) => void;
+  onNavigateToCategories?: () => void;
 }
 
 export const ProductsView: React.FC<ProductsViewProps> = ({
   userRole = 'ADMIN',
   outletId,
   onProductCountChange,
+  onNavigateToCategories,
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -49,6 +50,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   // Multi-Select State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Feedback Notification Banner
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
     null
@@ -56,10 +61,9 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [bulkCategoryModalOpen, setBulkCategoryModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [bulkCategoryModalOpen, setBulkCategoryModalOpen] = useState(false);
   const [selectedTargetCategoryId, setSelectedTargetCategoryId] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -77,6 +81,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     message: '',
     onConfirm: () => {},
   });
+
+  const canManage = userRole === 'ADMIN' || userRole === 'OWNER';
 
   const fetchData = async () => {
     setLoading(true);
@@ -122,6 +128,18 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     }, 250);
     return () => clearTimeout(timer);
   }, [searchTerm, selectedCategory, statusFilter, outletId]);
+
+  // Reset pagination ke halaman 1 saat filter atau pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedProducts = products.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   // Reset selected IDs when filter or list changes
   useEffect(() => {
@@ -169,13 +187,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
     const txCount = deleteInfo?.transactionCount ?? 0;
     const currentStock = deleteInfo?.currentStock ?? product.stock ?? 0;
-    const outletLabel = deleteInfo?.outletName || 'cabang aktif';
+    const outletLabel = deleteInfo?.outletName || 'toko aktif';
 
     setConfirmModalConfig({
       isOpen: true,
-      title: outletId ? 'Lepas Produk dari Cabang?' : 'Hapus Produk?',
+      title: outletId ? 'Lepas Produk dari Toko?' : 'Hapus Produk?',
       variant: 'danger',
-      confirmText: outletId ? 'Ya, Lepas dari Cabang' : 'Ya, Hapus Produk',
+      confirmText: outletId ? 'Ya, Lepas dari Toko' : 'Ya, Hapus Produk',
       message: (
         <div className="space-y-3 text-left">
           <p className="text-slate-700">
@@ -191,12 +209,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 <span>Terkait dengan {txCount} Riwayat Transaksi Penjualan</span>
               </div>
               <p className="text-amber-800 text-[11px] leading-relaxed">
-                Produk ini akan <strong>langsung lenyap dari katalog dan kasir cabang ini</strong>. Seluruh riwayat nota, laporan HPP, dan laporan laba rugi masa lalu <strong>tetap tersimpan utuh dan aman</strong>.
+                Produk ini akan <strong>langsung lenyap dari katalog dan kasir toko ini</strong>. Seluruh riwayat nota, laporan HPP, dan laporan laba rugi masa lalu <strong>tetap tersimpan utuh dan aman</strong>.
               </p>
             </div>
           ) : (
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800">
-              Produk ini belum pernah ditransaksikan di cabang ini. Produk akan langsung dihapus dari katalog cabang.
+              Produk ini belum pernah ditransaksikan di toko ini. Produk akan langsung dihapus dari katalog toko.
             </div>
           )}
 
@@ -214,7 +232,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           if (res.status === 'success') {
             setFeedback({
               type: 'success',
-              message: res.message || `Produk "${product.name}" berhasil dilepas dari cabang.`,
+              message: res.message || `Produk "${product.name}" berhasil dilepas dari toko.`,
             });
             fetchData();
           } else {
@@ -261,17 +279,17 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
     setConfirmModalConfig({
       isOpen: true,
-      title: outletId ? `Lepas ${selectedIds.length} Produk dari Cabang?` : `Hapus ${selectedIds.length} Produk?`,
+      title: outletId ? `Lepas ${selectedIds.length} Produk dari Toko?` : `Hapus ${selectedIds.length} Produk?`,
       variant: 'danger',
       confirmText: outletId ? `Ya, Lepas ${selectedIds.length} Produk` : `Hapus ${selectedIds.length} Produk`,
       message: (
         <div className="space-y-2 text-left">
           <p className="text-slate-700">
             Anda akan melepas{' '}
-            <strong className="text-blue-950">{selectedIds.length} produk terpilih</strong> dari cabang ini.
+            <strong className="text-blue-950">{selectedIds.length} produk terpilih</strong> dari toko ini.
           </p>
           <p className="text-[11px] text-slate-500">
-            Produk terpilih akan langsung lenyap dari katalog dan kasir cabang ini. Seluruh riwayat transaksi nota dan audit masa lalu tetap aman.
+            Produk terpilih akan langsung lenyap dari katalog dan kasir toko ini. Seluruh riwayat transaksi nota dan audit masa lalu tetap aman.
           </p>
         </div>
       ),
@@ -413,26 +431,30 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          {userRole === 'ADMIN' && (
+          {canManage && (
             <>
-              <button
-                type="button"
-                onClick={() => setCategoryModalOpen(true)}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Layers className="w-4 h-4 text-blue-900" />
-                <span>Kategori Produk</span>
-              </button>
+              {onNavigateToCategories && (
+                <button
+                  type="button"
+                  onClick={onNavigateToCategories}
+                  className="px-3.5 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Buka menu Kelola Kategori Produk"
+                >
+                  <Layers className="w-4 h-4 text-blue-900" />
+                  <span>Kategori Produk</span>
+                </button>
+              )}
+
 
               {outletId && (
                 <button
                   type="button"
                   onClick={() => setAssignModalOpen(true)}
-                  className="px-3.5 py-2.5 rounded-xl border border-blue-200 hover:border-blue-400 bg-blue-50/80 hover:bg-blue-100 text-blue-900 text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                  title="Hubungkan produk dari katalog pusat yang belum ada di cabang ini"
+                  className="px-3.5 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Ambil dan hubungkan menu dari Master Katalog Pusat ke outlet toko ini"
                 >
-                  <ShoppingBag className="w-4 h-4 text-blue-900" />
-                  <span>Ambil dari Katalog</span>
+                  <ShoppingBag className="w-4 h-4 text-blue-800" />
+                  <span>Ambil dari Master Katalog</span>
                 </button>
               )}
 
@@ -493,7 +515,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
           <div className="text-xs text-slate-500 font-medium">
             Menampilkan <strong>{products.length}</strong> produk
-            {outletId ? ' pada cabang aktif' : ''}
+            {outletId ? ' pada toko aktif' : ''}
           </div>
         </div>
 
@@ -525,13 +547,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             </button>
           ))}
 
-          {userRole === 'ADMIN' && (
+          {canManage && onNavigateToCategories && (
             <button
               type="button"
-              onClick={() => setCategoryModalOpen(true)}
+              onClick={onNavigateToCategories}
               className="px-3 py-1 rounded-xl text-xs font-bold border border-dashed border-blue-900/40 text-blue-900 hover:bg-blue-50 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer"
+              title="Buka menu Kelola Kategori Produk"
             >
-              <Plus className="w-3 h-3" /> Kategori
+              <Plus className="w-3 h-3" /> Kelola Kategori
             </button>
           )}
         </div>
@@ -543,8 +566,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-bold text-xs uppercase tracking-wider">
-                {userRole === 'ADMIN' && (
-                  <th className="py-3.5 pl-5 pr-2 w-10 text-center">
+                {canManage && (
+                  <th className="py-3.5 pl-4 pr-2 w-10 text-center">
                     <button
                       type="button"
                       onClick={handleToggleSelectAll}
@@ -563,20 +586,20 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     </button>
                   </th>
                 )}
-                <th className="py-3.5 px-4 pl-2">Produk</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Barcode / SKU</th>
-                <th className="py-3.5 px-4">Kategori</th>
-                <th className="py-3.5 px-4 text-right">Modal (HPP)</th>
-                <th className="py-3.5 px-4 text-right">Harga Jual</th>
-                <th className="py-3.5 px-4 text-center">Stok Toko</th>
-                <th className="py-3.5 px-4 pr-6 text-center">Aksi</th>
+                <th className="py-3.5 px-4 min-w-[260px]">Produk</th>
+                <th className="py-3.5 px-3 min-w-[90px]">Status</th>
+                <th className="py-3.5 px-3 min-w-[130px]">Barcode / SKU</th>
+                <th className="py-3.5 px-3 min-w-[120px]">Kategori</th>
+                <th className="py-3.5 px-4 min-w-[110px] text-right">Modal (HPP)</th>
+                <th className="py-3.5 px-4 min-w-[120px] text-right">Harga Jual</th>
+                <th className="py-3.5 px-4 min-w-[120px] text-center">Stok Toko</th>
+                <th className="py-3.5 px-4 pr-5 min-w-[110px] text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="py-12 text-center text-slate-400">
+                  <td colSpan={canManage ? 9 : 8} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin" />
                       <span>Memuat katalog produk...</span>
@@ -585,7 +608,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="py-12 text-center text-slate-400">
+                  <td colSpan={canManage ? 9 : 8} className="py-12 text-center text-slate-400">
                     <Layers className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                     <p className="font-semibold">Tidak ada produk ditemukan</p>
                     <p className="text-xs text-slate-500">
@@ -594,10 +617,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                products.map((p) => {
+                paginatedProducts.map((p) => {
                   const isSelected = selectedIds.includes(p.id);
                   const marginRp = p.basePrice - p.costPrice;
-                  const marginPercent = Math.round((marginRp / (p.basePrice || 1)) * 100);
+                  const marginPercent = p.basePrice > 0 ? Math.round((marginRp / p.basePrice) * 100) : 0;
 
                   return (
                     <tr
@@ -607,8 +630,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       } ${!p.isActive ? 'opacity-70 bg-slate-50/30' : ''}`}
                     >
                       {/* Checkbox */}
-                      {userRole === 'ADMIN' && (
-                        <td className="py-4 pl-5 pr-2 text-center">
+                      {canManage && (
+                        <td className="py-3.5 pl-4 pr-2 text-center">
                           <button
                             type="button"
                             onClick={() => handleToggleSelectOne(p.id)}
@@ -624,32 +647,35 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       )}
 
                       {/* Nama & Foto & Deskripsi */}
-                      <td className="py-4 px-4 pl-2">
+                      <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
                               alt={p.name}
-                              className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0 bg-slate-100"
+                              className="w-12 h-12 rounded-xl object-cover border border-slate-200/90 shadow-2xs shrink-0 bg-slate-100"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 font-bold text-xs flex-shrink-0">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs shrink-0 shadow-2xs">
                               {p.name.substring(0, 2).toUpperCase()}
                             </div>
                           )}
                           <div className="min-w-0">
-                            <div className="font-bold text-blue-950 text-sm flex items-center gap-1.5 flex-wrap">
+                            <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
                               <span className={!p.isActive ? 'line-through text-slate-500' : ''}>
                                 {p.name}
                               </span>
                               {p.modifiers && p.modifiers.length > 0 && (
-                                <span className="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
+                                <span className="text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full shadow-2xs">
                                   ✨ {p.modifiers.length} Custom Opsi
                                 </span>
                               )}
                             </div>
                             {p.description && (
-                              <div className="text-xs text-slate-400 truncate max-w-xs">
+                              <div className="text-xs text-slate-400 truncate max-w-xs mt-0.5">
                                 {p.description}
                               </div>
                             )}
@@ -658,7 +684,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </td>
 
                       {/* Status Aktif / Nonaktif */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-3">
                         {p.isActive ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -673,48 +699,76 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </td>
 
                       {/* Barcode / SKU */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-3">
                         <div className="font-mono text-xs font-semibold text-slate-700 flex items-center gap-1">
-                          <Barcode className="w-3.5 h-3.5 text-blue-900" />
-                          <span>{p.barcode}</span>
+                          <Barcode className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+                          <span className="truncate">{p.barcode || '-'}</span>
                         </div>
-                        <div className="font-mono text-[11px] text-slate-400">{p.sku}</div>
+                        <div className="font-mono text-[11px] text-slate-400 truncate">{p.sku}</div>
                       </td>
 
                       {/* Kategori */}
-                      <td className="py-4 px-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
+                      <td className="py-3.5 px-3">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold inline-block truncate max-w-[130px]">
                           {p.category.name}
                         </span>
                       </td>
 
                       {/* Modal HPP */}
-                      <td className="py-4 px-4 text-right font-medium text-slate-600">
-                        Rp {p.costPrice.toLocaleString('id-ID')}
+                      <td className="py-3.5 px-4 text-right">
+                        {p.costPrice > 0 ? (
+                          <div>
+                            <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                              Rp {p.costPrice.toLocaleString('id-ID')}
+                            </span>
+                            {p.productType === 'COMPOSITE' && (
+                              <span className="text-[10px] text-slate-400 font-normal block">
+                                HPP BOM
+                              </span>
+                            )}
+                          </div>
+                        ) : p.productType === 'COMPOSITE' ? (
+                          <div title="Formula resep belum diracik di modul Resep & HPP">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                              Belum Ada Resep
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                              HPP: Rp 0
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
                       </td>
 
                       {/* Harga Jual & Margin */}
-                      <td className="py-4 px-4 text-right">
-                        <div className="font-extrabold text-blue-950">
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="font-extrabold text-blue-950 text-xs sm:text-sm">
                           Rp {p.basePrice.toLocaleString('id-ID')}
                         </div>
-                        <div className="text-[11px] text-emerald-600 font-semibold">
-                          Margin: {marginPercent}%
-                        </div>
+                        {p.costPrice > 0 ? (
+                          <div className="text-[11px] text-emerald-600 font-bold mt-0.5">
+                            Margin: {marginPercent}%
+                          </div>
+                        ) : p.productType === 'COMPOSITE' ? (
+                          <div className="text-[10px] text-slate-400 font-medium mt-0.5" title="Margin HPP belum dapat dihitung karena resep belum dirawat">
+                            Margin: -
+                          </div>
+                        ) : null}
                       </td>
 
                       {/* Stok & Status Alert */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border">
-                          {p.stock >= 99999 ? (
-                            <span className="flex items-center gap-1 text-amber-800 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full">
-                              <InfinityIcon className="w-3 h-3 text-amber-600" />
-                              Tanpa Stok
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs">
+                          {p.productType === 'COMPOSITE' || p.stock >= 99999 ? (
+                            <span className="flex items-center gap-1 text-emerald-800 bg-emerald-50 border-emerald-200 px-2 py-0.5 rounded-full">
+                              <InfinityIcon className="w-3 h-3 text-emerald-600" />
+                              Olahan F&B
                             </span>
                           ) : p.isLowStock ? (
                             <span className="flex items-center gap-1 text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full">
                               <AlertTriangle className="w-3 h-3 text-amber-600" />
-                              {p.stock} {p.unit} (Menipis)
+                              {p.stock} {p.unit}
                             </span>
                           ) : (
                             <span className="text-blue-900 bg-blue-50 border-blue-200 px-2 py-0.5 rounded-full">
@@ -722,53 +776,66 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                             </span>
                           )}
                         </div>
-                        {p.warehouseStock !== undefined && p.warehouseStock !== null && p.stock < 99999 && (
-                          <div className="mt-1 flex items-center justify-center">
-                            <span
-                              className="text-[10px] text-amber-800 bg-amber-50/90 border border-amber-200/80 px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
-                              title="Stok cadangan yang tersimpan di Gudang Utama"
-                            >
-                              <Warehouse className="w-3 h-3 text-amber-700" />
-                              <span>{p.warehouseStock} di Gudang</span>
-                            </span>
-                          </div>
-                        )}
                       </td>
 
                       {/* Tombol Aksi */}
-                      <td className="py-4 px-4 pr-6 text-center">
-                        {userRole === 'ADMIN' ? (
+                      <td className="py-3.5 px-4 pr-5 text-center">
+                        {canManage ? (
                           <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleStatusSingle(p)}
-                              title={p.isActive ? 'Nonaktifkan Produk' : 'Aktifkan Kembali Produk'}
-                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                                p.isActive
-                                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                                  : 'border-slate-300 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50'
-                              }`}
-                            >
-                              <Power className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Toggle Aktif / Nonaktif */}
+                            <div className="relative group flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatusSingle(p)}
+                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                  p.isActive
+                                    ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                    : 'border-slate-300 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                              >
+                                <Power className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                  {p.isActive ? 'Nonaktifkan Menu' : 'Aktifkan Kembali'}
+                                </span>
+                                <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                              </div>
+                            </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(p)}
-                              title="Edit Produk"
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-900 hover:bg-blue-50 transition-colors cursor-pointer"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Edit Menu */}
+                            <div className="relative group flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(p)}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-900 hover:bg-blue-50 transition-colors cursor-pointer"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                  Edit Produk
+                                </span>
+                                <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                              </div>
+                            </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteSingle(p)}
-                              title="Hapus / Nonaktifkan Produk"
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Hapus / Nonaktifkan */}
+                            <div className="relative group flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSingle(p)}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex flex-col items-end pointer-events-none z-30">
+                                <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                  Hapus / Nonaktifkan
+                                </span>
+                                <div className="w-1.5 h-1 mr-2 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <span className="text-[10px] text-slate-400 font-medium px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
@@ -783,6 +850,19 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Produk */}
+        {!loading && products.length > 0 && (
+          <TablePagination
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            totalItems={products.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="produk"
+          />
+        )}
       </div>
 
       {/* Floating Bulk Action Bar */}
@@ -929,12 +1009,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         outletId={outletId}
       />
 
-      {/* Modal Kelola Kategori */}
-      <CategoryModal
-        isOpen={categoryModalOpen}
-        onClose={() => setCategoryModalOpen(false)}
-        categories={categories}
-        onRefresh={fetchData}
+      {/* Modal Dialog: Hubungkan Menu dari Master Katalog */}
+      <AssignCatalogProductModal
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        outletId={outletId}
+        onSuccess={fetchData}
       />
 
       {/* Reusable Confirm Modal (Hapus / Konfirmasi Tindakan Penting) */}
@@ -949,19 +1029,6 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         loading={actionLoading}
       />
 
-      {/* Modal Ambil Produk dari Master Katalog */}
-      <AssignCatalogProductModal
-        isOpen={assignModalOpen}
-        onClose={() => setAssignModalOpen(false)}
-        outletId={outletId}
-        onSuccess={() => {
-          fetchData();
-          setFeedback({
-            type: 'success',
-            message: 'Produk dari katalog berhasil dihubungkan ke cabang ini.',
-          });
-        }}
-      />
     </div>
   );
 };

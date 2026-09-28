@@ -1,8 +1,20 @@
 export interface Category {
   id: string;
   name: string;
+  slug?: string;
   productCount?: number;
+  _count?: {
+    products: number;
+  };
   createdAt?: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  sku?: string;
+  name: string;
+  price: number;
+  costPrice?: number;
 }
 
 export interface ProductModifierOption {
@@ -40,7 +52,10 @@ export interface Product {
   warehouseStock?: number | null;
   minStockAlert: number;
   isLowStock?: boolean;
+  productType?: string;
+  hasStock?: boolean;
   modifiers?: ProductModifierGroup[];
+  variants?: ProductVariant[];
   createdAt?: string;
 }
 
@@ -56,26 +71,26 @@ export interface StockMovement {
   id: string;
   outletId: string;
   productId: string;
-  userId: string;
+  userId?: string | null;
   type: StockMovementType;
   quantity: number;
   notes?: string | null;
   createdAt: string;
-  product: {
+  product?: {
     id: string;
     name: string;
     sku: string;
     unit: string;
-  };
-  user: {
+  } | null;
+  user?: {
     id: string;
     name: string;
     role: string;
-  };
+  } | null;
   outlet?: {
     id: string;
     name: string;
-  };
+  } | null;
 }
 
 export interface LowStockProduct {

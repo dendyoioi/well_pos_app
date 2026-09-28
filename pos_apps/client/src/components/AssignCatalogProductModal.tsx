@@ -123,7 +123,7 @@ export const AssignCatalogProductModal: React.FC<AssignCatalogProductModalProps>
             </div>
             <div>
               <h3 className="text-base font-black text-blue-950">Ambil Produk dari Master Katalog</h3>
-              <p className="text-xs text-slate-500">Hubungkan produk yang sudah ada ke cabang aktif ini</p>
+              <p className="text-xs text-slate-500">Hubungkan produk yang sudah ada ke outlet toko aktif ini</p>
             </div>
           </div>
           <button
@@ -166,7 +166,7 @@ export const AssignCatalogProductModal: React.FC<AssignCatalogProductModalProps>
               <ShoppingBag className="w-8 h-8 text-slate-300 mx-auto" />
               <p className="text-xs text-slate-500 font-medium">
                 {availableProducts.length === 0
-                  ? 'Semua produk katalog sudah terhubung dengan cabang ini.'
+                  ? 'Semua produk katalog sudah terhubung dengan outlet toko ini.'
                   : 'Tidak ada produk yang cocok dengan pencarian.'}
               </p>
             </div>
@@ -259,7 +259,7 @@ export const AssignCatalogProductModal: React.FC<AssignCatalogProductModalProps>
               className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{submitting ? 'Menghubungkan...' : `Hubungkan ke Cabang (${countSelected})`}</span>
+              <span>{submitting ? 'Menghubungkan...' : `Hubungkan ke Outlet Toko (${countSelected})`}</span>
             </button>
           </div>
         </div>

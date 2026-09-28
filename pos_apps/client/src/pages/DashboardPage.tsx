@@ -21,8 +21,9 @@ import {
   Contact,
   Sparkles,
   Printer,
-  Warehouse,
   Lock,
+  ExternalLink,
+  Smartphone,
 } from 'lucide-react';
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
@@ -33,10 +34,30 @@ import { PosTerminalView } from './PosTerminalView';
 import { OrdersView } from './OrdersView';
 import { CustomersView } from './CustomersView';
 import { FinancialReportView } from './FinancialReportView';
+import { ProductAnalyticsView } from './ProductAnalyticsView';
 import { ShiftsAuditView } from './ShiftsAuditView';
 import { UsersView } from './UsersView';
+import { StaffRolesView } from './StaffRolesView';
+import { QrTablesView } from './QrTablesView';
+import { QrMenuSettingsView } from './QrMenuSettingsView';
+import { QrLiveOrdersView } from './QrLiveOrdersView';
+import { CustomerQrMenuView } from './CustomerQrMenuView';
+import type { QrLiveOrder } from '../types/qr_menu';
+import { CategoriesView } from './CategoriesView';
+import { ModifiersView } from './ModifiersView';
+import { RecipesView } from './RecipesView';
 import { OutletsView } from './OutletsView';
+import { SuppliersView } from './SuppliersView';
+import { PromotionsView } from './PromotionsView';
+import { ReceiptSettingsView } from './ReceiptSettingsView';
+import { TaxesSettingsView } from './TaxesSettingsView';
+import { PaymentSettingsView } from './PaymentSettingsView';
+import { SalesChannelsSettingsView } from './SalesChannelsSettingsView';
 import { OnboardingWizardModal } from '../components/saas/OnboardingWizardModal';
+import { FullScreenStoreWizard } from '../components/saas/FullScreenStoreWizard';
+import { BackofficeLayout } from '../components/saas/BackofficeLayout';
+import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
+import { BillingTokensView } from './BillingTokensView';
 import { api } from '../services/api';
 
 interface DashboardPageProps {
@@ -45,13 +66,132 @@ interface DashboardPageProps {
   onUserChange?: (user: User) => void;
 }
 
-type TabKey = 'pos' | 'overview' | 'products' | 'inventory' | 'orders' | 'customers' | 'reports' | 'shifts' | 'users' | 'outlets';
+type TabKey =
+  | 'pos'
+  | 'overview'
+  | 'billing_tokens'
+  // Menu & Produk
+  | 'products'
+  | 'categories'
+  | 'modifiers'
+  | 'recipes'
+  // Buku Menu QR
+  | 'qr_tables'
+  | 'qr_settings'
+  | 'qr_orders'
+  | 'qr_guest_menu'
+  // Bahan Baku & Stok
+  | 'inventory'
+  | 'stock_movements'
+  | 'suppliers'
+  // Transaksi
+  | 'orders'
+  // Laporan
+  | 'reports'
+  | 'shifts'
+  | 'product_analytics'
+  // Promosi & Diskon
+  | 'promotions'
+  | 'customers'
+  // Staf
+  | 'staff_users'
+  | 'staff_roles'
+  | 'users'
+  // Pengaturan
+  | 'settings_receipt'
+  | 'settings_taxes'
+  | 'settings_payment'
+  | 'settings_channels'
+  | 'outlets';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
-  CASHIER: ['pos', 'orders', 'customers', 'shifts'],
-  WAREHOUSE: ['inventory', 'products', 'overview'],
-  SUPERVISOR: ['overview', 'pos', 'orders', 'customers', 'shifts', 'products', 'inventory', 'reports', 'outlets'],
-  ADMIN: ['overview', 'pos', 'products', 'inventory', 'orders', 'customers', 'shifts', 'reports', 'users', 'outlets'],
+  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders'],
+  WAREHOUSE: ['inventory', 'stock_movements', 'suppliers', 'recipes', 'products', 'overview'],
+  SUPERVISOR: [
+    'overview',
+    'pos',
+    'orders',
+    'customers',
+    'shifts',
+    'products',
+    'categories',
+    'modifiers',
+    'recipes',
+    'qr_tables',
+    'qr_settings',
+    'qr_orders',
+    'qr_guest_menu',
+    'inventory',
+    'stock_movements',
+    'suppliers',
+    'reports',
+    'product_analytics',
+    'promotions',
+    'staff_users',
+    'settings_payment',
+    'settings_channels',
+    'outlets',
+  ],
+  ADMIN: [
+    'overview',
+    'billing_tokens',
+    'pos',
+    'products',
+    'categories',
+    'modifiers',
+    'recipes',
+    'qr_tables',
+    'qr_settings',
+    'qr_orders',
+    'qr_guest_menu',
+    'inventory',
+    'stock_movements',
+    'suppliers',
+    'orders',
+    'customers',
+    'shifts',
+    'reports',
+    'product_analytics',
+    'promotions',
+    'staff_users',
+    'staff_roles',
+    'users',
+    'settings_receipt',
+    'settings_taxes',
+    'settings_payment',
+    'settings_channels',
+    'outlets',
+  ],
+  OWNER: [
+    'overview',
+    'billing_tokens',
+    'pos',
+    'products',
+    'categories',
+    'modifiers',
+    'recipes',
+    'qr_tables',
+    'qr_settings',
+    'qr_orders',
+    'qr_guest_menu',
+    'inventory',
+    'stock_movements',
+    'suppliers',
+    'orders',
+    'customers',
+    'shifts',
+    'reports',
+    'product_analytics',
+    'promotions',
+    'staff_users',
+    'staff_roles',
+    'users',
+    'settings_receipt',
+    'settings_taxes',
+    'settings_payment',
+    'settings_channels',
+    'outlets',
+  ],
 };
 
 const DEFAULT_TAB: Record<UserRole, TabKey> = {
@@ -59,6 +199,7 @@ const DEFAULT_TAB: Record<UserRole, TabKey> = {
   WAREHOUSE: 'inventory',
   SUPERVISOR: 'overview',
   ADMIN: 'overview',
+  OWNER: 'overview',
 };
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) => {
@@ -71,29 +212,48 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [activeOutlet, setActiveOutlet] = useState<Outlet | null>(null);
   const [appendOrderData, setAppendOrderData] = useState<Order | null>(null);
+  const [selectedQrOrderForPos, setSelectedQrOrderForPos] = useState<QrLiveOrder | null>(null);
+  const [loadingOutlets, setLoadingOutlets] = useState(true);
+
   // Fetch all outlets belonging to this store's tenant
   const fetchOutlets = async () => {
     try {
+      setLoadingOutlets(true);
       const res = await api.getOutlets();
-      if (res.status === 'success' && res.data && res.data.length > 0) {
+      if (res.status === 'success' && res.data) {
         setOutlets(res.data);
-        setActiveOutlet((current) => {
-          // Kasir & Gudang harus terkunci ke cabang penugasan mereka
-          if (user.role === 'CASHIER' || user.role === 'WAREHOUSE') {
-            const userOutlet = res.data.find((o: Outlet) => o.id === user.outletId || o.id === user.outlet?.id);
-            if (userOutlet) return userOutlet;
-          }
+        if (res.data.length > 0) {
+          setActiveOutlet((current) => {
+            // Kasir & Gudang harus terkunci ke outlet penugasan mereka
+            if (user.role === 'CASHIER' || user.role === 'WAREHOUSE') {
+              const userOutlet = res.data.find((o: Outlet) => o.id === user.outletId || o.id === user.outlet?.id);
+              if (userOutlet) return userOutlet;
+            }
 
-          if (current) {
-            const found = res.data.find((o: Outlet) => o.id === current.id);
-            if (found) return found;
-          }
-          const matched = res.data.find((o: Outlet) => o.id === user.outletId || o.id === user.outlet?.id);
-          return matched || res.data[0];
-        });
+            // Jika outlet yang saat ini aktif valid dan BUKAN gudang, pertahankan
+            if (current && !current.isWarehouse) {
+              const found = res.data.find((o: Outlet) => o.id === current.id && !o.isWarehouse);
+              if (found) return found;
+            }
+
+            // Prioritas: Toko penjualan yang cocok dengan penugasan outlet user
+            const matchedStore = res.data.find(
+              (o: Outlet) => !o.isWarehouse && (o.id === user.outletId || o.id === user.outlet?.id)
+            );
+            if (matchedStore) return matchedStore;
+
+            // Prioritas fallback: Ambil Toko Penjualan pertama (bukan Gudang)
+            const firstStore = res.data.find((o: Outlet) => !o.isWarehouse);
+            return firstStore || res.data[0];
+          });
+        } else {
+          setActiveOutlet(null);
+        }
       }
     } catch (err) {
-      console.error('Gagal mengambil daftar cabang:', err);
+      console.error('Gagal mengambil daftar outlet:', err);
+    } finally {
+      setLoadingOutlets(false);
     }
   };
 
@@ -105,6 +265,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
     const selected = outlets.find((o) => o.id === outletId);
     if (selected) {
       setActiveOutlet(selected);
+      if (selected.isWarehouse) {
+        const allowedWarehouseTabs: TabKey[] = [
+          'inventory',
+          'stock_movements',
+          'suppliers',
+          'recipes',
+          'products',
+          'staff_users',
+          'staff_roles',
+          'users',
+          'outlets',
+        ];
+        if (!allowedWarehouseTabs.includes(activeTab)) {
+          setActiveTab('inventory');
+        }
+      }
     }
   };
 
@@ -115,13 +291,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
     setOutlets((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
   };
 
-  // Sesuaikan tab aktif bila user switch role atau tab tidak diizinkan
+  const handleOutletUpdated = (updatedOutlet: Outlet) => {
+    setActiveOutlet(updatedOutlet);
+    setOutlets((prev) => prev.map((o) => (o.id === updatedOutlet.id ? updatedOutlet : o)));
+  };
+
+  // Sesuaikan tab aktif bila user switch role atau outlet gudang aktif
   useEffect(() => {
+    if (activeOutlet?.isWarehouse) {
+      const allowedWarehouseTabs: TabKey[] = [
+        'inventory',
+        'stock_movements',
+        'suppliers',
+        'recipes',
+        'products',
+        'staff_users',
+        'staff_roles',
+        'users',
+        'outlets',
+      ];
+      if (!allowedWarehouseTabs.includes(activeTab)) {
+        setActiveTab('inventory');
+      }
+      return;
+    }
+
     const allowed = ROLE_TABS[user.role] || ['pos'];
     if (!allowed.includes(activeTab)) {
       setActiveTab(DEFAULT_TAB[user.role] || allowed[0]);
     }
-  }, [user.role, activeTab]);
+  }, [user.role, activeOutlet?.id, activeOutlet?.isWarehouse, activeTab]);
 
   useEffect(() => {
     api
@@ -155,28 +354,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
       .then((res) => {
         if (res.status === 'success') {
           setProductCount(res.data.length);
-          if (res.data.length === 0 && (user.role === 'ADMIN' || (user as any).role === 'OWNER')) {
-            setShowOnboardingWizard(true);
-          }
         }
       })
       .catch(() => {});
+
+    // Otomatis buka wizard untuk Admin/Owner bila toko baru belum melengkapi profil/kontak
+    if ((!activeOutlet.address || activeOutlet.address.includes('Setup di Onboarding') || !activeOutlet.phone) && (user.role === 'ADMIN' || (user as any).role === 'OWNER')) {
+      setShowOnboardingWizard(true);
+    }
   }, [activeOutlet?.id]);
 
-  // Perhitungan Checklist Setup Awal (0 - 100% dengan 5 Langkah)
+  // Perhitungan Checklist Setup Awal (0 - 100% dengan 3 Langkah Terstruktur)
   const hasStep1Address = Boolean(activeOutlet?.address && activeOutlet?.phone && !activeOutlet?.address?.includes('Setup di Onboarding'));
-  const hasStep2Warehouse = Boolean(activeOutlet?.warehouseId || outlets.some((o) => o.isWarehouse));
-  const hasStep3Receipt = Boolean(activeOutlet?.receiptConfig?.paperSize);
-  const hasStep4Cashier = usersList.some((u) => u.role === 'CASHIER') || (activeOutlet?._count?.users ?? 0) > 1;
-  const hasStep5Product = productCount > 0;
+  const hasStep2Receipt = Boolean(activeOutlet?.receiptConfig?.paperSize);
+  const hasStep3Staff = usersList.some((u) => u.role === 'CASHIER' || u.role === 'SUPERVISOR') || (activeOutlet?._count?.users ?? 0) > 1;
 
   const completedStepsCount =
     (hasStep1Address ? 1 : 0) +
-    (hasStep2Warehouse ? 1 : 0) +
-    (hasStep3Receipt ? 1 : 0) +
-    (hasStep4Cashier ? 1 : 0) +
-    (hasStep5Product ? 1 : 0);
-  const setupPercent = Math.round((completedStepsCount / 5) * 100);
+    (hasStep2Receipt ? 1 : 0) +
+    (hasStep3Staff ? 1 : 0);
+  const setupPercent = Math.round((completedStepsCount / 3) * 100);
   const isSetupIncomplete = setupPercent < 100 && (user.role === 'ADMIN' || (user as any).role === 'OWNER');
 
 
@@ -197,8 +394,239 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
   const badge = getRoleBadge(user.role);
   const allowedTabs = ROLE_TABS[user.role] || ['pos'];
 
-  // Hanya Admin & Supervisor yang berhak berpindah cabang (Multi-Outlet Switcher)
+  // Hanya Admin & Supervisor yang berhak berpindah toko (Multi-Outlet Switcher)
   const canSwitchOutlet = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
+
+  // 1. Full-Screen Wizard bila Owner belum memiliki toko
+  if (!loadingOutlets && outlets.length === 0 && (user.role === 'ADMIN' || (user as any).role === 'OWNER')) {
+    return (
+      <FullScreenStoreWizard
+        ownerName={user.name}
+        ownerEmail={user.email}
+        onStoreCreated={async () => {
+          await fetchOutlets();
+          setActiveTab('overview');
+        }}
+        onLogout={onLogout}
+      />
+    );
+  }
+
+  // 2. Enterprise Well POS Backoffice untuk Owner / Admin / Supervisor
+  if (user.role === 'ADMIN' || (user as any).role === 'OWNER' || user.role === 'SUPERVISOR') {
+    return (
+      <BackofficeLayout
+        user={user}
+        outlets={outlets}
+        activeOutlet={activeOutlet}
+        onSelectOutlet={handleOutletSelect}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        onLogout={onLogout}
+      >
+        {activeTab === 'pos' ? (
+          <PosTerminalView
+            activeOutlet={activeOutlet}
+            currentUserRole={user.role}
+            onOutletFeesUpdated={handleUpdateOutletFees}
+            appendOrderData={appendOrderData}
+            onClearAppendOrder={() => setAppendOrderData(null)}
+            loadQrOrderData={selectedQrOrderForPos}
+            onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
+          />
+        ) : activeTab === 'overview' ? (
+          <BusinessSummaryView
+            activeOutlet={activeOutlet}
+            onOpenPos={() => setActiveTab('pos')}
+          />
+        ) : activeTab === 'billing_tokens' ? (
+          <BillingTokensView
+            user={user}
+            activeOutlet={activeOutlet}
+          />
+        ) : activeTab === 'products' ? (
+          <ProductsView
+            userRole={user.role}
+            outletId={activeOutlet?.id}
+            onProductCountChange={(count) => setProductCount(count)}
+            onNavigateToCategories={() => setActiveTab('categories')}
+          />
+        ) : activeTab === 'categories' ? (
+          <CategoriesView
+            activeOutlet={activeOutlet}
+            onNavigateToProductsWithCategory={() => setActiveTab('products')}
+          />
+        ) : activeTab === 'modifiers' ? (
+          <ModifiersView />
+        ) : activeTab === 'recipes' ? (
+          <RecipesView outletId={activeOutlet?.id} />
+        ) : activeTab === 'qr_tables' ? (
+          <QrTablesView activeOutlet={activeOutlet} />
+        ) : activeTab === 'qr_settings' ? (
+          <QrMenuSettingsView activeOutlet={activeOutlet} />
+        ) : activeTab === 'qr_orders' ? (
+          <QrLiveOrdersView
+            activeOutlet={activeOutlet}
+            onOpenInPos={(order) => {
+              setSelectedQrOrderForPos(order);
+              setActiveTab('pos');
+            }}
+          />
+        ) : activeTab === 'qr_guest_menu' ? (
+          <div className="space-y-0">
+            {/* 2-Col: Info Panel + Phone Mockup */}
+            <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+              {/* Kiri: Info Panel */}
+              <div className="w-full lg:w-80 shrink-0 space-y-4">
+                <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Smartphone className="w-4 h-4 text-blue-900 shrink-0" />
+                      <h2 className="text-sm font-black text-slate-900">Pratinjau Menu Tamu</h2>
+                    </div>
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[11px] font-bold border border-blue-200 mb-2">
+                      Toko: {activeOutlet?.name || 'Utama'}
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Tampilan persis yang dilihat tamu saat memindai QR meja restoran.
+                    </p>
+                  </div>
+
+                  <a
+                    href={`/#menu?outletId=${activeOutlet?.id || ''}&table=DEMO`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-900/20 active:scale-95 cursor-pointer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Buka Layar Penuh di Tab Baru</span>
+                  </a>
+                </div>
+
+                {/* Tips */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                  <p className="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider">💡 Tips</p>
+                  <ul className="text-xs text-amber-900 space-y-1.5 leading-relaxed">
+                    <li>• Scan QR meja untuk membuka tampilan asli di HP tamu</li>
+                    <li>• Klik "Buka Layar Penuh" untuk menguji di browser HP</li>
+                    <li>• Pratinjau di sini menggunakan <strong>Meja DEMO</strong></li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Kanan: Phone Mockup */}
+              <div className="flex-1 flex justify-center lg:justify-start items-start">
+                <div className="w-full max-w-[375px] bg-white rounded-[2.5rem] border-[8px] border-slate-900 shadow-2xl overflow-hidden relative">
+                  {/* Simulated Phone Notch */}
+                  <div className="bg-slate-900 h-6 flex items-center justify-center">
+                    <div className="w-24 h-3 bg-slate-950 rounded-full" />
+                  </div>
+
+                  {/* Embedded Customer Menu Container (Scroll-only, tanpa banner merah, non-clickable) */}
+                  <div className="max-h-[680px] overflow-y-auto select-none cursor-default">
+                    <div className="pointer-events-none">
+                      <CustomerQrMenuView
+                        outletId={activeOutlet?.id || ''}
+                        tableCode="DEMO"
+                        hidePreviewBanner
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bottom bar notch */}
+                  <div className="bg-slate-900 h-5 flex items-center justify-center">
+                    <div className="w-28 h-1 bg-slate-700 rounded-full" />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        ) : activeTab === 'inventory' ? (
+          <InventoryView activeOutlet={activeOutlet} />
+        ) : activeTab === 'stock_movements' ? (
+          <InventoryView
+            activeOutlet={activeOutlet}
+            initialTab="PRODUCTS"
+            initialSubView="MOVEMENTS"
+          />
+        ) : activeTab === 'suppliers' ? (
+          <SuppliersView />
+        ) : activeTab === 'orders' ? (
+          <OrdersView
+            activeOutlet={activeOutlet}
+            onAppendOrder={(order) => {
+              setAppendOrderData(order);
+              setActiveTab('pos');
+            }}
+          />
+        ) : activeTab === 'customers' ? (
+          <CustomersView />
+        ) : activeTab === 'shifts' ? (
+          <ShiftsAuditView />
+        ) : activeTab === 'reports' ? (
+          <FinancialReportView activeOutlet={activeOutlet} />
+        ) : activeTab === 'product_analytics' ? (
+          <ProductAnalyticsView activeOutlet={activeOutlet} />
+        ) : activeTab === 'promotions' ? (
+          <PromotionsView />
+        ) : activeTab === 'staff_users' || activeTab === 'users' ? (
+          <UsersView onNavigateToRoles={() => setActiveTab('staff_roles')} />
+        ) : activeTab === 'staff_roles' ? (
+          <StaffRolesView onBackToStaffList={() => setActiveTab('staff_users')} />
+        ) : activeTab === 'settings_receipt' ? (
+          <ReceiptSettingsView
+            activeOutlet={activeOutlet}
+            onOutletUpdated={handleOutletUpdated}
+          />
+        ) : activeTab === 'settings_taxes' ? (
+          <TaxesSettingsView
+            activeOutlet={activeOutlet}
+            onOutletUpdated={handleOutletUpdated}
+            currentUserRole={user.role}
+          />
+        ) : activeTab === 'settings_payment' ? (
+          <PaymentSettingsView
+            activeOutlet={activeOutlet}
+            onOutletUpdated={handleOutletUpdated}
+            currentUserRole={user.role}
+          />
+        ) : activeTab === 'settings_channels' ? (
+          <SalesChannelsSettingsView
+            activeOutlet={activeOutlet}
+            onOutletUpdated={handleOutletUpdated}
+            currentUserRole={user.role}
+          />
+        ) : activeTab === 'outlets' ? (
+          <OutletsView
+            activeOutletId={activeOutlet?.id}
+            onSelectActiveOutlet={(id) => {
+              handleOutletSelect(id);
+            }}
+            onOutletsUpdated={fetchOutlets}
+          />
+        ) : (
+          <InventoryView activeOutlet={activeOutlet} />
+        )}
+
+        {/* Modal Onboarding Wizard (3 Steps) */}
+        {showOnboardingWizard && activeOutlet && (
+          <OnboardingWizardModal
+            isOpen={showOnboardingWizard}
+            onClose={() => setShowOnboardingWizard(false)}
+            outletId={activeOutlet.id}
+            businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
+            currentUser={user}
+            onComplete={() => {
+              setShowOnboardingWizard(false);
+              fetchOutlets();
+            }}
+          />
+        )}
+      </BackofficeLayout>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
@@ -214,15 +642,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 <span>{user.tenant?.name || activeOutlet?.name || 'Well POS'}</span>
               </h1>
               {/* Multi-Outlet Dropdown Selector & Manage Shortcut:
-                  - Kasir & Gudang: Terkunci pada cabang penugasan (Badge tetap)
-                  - Admin & SPV: Memiliki wewenang dropdown switcher & shortcut kelola cabang */}
+                  - Kasir & Gudang: Terkunci pada toko penugasan (Badge tetap)
+                  - Admin & SPV: Memiliki wewenang dropdown switcher & shortcut kelola toko */}
               {canSwitchOutlet && outlets.length > 1 ? (
                 <div className="relative inline-flex items-center gap-1.5">
                   <select
                     value={activeOutlet?.id || ''}
                     onChange={(e) => handleOutletSelect(e.target.value)}
                     className="bg-blue-50 border border-blue-300 text-blue-950 text-xs font-black rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs hover:bg-blue-100 transition-colors"
-                    title="Ganti Cabang Aktif (Akses Khusus Admin / Supervisor)"
+                    title="Ganti Toko Aktif (Akses Khusus Admin / Supervisor)"
                   >
                     {outlets.map((o) => (
                       <option key={o.id} value={o.id}>
@@ -234,10 +662,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                     <button
                       onClick={() => setActiveTab('outlets')}
                       className="px-2 py-1 text-[11px] font-bold bg-slate-100 hover:bg-blue-100 hover:text-blue-900 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-1 transition-all shadow-xs"
-                      title="Buka Menu Kelola Cabang"
+                      title="Buka Menu Kelola Toko"
                     >
                       <Store className="w-3 h-3 text-blue-900" />
-                      <span className="hidden sm:inline">Kelola Cabang</span>
+                      <span className="hidden sm:inline">Kelola Toko</span>
                     </button>
                   )}
                 </div>
@@ -245,7 +673,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-950 border border-blue-200 flex items-center gap-1 shadow-xs">
                     <Store className="w-3 h-3 text-blue-800" />
-                    <span>{activeOutlet?.name || user.outlet?.name || 'Cabang Utama'}</span>
+                    <span>{activeOutlet?.name || user.outlet?.name || 'Toko Utama'}</span>
                     {!canSwitchOutlet && (
                       <span className="text-[9px] bg-blue-200/60 text-blue-900 font-semibold px-1 py-0.2 rounded ml-0.5">
                         Terkunci
@@ -256,7 +684,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                     <button
                       onClick={() => setActiveTab('outlets')}
                       className="px-2 py-0.5 text-[11px] font-bold bg-slate-100 hover:bg-blue-100 hover:text-blue-900 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-1 transition-all shadow-xs"
-                      title="Kelola & Tambah Cabang Toko"
+                      title="Kelola & Tambah Outlet Toko"
                     >
                       <Store className="w-3 h-3 text-blue-900" />
                       <span className="hidden sm:inline">Kelola</span>
@@ -444,7 +872,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             </button>
           )}
 
-          {/* Tab Kelola Cabang Toko (Multi-Outlet PRO) */}
+          {/* Tab Kelola Outlet Toko (Multi-Outlet PRO) */}
           {allowedTabs.includes('outlets') && (
             <button
               onClick={() => setActiveTab('outlets')}
@@ -455,7 +883,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
               }`}
             >
               <Store className="w-4 h-4" />
-              <span>Cabang Toko</span>
+              <span>Outlet Toko</span>
               {outlets.filter((o) => !o.isWarehouse).length > 0 && (
                 <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-blue-800/40 text-current">
                   {outlets.filter((o) => !o.isWarehouse).length}
@@ -467,7 +895,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8">
+      <main className={`flex-1 w-full mx-auto ${
+        activeTab === 'pos' ? 'max-w-[1600px] p-2 sm:p-3' : 'max-w-6xl p-4 sm:p-8'
+      }`}>
         {/* Widget Panduan & Progres Setup Awal (Jika Belum 100%) */}
         {isSetupIncomplete && (
           <div className="mb-6 p-5 sm:p-6 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl border border-indigo-500/30 shadow-2xl relative overflow-hidden animate-in fade-in">
@@ -509,8 +939,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
               />
             </div>
 
-            {/* Checklist Grid (5 Langkah Terstruktur) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+            {/* Checklist Grid (3 Langkah Terstruktur) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {/* Item 1 */}
               <div
                 className={`p-3 rounded-2xl border transition-all ${
@@ -522,7 +952,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] font-extrabold flex items-center gap-1.5">
                     <Store className="w-3.5 h-3.5" />
-                    <span>1. Profil & WA</span>
+                    <span>1. Profil &amp; WA Toko</span>
                   </span>
                   {hasStep1Address ? (
                     <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">
@@ -544,37 +974,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
               {/* Item 2 */}
               <div
                 className={`p-3 rounded-2xl border transition-all ${
-                  hasStep2Warehouse
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-extrabold flex items-center gap-1.5">
-                    <Warehouse className="w-3.5 h-3.5" />
-                    <span>2. Gudang Utama</span>
-                  </span>
-                  {hasStep2Warehouse ? (
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">
-                      Terhubung
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded">
-                      Pending
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  {hasStep2Warehouse
-                    ? 'Gudang pusat logistik & stok buffer aktif'
-                    : 'Setup gudang utama penampung stok'}
-                </p>
-              </div>
-
-              {/* Item 3 */}
-              <div
-                className={`p-3 rounded-2xl border transition-all ${
-                  hasStep3Receipt
+                  hasStep2Receipt
                     ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
                     : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
                 }`}
@@ -582,9 +982,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] font-extrabold flex items-center gap-1.5">
                     <Printer className="w-3.5 h-3.5" />
-                    <span>3. Ukuran Struk</span>
+                    <span>2. Ukuran Struk</span>
                   </span>
-                  {hasStep3Receipt ? (
+                  {hasStep2Receipt ? (
                     <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">
                       {activeOutlet?.receiptConfig?.paperSize}
                     </span>
@@ -595,16 +995,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 leading-snug">
-                  {hasStep3Receipt
+                  {hasStep2Receipt
                     ? `Default printer outlet: ${activeOutlet?.receiptConfig?.paperSize}`
                     : 'Pilih standar printer kasir (58mm / 80mm)'}
                 </p>
               </div>
 
-              {/* Item 4 */}
+              {/* Item 3 */}
               <div
                 className={`p-3 rounded-2xl border transition-all ${
-                  hasStep4Cashier
+                  hasStep3Staff
                     ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
                     : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
                 }`}
@@ -612,9 +1012,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] font-extrabold flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5" />
-                    <span>4. Staf Kasir</span>
+                    <span>3. Akun SPV &amp; Kasir</span>
                   </span>
-                  {hasStep4Cashier ? (
+                  {hasStep3Staff ? (
                     <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">
                       Selesai
                     </span>
@@ -625,39 +1025,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 leading-snug">
-                  {hasStep4Cashier
-                    ? 'Staf kasir dengan PIN 6 digit siap bertransaksi'
-                    : 'Buat kasir pertama agar staf counter bisa login'}
-                </p>
-              </div>
-
-              {/* Item 5 */}
-              <div
-                className={`p-3 rounded-2xl border transition-all ${
-                  hasStep5Product
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-extrabold flex items-center gap-1.5">
-                    <PackageCheck className="w-3.5 h-3.5" />
-                    <span>5. 1 Produk Awal</span>
-                  </span>
-                  {hasStep5Product ? (
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">
-                      {productCount} Produk
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded">
-                      Pending
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  {hasStep5Product
-                    ? 'Produk perdana dan alokasi saldo awal siap'
-                    : 'Buat minimal 1 produk perdana siap jual'}
+                  {hasStep3Staff
+                    ? 'Akun supervisor & kasir siap bertransaksi'
+                    : 'Siapkan akun operasional counter kasir'}
                 </p>
               </div>
             </div>
@@ -671,6 +1041,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             onOutletFeesUpdated={handleUpdateOutletFees}
             appendOrderData={appendOrderData}
             onClearAppendOrder={() => setAppendOrderData(null)}
+            loadQrOrderData={selectedQrOrderForPos}
+            onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
           />
         ) : activeTab === 'overview' ? (
           <div className="space-y-8">
@@ -766,7 +1138,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                       className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
                     >
                       <Store className="w-4 h-4 text-sky-300" />
-                      <span>Kelola Cabang ({outlets.filter((o) => !o.isWarehouse).length})</span>
+                      <span>Kelola Toko ({outlets.filter((o) => !o.isWarehouse).length})</span>
                     </button>
                   )}
                 </div>
@@ -781,10 +1153,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 className={`p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
                   allowedTabs.includes('outlets') ? 'cursor-pointer hover:border-blue-300' : ''
                 }`}
-                title={allowedTabs.includes('outlets') ? 'Klik untuk kelola cabang toko' : undefined}
+                title={allowedTabs.includes('outlets') ? 'Klik untuk kelola outlet toko' : undefined}
               >
                 <div className="flex items-center justify-between text-slate-500 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider">Cabang Toko</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">Outlet Toko</span>
                   <Store className="w-4 h-4 text-blue-900" />
                 </div>
                 <div>
@@ -823,7 +1195,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 <div>
                   <div className="text-lg font-extrabold text-blue-950">{productCount} Produk Terdata</div>
                   <p className="text-xs text-slate-500 mt-1">
-                    {user.role === 'ADMIN' ? 'Akses Tambah/Ubah/Hapus Aktif' : 'Akses Hanya Lihat (Read-Only)'}
+                    Akses Hanya Lihat (Read-Only)
                   </p>
                 </div>
               </div>
@@ -1045,6 +1417,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             userRole={user.role}
             outletId={activeOutlet?.id}
             onProductCountChange={(count) => setProductCount(count)}
+            onNavigateToCategories={() => setActiveTab('categories')}
           />
         ) : activeTab === 'orders' ? (
           <OrdersView
@@ -1061,7 +1434,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         ) : activeTab === 'reports' ? (
           <FinancialReportView />
         ) : activeTab === 'users' ? (
-          <UsersView />
+          <UsersView onNavigateToRoles={() => setActiveTab('staff_roles')} />
         ) : activeTab === 'outlets' ? (
           <OutletsView
             activeOutletId={activeOutlet?.id}
@@ -1074,13 +1447,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
           <InventoryView activeOutlet={activeOutlet} />
         )}
 
-        {/* Modal Onboarding Wizard (4 Steps) */}
+        {/* Modal Onboarding Wizard (3 Steps) */}
         {showOnboardingWizard && activeOutlet && (
           <OnboardingWizardModal
             isOpen={showOnboardingWizard}
             onClose={() => setShowOnboardingWizard(false)}
             outletId={activeOutlet.id}
-            businessName={(user as any).businessName || activeOutlet.name}
+            businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
+            currentUser={user}
             onComplete={() => {
               setShowOnboardingWizard(false);
               fetchOutlets();

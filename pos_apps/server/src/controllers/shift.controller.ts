@@ -34,9 +34,15 @@ export const startShift = async (req: Request, res: Response) => {
       return res.status(401).json({ status: 'error', message: 'Kasir belum terautentikasi' });
     }
 
+    let tenantId: string | undefined = req.user?.tenantId || req.tenantId;
     let targetOutletId = parseResult.data.outletId || req.user?.outletId;
     if (!targetOutletId) {
-      const defaultOutlet = await prisma.outlet.findFirst({ select: { id: true } });
+      const defaultOutlet = tenantId
+        ? await prisma.outlet.findFirst({
+            where: { tenantId },
+            select: { id: true },
+          })
+        : null;
       targetOutletId = defaultOutlet?.id;
     }
 
@@ -44,13 +50,25 @@ export const startShift = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Outlet tidak ditemukan' });
     }
 
+    if (!tenantId && targetOutletId) {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: targetOutletId },
+        select: { tenantId: true },
+      });
+      tenantId = outlet?.tenantId;
+    }
+    // Fix K3: Jangan fallback ke tenant pertama — tolak dengan 401
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
     // Cek apakah kasir sudah memiliki shift yang masih berstatus OPEN
     const existingOpenShift = await prisma.shift.findFirst({
       where: {
-        cashierId,
+        userId: cashierId,
         status: ShiftStatus.OPEN,
       },
-      include: { outlet: { select: { name: true } }, cashier: { select: { name: true } } },
+      include: { outlet: { select: { name: true } }, user: { select: { name: true } } },
     });
 
     if (existingOpenShift) {
@@ -65,16 +83,16 @@ export const startShift = async (req: Request, res: Response) => {
 
     const newShift = await prisma.shift.create({
       data: {
-        tenantId: req.user?.tenantId || undefined,
+        tenantId: tenantId!,
         outletId: targetOutletId,
-        cashierId,
+        userId: cashierId,
         startingCash,
         status: ShiftStatus.OPEN,
         notes: notes || 'Buka shift kasir harian',
       },
       include: {
         outlet: { select: { name: true } },
-        cashier: { select: { name: true } },
+        user: { select: { name: true } },
       },
     });
 
@@ -102,12 +120,12 @@ export const getCurrentShift = async (req: Request, res: Response) => {
 
     const activeShift = await prisma.shift.findFirst({
       where: {
-        cashierId,
+        userId: cashierId,
         status: ShiftStatus.OPEN,
       },
       include: {
         outlet: { select: { name: true, address: true, phone: true } },
-        cashier: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } },
       },
     });
 
@@ -120,27 +138,35 @@ export const getCurrentShift = async (req: Request, res: Response) => {
     }
 
     // Ambil rekap transaksi berjalan selama shift ini
-    const orders = await prisma.order.findMany({
-      where: { shiftId: activeShift.id },
-      include: { payments: true },
-    });
+    const paymentRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT pt.payment_method as "paymentMethod", pt.amount
+       FROM "payment_transactions" pt
+       JOIN "orders" o ON o.id = pt.order_id
+       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED';`,
+      activeShift.id
+    );
 
     let cashSalesTotal = 0;
     let cashSalesCount = 0;
     let qrisSalesTotal = 0;
     let qrisSalesCount = 0;
 
-    orders.forEach((order) => {
-      order.payments.forEach((p) => {
-        if (p.method === PaymentMethod.CASH) {
-          cashSalesTotal += Number(order.grandTotal);
-          cashSalesCount += 1;
-        } else if (p.method === PaymentMethod.QRIS) {
-          qrisSalesTotal += Number(order.grandTotal);
-          qrisSalesCount += 1;
-        }
-      });
+    paymentRows.forEach((p) => {
+      if (p.paymentMethod === 'CASH') {
+        cashSalesTotal += Number(p.amount);
+        cashSalesCount += 1;
+      } else if (p.paymentMethod === 'QRIS') {
+        qrisSalesTotal += Number(p.amount);
+        qrisSalesCount += 1;
+      }
     });
+
+    const countRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT count(*)::int as count FROM "orders" 
+       WHERE shift_id = $1 AND order_status NOT IN ('CANCELLED', 'VOIDED');`,
+      activeShift.id
+    );
+    const totalOrders = countRows[0]?.count || 0;
 
     const startingCash = Number(activeShift.startingCash);
     const expectedCash = startingCash + cashSalesTotal;
@@ -149,9 +175,10 @@ export const getCurrentShift = async (req: Request, res: Response) => {
       status: 'success',
       data: {
         ...activeShift,
+        cashier: { name: activeShift.user.name, email: activeShift.user.email },
         startingCash,
         stats: {
-          totalOrders: orders.length,
+          totalOrders,
           cashSalesTotal,
           cashSalesCount,
           qrisSalesTotal,
@@ -180,12 +207,12 @@ export const getXReport = async (req: Request, res: Response) => {
 
     const activeShift = await prisma.shift.findFirst({
       where: {
-        cashierId,
+        userId: cashierId,
         status: ShiftStatus.OPEN,
       },
       include: {
         outlet: true,
-        cashier: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } },
       },
     });
 
@@ -196,16 +223,16 @@ export const getXReport = async (req: Request, res: Response) => {
       });
     }
 
-    const orders = await prisma.order.findMany({
-      where: { shiftId: activeShift.id },
-      include: {
-        orderItems: {
-          include: { product: { select: { name: true, sku: true } } },
-        },
-        payments: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const orderRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT o.id, o.invoice_number as "invoiceNumber", o.subtotal, o.discount_amount as "discountAmount",
+              o.tax_amount as "taxAmount", o.service_charge as "serviceCharge", o.grand_total as "grandTotal",
+              o.created_at as "createdAt", pt.payment_method as "paymentMethod", pt.amount
+       FROM "orders" o
+       LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
+       WHERE o.shift_id = $1
+       ORDER BY o.created_at DESC;`,
+      activeShift.id
+    );
 
     let totalGrossSales = 0;
     let totalDiscounts = 0;
@@ -213,25 +240,33 @@ export const getXReport = async (req: Request, res: Response) => {
     let totalService = 0;
     let totalCashSales = 0;
     let totalQrisSales = 0;
+    const orderMap = new Map<string, any>();
 
-    orders.forEach((order) => {
-      totalGrossSales += Number(order.subtotal);
-      totalDiscounts += Number(order.discountAmount);
-      totalTax += Number(order.taxAmount);
-      totalService += Number(order.serviceCharge);
-
-      order.payments.forEach((p) => {
-        if (p.method === PaymentMethod.CASH) {
-          totalCashSales += Number(order.grandTotal);
-        } else if (p.method === PaymentMethod.QRIS) {
-          totalQrisSales += Number(order.grandTotal);
-        }
-      });
+    orderRows.forEach((row) => {
+      if (!orderMap.has(row.id)) {
+        orderMap.set(row.id, {
+          invoiceNumber: row.invoiceNumber,
+          createdAt: row.createdAt,
+          grandTotal: Number(row.grandTotal || 0),
+          paymentMethod: row.paymentMethod || 'CASH',
+        });
+        totalGrossSales += Number(row.subtotal || 0);
+        totalDiscounts += Number(row.discountAmount || 0);
+        totalTax += Number(row.taxAmount || 0);
+        totalService += Number(row.serviceCharge || 0);
+      }
+      if (row.paymentMethod === 'CASH') {
+        totalCashSales += Number(row.amount || 0);
+      } else if (row.paymentMethod === 'QRIS') {
+        totalQrisSales += Number(row.amount || 0);
+      }
     });
 
     const startingCash = Number(activeShift.startingCash);
     const expectedCashInDrawer = startingCash + totalCashSales;
     const netRevenue = totalCashSales + totalQrisSales;
+
+    const recentOrders = Array.from(orderMap.values()).slice(0, 10);
 
     return res.status(200).json({
       status: 'success',
@@ -245,7 +280,7 @@ export const getXReport = async (req: Request, res: Response) => {
           name: activeShift.outlet.name,
           address: activeShift.outlet.address,
         },
-        cashier: activeShift.cashier.name,
+        cashier: activeShift.user.name,
         cashDrawer: {
           startingCash,
           cashSales: totalCashSales,
@@ -257,18 +292,13 @@ export const getXReport = async (req: Request, res: Response) => {
           netRevenue,
         },
         transactionSummary: {
-          totalOrders: orders.length,
+          totalOrders: orderMap.size,
           totalGrossSales,
           totalDiscounts,
           totalTax,
           totalService,
         },
-        recentOrders: orders.slice(0, 10).map((o) => ({
-          invoiceNumber: o.invoiceNumber,
-          createdAt: o.createdAt,
-          grandTotal: Number(o.grandTotal),
-          paymentMethod: o.payments[0]?.method || 'CASH',
-        })),
+        recentOrders,
       },
     });
   } catch (error: any) {
@@ -299,12 +329,12 @@ export const closeShift = async (req: Request, res: Response) => {
 
     const activeShift = await prisma.shift.findFirst({
       where: {
-        cashierId,
+        userId: cashierId,
         status: ShiftStatus.OPEN,
       },
       include: {
         outlet: true,
-        cashier: { select: { name: true } },
+        user: { select: { name: true } },
       },
     });
 
@@ -318,23 +348,31 @@ export const closeShift = async (req: Request, res: Response) => {
     const { actualCash, notes } = parseResult.data;
 
     // Hitung rekap seluruh order pada shift ini
-    const orders = await prisma.order.findMany({
-      where: { shiftId: activeShift.id },
-      include: { payments: true },
-    });
+    const paymentRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT pt.payment_method as "paymentMethod", pt.amount
+       FROM "payment_transactions" pt
+       JOIN "orders" o ON o.id = pt.order_id
+       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED';`,
+      activeShift.id
+    );
 
     let totalCashSales = 0;
     let totalQrisSales = 0;
 
-    orders.forEach((order) => {
-      order.payments.forEach((p) => {
-        if (p.method === PaymentMethod.CASH) {
-          totalCashSales += Number(order.grandTotal);
-        } else if (p.method === PaymentMethod.QRIS) {
-          totalQrisSales += Number(order.grandTotal);
-        }
-      });
+    paymentRows.forEach((p) => {
+      if (p.paymentMethod === 'CASH') {
+        totalCashSales += Number(p.amount);
+      } else if (p.paymentMethod === 'QRIS') {
+        totalQrisSales += Number(p.amount);
+      }
     });
+
+    const countRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT count(*)::int as count FROM "orders" 
+       WHERE shift_id = $1 AND order_status NOT IN ('CANCELLED', 'VOIDED');`,
+      activeShift.id
+    );
+    const totalOrders = countRows[0]?.count || 0;
 
     const startingCash = Number(activeShift.startingCash);
     const expectedCash = startingCash + totalCashSales;
@@ -346,15 +384,15 @@ export const closeShift = async (req: Request, res: Response) => {
       where: { id: activeShift.id },
       data: {
         endTime,
-        expectedCash,
-        actualCash,
-        difference,
+        expectedEnding: expectedCash,
+        actualEnding: actualCash,
+        cashDifference: difference,
         status: ShiftStatus.CLOSED,
         notes: notes || `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`,
       },
       include: {
         outlet: true,
-        cashier: { select: { name: true } },
+        user: { select: { name: true } },
       },
     });
 
@@ -367,7 +405,7 @@ export const closeShift = async (req: Request, res: Response) => {
         startTime: closedShift.startTime,
         endTime: closedShift.endTime,
         outlet: closedShift.outlet.name,
-        cashier: closedShift.cashier.name,
+        cashier: closedShift.user.name,
         cashDrawer: {
           startingCash,
           totalCashSales,
@@ -381,7 +419,7 @@ export const closeShift = async (req: Request, res: Response) => {
           totalQrisSales,
           totalRevenue: totalCashSales + totalQrisSales,
         },
-        totalTransactions: orders.length,
+        totalTransactions: totalOrders,
         notes: closedShift.notes,
       },
     });
@@ -409,7 +447,7 @@ export const getShiftHistory = async (req: Request, res: Response) => {
         outletId: targetOutletId || undefined,
       },
       include: {
-        cashier: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } },
         outlet: { select: { name: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -418,15 +456,15 @@ export const getShiftHistory = async (req: Request, res: Response) => {
 
     const formatted = shifts.map((s) => ({
       id: s.id,
-      cashier: s.cashier.name,
-      cashierEmail: s.cashier.email,
+      cashier: s.user.name,
+      cashierEmail: s.user.email,
       outlet: s.outlet.name,
       startTime: s.startTime,
       endTime: s.endTime,
       startingCash: Number(s.startingCash),
-      expectedCash: s.expectedCash !== null ? Number(s.expectedCash) : null,
-      actualCash: s.actualCash !== null ? Number(s.actualCash) : null,
-      difference: s.difference !== null ? Number(s.difference) : null,
+      expectedCash: s.expectedEnding !== null ? Number(s.expectedEnding) : null,
+      actualCash: s.actualEnding !== null ? Number(s.actualEnding) : null,
+      difference: s.cashDifference !== null ? Number(s.cashDifference) : null,
       status: s.status,
       notes: s.notes,
       createdAt: s.createdAt,
@@ -457,17 +495,8 @@ export const getShiftById = async (req: Request, res: Response) => {
         ...(userTenantId ? { tenantId: userTenantId } : {}),
       },
       include: {
-        cashier: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true } },
         outlet: { select: { name: true, address: true, phone: true } },
-        orders: {
-          include: {
-            payments: true,
-            orderItems: {
-              include: { product: { select: { name: true, sku: true } } },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
       },
     });
 
@@ -475,29 +504,40 @@ export const getShiftById = async (req: Request, res: Response) => {
       return res.status(404).json({ status: 'error', message: 'Data shift tidak ditemukan' });
     }
 
+    const orderRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT o.id, o.grand_total as "grandTotal", o.invoice_number as "invoiceNumber", o.created_at,
+              o.order_status as "orderStatus",
+              pt.payment_method as "paymentMethod", pt.amount
+       FROM "orders" o
+       LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
+       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
+      id
+    );
+
     let cashSales = 0;
     let qrisSales = 0;
+    const orderSet = new Set<string>();
 
-    shift.orders.forEach((order) => {
-      order.payments.forEach((p) => {
-        if (p.method === PaymentMethod.CASH) {
-          cashSales += Number(order.grandTotal);
-        } else if (p.method === PaymentMethod.QRIS) {
-          qrisSales += Number(order.grandTotal);
-        }
-      });
+    orderRows.forEach((row) => {
+      orderSet.add(row.id);
+      if (row.paymentMethod === 'CASH') {
+        cashSales += Number(row.amount || 0);
+      } else if (row.paymentMethod === 'QRIS') {
+        qrisSales += Number(row.amount || 0);
+      }
     });
 
     return res.status(200).json({
       status: 'success',
       data: {
         ...shift,
+        cashier: { name: shift.user.name, email: shift.user.email },
         startingCash: Number(shift.startingCash),
-        expectedCash: shift.expectedCash !== null ? Number(shift.expectedCash) : null,
-        actualCash: shift.actualCash !== null ? Number(shift.actualCash) : null,
-        difference: shift.difference !== null ? Number(shift.difference) : null,
+        expectedCash: shift.expectedEnding !== null ? Number(shift.expectedEnding) : null,
+        actualCash: shift.actualEnding !== null ? Number(shift.actualEnding) : null,
+        difference: shift.cashDifference !== null ? Number(shift.cashDifference) : null,
         stats: {
-          totalOrders: shift.orders.length,
+          totalOrders: orderSet.size,
           cashSales,
           qrisSales,
           totalRevenue: cashSales + qrisSales,

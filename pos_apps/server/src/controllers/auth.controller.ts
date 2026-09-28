@@ -4,7 +4,12 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_super_aman_pos_12345';
+// Fix K2: JWT_SECRET WAJIB ada di environment. Jika tidak ada, server gagal startup secara eksplisit.
+// Generate dengan: openssl rand -hex 64
+if (!process.env.JWT_SECRET) {
+  throw new Error('[FATAL] JWT_SECRET tidak ditemukan di environment variables. Server tidak dapat dijalankan tanpa secret yang aman.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '7d';
 
 // Skema validasi login email/password
@@ -16,16 +21,46 @@ const loginPasswordSchema = z.object({
 // Skema validasi login PIN kasir
 const loginPinSchema = z.object({
   pin: z.string().length(6, 'PIN harus terdiri dari 6 digit angka'),
+  userCode: z.string().min(1).max(20).optional(), // ID Staff kasir (5 digit, misal: 10001)
   email: z.string().trim().toLowerCase().email().optional(),
   outletId: z.string().uuid().optional(),
   tenantId: z.string().uuid().optional(),
 });
 
-// Skema validasi pairing perangkat kasir ke toko
+// Skema validasi pairing perangkat kasir ke toko menggunakan ID Toko + ID Staff Owner/SPV
 const pairDeviceSchema = z.object({
-  storeIdentifier: z.string().min(2, 'ID Toko atau Nomor Telepon wajib diisi'),
+  tenantSlug: z.string().min(1, 'ID Toko wajib diisi'),       // slug toko, misal: kopi-nusantara
+  staffCode: z.string().min(1, 'ID Staff Owner/SPV wajib diisi'), // userCode, misal: 00001
   authPin: z.string().length(6, 'PIN Otorisasi harus 6 digit'),
 });
+
+/**
+ * Helper: Ambil info langganan aktif tenant (FREE vs PRO)
+ */
+const getTenantSubscriptionInfo = async (tenantId: string) => {
+  try {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT ts.id, ts.expires_at, ts.is_active, sp.code as plan_code, sp.name as plan_name, sp.features
+       FROM "tenant_subscriptions" ts
+       JOIN "subscription_plans" sp ON sp.id = ts.plan_id
+       WHERE ts.tenant_id = $1 AND ts.is_active = true
+       ORDER BY ts.created_at DESC LIMIT 1;`,
+      tenantId
+    );
+    if (!rows || rows.length === 0) return null;
+    const sub = rows[0];
+    return {
+      planCode: sub.plan_code,
+      planName: sub.plan_name,
+      features: (sub.features as string[]) || [],
+      isPro: sub.plan_code === 'PRO',
+      isFree: sub.plan_code === 'FREE',
+      expiresAt: sub.expires_at,
+    };
+  } catch (err) {
+    return null;
+  }
+};
 
 /**
  * Controller: Login menggunakan Email & Password
@@ -61,6 +96,15 @@ export const loginWithPassword = async (req: Request, res: Response) => {
             phone: true,
           },
         },
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            status: true,
+            slug: true,
+          },
+        },
       },
     });
 
@@ -81,19 +125,26 @@ export const loginWithPassword = async (req: Request, res: Response) => {
     if (user.tenantId) {
       const tenant = await prisma.tenant.findUnique({
         where: { id: user.tenantId },
-        select: { status: true, businessName: true },
+        select: { status: true, name: true },
       });
       if (tenant?.status === 'PENDING') {
         return res.status(403).json({
           status: 'error',
           code: 'TENANT_PENDING_APPROVAL',
-          tenantName: tenant.businessName,
-          message: `Akun bisnis "${tenant.businessName}" sedang dalam tahap peninjauan (Pending Approval) oleh tim SaaS. Silakan tunggu notifikasi persetujuan sebelum masuk.`,
+          tenantName: tenant.name,
+          message: `Akun bisnis "${tenant.name}" sedang dalam tahap peninjauan (Pending Approval) oleh tim SaaS. Silakan tunggu notifikasi persetujuan sebelum masuk.`,
         });
       }
     }
 
     // Verifikasi password hash
+    if (!user.passwordHash) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Pengguna ini tidak memiliki kata sandi aktif. Silakan gunakan Login PIN kasir.',
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -115,25 +166,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
     );
 
     // Ambil info paket langganan tenant (FREE vs PRO)
-    let subscriptionInfo = null;
-    if (user.tenantId) {
-      const activeSub = await prisma.tenantSubscription.findFirst({
-        where: { tenantId: user.tenantId, isActive: true },
-        include: { plan: true },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (activeSub) {
-        subscriptionInfo = {
-          planCode: activeSub.plan.code,
-          planName: activeSub.plan.name,
-          features: (activeSub.plan.features as string[]) || [],
-          isPro: activeSub.plan.code === 'PRO',
-          isFree: activeSub.plan.code === 'FREE',
-          expiresAt: activeSub.expiresAt,
-        };
-      }
-    }
+    const subscriptionInfo = user.tenantId ? await getTenantSubscriptionInfo(user.tenantId) : null;
 
     return res.status(200).json({
       status: 'success',
@@ -145,8 +178,16 @@ export const loginWithPassword = async (req: Request, res: Response) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          pin: user.pin,
+          hasPin: !!user.pinHash,
           tenantId: user.tenantId,
+          tenant: user.tenant
+            ? {
+                id: user.tenant.id,
+                name: user.tenant.name,
+                phone: user.tenant.phone,
+                slug: user.tenant.slug,
+              }
+            : null,
           outlet: user.outlet,
           subscription: subscriptionInfo,
         },
@@ -162,7 +203,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
 };
 
 /**
- * Controller: Login cepat kasir menggunakan PIN 6-digit
+ * Controller: Login cepat kasir menggunakan ID Staff (userCode) + PIN 6-digit
  * @route POST /api/auth/pin-login
  */
 export const loginWithPin = async (req: Request, res: Response) => {
@@ -176,32 +217,40 @@ export const loginWithPin = async (req: Request, res: Response) => {
       });
     }
 
-    const { pin, email, outletId, tenantId } = parseResult.data;
+    const { pin, userCode, email, outletId, tenantId } = parseResult.data;
 
-    // Filter pencarian user aktif
+    // Bangun filter pencarian user aktif yang memiliki PIN
     const whereClause: any = {
-      pin,
       isActive: true,
+      pinHash: { not: null },
     };
 
-    if (tenantId) {
-      whereClause.tenantId = tenantId;
-    }
+    if (tenantId) whereClause.tenantId = tenantId;
 
-    if (email) {
+    if (userCode && userCode.trim()) {
+      // Cara baru: cari by userCode + tenantId (presisi, tidak perlu scan semua PIN)
+      whereClause.userCode = userCode.trim();
+    } else if (email) {
       whereClause.email = email;
-    }
-
-    if (outletId) {
+    } else if (outletId) {
+      // Fallback lama: scan PIN di outlet
       whereClause.OR = [
         { outletId },
         { outletId: null },
       ];
     }
 
-    const users = await prisma.user.findMany({
+    const candidateUsers = await prisma.user.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        userCode: true,
+        pinHash: true,
+        tenantId: true,
+        outletId: true,
         outlet: {
           select: {
             id: true,
@@ -213,25 +262,33 @@ export const loginWithPin = async (req: Request, res: Response) => {
       },
     });
 
-    if (users.length === 0) {
+    // Validasi PIN via bcrypt
+    const matchingUsers: typeof candidateUsers = [];
+    for (const cand of candidateUsers) {
+      if (cand.pinHash) {
+        const isMatch = await bcrypt.compare(pin, cand.pinHash);
+        if (isMatch) matchingUsers.push(cand);
+      }
+    }
+
+    if (matchingUsers.length === 0) {
       return res.status(401).json({
         status: 'error',
-        message: 'PIN tidak sesuai atau kasir tidak terdaftar di toko ini',
+        message: 'ID Staff atau PIN tidak sesuai. Pastikan ID Staff dan PIN 6-digit Anda benar.',
       });
     }
 
-    let user = users[0];
+    let user = matchingUsers[0];
 
-    // Jika ada lebih dari 1 user yang memakai PIN sama dan tanpa spesifikasi email/outlet
-    if (users.length > 1) {
-      // Prioritaskan akun dengan role CASHIER
-      const cashiers = users.filter((u) => u.role === 'CASHIER');
+    // Jika ada lebih dari 1 match (kasus PIN sama, userCode tidak disertakan)
+    if (matchingUsers.length > 1) {
+      const cashiers = matchingUsers.filter((u) => u.role === 'CASHIER');
       if (cashiers.length === 1) {
         user = cashiers[0];
       } else {
         return res.status(400).json({
           status: 'error',
-          message: 'Ditemukan beberapa akun dengan PIN ini. Mohon sertakan email Anda.',
+          message: 'Ditemukan beberapa akun. Mohon sertakan ID Staff Anda.',
         });
       }
     }
@@ -248,26 +305,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // Ambil info paket langganan tenant (FREE vs PRO)
-    let subscriptionInfo = null;
-    if (user.tenantId) {
-      const activeSub = await prisma.tenantSubscription.findFirst({
-        where: { tenantId: user.tenantId, isActive: true },
-        include: { plan: true },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (activeSub) {
-        subscriptionInfo = {
-          planCode: activeSub.plan.code,
-          planName: activeSub.plan.name,
-          features: (activeSub.plan.features as string[]) || [],
-          isPro: activeSub.plan.code === 'PRO',
-          isFree: activeSub.plan.code === 'FREE',
-          expiresAt: activeSub.expiresAt,
-        };
-      }
-    }
+    const subscriptionInfo = user.tenantId ? await getTenantSubscriptionInfo(user.tenantId) : null;
 
     return res.status(200).json({
       status: 'success',
@@ -279,7 +317,8 @@ export const loginWithPin = async (req: Request, res: Response) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          pin: user.pin,
+          userCode: user.userCode,
+          hasPin: !!user.pinHash,
           tenantId: user.tenantId,
           outlet: user.outlet,
           subscription: subscriptionInfo,
@@ -320,6 +359,15 @@ export const getProfile = async (req: Request, res: Response) => {
             isActive: true,
           },
         },
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            status: true,
+            slug: true,
+          },
+        },
       },
     });
 
@@ -331,25 +379,7 @@ export const getProfile = async (req: Request, res: Response) => {
     }
 
     // Ambil info paket langganan tenant (FREE vs PRO)
-    let subscriptionInfo = null;
-    if (user.tenantId) {
-      const activeSub = await prisma.tenantSubscription.findFirst({
-        where: { tenantId: user.tenantId, isActive: true },
-        include: { plan: true },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (activeSub) {
-        subscriptionInfo = {
-          planCode: activeSub.plan.code,
-          planName: activeSub.plan.name,
-          features: (activeSub.plan.features as string[]) || [],
-          isPro: activeSub.plan.code === 'PRO',
-          isFree: activeSub.plan.code === 'FREE',
-          expiresAt: activeSub.expiresAt,
-        };
-      }
-    }
+    const subscriptionInfo = user.tenantId ? await getTenantSubscriptionInfo(user.tenantId) : null;
 
     return res.status(200).json({
       status: 'success',
@@ -358,8 +388,16 @@ export const getProfile = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        pin: user.pin,
+        hasPin: !!user.pinHash,
         tenantId: user.tenantId,
+        tenant: user.tenant
+          ? {
+              id: user.tenant.id,
+              name: user.tenant.name,
+              phone: user.tenant.phone,
+              slug: user.tenant.slug,
+            }
+          : null,
         isActive: user.isActive,
         createdAt: user.createdAt,
         outlet: user.outlet,
@@ -379,6 +417,14 @@ export const getProfile = async (req: Request, res: Response) => {
  * Controller: Menghubungkan (Pairing) Perangkat Mesin Kasir ke Toko
  * @route POST /api/auth/pair-device
  */
+/**
+ * Controller: Pairing perangkat kasir menggunakan ID Toko (slug) + ID Staff Owner/SPV + PIN
+ * Alur:
+ *  1. Identifikasi tenant via slug toko
+ *  2. Cari user Owner/SPV dalam tenant tersebut berdasarkan userCode
+ *  3. Verifikasi PIN — hanya Owner/SPV yang berwenang pairing
+ * @route POST /api/auth/pair-device
+ */
 export const pairDevice = async (req: Request, res: Response) => {
   try {
     const parseResult = pairDeviceSchema.safeParse(req.body);
@@ -390,28 +436,18 @@ export const pairDevice = async (req: Request, res: Response) => {
       });
     }
 
-    const { storeIdentifier, authPin } = parseResult.data;
-    const cleanId = storeIdentifier.trim();
-    const digitsOnly = cleanId.replace(/\D/g, '');
-    const phoneCandidates = [
-      cleanId,
-      digitsOnly ? `+62${digitsOnly.replace(/^62/, '').replace(/^0+/, '')}` : '',
-      digitsOnly ? `0${digitsOnly.replace(/^62/, '').replace(/^0+/, '')}` : '',
-    ].filter(Boolean);
+    const { tenantSlug, staffCode, authPin } = parseResult.data;
 
-    // Cari tenant berdasarkan slug, phone, email user, atau id tenant
+    // Langkah 1: Identifikasi tenant via slug toko
     const tenant = await prisma.tenant.findFirst({
-      where: {
-        OR: [
-          { slug: cleanId.toLowerCase() },
-          { phone: { in: phoneCandidates } },
-          { users: { some: { email: cleanId.toLowerCase() } } },
-          ...(cleanId.length === 36 ? [{ id: cleanId }] : []),
-        ],
-      },
-      include: {
+      where: { slug: tenantSlug.trim().toLowerCase() },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
         outlets: {
-          where: { isWarehouse: false, isActive: true },
+          where: { isActive: true },
           select: { id: true, name: true, address: true, phone: true },
           orderBy: { createdAt: 'asc' },
         },
@@ -421,40 +457,105 @@ export const pairDevice = async (req: Request, res: Response) => {
     if (!tenant) {
       return res.status(404).json({
         status: 'error',
-        message: 'Toko dengan ID Toko, Email Pemilik, atau Nomor HP tersebut tidak ditemukan',
+        message: 'ID Toko tidak ditemukan. Pastikan slug toko Anda benar (contoh: kopi-nusantara).',
       });
     }
 
-    // Validasi authPin harus cocok dengan PIN Owner/Admin atau Supervisor di tenant tersebut
-    const authorizedUser = await prisma.user.findFirst({
+    if (tenant.status === 'PENDING') {
+      return res.status(403).json({
+        status: 'error',
+        message: `Akun bisnis "${tenant.name}" belum diaktivasi. Hubungi administrator.`,
+      });
+    }
+
+    // Langkah 2: Cari user aktif dalam tenant ini berdasarkan userCode
+    const candidateUsers = await prisma.user.findMany({
       where: {
         tenantId: tenant.id,
-        pin: authPin,
-        role: { in: ['ADMIN', 'SUPERVISOR'] },
+        userCode: staffCode.trim(),
         isActive: true,
+        pinHash: { not: null },
       },
-      select: { id: true, name: true, role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        userCode: true,
+        pinHash: true,
+        outletId: true,
+        outlet: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            phone: true,
+          },
+        },
+      },
     });
+
+    if (candidateUsers.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'ID Staff tidak ditemukan di toko ini atau belum memiliki PIN aktif.',
+      });
+    }
+
+    // Langkah 3: Verifikasi PIN
+    let authorizedUser: typeof candidateUsers[0] | null = null;
+    for (const cand of candidateUsers) {
+      if (cand.pinHash && (await bcrypt.compare(authPin, cand.pinHash))) {
+        authorizedUser = cand;
+        break;
+      }
+    }
 
     if (!authorizedUser) {
       return res.status(401).json({
         status: 'error',
-        message: 'PIN Otorisasi Pemilik / Supervisor salah atau akun tidak memiliki wewenang',
+        message: 'PIN tidak sesuai dengan ID Staff ini.',
       });
     }
 
+    // Generate JWT token login otomatis
+    const token = jwt.sign(
+      {
+        userId: authorizedUser.id,
+        role: authorizedUser.role,
+        outletId: authorizedUser.outletId,
+        tenantId: tenant.id,
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const subscriptionInfo = await getTenantSubscriptionInfo(tenant.id);
+
     return res.status(200).json({
       status: 'success',
-      message: `Perangkat berhasil dihubungkan dengan ${tenant.businessName}`,
+      message: `Perangkat berhasil dihubungkan dengan ${tenant.name}`,
       data: {
         tenant: {
           id: tenant.id,
-          businessName: tenant.businessName,
+          businessName: tenant.name,
           slug: tenant.slug,
-          phone: tenant.phone,
         },
         outlets: tenant.outlets,
         authorizedBy: authorizedUser.name,
+        token,
+        user: {
+          id: authorizedUser.id,
+          name: authorizedUser.name,
+          email: authorizedUser.email,
+          role: authorizedUser.role,
+          userCode: authorizedUser.userCode,
+          hasPin: true,
+          tenantId: tenant.id,
+          outletId: authorizedUser.outletId,
+          outlet: authorizedUser.outlet,
+          subscription: subscriptionInfo,
+        },
       },
     });
   } catch (error: any) {
@@ -466,13 +567,17 @@ export const pairDevice = async (req: Request, res: Response) => {
   }
 };
 
+
+
 /**
  * Controller: Mengambil daftar kasir aktif di cabang yang sudah terpasang (paired)
  * @route GET /api/auth/paired-cashiers
  */
 export const getPairedOutletCashiers = async (req: Request, res: Response) => {
   try {
-    const { tenantId, outletId } = req.query;
+    const { outletId } = req.query;
+    const queryTenantId = req.query.tenantId as string;
+    const tenantId = (req as any).user?.tenantId || (req as any).tenantId || queryTenantId;
     if (!tenantId || typeof tenantId !== 'string') {
       return res.status(400).json({ status: 'error', message: 'Tenant ID wajib disertakan' });
     }
@@ -480,6 +585,9 @@ export const getPairedOutletCashiers = async (req: Request, res: Response) => {
     const where: any = {
       tenantId,
       isActive: true,
+      // Fix S3: Hanya tampilkan staf dengan role yang relevan untuk terminal kasir.
+      // Petugas gudang (WAREHOUSE) tidak perlu muncul sebagai pilihan kasir.
+      role: { in: ['CASHIER', 'SUPERVISOR', 'ADMIN', 'OWNER'] },
     };
 
     if (outletId && typeof outletId === 'string') {
@@ -496,6 +604,7 @@ export const getPairedOutletCashiers = async (req: Request, res: Response) => {
         name: true,
         role: true,
         email: true,
+        userCode: true,
       },
       orderBy: { name: 'asc' },
     });

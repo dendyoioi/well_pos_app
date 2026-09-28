@@ -18,10 +18,13 @@ import {
   ArrowRight,
   ShoppingBag,
   Warehouse,
+  Copy,
+  Smartphone,
 } from 'lucide-react';
 import type { Outlet, OutletFee } from '../types/outlet';
 import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { WhatsAppInput } from '../components/ui';
 
 interface OutletsViewProps {
   activeOutletId?: string;
@@ -37,6 +40,16 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [copiedStoreId, setCopiedStoreId] = useState(false);
+
+  const currentUser = authStorage.getUser();
+  const storeId = currentUser?.tenant?.slug || 'ura-coffee';
+
+  const handleCopyStoreId = () => {
+    navigator.clipboard.writeText(storeId);
+    setCopiedStoreId(true);
+    setTimeout(() => setCopiedStoreId(false), 2000);
+  };
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -51,6 +64,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
     address: '',
     phone: '',
     isWarehouse: false,
+    warehouseId: null as string | null,
     isActive: true,
   });
   const [formError, setFormError] = useState<string | null>(null);
@@ -75,11 +89,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   }, []);
 
   const handleOpenAdd = () => {
+    const defaultWh = outlets.find((o) => o.isWarehouse);
     setFormData({
       name: '',
       address: '',
       phone: '',
       isWarehouse: false,
+      warehouseId: defaultWh?.id || null,
       isActive: true,
     });
     setFormError(null);
@@ -93,6 +109,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       address: outlet.address || '',
       phone: outlet.phone || '',
       isWarehouse: !!outlet.isWarehouse,
+      warehouseId: outlet.warehouseId || null,
       isActive: outlet.isActive,
     });
     setFormError(null);
@@ -102,7 +119,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   const handleCreateOutlet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      setFormError('Nama cabang wajib diisi');
+      setFormError('Nama toko wajib diisi');
       return;
     }
 
@@ -114,14 +131,15 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         address: formData.address.trim() || undefined,
         phone: formData.phone.trim() || undefined,
         isWarehouse: formData.isWarehouse,
-      });
+        warehouseId: formData.isWarehouse ? null : (formData.warehouseId || null),
+      } as any);
 
       if (res.status === 'success') {
         setIsAddModalOpen(false);
         fetchOutlets();
         if (onOutletsUpdated) onOutletsUpdated();
       } else {
-        setFormError(res.message || 'Gagal membuat cabang baru');
+        setFormError(res.message || 'Gagal membuat toko baru');
       }
     } catch (err: any) {
       setFormError(err.message || 'Terjadi kesalahan sistem');
@@ -134,7 +152,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
     e.preventDefault();
     if (!editingOutlet) return;
     if (!formData.name.trim()) {
-      setFormError('Nama cabang wajib diisi');
+      setFormError('Nama toko wajib diisi');
       return;
     }
 
@@ -146,8 +164,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         address: formData.address.trim() || undefined,
         phone: formData.phone.trim() || undefined,
         isWarehouse: formData.isWarehouse,
+        warehouseId: formData.isWarehouse ? null : (formData.warehouseId || null),
         isActive: formData.isActive,
-      });
+      } as any);
 
       if (res.status === 'success') {
         setIsEditModalOpen(false);
@@ -155,7 +174,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         fetchOutlets();
         if (onOutletsUpdated) onOutletsUpdated();
       } else {
-        setFormError(res.message || 'Gagal memperbarui cabang');
+        setFormError(res.message || 'Gagal memperbarui data toko');
       }
     } catch (err: any) {
       setFormError(err.message || 'Terjadi kesalahan sistem');
@@ -164,7 +183,6 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
     }
   };
 
-  const mainWarehouse = outlets.find((o) => o.isWarehouse);
   const storeOutlets = outlets.filter((o) => !o.isWarehouse);
 
   const filteredOutlets = storeOutlets.filter((o) => {
@@ -187,14 +205,14 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               <Store className="w-4 h-4" />
             </div>
             <h2 className="text-xl font-extrabold text-blue-950 tracking-tight">
-              Manajemen Cabang Toko (Multi-Outlet)
+              Manajemen Outlet Toko
             </h2>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
               Paket PRO
             </span>
           </div>
           <p className="text-xs text-slate-500 max-w-2xl">
-            Kelola seluruh cabang usaha retail Anda dalam 1 akun owner. Setiap cabang memiliki isolasi inventori stok, riwayat transaksi, staf kasir, serta aturan biaya dan pajak dinamis.
+            Kelola seluruh outlet toko usaha Anda dalam 1 akun owner. Setiap outlet toko memiliki isolasi inventori stok, riwayat transaksi, staf kasir, serta aturan biaya dan pajak dinamis.
           </p>
         </div>
 
@@ -204,8 +222,56 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Tambah Cabang Baru</span>
+          <span>Tambah Outlet Toko</span>
         </button>
+      </div>
+
+      {/* Kartu Informasi ID Toko untuk Mesin Kasir POS (Device Pairing) */}
+      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-5 sm:p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider">
+              Koneksi Mesin Kasir POS
+            </span>
+            <span className="text-xs text-blue-200 font-medium">ID Toko Resmi Bisnis</span>
+          </div>
+          <div className="flex items-center gap-3 pt-0.5">
+            <h2 className="text-2xl sm:text-3xl font-mono font-black tracking-wider text-amber-300">
+              {storeId}
+            </h2>
+            <button
+              type="button"
+              onClick={handleCopyStoreId}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer text-white"
+              title="Salin ID Toko"
+            >
+              {copiedStoreId ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-300">Tersalin!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Salin ID Toko</span>
+                </>
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-blue-100/90 leading-relaxed pt-0.5">
+            Gunakan <strong>ID Toko</strong> ini bersama <strong>PIN Pemilik / Supervisor (123456)</strong> saat pertama kali menghubungkan mesin kasir tablet atau laptop ke toko ini.
+          </p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-xs border border-white/15 rounded-2xl p-4 text-xs text-blue-100 max-w-sm shrink-0 space-y-1">
+          <div className="font-bold text-white flex items-center gap-1.5">
+            <Smartphone className="w-4 h-4 text-amber-300 shrink-0" />
+            <span>Alur Sambung Kasir</span>
+          </div>
+          <p className="text-[11px] text-blue-200 leading-snug">
+            Buka menu <strong>Kasir POS</strong> $\rightarrow$ Masukkan <strong>ID Toko</strong> & <strong>PIN</strong> $\rightarrow$ Pilih Outlet Toko. Perangkat akan terhubung otomatis tanpa perlu input ID Toko lagi.
+          </p>
+        </div>
       </div>
 
       {/* Quota & Summary Stats Bar */}
@@ -225,7 +291,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Staf Seluruh Cabang</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Total Staf Seluruh Toko</span>
             <Users className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-emerald-700">
@@ -252,7 +318,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Cari cabang berdasarkan nama, alamat, atau no telepon..."
+            placeholder="Cari outlet toko berdasarkan nama, alamat, atau no telepon..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white"
@@ -273,13 +339,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       {loading && outlets.length === 0 ? (
         <div className="p-12 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-900 mb-2" />
-          <p className="text-xs font-semibold">Memuat daftar cabang outlet...</p>
+          <p className="text-xs font-semibold">Memuat daftar outlet toko...</p>
         </div>
       ) : filteredOutlets.length === 0 ? (
         <div className="p-12 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
           <Store className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm font-bold text-slate-700">Tidak ada cabang yang cocok</p>
-          <p className="text-xs text-slate-400 mt-1">Coba kata kunci pencarian lain atau buat cabang baru.</p>
+          <p className="text-sm font-bold text-slate-700">Tidak ada outlet toko yang cocok</p>
+          <p className="text-xs text-slate-400 mt-1">Coba kata kunci pencarian lain atau buat toko baru.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -360,16 +426,30 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       type="button"
                       onClick={() => handleOpenEdit(outlet)}
                       className="p-1.5 rounded-xl text-slate-400 hover:text-blue-900 hover:bg-slate-100 transition-colors"
-                      title="Edit Informasi Cabang"
+                      title="Edit Informasi Toko"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                   </div>
 
                   {/* Sumber Pasokan Gudang */}
-                  <div className="flex items-center gap-2 text-xs text-slate-600 bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100">
-                    <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
-                    <span>Sumber Pasokan: <strong className="text-indigo-950 font-bold">{mainWarehouse?.name || 'Gudang Utama Pusat'}</strong></span>
+                  <div className="flex items-center justify-between text-xs text-slate-600 bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100">
+                    <div className="flex items-center gap-2">
+                      <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span>
+                        Pasokan:{' '}
+                        <strong className="text-indigo-950 font-bold">
+                          {outlet.warehouseId
+                            ? outlets.find((o) => o.id === outlet.warehouseId)?.name || 'Gudang Pusat'
+                            : 'Toko Mandiri (Lokal)'}
+                        </strong>
+                      </span>
+                    </div>
+                    {outlet.warehouseId && (
+                      <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                        Auto-Backflush
+                      </span>
+                    )}
                   </div>
 
                   {/* Address & Phone */}
@@ -535,13 +615,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       }}
                       className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>Pilih Cabang Ini</span>
+                      <span>Pilih Toko Ini</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   ) : (
                     <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Cabang Aktif</span>
+                      <span>Toko Aktif</span>
                     </span>
                   )}
                 </div>
@@ -551,14 +631,14 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         </div>
       )}
 
-      {/* Modal: Tambah Cabang Baru */}
+      {/* Modal: Tambah Toko Baru */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="font-extrabold text-blue-950 text-base">Tambah Cabang Baru</h3>
-                <p className="text-xs text-slate-500">Buka cabang outlet baru pada toko Anda</p>
+                <h3 className="font-extrabold text-blue-950 text-base">Tambah Outlet Toko</h3>
+                <p className="text-xs text-slate-500">Buka outlet toko baru pada bisnis Anda</p>
               </div>
               <button
                 type="button"
@@ -579,12 +659,12 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <form onSubmit={handleCreateOutlet} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Cabang <span className="text-rose-600">*</span>
+                  Nama Toko <span className="text-rose-600">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Minimarket Maju Jaya - Cabang Cilandak"
+                  placeholder="Contoh: Kopi Nusantara - Kemang"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
@@ -593,35 +673,45 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Alamat Lengkap Cabang
+                  Alamat Lengkap Toko
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Contoh: Jl. Cilandak Barat No. 88, Jakarta Selatan"
+                  placeholder="Contoh: Jl. Kemang Raya No. 12, Jakarta Selatan"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
                 />
               </div>
 
+              <WhatsAppInput
+                label="Nomor WhatsApp / Telepon Toko"
+                value={formData.phone}
+                onChange={(val) => setFormData({ ...formData, phone: val })}
+                placeholder="81234567890"
+              />
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nomor Telepon Cabang
+                  Gudang Sumber Pasokan (Backflush Warehouse)
                 </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 021-7654321 atau 0812-3456-7890"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                <select
+                  value={formData.warehouseId || ''}
+                  onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                />
-              </div>
-
-              <div className="p-3 rounded-2xl bg-indigo-50/80 border border-indigo-200 text-indigo-950 text-xs flex items-start gap-2.5">
-                <Warehouse className="w-4 h-4 text-indigo-700 mt-0.5 shrink-0" />
-                <div>
-                  <span className="font-bold">Pasokan Otomatis dari Gudang Utama:</span> Cabang toko baru ini secara default akan dipasok dari <strong>{mainWarehouse?.name || 'Gudang Utama Perusahaan'}</strong>. Seluruh master produk langsung siap dengan stok awal 0.
-                </div>
+                >
+                  <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                  {outlets
+                    .filter((o) => o.isWarehouse)
+                    .map((wh) => (
+                      <option key={wh.id} value={wh.id}>
+                        🏭 {wh.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
+                </p>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -637,7 +727,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   disabled={submitting}
                   className="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50"
                 >
-                  {submitting ? 'Menyimpan...' : 'Buat Cabang Baru'}
+                  {submitting ? 'Menyimpan...' : 'Buat Toko Baru'}
                 </button>
               </div>
             </form>
@@ -645,13 +735,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         </div>
       )}
 
-      {/* Modal: Edit Cabang */}
+      {/* Modal: Edit Toko */}
       {isEditModalOpen && editingOutlet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="font-extrabold text-blue-950 text-base">Edit Informasi Cabang</h3>
+                <h3 className="font-extrabold text-blue-950 text-base">Edit Informasi Toko</h3>
                 <p className="text-xs text-slate-500">{editingOutlet.name}</p>
               </div>
               <button
@@ -676,7 +766,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <form onSubmit={handleUpdateOutlet} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Cabang <span className="text-rose-600">*</span>
+                  Nama Toko <span className="text-rose-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -699,17 +789,37 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nomor Telepon
-                </label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                />
-              </div>
+              <WhatsAppInput
+                label="Nomor WhatsApp / Telepon"
+                value={formData.phone}
+                onChange={(val) => setFormData({ ...formData, phone: val })}
+                placeholder="81234567890"
+              />
+
+              {!formData.isWarehouse && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Gudang Sumber Pasokan (Backflush Warehouse)
+                  </label>
+                  <select
+                    value={formData.warehouseId || ''}
+                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                  >
+                    <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                    {outlets
+                      .filter((o) => o.isWarehouse)
+                      .map((wh) => (
+                        <option key={wh.id} value={wh.id}>
+                          🏭 {wh.name}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">

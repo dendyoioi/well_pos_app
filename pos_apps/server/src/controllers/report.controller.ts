@@ -1,344 +1,231 @@
 import { Request, Response } from 'express';
-import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { prisma } from '../config/prisma';
+import { analyticsService } from '../services/analytics.service';
+import { reportReadAdapter } from '../services/read_adapters/report.read_adapter';
 
 /**
- * Controller: Laporan Finansial & Akuntansi Sederhana
+ * Helper: Cek hak akses fitur Pro untuk modul analitik & finansial
+ */
+const checkProSubscription = async (tenantId: string): Promise<boolean> => {
+  const activeSubs: any[] = await prisma.$queryRawUnsafe(
+    `SELECT ts.id, ts.is_active, sp.code as plan_code
+     FROM "tenant_subscriptions" ts
+     JOIN "subscription_plans" sp ON sp.id = ts.plan_id
+     WHERE ts.tenant_id = $1 AND ts.is_active = true
+     ORDER BY ts.created_at DESC
+     LIMIT 1;`,
+    tenantId
+  );
+
+  if (activeSubs.length > 0 && activeSubs[0].plan_code === 'FREE') {
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Helper: Resolusi tenantId dari JWT token saja — tidak menggunakan fallback berbahaya
+ * Fix K3: Hapus prisma.tenant.findFirst() fallback yang bisa mengakibatkan cross-tenant leak
+ */
+const resolveAuthenticatedTenantId = (req: Request): string | null => {
+  return (req as any).user?.tenantId || (req as any).tenantId || null;
+};
+
+/**
+ * Controller: Laporan Finansial & Laba Rugi (P&L) Real-Time
  * @route GET /api/reports/financial
  */
 export const getFinancialSummary = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const tenantId = user?.tenantId;
-    if (tenantId) {
-      const activeSub = await prisma.tenantSubscription.findFirst({
-        where: { tenantId, isActive: true },
-        include: { plan: true },
-        orderBy: { createdAt: 'desc' },
-      });
+    // Fix K3: Gunakan tenantId dari JWT token saja — tidak ada fallback ke findFirst()
+    const tenantId = resolveAuthenticatedTenantId(req);
 
-      if (activeSub && activeSub.plan.code === 'FREE') {
-        return res.status(403).json({
-          status: 'error',
-          code: 'PRO_FEATURE_REQUIRED',
-          isLocked: true,
-          message: 'Fitur Laporan Laba Kotor & Analisis HPP hanya tersedia pada Paket Pro. Silakan upgrade paket bisnis Anda untuk mengaktifkan fitur ini!',
-        });
-      }
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const hasAccess = await checkProSubscription(tenantId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        status: 'error',
+        code: 'PRO_FEATURE_REQUIRED',
+        isLocked: true,
+        message: 'Fitur Laporan Laba Rugi & HPP hanya tersedia pada Paket Pro. Silakan upgrade paket bisnis Anda!',
+      });
     }
 
     const { startDate, endDate, outletId } = req.query;
-
     let targetOutletId = (outletId as string) || user?.outletId;
     if (outletId === 'ALL') {
       targetOutletId = undefined;
     }
 
-    // Tentukan filter rentang tanggal
-    const now = new Date();
-    let start: Date;
-    let end: Date;
-
-    if (startDate) {
-      start = new Date(`${startDate}T00:00:00.000Z`);
-    } else {
-      // Default: 30 hari terakhir
-      start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      start.setUTCHours(0, 0, 0, 0);
-    }
-
-    if (endDate) {
-      end = new Date(`${endDate}T23:59:59.999Z`);
-    } else {
-      end = new Date(now);
-      end.setUTCHours(23, 59, 59, 999);
-    }
-
-    // Ambil seluruh order penjualan yang berhasil lunas (PAID) dalam rentang tanggal
-    const orders = await prisma.order.findMany({
-      where: {
-        paymentStatus: PaymentStatus.PAID,
-        ...(tenantId ? { tenantId } : {}),
-        outletId: targetOutletId || undefined,
-        createdAt: {
-          gte: start,
-          lte: end,
-        },
-      },
-      include: {
-        orderItems: {
-          include: {
-            product: {
-              include: { category: { select: { id: true, name: true } } },
-            },
-          },
-        },
-        payments: true,
-        outlet: { select: { id: true, name: true } },
-        cashier: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
+    const summary = await reportReadAdapter.getFinancialSummary(tenantId, {
+      startDate: startDate as string,
+      endDate: endDate as string,
+      outletId: targetOutletId,
     });
-
-    // 1. Kalkulasi Metrik Finansial Utama
-    let totalGrossSales = 0;
-    let totalDiscounts = 0;
-    let totalTax = 0;
-    let totalService = 0;
-    let totalNetRevenue = 0;
-    let totalCOGS = 0; // HPP (Cost of Goods Sold)
-
-    // 2. Arus Kas (Metode Pembayaran)
-    let cashSalesTotal = 0;
-    let cashSalesCount = 0;
-    let qrisSalesTotal = 0;
-    let qrisSalesCount = 0;
-
-    // 3. Peta Penjualan per Produk & Kategori
-    const productStatsMap = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        sku: string;
-        categoryName: string;
-        qtySold: number;
-        revenue: number;
-        cost: number;
-      }
-    >();
-
-    const categoryStatsMap = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        qtySold: number;
-        revenue: number;
-      }
-    >();
-
-    // 4. Tren Harian
-    const dailyMap = new Map<
-      string,
-      {
-        date: string;
-        ordersCount: number;
-        revenue: number;
-        cogs: number;
-        grossProfit: number;
-        cashRevenue: number;
-        qrisRevenue: number;
-      }
-    >();
-
-    orders.forEach((order) => {
-      const orderNet = Number(order.grandTotal);
-      const orderGross = Number(order.subtotal);
-      const orderDisc = Number(order.discountAmount);
-      const orderTax = Number(order.taxAmount);
-      const orderSvc = Number(order.serviceCharge);
-      const orderCost = Number(order.totalCost);
-
-      totalGrossSales += orderGross;
-      totalDiscounts += orderDisc;
-      totalTax += orderTax;
-      totalService += orderSvc;
-      totalNetRevenue += orderNet;
-      totalCOGS += orderCost;
-
-      // Payments
-      order.payments.forEach((p) => {
-        if (p.method === PaymentMethod.CASH) {
-          cashSalesTotal += Number(order.grandTotal);
-          cashSalesCount += 1;
-        } else if (p.method === PaymentMethod.QRIS) {
-          qrisSalesTotal += Number(order.grandTotal);
-          qrisSalesCount += 1;
-        }
-      });
-
-      // Produk & Kategori
-      order.orderItems.forEach((item) => {
-        const prod = item.product;
-        const itemSubtotal = Number(item.subtotal);
-        const itemCost = Number(item.costPrice) * item.quantity;
-        const catName = prod.category?.name || 'Lainnya';
-        const catId = prod.categoryId;
-
-        // Stat Produk
-        if (!productStatsMap.has(prod.id)) {
-          productStatsMap.set(prod.id, {
-            id: prod.id,
-            name: prod.name,
-            sku: prod.sku,
-            categoryName: catName,
-            qtySold: 0,
-            revenue: 0,
-            cost: 0,
-          });
-        }
-        const pStat = productStatsMap.get(prod.id)!;
-        pStat.qtySold += item.quantity;
-        pStat.revenue += itemSubtotal;
-        pStat.cost += itemCost;
-
-        // Stat Kategori
-        if (!categoryStatsMap.has(catId)) {
-          categoryStatsMap.set(catId, {
-            id: catId,
-            name: catName,
-            qtySold: 0,
-            revenue: 0,
-          });
-        }
-        const cStat = categoryStatsMap.get(catId)!;
-        cStat.qtySold += item.quantity;
-        cStat.revenue += itemSubtotal;
-      });
-
-      // Daily Trend grouping
-      const dateKey = order.createdAt.toISOString().slice(0, 10); // YYYY-MM-DD
-      if (!dailyMap.has(dateKey)) {
-        dailyMap.set(dateKey, {
-          date: dateKey,
-          ordersCount: 0,
-          revenue: 0,
-          cogs: 0,
-          grossProfit: 0,
-          cashRevenue: 0,
-          qrisRevenue: 0,
-        });
-      }
-      const dayStat = dailyMap.get(dateKey)!;
-      dayStat.ordersCount += 1;
-      dayStat.revenue += orderNet;
-      dayStat.cogs += orderCost;
-      dayStat.grossProfit += orderNet - orderTax - orderCost;
-      if (order.payments[0]?.method === PaymentMethod.CASH) {
-        dayStat.cashRevenue += orderNet;
-      } else {
-        dayStat.qrisRevenue += orderNet;
-      }
-    });
-
-    // Laba Kotor (Gross Profit): Net Revenue (tanpa PPN titipan pajak) - COGS/HPP
-    const netSalesExTax = Math.max(0, totalNetRevenue - totalTax);
-    const grossProfit = netSalesExTax - totalCOGS;
-    const grossProfitMargin =
-      netSalesExTax > 0 ? Number(((grossProfit / netSalesExTax) * 100).toFixed(2)) : 0;
-
-    const totalTransactions = orders.length;
-    const averageOrderValue =
-      totalTransactions > 0 ? Math.round(totalNetRevenue / totalTransactions) : 0;
-
-    // Sort Top Products by Qty Sold
-    const topProducts = Array.from(productStatsMap.values())
-      .map((p) => ({
-        ...p,
-        profit: p.revenue - p.cost,
-        profitMargin: p.revenue > 0 ? Number((((p.revenue - p.cost) / p.revenue) * 100).toFixed(2)) : 0,
-      }))
-      .sort((a, b) => b.qtySold - a.qtySold)
-      .slice(0, 10);
-
-    // Ambil seluruh produk terdaftar di outlet untuk identifikasi Slow-Moving Items
-    const allProducts = await prisma.product.findMany({
-      where: {
-        ...(tenantId ? { tenantId } : {}),
-        isActive: true,
-      },
-      include: {
-        category: { select: { name: true } },
-        outletProducts: {
-          where: targetOutletId ? { outletId: targetOutletId } : undefined,
-          select: { stock: true },
-        },
-      },
-    });
-
-    const slowMovingProducts = allProducts
-      .map((p) => {
-        const soldStat = productStatsMap.get(p.id);
-        const currentStock = p.outletProducts[0]?.stock ?? 0;
-        return {
-          id: p.id,
-          name: p.name,
-          sku: p.sku,
-          categoryName: p.category?.name || 'Lainnya',
-          currentStock,
-          costPrice: Number(p.costPrice),
-          basePrice: Number(p.basePrice),
-          qtySold: soldStat?.qtySold || 0,
-          revenue: soldStat?.revenue || 0,
-          deadStockValue: (soldStat?.qtySold || 0) === 0 ? currentStock * Number(p.costPrice) : 0,
-        };
-      })
-      .filter((p) => p.qtySold <= 2 && p.currentStock > 0)
-      .sort((a, b) => a.qtySold - b.qtySold || b.currentStock - a.currentStock)
-      .slice(0, 10);
-
-    // Categories with percentage
-    const salesByCategory = Array.from(categoryStatsMap.values())
-      .map((c) => ({
-        ...c,
-        percentage:
-          totalGrossSales > 0 ? Number(((c.revenue / totalGrossSales) * 100).toFixed(2)) : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-
-    // Daily trends sorted ascending
-    const dailyTrends = Array.from(dailyMap.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
 
     return res.status(200).json({
       status: 'success',
-      data: {
-        filter: {
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
-          outletId: targetOutletId,
-        },
-        financialSummary: {
-          totalGrossSales,
-          totalDiscounts,
-          totalService,
-          totalTax,
-          totalNetRevenue,
-          totalCOGS,
-          netSalesExTax,
-          grossProfit,
-          grossProfitMargin,
-          totalTransactions,
-          averageOrderValue,
-        },
-        cashFlow: {
-          cash: {
-            amount: cashSalesTotal,
-            count: cashSalesCount,
-            percentage:
-              totalNetRevenue > 0
-                ? Number(((cashSalesTotal / totalNetRevenue) * 100).toFixed(2))
-                : 0,
-          },
-          qris: {
-            amount: qrisSalesTotal,
-            count: qrisSalesCount,
-            percentage:
-              totalNetRevenue > 0
-                ? Number(((qrisSalesTotal / totalNetRevenue) * 100).toFixed(2))
-                : 0,
-          },
-        },
-        topProducts,
-        slowMovingProducts,
-        salesByCategory,
-        dailyTrends,
-      },
+      data: summary,
     });
   } catch (error: any) {
     console.error('Error saat memuat laporan finansial:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memuat laporan finansial' });
+  }
+};
+
+/**
+ * Controller: Audit Rekapitulasi Shift & Selisih Kas Kasir (Over / Short)
+ * @route GET /api/reports/shifts
+ */
+export const getShiftDiscrepancies = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    // Fix K3: Gunakan tenantId dari JWT token saja
+    const tenantId = resolveAuthenticatedTenantId(req);
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const { startDate, endDate, outletId } = req.query;
+    let targetOutletId = (outletId as string) || user?.outletId;
+    if (outletId === 'ALL') {
+      targetOutletId = undefined;
+    }
+
+    const discrepancies = await analyticsService.getShiftDiscrepancies(tenantId, {
+      startDate: startDate as string,
+      endDate: endDate as string,
+      outletId: targetOutletId,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: discrepancies,
+    });
+  } catch (error: any) {
+    console.error('Error saat memuat audit selisih kas shift:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat audit selisih kas shift' });
+  }
+};
+
+/**
+ * Controller: Analisis Performa Penjualan & Matriks Produk (Pareto 80/20)
+ * @route GET /api/reports/product-performance
+ */
+export const getProductPerformance = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    // Fix K3: Gunakan tenantId dari JWT token saja
+    const tenantId = resolveAuthenticatedTenantId(req);
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const { startDate, endDate, outletId, limit } = req.query;
+    let targetOutletId = (outletId as string) || user?.outletId;
+    if (outletId === 'ALL') {
+      targetOutletId = undefined;
+    }
+
+    const performance = await analyticsService.getProductPerformance(tenantId, {
+      startDate: startDate as string,
+      endDate: endDate as string,
+      outletId: targetOutletId,
+      limit: limit ? parseInt(limit as string, 10) : 10,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: performance,
+    });
+  } catch (error: any) {
+    console.error('Error saat memuat performa produk:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat analitik performa produk' });
+  }
+};
+
+/**
+ * Controller: Laporan Dead Stock & Modal Kerja Tertahan
+ * @route GET /api/reports/dead-stock
+ */
+export const getDeadStockReport = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    // Fix K3: Gunakan tenantId dari JWT token saja
+    const tenantId = resolveAuthenticatedTenantId(req);
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const { daysThreshold, outletId } = req.query;
+    let targetOutletId = (outletId as string) || user?.outletId;
+    if (outletId === 'ALL') {
+      targetOutletId = undefined;
+    }
+
+    const deadStock = await analyticsService.getDeadStock(tenantId, {
+      daysThreshold: daysThreshold ? parseInt(daysThreshold as string, 10) : 30,
+      outletId: targetOutletId,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: deadStock,
+    });
+  } catch (error: any) {
+    console.error('Error saat memuat laporan dead stock:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat laporan dead stock' });
+  }
+};
+
+/**
+ * Controller: Ekspor Laporan Finansial / Produk / Shift ke Format CSV (Excel Compatible)
+ * @route GET /api/reports/export
+ */
+export const exportReport = async (req: Request, res: Response) => {
+  try {
+    // Fix K3: Gunakan tenantId dari JWT token saja
+    const tenantId = resolveAuthenticatedTenantId(req);
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const { type, startDate, endDate, outletId, daysThreshold } = req.query;
+
+    const validTypes = ['financial', 'products', 'shifts', 'dead-stock'];
+    const exportType = (type as string) || 'financial';
+
+    if (!validTypes.includes(exportType)) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Tipe ekspor tidak valid. Pilihan: ${validTypes.join(', ')}`,
+      });
+    }
+
+    const { filename, csvContent } = await analyticsService.exportCsv(
+      exportType as any,
+      tenantId,
+      {
+        startDate: startDate as string,
+        endDate: endDate as string,
+        outletId: outletId as string,
+        daysThreshold: daysThreshold ? parseInt(daysThreshold as string, 10) : 30,
+      }
+    );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(csvContent);
+  } catch (error: any) {
+    console.error('Error saat mengekspor laporan:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengekspor laporan' });
   }
 };

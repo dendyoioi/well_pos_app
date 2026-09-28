@@ -1,5 +1,10 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 .DS_Store
 *.log
+*.dump
+pos_apps/scratch/
+scratch/

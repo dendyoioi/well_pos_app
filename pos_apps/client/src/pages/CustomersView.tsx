@@ -20,14 +20,22 @@ import {
 } from 'lucide-react';
 import { customerApi } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats } from '../types/customer';
+import { WhatsAppInput } from '../components/ui';
+import { TablePagination } from '../components/TablePagination';
+import { useDialog } from '../context/DialogContext';
 
 export const CustomersView: React.FC = () => {
+  const dialog = useDialog();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [summary, setSummary] = useState<CustomerSummaryStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Modal State
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
@@ -76,6 +84,18 @@ export const CustomersView: React.FC = () => {
     }, 250);
     return () => clearTimeout(timer);
   }, [search, sortBy, sortOrder]);
+
+  // Reset pagination ke halaman 1 saat filter atau pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, sortBy, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(customers.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedCustomers = customers.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   // Open Add Modal
   const handleOpenAdd = () => {
@@ -161,19 +181,33 @@ export const CustomersView: React.FC = () => {
 
   // Delete Customer
   const handleDelete = async (c: Customer) => {
-    if (!window.confirm(`Yakin ingin menghapus pelanggan "${c.name}"? Riwayat penjualan tidak akan hilang.`)) {
-      return;
-    }
+    const ok = await dialog.confirm({
+      title: 'Hapus Pelanggan',
+      message: `Yakin ingin menghapus pelanggan "${c.name}"? Riwayat penjualan tidak akan hilang.`,
+      variant: 'danger',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+    });
+    if (!ok) return;
 
     try {
       const res = await customerApi.deleteCustomer(c.id);
       if (res.status === 'success') {
         fetchCustomers();
+        dialog.toast('Pelanggan berhasil dihapus', 'success');
       } else {
-        alert(res.message || 'Gagal menghapus pelanggan');
+        dialog.alert({
+          title: 'Gagal Menghapus Pelanggan',
+          message: res.message || 'Gagal menghapus pelanggan.',
+          variant: 'danger',
+        });
       }
-    } catch (err) {
-      alert('Terjadi kesalahan saat menghapus data');
+    } catch (err: any) {
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: 'Terjadi kesalahan saat menghapus data pelanggan.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -370,7 +404,7 @@ export const CustomersView: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                customers.map((c) => {
+                paginatedCustomers.map((c) => {
                   const waLink = getWaLink(c.phone);
                   return (
                     <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
@@ -489,6 +523,19 @@ export const CustomersView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Pelanggan */}
+        {!loading && customers.length > 0 && (
+          <TablePagination
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            totalItems={customers.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="pelanggan"
+          />
+        )}
       </div>
 
       {/* 5. Modal Tambah / Edit Pelanggan */}
@@ -534,21 +581,12 @@ export const CustomersView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nomor WhatsApp / HP
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      placeholder="081234567890"
-                      value={formData.phone || ''}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white"
-                    />
-                  </div>
-                </div>
+                <WhatsAppInput
+                  label="Nomor WhatsApp / HP"
+                  placeholder="81234567890"
+                  value={formData.phone || ''}
+                  onChange={(val) => setFormData({ ...formData, phone: val })}
+                />
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -783,7 +821,7 @@ export const CustomersView: React.FC = () => {
                               {ord.invoiceNumber}
                             </td>
                             <td className="py-2.5 px-3 text-slate-600">
-                              {ord.outlet?.name || 'Cabang Utama'}
+                              {ord.outlet?.name || 'Toko Utama'}
                             </td>
                             <td className="py-2.5 px-3 text-slate-500">
                               {new Date(ord.createdAt).toLocaleString('id-ID', {

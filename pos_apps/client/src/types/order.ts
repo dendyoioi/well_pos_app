@@ -12,11 +12,12 @@ export interface CartItem {
 
 export type PaymentMethodType = 'CASH' | 'QRIS' | 'DEBIT' | 'CREDIT' | 'TRANSFER' | 'SPLIT';
 
-export type OrderChannel = 'DINE_IN' | 'TAKEAWAY' | 'GOFOOD' | 'GRABFOOD' | 'SHOPEEFOOD' | 'DELIVERY';
+export type OrderChannel = 'DINE_IN' | 'TAKEAWAY' | 'QR_MENU' | 'GOFOOD' | 'GRABFOOD' | 'SHOPEEFOOD' | 'DELIVERY';
 
 export const ORDER_CHANNEL_LABELS: Record<OrderChannel, { label: string; badge: string; color: string; bg: string }> = {
   DINE_IN: { label: 'Dine In', badge: 'Makan di Tempat', color: '#16a34a', bg: '#dcfce7' },
   TAKEAWAY: { label: 'Takeaway', badge: 'Bawa Pulang', color: '#ea580c', bg: '#ffedd5' },
+  QR_MENU: { label: 'QR Meja', badge: 'Pesan Mandiri QR', color: '#7c3aed', bg: '#f3e8ff' },
   GOFOOD: { label: 'GoFood', badge: 'GoFood Online', color: '#dc2626', bg: '#fee2e2' },
   GRABFOOD: { label: 'GrabFood', badge: 'GrabFood Online', color: '#15803d', bg: '#bbf7d0' },
   SHOPEEFOOD: { label: 'ShopeeFood', badge: 'ShopeeFood Online', color: '#ea580c', bg: '#ffedd5' },
@@ -37,6 +38,9 @@ export interface CheckoutPayload {
     discountAmount?: number;
   }[];
   channel?: OrderChannel | string;
+  tableNumber?: string;
+  onlineOrderId?: string;
+  notes?: string;
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
@@ -47,8 +51,10 @@ export interface CheckoutPayload {
   serviceCharge?: number;
   payment?: PaymentPayload;
   payments?: PaymentPayload[];
+  existingOrderId?: string;
   shiftId?: string;
   outletId?: string;
+  promotionId?: string;
 }
 
 export interface OrderItem {
@@ -70,8 +76,10 @@ export interface OrderItem {
 export interface Payment {
   id: string;
   method: string;
+  paymentMethod?: string;
   amountPaid: number;
-  changeGiven: number;
+  amount?: number;
+  changeGiven?: number;
   qrisReference?: string | null;
   status: string;
   createdAt: string;
@@ -94,10 +102,15 @@ export interface Order {
   } | null;
   subtotal: number;
   discountAmount: number;
+  discountTotal?: number;
   taxAmount: number;
+  taxTotal?: number;
   serviceCharge: number;
+  serviceTotal?: number;
   grandTotal: number;
+  totalAmount?: number;
   channel?: OrderChannel | string;
+  orderType?: string;
   paymentStatus: string;
   createdAt: string;
   orderItems: OrderItem[];
@@ -138,4 +151,63 @@ export interface HoldOrder {
   cashier?: {
     name: string;
   };
+}
+
+export interface OpenTabOrderItem {
+  id: string;
+  productId: string;
+  variantId?: string | null;
+  productName: string;
+  variantName?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  subtotal: number;
+  notes?: string | null;
+}
+
+export interface OpenTabOrder {
+  id: string;
+  invoiceNumber: string;
+  outletId: string;
+  cashierId: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  channel?: OrderChannel | string;
+  tableNumber?: string | null;
+  notes?: string | null;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  serviceCharge: number;
+  grandTotal: number;
+  orderStatus: string;
+  paymentStatus: string;
+  createdAt: string;
+  cashier?: {
+    name: string;
+  };
+  items: OpenTabOrderItem[];
+}
+
+export interface OpenTabPayload {
+  items: {
+    productId: string;
+    quantity: number;
+    discountAmount?: number;
+    notes?: string;
+  }[];
+  channel?: OrderChannel | string;
+  tableNumber?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerId?: string;
+  notes?: string;
+  discountAmount?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  serviceCharge?: number;
+  outletId?: string;
+  shiftId?: string;
+  existingOrderId?: string | null;
 }

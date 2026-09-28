@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "dev:sandbox": "../run-sandbox.sh",
+    "seed:sandbox": "npm run seed:sandbox --prefix server",
+    "test:sandbox": "npx tsx server/src/migrations/contract/test_epic12_sandbox_validation.ts"
+  },
   "devDependencies": {
     "playwright": "^1.63.0"
   }

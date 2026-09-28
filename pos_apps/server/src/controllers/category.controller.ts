@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
+import { catalogReadAdapter, isReadFromTargetEnabled } from '../services/read_adapters';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Nama kategori wajib diisi').max(100, 'Nama kategori terlalu panjang'),
@@ -12,7 +13,7 @@ const categorySchema = z.object({
  */
 export const getCategories = async (req: Request, res: Response) => {
   try {
-    const { outletId, isActive } = req.query;
+    const { outletId, isActive, hasProductsOnly } = req.query;
 
     const productWhere: any = {};
 
@@ -30,10 +31,51 @@ export const getCategories = async (req: Request, res: Response) => {
       };
     }
 
-    const userTenantId = req.user?.tenantId;
-    const categoryWhere: any = {};
-    if (userTenantId) {
-      categoryWhere.tenantId = userTenantId;
+    // Fix T1: Hapus req.query.tenantId — user input tidak boleh override konteks JWT
+    let userTenantId = req.user?.tenantId || req.tenantId || (req.headers['x-tenant-id'] as string);
+
+    if (!userTenantId && outletId && typeof outletId === 'string') {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: outletId },
+        select: { tenantId: true },
+      });
+      if (outlet?.tenantId) {
+        userTenantId = outlet.tenantId;
+      }
+    }
+
+    if (!userTenantId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Akses ditolak: Konteks tenant tidak ditemukan',
+      });
+    }
+
+    // Cutover Feature Flag (PROMPT 15.2 / PHASE 16): Switch to Target Schema Read Adapter
+    if (isReadFromTargetEnabled()) {
+      const categories = await catalogReadAdapter.getCategories(
+        userTenantId,
+        outletId as string,
+        isActive as string,
+        hasProductsOnly === 'true'
+      );
+      return res.status(200).json({
+        status: 'success',
+        data: categories,
+      });
+    }
+
+    const categoryWhere: any = { tenantId: userTenantId };
+
+    if (hasProductsOnly === 'true' && outletId && typeof outletId === 'string') {
+      categoryWhere.products = {
+        some: {
+          isActive: true,
+          outletProducts: {
+            some: { outletId, isAvailable: true },
+          },
+        },
+      };
     }
 
     const categories = await prisma.category.findMany({
@@ -87,7 +129,11 @@ export const createCategory = async (req: Request, res: Response) => {
     }
 
     const { name } = parseResult.data;
-    const userTenantId = req.user?.tenantId;
+    let userTenantId = req.user?.tenantId || req.tenantId;
+    // Fix K3: Jangan fallback ke tenant pertama di DB — return 401
+    if (!userTenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
 
     // Cek duplikasi nama kategori untuk tenant ini
     const existing = await prisma.category.findFirst({
@@ -107,7 +153,8 @@ export const createCategory = async (req: Request, res: Response) => {
     const newCategory = await prisma.category.create({
       data: {
         name,
-        tenantId: userTenantId || undefined,
+        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        tenantId: userTenantId!,
       },
     });
 
@@ -243,10 +290,15 @@ export const deleteCategory = async (req: Request, res: Response) => {
       }
 
       if (!fallbackCategory) {
+        // Fix K3: Jika tenantId tidak ada, tolak dengan 401 daripada membuat kategori di tenant acak
+        if (!userTenantId) {
+          return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+        }
         fallbackCategory = await prisma.category.create({
           data: {
             name: 'Lainnya',
-            tenantId: userTenantId || undefined,
+            slug: 'lainnya',
+            tenantId: userTenantId,
           },
         });
       }

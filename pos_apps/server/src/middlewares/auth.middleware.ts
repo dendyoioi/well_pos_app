@@ -28,7 +28,12 @@ export const authenticate = async (
     }
 
     const token = authHeader.split(' ')[1];
-    const secret = process.env.JWT_SECRET || 'rahasia_super_aman_pos_12345';
+    // Fix K2: Tidak ada fallback hardcoded. JWT_SECRET harus ada di environment.
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('[FATAL] JWT_SECRET tidak ditemukan di environment saat memverifikasi token');
+      return res.status(500).json({ status: 'error', message: 'Konfigurasi keamanan server tidak valid' });
+    }
 
     let decoded: JwtPayloadDecoded;
     try {

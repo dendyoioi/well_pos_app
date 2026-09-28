@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Clock, AlertCircle, X, Check, Store } from 'lucide-react';
 import { api } from '../services/api';
 import type { Shift } from '../types/shift';
+import { CurrencyInput } from './ui/CurrencyInput';
 
 interface StartShiftModalProps {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
               <h3 className="font-extrabold text-base tracking-tight text-white">Buka Shift Kasir Baru</h3>
               <p className="text-xs text-blue-200 flex items-center gap-1">
                 <Store className="w-3.5 h-3.5" />
-                {outletName || 'Cabang Utama'}
+                {outletName || 'Toko Utama'}
               </p>
             </div>
           </div>
@@ -85,25 +86,16 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Modal Awal di Laci Kasir (Cash Float)
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-extrabold text-slate-400">
-                Rp
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="1000"
-                value={startingCash || ''}
-                onChange={(e) => setStartingCash(Number(e.target.value))}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 focus:border-blue-900 focus:bg-white rounded-2xl text-lg font-black text-slate-900 outline-none transition-all text-right tracking-tight"
-                placeholder="0"
-                autoFocus
-                required
-              />
-            </div>
+            <CurrencyInput
+              label="Modal Awal di Laci Kasir (Cash Float)"
+              value={startingCash}
+              onChange={(val) => setStartingCash(val)}
+              inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
+              prefixClassName="text-sm font-extrabold"
+              placeholder="0"
+              autoFocus
+              required
+            />
             <p className="text-[11px] text-slate-500 mt-1">
               Uang tunai fisik pecahan kecil untuk uang kembalian pembeli.
             </p>

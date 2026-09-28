@@ -10,16 +10,17 @@ import {
   Plus,
   Trash2,
   Sliders,
-  Flame,
-  Droplets,
   Search,
   ChevronDown,
   CheckCircle2,
   Infinity as InfinityIcon,
   Package,
 } from 'lucide-react';
-import type { Product, Category, ProductModifierGroup } from '../types/product';
+import type { Product, Category } from '../types/product';
+import type { ModifierGroup } from '../types/modifier';
 import { api } from '../services/api';
+import { CurrencyInput } from './ui/CurrencyInput';
+import { useDialog } from '../context/DialogContext';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -51,19 +52,6 @@ const DEFAULT_UNITS = [
   'Set',
 ];
 
-// Helper auto-format Rupiah dan Parser numerik
-const formatRupiah = (val: number | string): string => {
-  if (val === '' || val === undefined || val === null) return '0';
-  const clean = typeof val === 'string' ? val.replace(/\D/g, '') : String(val);
-  const num = parseInt(clean, 10);
-  return isNaN(num) ? '0' : num.toLocaleString('id-ID');
-};
-
-const parseRupiah = (val: string): number => {
-  const clean = val.replace(/\D/g, '');
-  return clean ? parseInt(clean, 10) : 0;
-};
-
 // Preset foto makanan & minuman populer F&B
 const PRESET_IMAGES = [
   { label: '☕ Kopi', url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&auto=format&fit=crop&q=80' },
@@ -84,6 +72,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   categories,
   outletId,
 }) => {
+  const dialog = useDialog();
   const isEdit = !!productToEdit;
 
   const [name, setName] = useState('');
@@ -93,7 +82,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [costPrice, setCostPrice] = useState<number>(0);
   const [basePrice, setBasePrice] = useState<number>(0);
   const [unit, setUnit] = useState('Pcs');
-  const [hasStock, setHasStock] = useState<boolean>(true);
+  const [hasStock, setHasStock] = useState<boolean>(false); // Default F&B: Olahan Dapur / Resep BOM
   const [initialStock, setInitialStock] = useState<number>(0);
   const [minStockAlert, setMinStockAlert] = useState<number>(5);
   const [description, setDescription] = useState('');
@@ -110,8 +99,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Modifiers state
-  const [modifiers, setModifiers] = useState<ProductModifierGroup[]>([]);
+  // Relational Modifiers state
+  const [availableModifierGroups, setAvailableModifierGroups] = useState<ModifierGroup[]>([]);
+  const [selectedModifierGroupIds, setSelectedModifierGroupIds] = useState<string[]>([]);
+  const [loadingModifiers, setLoadingModifiers] = useState(false);
 
   // Quick Category Add
   const [showQuickCategory, setShowQuickCategory] = useState(false);
@@ -146,6 +137,22 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+
+    // Load centralized modifier groups
+    const loadModifiers = async () => {
+      setLoadingModifiers(true);
+      try {
+        const res = await api.getModifierGroups();
+        if (res.status === 'success' && res.data) {
+          setAvailableModifierGroups(res.data);
+        }
+      } catch (err) {
+        console.error('Gagal memuat modifier groups:', err);
+      } finally {
+        setLoadingModifiers(false);
+      }
+    };
+    loadModifiers();
 
     if (productToEdit) {
       setName(productToEdit.name);
@@ -185,7 +192,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         setUnitList((prev) => (prev.includes(productToEdit.unit) ? prev : [...prev, productToEdit.unit]));
       }
 
-      setModifiers(productToEdit.modifiers ? JSON.parse(JSON.stringify(productToEdit.modifiers)) : []);
+      // Initialize selected modifier IDs from relational product.modifiers
+      const linkedIds = productToEdit.modifiers?.map((m) => m.id) || [];
+      setSelectedModifierGroupIds(linkedIds);
     } else {
       // Reset form
       setName('');
@@ -195,12 +204,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCostPrice(0);
       setBasePrice(0);
       setUnit('Pcs');
-      setHasStock(true); // Default tetap ada stok sesuai requirement #4
+      setHasStock(false); // Default F&B: Olahan Dapur / Resep BOM (Made-to-Order)
       setInitialStock(0);
       setMinStockAlert(5);
       setDescription('');
       setImageUrl('');
-      setModifiers([]);
+      setSelectedModifierGroupIds([]);
     }
     setError(null);
     setShowQuickCategory(false);
@@ -257,11 +266,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         setShowQuickCategory(false);
         setIsCategoryDropdownOpen(false);
         setCategorySearch('');
+        dialog.toast(`Kategori "${res.data.name}" berhasil ditambahkan`, 'success');
       } else {
-        alert(res.message || 'Gagal menambahkan kategori');
+        dialog.alert({
+          title: 'Gagal Menambah Kategori',
+          message: res.message || 'Gagal menambahkan kategori.',
+          variant: 'danger',
+        });
       }
     } catch {
-      alert('Terjadi kesalahan saat menambah kategori');
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: 'Terjadi kesalahan saat menambah kategori.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -276,11 +294,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         setCategoryId(res.data.id);
         setIsCategoryDropdownOpen(false);
         setCategorySearch('');
+        dialog.toast(`Kategori "${res.data.name}" berhasil ditambahkan`, 'success');
       } else {
-        alert(res.message || 'Gagal menambahkan kategori');
+        dialog.alert({
+          title: 'Gagal Menambah Kategori',
+          message: res.message || 'Gagal menambahkan kategori.',
+          variant: 'danger',
+        });
       }
     } catch {
-      alert('Terjadi kesalahan saat menambah kategori');
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: 'Terjadi kesalahan saat menambah kategori.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -296,147 +323,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setIsUnitDropdownOpen(false);
   };
 
-  // Modifiers Quick Templates
-  const addPedasTemplate = () => {
-    const newGroup: ProductModifierGroup = {
-      id: `mod_pedas_${Date.now()}`,
-      name: 'Level Pedas',
-      type: 'SINGLE',
-      required: true,
-      options: [
-        { id: `opt_${Date.now()}_0`, name: 'Level 0 (Tidak Pedas)', priceDelta: 0, isDefault: true },
-        { id: `opt_${Date.now()}_1`, name: 'Level 1 (Sedang)', priceDelta: 0 },
-        { id: `opt_${Date.now()}_2`, name: 'Level 2 (Pedas)', priceDelta: 0 },
-        { id: `opt_${Date.now()}_3`, name: 'Level 3 (Extra Pedas)', priceDelta: 2000 },
-      ],
-    };
-    setModifiers((prev) => [...prev, newGroup]);
-  };
-
-  const addGulaTemplate = () => {
-    const newGroup: ProductModifierGroup = {
-      id: `mod_gula_${Date.now()}`,
-      name: 'Tingkat Kemanisan (Sugar)',
-      type: 'SINGLE',
-      required: true,
-      options: [
-        { id: `opt_${Date.now()}_0`, name: 'Normal Sugar (100%)', priceDelta: 0, isDefault: true },
-        { id: `opt_${Date.now()}_1`, name: 'Less Sugar (50%)', priceDelta: 0 },
-        { id: `opt_${Date.now()}_2`, name: 'No Sugar (0%)', priceDelta: 0 },
-      ],
-    };
-    setModifiers((prev) => [...prev, newGroup]);
-  };
-
-  const addEsTemplate = () => {
-    const newGroup: ProductModifierGroup = {
-      id: `mod_es_${Date.now()}`,
-      name: 'Level Es (Ice)',
-      type: 'SINGLE',
-      required: true,
-      options: [
-        { id: `opt_${Date.now()}_0`, name: 'Normal Ice', priceDelta: 0, isDefault: true },
-        { id: `opt_${Date.now()}_1`, name: 'Less Ice', priceDelta: 0 },
-        { id: `opt_${Date.now()}_2`, name: 'No Ice', priceDelta: 0 },
-      ],
-    };
-    setModifiers((prev) => [...prev, newGroup]);
-  };
-
-  const addToppingTemplate = () => {
-    const newGroup: ProductModifierGroup = {
-      id: `mod_topping_${Date.now()}`,
-      name: 'Pilihan Ekstra Topping',
-      type: 'MULTIPLE',
-      required: false,
-      options: [
-        { id: `opt_${Date.now()}_0`, name: 'Ekstra Keju Mozzarella', priceDelta: 4000 },
-        { id: `opt_${Date.now()}_1`, name: 'Telur Dadar / Ceplok', priceDelta: 5000 },
-        { id: `opt_${Date.now()}_2`, name: 'Boba Jelly Brown Sugar', priceDelta: 3000 },
-      ],
-    };
-    setModifiers((prev) => [...prev, newGroup]);
-  };
-
-  const addCustomGroup = () => {
-    const newGroup: ProductModifierGroup = {
-      id: `mod_custom_${Date.now()}`,
-      name: 'Pilihan Baru',
-      type: 'SINGLE',
-      required: false,
-      options: [
-        { id: `opt_${Date.now()}_1`, name: 'Opsi A', priceDelta: 0, isDefault: true },
-        { id: `opt_${Date.now()}_2`, name: 'Opsi B', priceDelta: 0 },
-      ],
-    };
-    setModifiers((prev) => [...prev, newGroup]);
-  };
-
-  const removeModifierGroup = (groupId: string) => {
-    setModifiers((prev) => prev.filter((g) => g.id !== groupId));
-  };
-
-  const updateGroupName = (groupId: string, newTitle: string) => {
-    setModifiers((prev) =>
-      prev.map((g) => (g.id === groupId ? { ...g, name: newTitle } : g))
-    );
-  };
-
-  const setGroupType = (groupId: string, type: 'SINGLE' | 'MULTIPLE') => {
-    setModifiers((prev) =>
-      prev.map((g) => (g.id === groupId ? { ...g, type } : g))
-    );
-  };
-
-  const setGroupRequired = (groupId: string, required: boolean) => {
-    setModifiers((prev) =>
-      prev.map((g) => (g.id === groupId ? { ...g, required } : g))
-    );
-  };
-
-  const addOptionToGroup = (groupId: string) => {
-    setModifiers((prev) =>
-      prev.map((g) => {
-        if (g.id !== groupId) return g;
-        return {
-          ...g,
-          options: [
-            ...g.options,
-            { id: `opt_${Date.now()}`, name: 'Varian Baru', priceDelta: 0 },
-          ],
-        };
-      })
-    );
-  };
-
-  const updateOption = (
-    groupId: string,
-    optId: string,
-    field: 'name' | 'priceDelta',
-    value: any
-  ) => {
-    setModifiers((prev) =>
-      prev.map((g) => {
-        if (g.id !== groupId) return g;
-        return {
-          ...g,
-          options: g.options.map((opt) =>
-            opt.id === optId ? { ...opt, [field]: value } : opt
-          ),
-        };
-      })
-    );
-  };
-
-  const removeOption = (groupId: string, optId: string) => {
-    setModifiers((prev) =>
-      prev.map((g) => {
-        if (g.id !== groupId) return g;
-        return {
-          ...g,
-          options: g.options.filter((opt) => opt.id !== optId),
-        };
-      })
+  // Toggle pemilihan grup modifier terpusat untuk produk ini
+  const toggleModifierGroup = (groupId: string) => {
+    setSelectedModifierGroupIds((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
     );
   };
 
@@ -445,17 +335,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setError(null);
     setLoading(true);
 
-    // If modifiers or hasStock are present, encode metadata cleanly with description
+    // Encode metadata hasStock ke deskripsi untuk kompatibilitas filter F&B
     let finalDescription = description.trim();
-    const metadata: any = {
-      text: description.trim(),
-      hasStock,
-    };
-    if (modifiers.length > 0) {
-      metadata.modifiers = modifiers;
-    }
-    if (!hasStock || modifiers.length > 0) {
-      finalDescription = JSON.stringify(metadata);
+    if (!hasStock) {
+      finalDescription = JSON.stringify({
+        text: description.trim(),
+        hasStock: false,
+      });
     }
 
     try {
@@ -474,6 +360,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         });
 
         if (res.status === 'success') {
+          // Sinkronisasi relasi modifier terpusat
+          const linkRes = await api.linkProductModifiers(productToEdit.id, selectedModifierGroupIds);
+          if (linkRes && linkRes.status === 'error') {
+            setError(linkRes.message || 'Gagal menghubungkan modifier ke produk');
+            return;
+          }
           onSuccess();
           onClose();
         } else {
@@ -495,7 +387,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           outletId: outletId || undefined,
         });
 
-        if (res.status === 'success') {
+        if (res.status === 'success' && res.data?.id) {
+          // Hubungkan produk baru ke modifier groups terpilih jika ada
+          if (selectedModifierGroupIds.length > 0) {
+            const linkRes = await api.linkProductModifiers(res.data.id, selectedModifierGroupIds);
+            if (linkRes && linkRes.status === 'error') {
+              setError(linkRes.message || 'Gagal menghubungkan modifier ke produk');
+              return;
+            }
+          }
           onSuccess();
           onClose();
         } else {
@@ -915,65 +815,59 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Harga Modal (HPP) - Auto-Format Rupiah */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Harga Modal (HPP) *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  Rp
-                </span>
-                <input
-                  type="text"
-                  id="product-cost-price"
-                  inputMode="numeric"
-                  required
-                  value={formatRupiah(costPrice)}
-                  onChange={(e) => setCostPrice(parseRupiah(e.target.value))}
-                  placeholder="0"
-                  className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl pl-9 pr-3.5 py-2.5 text-sm transition-all outline-none font-semibold"
-                />
-              </div>
+              <CurrencyInput
+                id="product-cost-price"
+                label="Harga Modal (HPP)"
+                required
+                value={costPrice}
+                onChange={(val) => setCostPrice(val)}
+                placeholder="0"
+                inputClassName="font-semibold text-slate-900"
+              />
             </div>
 
             {/* Harga Jual (HPJ) - Auto-Format Rupiah */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Harga Jual Standar *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  Rp
-                </span>
-                <input
-                  type="text"
-                  id="product-base-price"
-                  inputMode="numeric"
-                  required
-                  value={formatRupiah(basePrice)}
-                  onChange={(e) => setBasePrice(parseRupiah(e.target.value))}
-                  placeholder="0"
-                  className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl pl-9 pr-3.5 py-2.5 text-sm transition-all outline-none font-bold text-blue-950"
-                />
-              </div>
+              <CurrencyInput
+                id="product-base-price"
+                label="Harga Jual Standar"
+                required
+                value={basePrice}
+                onChange={(val) => setBasePrice(val)}
+                placeholder="0"
+                inputClassName="font-bold text-blue-950"
+              />
             </div>
 
-            {/* Opsi Pengelolaan Stok Produk: Ada Stok vs Tanpa Stok */}
+            {/* Opsi Tipe Pengelolaan: Olahan F&B (Made to Order) vs Barang Kemasan Ritel */}
             <div className="sm:col-span-2 bg-slate-50/90 border border-slate-200 rounded-2xl p-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-blue-900" />
-                    Pengelolaan Stok Toko
+                    Tipe Produk & Kontrol Stok
                   </span>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    {hasStock
-                      ? 'Kuantitas stok dicatat riil, dipantau, dan berkurang otomatis saat terjadi order'
-                      : 'Tanpa batasan kuantitas stok (Cocok untuk menu masak on-demand, digital, atau jasa)'}
+                    {!hasStock
+                      ? 'Olahan Dapur F&B (Made-to-Order): Kasir tidak diblokir sisa stok, pengurangan bahan baku dilacak via Resep/BOM.'
+                      : 'Barang Kemasan Ritel Fisik: Kuantitas stok dihitung per unit dan berkurang langsung di kasir.'}
                   </p>
                 </div>
 
                 {/* Segmented Toggle Control */}
                 <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setHasStock(false)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      !hasStock
+                        ? 'bg-blue-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <InfinityIcon className={`w-3.5 h-3.5 ${!hasStock ? 'text-amber-300' : 'text-slate-400'}`} />
+                    Resep / Dapur F&B
+                  </button>
                   <button
                     type="button"
                     onClick={() => setHasStock(true)}
@@ -984,29 +878,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     }`}
                   >
                     <CheckCircle2 className={`w-3.5 h-3.5 ${hasStock ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    Ada Stok
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHasStock(false)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      !hasStock
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <InfinityIcon className={`w-3.5 h-3.5 ${!hasStock ? 'text-white' : 'text-slate-400'}`} />
-                    Tanpa Stok
+                    Barang Ritel Fisik
                   </button>
                 </div>
               </div>
 
               {/* Sub-Panel Input Stok atau Banner Bebas Stok */}
               {!hasStock ? (
-                <div className="p-3 bg-amber-50 border border-amber-200/90 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-                  <span className="text-base">✨</span>
+                <div className="p-3 bg-blue-50 border border-blue-200/90 rounded-xl text-xs text-blue-950 flex items-center gap-2">
+                  <span className="text-base">🍳</span>
                   <span>
-                    Produk diset <strong>Tanpa Stok</strong>. Kasir dapat melakukan penjualan tanpa batasan sisa stok dan tidak akan pernah diblokir peringatan stok habis.
+                    Produk diatur sebagai <strong>Menu Olahan Dapur F&B (Made-to-Order)</strong>. Kasir dapat menjual bebas tanpa pembatasan kuantitas etalase. Bahan baku (kopi, gula, susu, dll.) dipotong otomatis saat transaksi melalui sistem <strong>Resep / BOM</strong>.
                   </span>
                 </div>
               ) : (
@@ -1028,7 +910,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none"
                       />
                       <p className="text-[10px] text-slate-500 mt-1">
-                        Biarkan kosong/0 jika stok akan dimasukkan nanti lewat menu Stok Masuk (PO Gudang) atau Transfer Cabang.
+                        Biarkan kosong/0 jika stok akan dimasukkan nanti lewat menu Stok Masuk (PO Gudang) atau Transfer Toko.
                       </p>
                     </div>
                   )}
@@ -1063,239 +945,106 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: Modifiers / Kustomisasi Makanan & Minuman Dinamis */}
+          {/* Section 3: Pilihan Kustomisasi Terpusat (Modifiers & Topping F&B) */}
           <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5 uppercase tracking-wider">
                   <Sliders className="w-4 h-4 text-blue-900" />
-                  <span>Kustomisasi Dinamis (Modifiers)</span>
+                  <span>Kustomisasi Dinamis (Modifiers & Topping)</span>
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  Untuk makanan & minuman (Level pedas, sugar, ice, ekstra topping)
+                  Pilih grup varian & kustomisasi terpusat yang berlaku untuk menu ini (Level pedas, sugar, es, topping).
                 </p>
               </div>
-
-              {/* Template Buttons */}
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={addPedasTemplate}
-                  className="px-2.5 py-1 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  <Flame className="w-3 h-3 text-rose-500" /> + Level Pedas
-                </button>
-                <button
-                  type="button"
-                  onClick={addGulaTemplate}
-                  className="px-2.5 py-1 bg-white border border-amber-200 text-amber-800 hover:bg-amber-50 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  <Droplets className="w-3 h-3 text-amber-500" /> + Level Gula
-                </button>
-                <button
-                  type="button"
-                  onClick={addEsTemplate}
-                  className="px-2.5 py-1 bg-white border border-cyan-200 text-cyan-800 hover:bg-cyan-50 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  🧊 + Level Es
-                </button>
-                <button
-                  type="button"
-                  onClick={addToppingTemplate}
-                  className="px-2.5 py-1 bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  🧀 + Topping
-                </button>
-                <button
-                  type="button"
-                  onClick={addCustomGroup}
-                  className="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  <Plus className="w-3 h-3" /> + Buat Baru
-                </button>
-              </div>
+              <span className="text-[11px] font-semibold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 self-start sm:self-auto">
+                {selectedModifierGroupIds.length} grup dipilih
+              </span>
             </div>
 
-            {/* List Modifier Groups */}
-            {modifiers.length === 0 ? (
-              <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-white/60">
-                <Sliders className="w-7 h-7 text-slate-300 mx-auto mb-1.5" />
-                <p className="text-xs font-semibold text-slate-500">
-                  Belum ada opsi kustomisasi untuk produk ini
+            {loadingModifiers ? (
+              <div className="text-center py-6 bg-white/60 rounded-xl border border-slate-200 text-xs text-slate-500">
+                Memuat daftar modifier terpusat...
+              </div>
+            ) : availableModifierGroups.length === 0 ? (
+              <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-white/60 space-y-1">
+                <Sliders className="w-7 h-7 text-slate-300 mx-auto mb-1" />
+                <p className="text-xs font-semibold text-slate-600">
+                  Belum ada grup modifier di sistem
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Klik salah satu tombol template di atas untuk menambahkan level pedas, es, atau topping.
+                  Kelola master grup varian & topping terpusat melalui tab <strong>Modifiers</strong> di menu Katalog Produk.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {modifiers.map((group, gIdx) => (
-                  <div
-                    key={group.id}
-                    className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm space-y-3"
-                  >
-                    {/* Header Group dengan Segmented Control yang Sangat Jelas & Interaktif */}
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-2.5 border-b border-slate-100">
-                      <div className="flex items-center gap-2 flex-1">
-                        <span className="w-5 h-5 rounded-md bg-blue-100 text-blue-900 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                          {gIdx + 1}
-                        </span>
-                        <input
-                          type="text"
-                          value={group.name}
-                          onChange={(e) => updateGroupName(group.id, e.target.value)}
-                          placeholder="Nama Grup (misal: Level Pedas)"
-                          className="font-bold text-xs sm:text-sm text-slate-800 bg-transparent border-b border-dashed border-slate-300 focus:border-blue-900 outline-none px-1 py-0.5 w-full max-w-xs"
-                        />
-                      </div>
-
-                      {/* Controls Group: Segmented Controls untuk Tipe dan Aturan */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Segmented Control 1: Tipe Pemilihan (Radio vs Checkbox) */}
-                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-                          <button
-                            type="button"
-                            onClick={() => setGroupType(group.id, 'SINGLE')}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                              group.type === 'SINGLE'
-                                ? 'bg-blue-900 text-white shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              <div className="grid grid-cols-1 gap-2.5">
+                {availableModifierGroups.map((group) => {
+                  const isChecked = selectedModifierGroupIds.includes(group.id);
+                  return (
+                    <div
+                      key={group.id}
+                      onClick={() => toggleModifierGroup(group.id)}
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                        isChecked
+                          ? 'bg-blue-50/70 border-blue-300 shadow-xs'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // event dikontrol oleh onClick container
+                        className="mt-1 w-4 h-4 rounded text-blue-900 focus:ring-blue-900 accent-blue-900 cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold text-slate-900">
+                            {group.name}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              group.selectionType === 'SINGLE'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
                             }`}
-                            title="Pelanggan hanya boleh memilih satu pilihan (Radio Button)"
                           >
-                            <span
-                              className={`w-2.5 h-2.5 rounded-full border flex items-center justify-center ${
-                                group.type === 'SINGLE' ? 'border-white' : 'border-slate-400'
-                              }`}
-                            >
-                              {group.type === 'SINGLE' && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                              )}
-                            </span>
-                            <span>Radio (Pilih 1)</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setGroupType(group.id, 'MULTIPLE')}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                              group.type === 'MULTIPLE'
-                                ? 'bg-purple-900 text-white shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                            {group.selectionType === 'SINGLE' ? 'Pilih 1 (Radio)' : 'Boleh Multi (Checkbox)'}
+                          </span>
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                              group.isRequired
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-emerald-100 text-emerald-800'
                             }`}
-                            title="Pelanggan boleh memilih lebih dari satu pilihan (Checkbox)"
                           >
-                            <span
-                              className={`w-2.5 h-2.5 rounded-xs border flex items-center justify-center ${
-                                group.type === 'MULTIPLE' ? 'border-white bg-purple-900' : 'border-slate-400'
-                              }`}
-                            >
-                              {group.type === 'MULTIPLE' && (
-                                <Check className="w-2 h-2 text-white stroke-[3]" />
-                              )}
-                            </span>
-                            <span>Checkbox (Boleh Multi)</span>
-                          </button>
+                            {group.isRequired ? 'Wajib Pilih' : 'Opsional'}
+                          </span>
                         </div>
 
-                        {/* Segmented Control 2: Aturan Wajib vs Opsional */}
-                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-                          <button
-                            type="button"
-                            onClick={() => setGroupRequired(group.id, true)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                              group.required
-                                ? 'bg-rose-700 text-white shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                            }`}
-                            title="Wajib memilih opsi kustomisasi ini"
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                group.required ? 'bg-white' : 'bg-rose-500'
-                              }`}
-                            />
-                            <span>Wajib</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setGroupRequired(group.id, false)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                              !group.required
-                                ? 'bg-emerald-800 text-white shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                            }`}
-                            title="Opsi kustomisasi ini opsional / tidak wajib"
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                !group.required ? 'bg-white' : 'bg-emerald-500'
-                              }`}
-                            />
-                            <span>Opsional</span>
-                          </button>
-                        </div>
-
-                        {/* Delete Group */}
-                        <button
-                          type="button"
-                          onClick={() => removeModifierGroup(group.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer ml-auto"
-                          title="Hapus grup kustomisasi"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Options Rows - Dengan Auto-Format Rupiah pada priceDelta */}
-                    <div className="space-y-1.5 pl-2">
-                      {group.options.map((opt) => (
-                        <div key={opt.id} className="flex items-center gap-2">
-                          <span className="text-slate-300 text-xs">•</span>
-                          <input
-                            type="text"
-                            value={opt.name}
-                            onChange={(e) => updateOption(group.id, opt.id, 'name', e.target.value)}
-                            placeholder="Nama varian..."
-                            className="flex-1 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-900 focus:bg-white"
-                          />
-                          <div className="flex items-center gap-1 w-40">
-                            <span className="text-[11px] font-bold text-slate-400">+Rp</span>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={formatRupiah(opt.priceDelta)}
-                              onChange={(e) =>
-                                updateOption(group.id, opt.id, 'priceDelta', parseRupiah(e.target.value))
-                              }
-                              placeholder="0"
-                              className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-900 focus:bg-white text-right font-bold text-slate-800"
-                            />
-                          </div>
-                          {group.options.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeOption(group.id, opt.id)}
-                              className="text-slate-300 hover:text-rose-500 p-1 cursor-pointer"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                        {/* List Options Preview */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          {group.items && group.items.length > 0 ? (
+                            group.items.map((item, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[11px] bg-slate-100 border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md"
+                              >
+                                {item.name}
+                                {item.priceAdjustment > 0
+                                  ? ` (+Rp ${item.priceAdjustment.toLocaleString('id-ID')})`
+                                  : ''}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              Tidak ada opsi varian
+                            </span>
                           )}
                         </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={() => addOptionToGroup(group.id)}
-                        className="text-[11px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-1 mt-1 pl-1 pt-1 cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" /> Tambah Pilihan Varian
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

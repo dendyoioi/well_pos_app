@@ -5,6 +5,8 @@ import {
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  getCustomerPointsHistory,
+  adjustCustomerPoints,
 } from '../controllers/customer.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
@@ -13,6 +15,9 @@ export const customerRouter = Router();
 // Seluruh endpoint pelanggan memerlukan autentikasi login (baik kasir maupun admin dapat mengakses)
 customerRouter.get('/', authenticate, getCustomers);
 customerRouter.get('/:id', authenticate, getCustomerById);
+customerRouter.get('/:id/points-history', authenticate, getCustomerPointsHistory);
+customerRouter.post('/:id/adjust-points', authenticate, adjustCustomerPoints);
 customerRouter.post('/', authenticate, createCustomer);
 customerRouter.put('/:id', authenticate, updateCustomer);
 customerRouter.delete('/:id', authenticate, deleteCustomer);
+

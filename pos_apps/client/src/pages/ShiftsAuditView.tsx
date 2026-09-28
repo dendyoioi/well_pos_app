@@ -10,12 +10,17 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Shift } from '../types/shift';
+import { TablePagination } from '../components/TablePagination';
 
 export const ShiftsAuditView: React.FC = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [selectedShift, setSelectedShift] = useState<any | null>(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const fetchShifts = async () => {
     setLoading(true);
@@ -53,6 +58,18 @@ export const ShiftsAuditView: React.FC = () => {
     const notes = s.notes?.toLowerCase() || '';
     return cashier.includes(q) || outlet.includes(q) || notes.includes(q);
   });
+
+  // Reset pagination ke halaman 1 saat pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredShifts.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedShifts = filteredShifts.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   return (
     <div className="space-y-6">
@@ -130,7 +147,7 @@ export const ShiftsAuditView: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredShifts.map((shift) => {
+                paginatedShifts.map((shift) => {
                   const isDiffZero = shift.difference === 0;
                   const isDiffPositive = (shift.difference || 0) > 0;
 
@@ -222,6 +239,19 @@ export const ShiftsAuditView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Shift */}
+        {!loading && filteredShifts.length > 0 && (
+          <TablePagination
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            totalItems={filteredShifts.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="shift"
+          />
+        )}
       </div>
 
       {/* Detail Shift Modal */}

@@ -31,8 +31,9 @@ authRouter.post('/pair-device', pairDevice);
 /**
  * @route GET /api/auth/paired-cashiers
  * @desc Mengambil daftar staf kasir aktif pada outlet yang terpasang di perangkat ini
+ * @security BUG-K1 Fix: Endpoint ini memerlukan token yang valid untuk mencegah enumerasi staf
  */
-authRouter.get('/paired-cashiers', getPairedOutletCashiers);
+authRouter.get('/paired-cashiers', authenticate, getPairedOutletCashiers);
 
 /**
  * @route GET /api/auth/me

@@ -5,10 +5,18 @@ import { ORDER_CHANNEL_LABELS } from '../types/order';
  * Ekspor Data Riwayat Transaksi Penjualan ke format CSV / Excel
  * Menggunakan UTF-8 BOM agar terbaca sempurna di Microsoft Excel (Indonesia/Global)
  */
-export const exportOrdersToCsv = (orders: Order[], filenamePrefix: string = 'rekap_transaksi_wellpos') => {
+export const exportOrdersToCsv = (
+  orders: Order[],
+  filenamePrefix: string = 'rekap_transaksi_wellpos',
+  onError?: (msg: string) => void
+): boolean => {
   if (orders.length === 0) {
-    alert('Tidak ada data transaksi untuk diekspor.');
-    return;
+    if (onError) {
+      onError('Tidak ada data transaksi untuk diekspor.');
+    } else {
+      console.warn('exportOrdersToCsv: Tidak ada data transaksi untuk diekspor.');
+    }
+    return false;
   }
 
   // Header Kolom CSV
@@ -74,4 +82,5 @@ export const exportOrdersToCsv = (orders: Order[], filenamePrefix: string = 'rek
   downloadLink.click();
   document.body.removeChild(downloadLink);
   URL.revokeObjectURL(url);
+  return true;
 };

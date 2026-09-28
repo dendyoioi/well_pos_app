@@ -66,6 +66,14 @@ export interface SlowMovingProductItem {
   deadStockValue: number;
 }
 
+export interface ChannelSalesItem {
+  channel: string;
+  name: string;
+  amount: number;
+  count: number;
+  percentage: number;
+}
+
 export interface FinancialReportData {
   filter: {
     startDate: string;
@@ -78,4 +86,5 @@ export interface FinancialReportData {
   slowMovingProducts?: SlowMovingProductItem[];
   salesByCategory: CategorySalesItem[];
   dailyTrends: DailyTrendItem[];
+  channelSales?: ChannelSalesItem[];
 }

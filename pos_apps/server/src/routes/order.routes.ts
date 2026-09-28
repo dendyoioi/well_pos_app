@@ -7,6 +7,12 @@ import {
   holdOrder,
   getHoldOrders,
   deleteHoldOrder,
+  createOpenTabOrder,
+  getOpenTabs,
+  cancelOpenTab,
+  getKitchenTicket,
+  getDigitalReceipt,
+  sendDigitalReceipt,
 } from '../controllers/order.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { tenantContext, verifyTenantLicense } from '../middlewares/saas.middleware';
@@ -23,6 +29,18 @@ orderRouter.post('/hold', holdOrder);
 orderRouter.get('/hold', getHoldOrders);
 orderRouter.delete('/hold/:id', deleteHoldOrder);
 
+// Fitur Tagihan Meja Terbuka (Open Tab / Bayar Nanti)
+orderRouter.post('/open-tab', createOpenTabOrder);
+orderRouter.get('/open-tabs', getOpenTabs);
+orderRouter.post('/:id/cancel-tab', cancelOpenTab);
+
+// Fitur Kitchen Order Ticket (KOT)
+orderRouter.get('/:id/kitchen-ticket', getKitchenTicket);
+
+// Fitur Struk Digital & Pengiriman (EPIC-08)
+orderRouter.get('/:id/digital-receipt', getDigitalReceipt);
+orderRouter.post('/:id/send-receipt', sendDigitalReceipt);
+
 // Fitur Checkout Penjualan & Riwayat
 orderRouter.post('/checkout', checkoutOrder);
 orderRouter.get('/', getOrders);
@@ -30,3 +48,4 @@ orderRouter.get('/:id', getOrderById);
 orderRouter.post('/:id/send-email', sendOrderEmail);
 
 export default orderRouter;
+
