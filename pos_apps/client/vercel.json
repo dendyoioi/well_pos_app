@@ -1,11 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://wellpos-api-dev.onrender.com/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://wellpos-api-dev.onrender.com/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
