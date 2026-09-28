@@ -157,7 +157,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   }, [cart]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] sm:h-[calc(100vh-6.5rem)] bg-slate-100 select-none font-sans overflow-hidden relative">
+    <div className="flex flex-col flex-1 h-full bg-slate-100 select-none font-sans overflow-hidden relative">
       {/* 1. Mobile Sticky Top Header */}
       <header className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3.5 py-2.5 shrink-0 shadow-md z-20 flex items-center justify-between gap-2">
         {/* Left: Outlet & Shift Status */}

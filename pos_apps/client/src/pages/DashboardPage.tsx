@@ -897,7 +897,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
 
       {/* Main Content Area */}
       <main className={`flex-1 w-full mx-auto ${
-        activeTab === 'pos' ? 'max-w-[1600px] p-2 sm:p-3' : 'max-w-6xl p-4 sm:p-8'
+        activeTab === 'pos' ? 'max-w-[1600px] p-0 sm:p-3' : 'max-w-6xl p-4 sm:p-8'
       }`}>
         {/* Widget Panduan & Progres Setup Awal (Jika Belum 100%) */}
         {isSetupIncomplete && (

@@ -1285,7 +1285,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const cartGrandTotal = cartAfterDiscount + onDemandFeesTotal + autoFeesTotal;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6.5rem)] overflow-hidden bg-slate-100 font-sans">
+    <div className={`flex flex-col ${isHandheld ? 'h-[calc(100dvh-105px)] sm:h-[calc(100vh-6.5rem)]' : 'h-[calc(100vh-6.5rem)]'} overflow-hidden bg-slate-100 font-sans`}>
       {isHandheld ? (
         <PosMobileView
           activeOutlet={activeOutlet}
