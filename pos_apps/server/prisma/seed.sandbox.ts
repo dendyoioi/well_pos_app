@@ -115,7 +115,6 @@ export async function runSandboxSeed() {
     await prisma.paymentTransaction.deleteMany({ where: { tenantId: tId } });
     await prisma.orderItem.deleteMany({ where: { tenantId: tId } });
     await prisma.order.deleteMany({ where: { tenantId: tId } });
-    await prisma.$executeRawUnsafe(`DELETE FROM "hold_orders" WHERE "tenant_id" = $1;`, tId);
     await prisma.shift.deleteMany({ where: { tenantId: tId } });
     await prisma.inventoryLedger.deleteMany({ where: { tenantId: tId } });
     await prisma.inventoryBalance.deleteMany({ where: { tenantId: tId } });
@@ -1114,14 +1113,9 @@ export async function runSandboxSeed() {
       discountTotal: new Prisma.Decimal(0),
       taxTotal: new Prisma.Decimal(6900),
       totalAmount: new Prisma.Decimal(75900),
-      notes: 'Meja 02 [Dine In]',
+      notes: 'Meja 02 [Dine In] - Tamu: Dimas & Sarah',
     },
   });
-  await prisma.$executeRawUnsafe(
-    'UPDATE "orders" SET "customer_name" = $1 WHERE "id" = $2;',
-    'Dimas & Sarah',
-    tabMeja02Id
-  );
 
   await prisma.orderItem.createMany({
     data: [
@@ -1173,14 +1167,9 @@ export async function runSandboxSeed() {
       discountTotal: new Prisma.Decimal(0),
       taxTotal: new Prisma.Decimal(7200),
       totalAmount: new Prisma.Decimal(79200),
-      notes: 'Meja 05 [Outdoor]',
+      notes: 'Meja 05 [Outdoor] - Komunitas Sepeda',
     },
   });
-  await prisma.$executeRawUnsafe(
-    'UPDATE "orders" SET "customer_name" = $1 WHERE "id" = $2;',
-    'Komunitas Sepeda',
-    tabMeja05Id
-  );
 
   await prisma.orderItem.createMany({
     data: [
@@ -1230,15 +1219,9 @@ export async function runSandboxSeed() {
       discountTotal: new Prisma.Decimal(0),
       taxTotal: new Prisma.Decimal(4300),
       totalAmount: new Prisma.Decimal(47300),
-      notes: '[QR Menu Meja 01] Pesanan mandiri tamu',
+      notes: '[QR Menu Meja 01] Tamu: Andi Saputra (081298765432)',
     },
   });
-  await prisma.$executeRawUnsafe(
-    'UPDATE "orders" SET "customer_name" = $1, "customer_phone" = $2 WHERE "id" = $3;',
-    'Andi Saputra',
-    '081298765432',
-    qrOrderMeja01Id
-  );
 
   await prisma.orderItem.createMany({
     data: [
