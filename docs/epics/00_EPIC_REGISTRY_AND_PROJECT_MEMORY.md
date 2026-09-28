@@ -91,6 +91,13 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
   ├── Target Dual-Write & Ledger: Pencatatan mutasi OPNAME_ADJUSTMENT ke inventory_ledgers & inventory_balances.
   ├── Frontend Full-Screen Workspace: FullScreenBulkOpnameModal.tsx (Clean White-Blue, zero stacked modals).
   └── Fitur Unggulan: Samakan semua dengan sistem, kalkulasi delta (+/-) real-time, estimasi dampak finansial HPP, dan filter selisih.
+
+[2026-09-28] LIVE CLOUD DEPLOYMENT: VERCEL + RENDER + SUPABASE (ZERO-COST BOOTSTRAP STACK)
+  ├── Frontend Web (SPA): Live di Vercel (https://well-pos-app.vercel.app) dengan auto-deploy branch dev & main.
+  ├── Backend API Engine: Live di Render Singapore (https://wellpos-api-dev.onrender.com) dengan auto health-check.
+  ├── Database Cloud: PostgreSQL 16 Managed di Supabase Singapore (ap-southeast-1) terhubung via connection pooler (port 6543).
+  ├── Reverse-Proxy /api: Terintegrasi via Vercel rewrites (zero CORS configuration).
+  └── Multi-Branch Topology: Terkoneksi ke Git branch dev (Staging/Sandbox) dan main (Produksi).
 ===============================================================
 ```
 
