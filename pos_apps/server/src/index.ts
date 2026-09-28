@@ -33,16 +33,30 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware global
 app.use(securityHeaders);
-// Fix T3: CORS dengan whitelist origin — mencegah request dari domain asing
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map(s => s.trim());
+// Fix T3: CORS dengan whitelist origin fleksibel (mendukung '*', localhost, dan *.vercel.app)
+const rawOrigins = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const allowedOrigins = rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Izinkan request tanpa origin (contoh: Postman, server-to-server) di development
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: Origin '${origin}' tidak diizinkan`));
+    // 1. Izinkan request tanpa origin (contoh: curl, Postman, cron/server-to-server)
+    if (!origin) {
+      return callback(null, true);
     }
+    // 2. Jika wildcard '*' disetel atau origin ada di whitelist persis
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // 3. Izinkan domain deployment Vercel (preview & production) serta local development
+    if (
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+    // 4. Tolak jika origin tidak dikenali
+    return callback(new Error(`CORS: Origin '${origin}' tidak diizinkan`));
   },
   credentials: true,
 }));
@@ -93,6 +107,13 @@ app.use((req: Request, res: Response) => {
 
 // Middleware penanganan Error Global
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err.message && err.message.startsWith('CORS:')) {
+    res.status(403).json({
+      status: 'error',
+      message: err.message,
+    });
+    return;
+  }
   console.error('Unhandled Server Error:', err);
   res.status(500).json({
     status: 'error',
