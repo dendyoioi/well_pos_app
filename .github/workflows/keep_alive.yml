@@ -1,0 +1,24 @@
+name: Keep Alive Backend Render
+
+on:
+  schedule:
+    # Berjalan setiap 10 menit agar server Render free tier tidak sleep
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Mengizinkan pengujian manual via GitHub Actions tab
+
+jobs:
+  keep-alive:
+    name: Ping Render Healthcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send HTTP Ping to Render
+        run: |
+          echo "Sending keep-alive ping to Well POS Render backend..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" https://wellpos-api-dev.onrender.com/api/health)
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "✅ Ping sukses! Server Render tetap terjaga dan aktif."
+          else
+            echo "⚠️ Status response: $STATUS"
+          fi
