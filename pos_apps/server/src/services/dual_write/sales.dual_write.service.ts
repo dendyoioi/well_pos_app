@@ -42,34 +42,61 @@ export class SalesDualWriteService extends BaseDualWriteService {
       const isQueueEnabled = outletConfig?.showQueueNumber !== false;
 
       let queueNumber: number | null = null;
+      let hasQueueColumn = true;
+
       if (dto.existingOrderId) {
-        const existingOrderRows = await this.queryRaw<{ invoice_number: string; queue_number: number | null }>(
-          tx,
-          `SELECT invoice_number, queue_number FROM "orders" WHERE id = $1;`,
-          dto.existingOrderId
-        );
-        if (existingOrderRows[0]?.invoice_number) {
-          invoiceNumber = existingOrderRows[0].invoice_number;
-        }
-        if (existingOrderRows[0]?.queue_number) {
-          queueNumber = existingOrderRows[0].queue_number;
+        try {
+          const existingOrderRows = await this.queryRaw<{ invoice_number: string; queue_number: number | null }>(
+            tx,
+            `SELECT invoice_number, queue_number FROM "orders" WHERE id = $1;`,
+            dto.existingOrderId
+          );
+          if (existingOrderRows[0]?.invoice_number) {
+            invoiceNumber = existingOrderRows[0].invoice_number;
+          }
+          if (existingOrderRows[0]?.queue_number) {
+            queueNumber = existingOrderRows[0].queue_number;
+          }
+        } catch (err: any) {
+          if (err.message && err.message.includes('queue_number')) {
+            hasQueueColumn = false;
+            const existingOrderRows = await this.queryRaw<{ invoice_number: string }>(
+              tx,
+              `SELECT invoice_number FROM "orders" WHERE id = $1;`,
+              dto.existingOrderId
+            );
+            if (existingOrderRows[0]?.invoice_number) {
+              invoiceNumber = existingOrderRows[0].invoice_number;
+            }
+          } else {
+            throw err;
+          }
         }
       }
 
-      if (isQueueEnabled && !queueNumber) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
+      if (isQueueEnabled && !queueNumber && hasQueueColumn) {
+        try {
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
 
-        const queueRes = await this.queryRaw<{ next_queue: number }>(
-          tx,
-          `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
-           FROM "orders" 
-           WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
-          tenantId,
-          dto.targetOutletId,
-          todayStart
-        );
-        queueNumber = queueRes[0]?.next_queue || 1;
+          const queueRes = await this.queryRaw<{ next_queue: number }>(
+            tx,
+            `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
+             FROM "orders" 
+             WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
+            tenantId,
+            dto.targetOutletId,
+            todayStart
+          );
+          queueNumber = queueRes[0]?.next_queue || 1;
+        } catch (err: any) {
+          if (err.message && err.message.includes('queue_number')) {
+            hasQueueColumn = false;
+            queueNumber = null;
+          } else {
+            throw err;
+          }
+        }
       }
 
       const channel = dto.channel || 'DINE_IN';
@@ -81,43 +108,120 @@ export class SalesDualWriteService extends BaseDualWriteService {
       }
       const actorUserId = await this.resolveActorUserId(tx, tenantId, ctx.actorUserId || dto.cashierId);
 
-      // 1. ORDERS MUTATION VIA PARAMETERIZED RAW SQL (Enriched with F&B fields & queue_number)
+      // 1. ORDERS MUTATION VIA PARAMETERIZED RAW SQL (Enriched with F&B fields & queue_number fallback)
       if (dto.existingOrderId) {
-        await this.executeRaw(
-          tx,
-          `UPDATE "orders" SET
-            "cashier_id" = $2,
-            "customer_id" = $3,
-            "shift_id" = $4,
-            "subtotal" = $5,
-            "discount_amount" = $6,
-            "tax_amount" = $7,
-            "service_total" = $8,
-            "grand_total" = $9,
-            "payment_status" = 'PAID'::"PaymentStatus",
-            "order_status" = 'COMPLETED'::"OrderStatus",
-            "channel" = COALESCE($10, "channel"),
-            "order_type" = COALESCE($11, "order_type"),
-            "table_number" = COALESCE($12, "table_number"),
-            "notes" = COALESCE($13, "notes"),
-            "queue_number" = COALESCE("queue_number", $14),
-            "updated_at" = (NOW() AT TIME ZONE 'UTC')
-           WHERE "id" = $1;`,
-          orderId,
-          dto.cashierId,
-          dto.customerId || null,
-          dto.shiftId || null,
-          dto.subtotal,
-          dto.globalDiscount || 0,
-          dto.taxAmount || 0,
-          dto.serviceCharge || 0,
-          dto.grandTotal,
-          channel,
-          orderType,
-          tableNumber,
-          orderNotes,
-          queueNumber
-        );
+        if (hasQueueColumn) {
+          try {
+            await this.executeRaw(
+              tx,
+              `UPDATE "orders" SET
+                "cashier_id" = $2,
+                "customer_id" = $3,
+                "shift_id" = $4,
+                "subtotal" = $5,
+                "discount_amount" = $6,
+                "tax_amount" = $7,
+                "service_total" = $8,
+                "grand_total" = $9,
+                "payment_status" = 'PAID'::"PaymentStatus",
+                "order_status" = 'COMPLETED'::"OrderStatus",
+                "channel" = COALESCE($10, "channel"),
+                "order_type" = COALESCE($11, "order_type"),
+                "table_number" = COALESCE($12, "table_number"),
+                "notes" = COALESCE($13, "notes"),
+                "queue_number" = COALESCE("queue_number", $14),
+                "updated_at" = (NOW() AT TIME ZONE 'UTC')
+               WHERE "id" = $1;`,
+              orderId,
+              dto.cashierId,
+              dto.customerId || null,
+              dto.shiftId || null,
+              dto.subtotal,
+              dto.globalDiscount || 0,
+              dto.taxAmount || 0,
+              dto.serviceCharge || 0,
+              dto.grandTotal,
+              channel,
+              orderType,
+              tableNumber,
+              orderNotes,
+              queueNumber
+            );
+          } catch (err: any) {
+            if (err.message && err.message.includes('queue_number')) {
+              hasQueueColumn = false;
+              await this.executeRaw(
+                tx,
+                `UPDATE "orders" SET
+                  "cashier_id" = $2,
+                  "customer_id" = $3,
+                  "shift_id" = $4,
+                  "subtotal" = $5,
+                  "discount_amount" = $6,
+                  "tax_amount" = $7,
+                  "service_total" = $8,
+                  "grand_total" = $9,
+                  "payment_status" = 'PAID'::"PaymentStatus",
+                  "order_status" = 'COMPLETED'::"OrderStatus",
+                  "channel" = COALESCE($10, "channel"),
+                  "order_type" = COALESCE($11, "order_type"),
+                  "table_number" = COALESCE($12, "table_number"),
+                  "notes" = COALESCE($13, "notes"),
+                  "updated_at" = (NOW() AT TIME ZONE 'UTC')
+                 WHERE "id" = $1;`,
+                orderId,
+                dto.cashierId,
+                dto.customerId || null,
+                dto.shiftId || null,
+                dto.subtotal,
+                dto.globalDiscount || 0,
+                dto.taxAmount || 0,
+                dto.serviceCharge || 0,
+                dto.grandTotal,
+                channel,
+                orderType,
+                tableNumber,
+                orderNotes
+              );
+            } else {
+              throw err;
+            }
+          }
+        } else {
+          await this.executeRaw(
+            tx,
+            `UPDATE "orders" SET
+              "cashier_id" = $2,
+              "customer_id" = $3,
+              "shift_id" = $4,
+              "subtotal" = $5,
+              "discount_amount" = $6,
+              "tax_amount" = $7,
+              "service_total" = $8,
+              "grand_total" = $9,
+              "payment_status" = 'PAID'::"PaymentStatus",
+              "order_status" = 'COMPLETED'::"OrderStatus",
+              "channel" = COALESCE($10, "channel"),
+              "order_type" = COALESCE($11, "order_type"),
+              "table_number" = COALESCE($12, "table_number"),
+              "notes" = COALESCE($13, "notes"),
+              "updated_at" = (NOW() AT TIME ZONE 'UTC')
+             WHERE "id" = $1;`,
+            orderId,
+            dto.cashierId,
+            dto.customerId || null,
+            dto.shiftId || null,
+            dto.subtotal,
+            dto.globalDiscount || 0,
+            dto.taxAmount || 0,
+            dto.serviceCharge || 0,
+            dto.grandTotal,
+            channel,
+            orderType,
+            tableNumber,
+            orderNotes
+          );
+        }
 
         // Bersihkan order_items sebelumnya agar snapshot produk terbaru disimpan bersih
         await this.executeRaw(tx, `DELETE FROM "order_items" WHERE "order_id" = $1;`, orderId);
@@ -126,41 +230,120 @@ export class SalesDualWriteService extends BaseDualWriteService {
         const totalAmountPaidForOrder = dto.payments.reduce((s, p) => s + Number(p.amountPaid || 0), 0);
         const totalChangeGivenForOrder = dto.payments.reduce((s, p) => s + Number(p.changeGiven || 0), 0);
 
-        await this.executeRaw(
-          tx,
-          `INSERT INTO "orders" (
-            "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number", "queue_number",
-            "customer_id", "shift_id",
-            "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
-            "paid_amount", "change_amount",
-            "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6,
-            $7, $8,
-            $9, $10, $11, $12, $13,
-            $14, $15,
-            'PAID'::"PaymentStatus", $16, $17, $18, $19, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
-          );`,
-          orderId,
-          tenantId,
-          dto.targetOutletId,
-          dto.cashierId,
-          invoiceNumber,
-          queueNumber,
-          dto.customerId || null,
-          dto.shiftId || null,
-          dto.subtotal,
-          dto.globalDiscount || 0,
-          dto.taxAmount || 0,
-          dto.serviceCharge || 0,
-          dto.grandTotal,
-          totalAmountPaidForOrder,
-          totalChangeGivenForOrder,
-          channel,
-          orderType,
-          tableNumber,
-          orderNotes
-        );
+        if (hasQueueColumn) {
+          try {
+            await this.executeRaw(
+              tx,
+              `INSERT INTO "orders" (
+                "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number", "queue_number",
+                "customer_id", "shift_id",
+                "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
+                "paid_amount", "change_amount",
+                "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6,
+                $7, $8,
+                $9, $10, $11, $12, $13,
+                $14, $15,
+                'PAID'::"PaymentStatus", $16, $17, $18, $19, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+              );`,
+              orderId,
+              tenantId,
+              dto.targetOutletId,
+              dto.cashierId,
+              invoiceNumber,
+              queueNumber,
+              dto.customerId || null,
+              dto.shiftId || null,
+              dto.subtotal,
+              dto.globalDiscount || 0,
+              dto.taxAmount || 0,
+              dto.serviceCharge || 0,
+              dto.grandTotal,
+              totalAmountPaidForOrder,
+              totalChangeGivenForOrder,
+              channel,
+              orderType,
+              tableNumber,
+              orderNotes
+            );
+          } catch (err: any) {
+            if (err.message && err.message.includes('queue_number')) {
+              hasQueueColumn = false;
+              await this.executeRaw(
+                tx,
+                `INSERT INTO "orders" (
+                  "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
+                  "customer_id", "shift_id",
+                  "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
+                  "paid_amount", "change_amount",
+                  "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
+                ) VALUES (
+                  $1, $2, $3, $4, $5,
+                  $6, $7,
+                  $8, $9, $10, $11, $12,
+                  $13, $14,
+                  'PAID'::"PaymentStatus", $15, $16, $17, $18, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+                );`,
+                orderId,
+                tenantId,
+                dto.targetOutletId,
+                dto.cashierId,
+                invoiceNumber,
+                dto.customerId || null,
+                dto.shiftId || null,
+                dto.subtotal,
+                dto.globalDiscount || 0,
+                dto.taxAmount || 0,
+                dto.serviceCharge || 0,
+                dto.grandTotal,
+                totalAmountPaidForOrder,
+                totalChangeGivenForOrder,
+                channel,
+                orderType,
+                tableNumber,
+                orderNotes
+              );
+            } else {
+              throw err;
+            }
+          }
+        } else {
+          await this.executeRaw(
+            tx,
+            `INSERT INTO "orders" (
+              "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
+              "customer_id", "shift_id",
+              "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
+              "paid_amount", "change_amount",
+              "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
+            ) VALUES (
+              $1, $2, $3, $4, $5,
+              $6, $7,
+              $8, $9, $10, $11, $12,
+              $13, $14,
+              'PAID'::"PaymentStatus", $15, $16, $17, $18, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+            );`,
+            orderId,
+            tenantId,
+            dto.targetOutletId,
+            dto.cashierId,
+            invoiceNumber,
+            dto.customerId || null,
+            dto.shiftId || null,
+            dto.subtotal,
+            dto.globalDiscount || 0,
+            dto.taxAmount || 0,
+            dto.serviceCharge || 0,
+            dto.grandTotal,
+            totalAmountPaidForOrder,
+            totalChangeGivenForOrder,
+            channel,
+            orderType,
+            tableNumber,
+            orderNotes
+          );
+        }
       }
 
       // Update CRM Customer if assigned

@@ -123,7 +123,17 @@ export class SalesReadAdapter extends BaseReadAdapter {
       LIMIT $${takeIdx} OFFSET $${skipIdx};
     `;
 
-    const orderRows = await this.queryRaw<any>(ordersSql, ...params);
+    let orderRows: any[];
+    try {
+      orderRows = await this.queryRaw<any>(ordersSql, ...params);
+    } catch (err: any) {
+      if (err.message && err.message.includes('queue_number')) {
+        const fallbackSql = ordersSql.replace('o.queue_number,', 'NULL as queue_number,');
+        orderRows = await this.queryRaw<any>(fallbackSql, ...params);
+      } else {
+        throw err;
+      }
+    }
     if (orderRows.length === 0) {
       return {
         data: [],
@@ -320,7 +330,17 @@ export class SalesReadAdapter extends BaseReadAdapter {
       WHERE o.tenant_id = $1 AND o.id = $2
       LIMIT 1;
     `;
-    const rows = await this.queryRaw<any>(sql, tenantId, orderId);
+    let rows: any[];
+    try {
+      rows = await this.queryRaw<any>(sql, tenantId, orderId);
+    } catch (err: any) {
+      if (err.message && err.message.includes('queue_number')) {
+        const fallbackSql = sql.replace('o.queue_number,', 'NULL as queue_number,');
+        rows = await this.queryRaw<any>(fallbackSql, tenantId, orderId);
+      } else {
+        throw err;
+      }
+    }
     if (rows.length === 0) return null;
 
     const r = rows[0];

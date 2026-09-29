@@ -1554,51 +1554,130 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
     );
     const isQueueNumberEnabled = outletInfoRows[0]?.receipt_config?.showQueueNumber !== false;
     let openTabQueueNumber: number | null = null;
+    let hasQueueColumn = true;
     if (isQueueNumberEnabled) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const queueResult = await prisma.$queryRawUnsafe<{ next_queue: number }[]>(
-        `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
-         FROM "orders" 
-         WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
-        tenantId,
-        targetOutletId,
-        todayStart
-      );
-      openTabQueueNumber = queueResult[0]?.next_queue || 1;
+      try {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const queueResult = await prisma.$queryRawUnsafe<{ next_queue: number }[]>(
+          `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
+           FROM "orders" 
+           WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
+          tenantId,
+          targetOutletId,
+          todayStart
+        );
+        openTabQueueNumber = queueResult[0]?.next_queue || 1;
+      } catch (err: any) {
+        if (err.message && err.message.includes('queue_number')) {
+          hasQueueColumn = false;
+          openTabQueueNumber = null;
+        } else {
+          throw err;
+        }
+      }
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(
-        `INSERT INTO "orders" (
-          "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number", "queue_number",
-          "customer_id", "shift_id",
-          "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
-          "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6,
-          $7, $8,
-          $9, $10, $11, $12, $13,
-          'UNPAID'::"PaymentStatus", $14, $15, $16, $17, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
-        );`,
-        orderId,
-        tenantId,
-        targetOutletId,
-        cashierId,
-        invoiceNumber,
-        openTabQueueNumber,
-        customerId || null,
-        resolvedShiftId || null,
-        subtotal,
-        discountAmount,
-        taxAmount,
-        serviceCharge,
-        grandTotal,
-        channel,
-        orderType,
-        cleanTable,
-        openTabNotes
-      );
+      if (hasQueueColumn) {
+        try {
+          await tx.$executeRawUnsafe(
+            `INSERT INTO "orders" (
+              "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number", "queue_number",
+              "customer_id", "shift_id",
+              "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
+              "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, $8,
+              $9, $10, $11, $12, $13,
+              'UNPAID'::"PaymentStatus", $14, $15, $16, $17, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+            );`,
+            orderId,
+            tenantId,
+            targetOutletId,
+            cashierId,
+            invoiceNumber,
+            openTabQueueNumber,
+            customerId || null,
+            resolvedShiftId || null,
+            subtotal,
+            discountAmount,
+            taxAmount,
+            serviceCharge,
+            grandTotal,
+            channel,
+            orderType,
+            cleanTable,
+            openTabNotes
+          );
+        } catch (err: any) {
+          if (err.message && err.message.includes('queue_number')) {
+            hasQueueColumn = false;
+            await tx.$executeRawUnsafe(
+              `INSERT INTO "orders" (
+                "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
+                "customer_id", "shift_id",
+                "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
+                "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
+              ) VALUES (
+                $1, $2, $3, $4, $5,
+                $6, $7,
+                $8, $9, $10, $11, $12,
+                'UNPAID'::"PaymentStatus", $13, $14, $15, $16, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+              );`,
+              orderId,
+              tenantId,
+              targetOutletId,
+              cashierId,
+              invoiceNumber,
+              customerId || null,
+              resolvedShiftId || null,
+              subtotal,
+              discountAmount,
+              taxAmount,
+              serviceCharge,
+              grandTotal,
+              channel,
+              orderType,
+              cleanTable,
+              openTabNotes
+            );
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO "orders" (
+            "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
+            "customer_id", "shift_id",
+            "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
+            "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
+          ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7,
+            $8, $9, $10, $11, $12,
+            'UNPAID'::"PaymentStatus", $13, $14, $15, $16, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+          );`,
+          orderId,
+          tenantId,
+          targetOutletId,
+          cashierId,
+          invoiceNumber,
+          customerId || null,
+          resolvedShiftId || null,
+          subtotal,
+          discountAmount,
+          taxAmount,
+          serviceCharge,
+          grandTotal,
+          channel,
+          orderType,
+          cleanTable,
+          openTabNotes
+        );
+      }
 
       for (const item of preparedItems) {
         await tx.$executeRawUnsafe(
