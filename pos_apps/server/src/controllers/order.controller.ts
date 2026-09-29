@@ -600,12 +600,23 @@ export const checkoutOrder = async (req: Request, res: Response) => {
           discountAmount: Number(it.discountAmount),
           subtotal: Number(it.subtotal),
         })),
-        payments: paymentRows.map((pay) => ({
-          ...pay,
-          amount: Number(pay.amount),
-          cashReceived: pay.cashReceived ? Number(pay.cashReceived) : null,
-          cashChange: pay.cashChange ? Number(pay.cashChange) : null,
-        })),
+        payments: paymentRows.map((pay, idx) => {
+          const prep = preparedPayments[idx] || preparedPayments[0];
+          const m = pay.paymentMethod || pay.payment_method || prep?.method || 'CASH';
+          const amtPaid = prep?.amountPaid !== undefined ? Number(prep.amountPaid) : Number(pay.amount);
+          const chg = prep?.changeGiven !== undefined ? Number(prep.changeGiven) : 0;
+          return {
+            ...pay,
+            method: m,
+            paymentMethod: m,
+            amountPaid: amtPaid,
+            amount: Number(pay.amount),
+            changeGiven: chg,
+            cashReceived: amtPaid,
+            cashChange: chg,
+            qrisReference: prep?.qrisReference || null,
+          };
+        }),
         outlet: outletRows[0] || null,
         cashier: cashierRows[0] || null,
         customer: customerRows[0] || null,

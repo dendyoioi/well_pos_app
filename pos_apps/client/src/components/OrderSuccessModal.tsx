@@ -130,17 +130,123 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
     }
   };
 
+  // Pasang class has-receipt-modal pada body saat modal aktif agar @media print menyembunyikan #root 100%
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('has-receipt-modal');
+    } else {
+      document.body.classList.remove('has-receipt-modal');
+    }
+    return () => {
+      document.body.classList.remove('has-receipt-modal');
+      document.body.classList.remove('printing-receipt');
+    };
+  }, [isOpen]);
+
   if (!isOpen || !order) return null;
 
   const handlePrint = () => {
-    document.body.classList.add('printing-receipt');
-    const cleanup = () => {
-      document.body.classList.remove('printing-receipt');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    window.print();
-    setTimeout(cleanup, 2500);
+    const receiptEl = document.getElementById('thermal-receipt-content');
+    if (!receiptEl) {
+      document.body.classList.add('printing-receipt');
+      window.print();
+      return;
+    }
+
+    // Gunakan iframe tersembunyi agar proses cetak murni dan 100% terisolasi dari halaman utama
+    let iframe = document.getElementById('thermal-print-iframe') as HTMLIFrameElement | null;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'thermal-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.opacity = '0.01';
+      iframe.style.pointerEvents = 'none';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+    }
+
+    const widthMm = paperSize === '58mm' ? '48mm' : '72mm';
+    const paperWidth = paperSize === '58mm' ? '58mm' : '80mm';
+    const fontSize = paperSize === '58mm' ? '11px' : '12px';
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Struk - ${order.invoiceNumber}</title>
+          <style>
+            @page {
+              size: ${paperWidth} auto;
+              margin: 0mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            html, body {
+              width: ${widthMm};
+              max-width: ${widthMm};
+              margin: 0 auto;
+              padding: 2mm 0mm;
+              background: #ffffff;
+              color: #000000;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: ${fontSize};
+              line-height: 1.35;
+            }
+            .no-print { display: none !important; }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+            .font-semibold { font-weight: 600; }
+            .font-black { font-weight: 900; }
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .items-center { align-items: center; }
+            .space-y-0\\.5 > * + * { margin-top: 2px; }
+            .space-y-1 > * + * { margin-top: 4px; }
+            .space-y-2 > * + * { margin-top: 8px; }
+            .space-y-3\\.5 > * + * { margin-top: 12px; }
+            .my-2 { margin-top: 6px; margin-bottom: 6px; }
+            .pt-1\\.5 { padding-top: 6px; }
+            .border-b { border-bottom: 1px dashed #444; }
+            .border-t { border-top: 1px solid #444; }
+            .border-l-2 { border-left: 2px solid #666; padding-left: 4px; }
+            .text-rose-600 { color: #000; }
+            .text-emerald-700 { color: #000; }
+            .text-blue-950 { color: #000; }
+            .text-slate-500, .text-slate-600 { color: #333; }
+            svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          ${receiptEl.innerHTML}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe?.contentWindow?.focus();
+        iframe?.contentWindow?.print();
+      } catch (err) {
+        console.error('Iframe print error, falling back to window.print', err);
+        document.body.classList.add('printing-receipt');
+        window.print();
+      }
+    }, 250);
   };
 
   const handleDownloadPdf = () => {
@@ -362,6 +468,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
 
         {/* Printable Receipt Body */}
         <div
+          id="thermal-receipt-content"
           className={`p-4 sm:p-6 overflow-y-auto flex-1 space-y-3.5 font-mono text-slate-800 bg-white mx-auto w-full transition-all overscroll-contain ${
             paperSize === '58mm'
               ? 'max-w-[240px] text-[11px] paper-58mm'
@@ -480,26 +587,36 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             <div className="space-y-1">
               {order.payments.length === 1 ? (
                 <>
-                  <div className="flex justify-between">
-                    <span>Metode Bayar:</span>
-                    <span className="font-bold">{order.payments[0].method}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Jumlah Diterima:</span>
-                    <span>Rp {Number(order.payments[0].amountPaid).toLocaleString('id-ID')}</span>
-                  </div>
-                  {order.payments[0].method === 'CASH' && (
-                    <div className="flex justify-between font-bold text-emerald-700">
-                      <span>Kembalian:</span>
-                      <span>Rp {Number(order.payments[0].changeGiven).toLocaleString('id-ID')}</span>
-                    </div>
-                  )}
-                  {order.payments[0].qrisReference && (
-                    <div className="flex justify-between text-[10px] text-slate-500">
-                      <span>Ref QRIS:</span>
-                      <span>{order.payments[0].qrisReference}</span>
-                    </div>
-                  )}
+                  {(() => {
+                    const p = order.payments[0];
+                    const method = p.method || (p as any).paymentMethod || (p as any).payment_method || 'CASH';
+                    const amountPaid = Number(p.amountPaid ?? (p as any).amount ?? (p as any).cashReceived ?? order.grandTotal ?? 0);
+                    const changeGiven = Number(p.changeGiven ?? (p as any).cashChange ?? 0);
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Metode Bayar:</span>
+                          <span className="font-bold">{method}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Jumlah Diterima:</span>
+                          <span>Rp {amountPaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        {method === 'CASH' && (
+                          <div className="flex justify-between font-bold text-emerald-700">
+                            <span>Kembalian:</span>
+                            <span>Rp {changeGiven.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {p.qrisReference && (
+                          <div className="flex justify-between text-[10px] text-slate-500">
+                            <span>Ref QRIS:</span>
+                            <span>{p.qrisReference}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </>
               ) : (
                 <>
@@ -507,26 +624,31 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                     <span>Metode:</span>
                     <span>SPLIT (CAMPURAN)</span>
                   </div>
-                  {order.payments.map((p, idx) => (
-                    <div key={idx} className="pl-2 border-l-2 border-slate-200 space-y-0.5 text-[10px]">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-700">{p.method}:</span>
-                        <span>Rp {Number(p.amountPaid).toLocaleString('id-ID')}</span>
+                  {order.payments.map((p, idx) => {
+                    const method = p.method || (p as any).paymentMethod || (p as any).payment_method || 'CASH';
+                    const amountPaid = Number(p.amountPaid ?? (p as any).amount ?? (p as any).cashReceived ?? 0);
+                    const changeGiven = Number(p.changeGiven ?? (p as any).cashChange ?? 0);
+                    return (
+                      <div key={idx} className="pl-2 border-l-2 border-slate-200 space-y-0.5 text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="font-bold text-slate-700">{method}:</span>
+                          <span>Rp {amountPaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        {method === 'CASH' && changeGiven > 0 && (
+                          <div className="flex justify-between text-emerald-700 font-bold">
+                            <span>Kembalian:</span>
+                            <span>Rp {changeGiven.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {p.qrisReference && (
+                          <div className="flex justify-between text-slate-400">
+                            <span>Ref:</span>
+                            <span>{p.qrisReference}</span>
+                          </div>
+                        )}
                       </div>
-                      {p.method === 'CASH' && Number(p.changeGiven) > 0 && (
-                        <div className="flex justify-between text-emerald-700 font-bold">
-                          <span>Kembalian:</span>
-                          <span>Rp {Number(p.changeGiven).toLocaleString('id-ID')}</span>
-                        </div>
-                      )}
-                      {p.qrisReference && (
-                        <div className="flex justify-between text-slate-400">
-                          <span>Ref:</span>
-                          <span>{p.qrisReference}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </>
               )}
             </div>

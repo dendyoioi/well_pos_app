@@ -96,10 +96,14 @@ body {
     display: block !important;
   }
 
-  /* Khusus saat modal struk mencetak: sembunyikan seluruh root app */
+  /* Khusus saat modal struk aktif atau mencetak: sembunyikan seluruh root app */
+  body.has-receipt-modal #root,
   body.printing-receipt #root,
   body:has(.receipt-print-wrapper) #root {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Reset container modal agar hanya struk yang dicetak */
