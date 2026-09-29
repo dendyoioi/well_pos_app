@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Printer,
@@ -132,7 +133,14 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   if (!isOpen || !order) return null;
 
   const handlePrint = () => {
+    document.body.classList.add('printing-receipt');
+    const cleanup = () => {
+      document.body.classList.remove('printing-receipt');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
     window.print();
+    setTimeout(cleanup, 2500);
   };
 
   const handleDownloadPdf = () => {
@@ -234,17 +242,23 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
     setTimeout(() => setCopiedWhatsApp(false), 2500);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn receipt-print-wrapper overflow-hidden">
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[96vh] receipt-printable">
+  return createPortal(
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn receipt-print-wrapper overflow-hidden"
+    >
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] sm:max-h-[92dvh] receipt-printable">
         {/* Banner Sukses (No Print) */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-950 to-blue-900 text-white text-center flex flex-col items-center justify-center no-print relative">
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 p-1.5 rounded-full text-blue-300 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Tutup Struk"
+            className="absolute top-3 right-3 p-2 rounded-full text-white bg-white/20 hover:bg-white/30 active:scale-95 transition-all z-20 cursor-pointer shadow-sm"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mb-2 shadow-sm">
             <CheckCircle2 className="w-6 h-6" />
@@ -574,8 +588,17 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             </button>
           </div>
 
-          {/* Tombol Aksi Akhir: Transaksi Baru & Tambah Order Susulan */}
-          <div className="flex flex-col sm:flex-row gap-2">
+          {/* Tombol Aksi Akhir: Tutup, Transaksi Baru & Tambah Order Susulan */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-3 px-3.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <X className="w-4 h-4" />
+              <span>Tutup</span>
+            </button>
+
             {onAppendOrder && (
               <button
                 type="button"
@@ -583,17 +606,17 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                   onClose();
                   onAppendOrder(order);
                 }}
-                className="flex-1 py-3 px-4 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-2 shadow-xs active:scale-[0.99] cursor-pointer"
+                className="flex-1 py-3 px-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.99] cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-amber-700" />
-                <span>Tambah Order Susulan</span>
+                <span>Order Susulan</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
+              className="flex-1 py-3 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-900/20 active:scale-[0.99] cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Transaksi Baru</span>
@@ -840,6 +863,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

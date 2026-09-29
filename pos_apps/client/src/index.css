@@ -86,12 +86,20 @@ body {
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .no-print {
     display: none !important;
   }
   .print-only {
     display: block !important;
+  }
+
+  /* Khusus saat modal struk mencetak: sembunyikan seluruh root app */
+  body.printing-receipt #root,
+  body:has(.receipt-print-wrapper) #root {
+    display: none !important;
   }
 
   /* Reset container modal agar hanya struk yang dicetak */
@@ -101,6 +109,9 @@ body {
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .receipt-printable {
@@ -110,19 +121,26 @@ body {
     border-radius: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
   }
 
   .paper-58mm {
     width: 48mm !important;
     max-width: 48mm !important;
     font-size: 10px !important;
-    padding: 2mm !important;
+    padding: 2mm 1mm !important;
+    margin: 0 auto !important;
   }
 
   .paper-80mm {
     width: 72mm !important;
     max-width: 72mm !important;
     font-size: 11px !important;
-    padding: 3mm !important;
+    padding: 3mm 2mm !important;
+    margin: 0 auto !important;
   }
 }
+
