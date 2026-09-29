@@ -535,7 +535,7 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
     - **Remote DB CLI Tool (`npm run db:remote:patch` & `npm run db:remote:sql`)**: Developer atau AI Agent dapat mengeksekusi DDL langsung ke Supabase tanpa membuka browser:
       - `npm run db:remote:patch` untuk mengeksekusi seluruh patch terdaftar.
       - `npm run db:remote:sql -- "<SQL>"` untuk mengeksekusi query SQL bebas (DDL maupun DML).
-      - Menggunakan URL dari file lokal `pos_apps/server/.env.production` (`REMOTE_DATABASE_URL` pada Port 5432).
+      - Menggunakan URL dari file lokal `pos_apps/server/.env.production` (`REMOTE_DATABASE_URL` pada Port 5432, Project Ref: `izzcirbofftkprrtpqae`, AWS Singapore). File ini tersimpan permanen di lokal pengembang.
     - **Dual Port Supabase**: Gunakan Port 6543 (PgBouncer) untuk query runtime aplikasi, dan Port 5432 (Direct) untuk DDL/migrasi.
     - **Vercel Main-Branch Rule**: Fitur produksi hanya akan live di `well-pos-app.vercel.app` jika branch `dev` telah di-merge ke branch `main`.
 17. **Standar UX Mobile & Smartphone Portrait 6,8 Inci (`BackofficeLayout` & Handheld)**:
