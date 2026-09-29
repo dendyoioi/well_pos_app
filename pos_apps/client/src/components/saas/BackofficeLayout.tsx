@@ -588,7 +588,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           ========================================================================= */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs h-14 sm:h-16 shrink-0 px-3 sm:px-6 flex items-center justify-between">
         {/* Left: Mobile Hamburger & Brand & Store Selector */}
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 mr-2">
           {/* Hamburger Menu Trigger for 6.8" Smartphone Portrait */}
           <button
             type="button"
@@ -618,10 +618,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             const isWarehouseActive = !!activeOutlet?.isWarehouse;
 
             return (
-              <div className="relative">
+              <div className="relative min-w-0">
                 <button
                   onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs max-w-full ${
                     isWarehouseActive
                       ? 'border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-950'
                       : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800'
@@ -632,7 +632,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   ) : (
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   )}
-                  <span className="max-w-[110px] xs:max-w-[140px] sm:max-w-[200px] truncate">
+                  <span className="max-w-[95px] xs:max-w-[130px] sm:max-w-[200px] truncate">
                     {activeOutlet?.name || (storeOutlets[0]?.name ?? 'Pilih Toko')}
                   </span>
                   {isWarehouseActive ? (
@@ -759,7 +759,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         </div>
 
         {/* Right: Help, Lang, Notifications, Plan Badge, Profile & Logout */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Action Button: Return to Store (if in Warehouse Mode) or Launch POS (if Store Mode) */}
           {activeOutlet?.isWarehouse ? (
             <button
@@ -770,7 +770,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   onTabChange('overview');
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-black shadow-md shadow-indigo-900/20 transition-all active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-black shadow-md shadow-indigo-900/20 transition-all active:scale-95"
               title="Beralih ke Toko Penjualan"
             >
               <Store className="w-3.5 h-3.5" />
@@ -779,7 +779,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           ) : activeTab !== 'pos' ? (
             <button
               onClick={() => onTabChange('pos')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95"
               title="Buka Mesin Kasir"
             >
               <CreditCard className="w-3.5 h-3.5" />
