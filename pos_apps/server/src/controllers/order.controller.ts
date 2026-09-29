@@ -579,17 +579,17 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         cashierId: o.cashier_id || o.cashierId,
         shiftId: o.shift_id || o.shiftId,
         customerId: o.customer_id || o.customerId,
-        customerName: o.customer_name || o.customerName,
-        customerEmail: o.customer_email || o.customerEmail,
-        customerPhone: o.customer_phone || o.customerPhone,
+        customerName: customerRows[0]?.name || finalCustomerName || (o as any)?.customer_name || (o as any)?.customerName || null,
+        customerEmail: customerRows[0]?.email || finalCustomerEmail || (o as any)?.customer_email || (o as any)?.customerEmail || null,
+        customerPhone: customerRows[0]?.phone || finalCustomerPhone || (o as any)?.customer_phone || (o as any)?.customerPhone || null,
         channel: o.channel,
         tableNumber: o.table_number || o.tableNumber || null,
         subtotal: Number(o.subtotal || subtotal),
         discountAmount: Number(o.discount_amount || totalDiscount || 0),
         taxAmount: Number(o.tax_amount || taxAmount || 0),
-        serviceCharge: Number(o.service_charge || serviceCharge || 0),
+        serviceCharge: Number(o.service_total || o.service_charge || serviceCharge || 0),
         grandTotal: Number(o.grand_total || grandTotal),
-        totalCost: Number(o.total_cost || totalCost || 0),
+        totalCost: Number(totalCost || 0),
         paymentStatus: o.payment_status || 'PAID',
         createdAt: o.created_at || new Date(),
         updatedAt: o.updated_at || new Date(),
@@ -1314,7 +1314,7 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
     // Proteksi: Jika order baru (bukan update), cegah pemilihan meja yang sudah terisi / aktif
     if (!isUpdate && cleanTable) {
       const occupiedMeja = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT id, invoice_number, customer_name, channel
+        `SELECT id, invoice_number, channel, notes
          FROM "orders"
          WHERE outlet_id = $1 AND tenant_id = $2 AND table_number = $3
            AND payment_status = 'UNPAID'
@@ -1329,7 +1329,7 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
         const occ = occupiedMeja[0];
         return res.status(400).json({
           status: 'error',
-          message: `Meja ${cleanTable} saat ini sedang aktif digunakan (${occ.customer_name || 'Tagihan Aktif'} • #${occ.invoice_number}). Silakan selesaikan tagihan meja tersebut atau pilih meja kosong lainnya.`,
+          message: `Meja ${cleanTable} saat ini sedang aktif digunakan (${occ.notes || 'Tagihan Aktif'} • #${occ.invoice_number}). Silakan selesaikan tagihan meja tersebut atau pilih meja kosong lainnya.`,
         });
       }
     }
@@ -1377,29 +1377,30 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
 
     if (isUpdate && targetOrderId) {
       // MODE UPDATE: Perbarui order yang sudah ada (tambahkan pesanan susulan via kasir)
+      let openTabNotes = orderNotes;
+      if (finalCustomerName && (!openTabNotes || !openTabNotes.includes(finalCustomerName))) {
+        openTabNotes = openTabNotes ? `${openTabNotes} (Pelanggan: ${finalCustomerName})` : `Pelanggan: ${finalCustomerName}`;
+      }
+
       await prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(
           `UPDATE "orders" SET
             "subtotal" = $1,
             "discount_amount" = $2,
             "tax_amount" = $3,
-            "service_charge" = $4,
+            "service_total" = $4,
             "grand_total" = $5,
             "notes" = COALESCE($6, notes),
-            "customer_name" = COALESCE($7, customer_name),
-            "customer_phone" = COALESCE($8, customer_phone),
-            "shift_id" = COALESCE($9, shift_id),
-            "table_number" = COALESCE($10, table_number),
+            "shift_id" = COALESCE($7, shift_id),
+            "table_number" = COALESCE($8, table_number),
             "updated_at" = CURRENT_TIMESTAMP
-          WHERE id = $11 AND tenant_id = $12;`,
+          WHERE id = $9 AND tenant_id = $10;`,
           subtotal,
           discountAmount,
           taxAmount,
           serviceCharge,
           grandTotal,
-          orderNotes,
-          finalCustomerName,
-          customerPhone?.trim() || null,
+          openTabNotes,
           resolvedShiftId || null,
           cleanTable,
           targetOrderId,
@@ -1457,18 +1458,23 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
     const invoiceNumber = await generateInvoiceNumber(targetOutletId);
     const orderId = crypto.randomUUID();
 
+    let openTabNotes = orderNotes;
+    if (finalCustomerName && (!openTabNotes || !openTabNotes.includes(finalCustomerName))) {
+      openTabNotes = openTabNotes ? `${openTabNotes} (Pelanggan: ${finalCustomerName})` : `Pelanggan: ${finalCustomerName}`;
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(
         `INSERT INTO "orders" (
           "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
-          "customer_id", "customer_name", "customer_phone", "shift_id",
-          "subtotal", "discount_amount", "tax_amount", "service_charge", "grand_total", "total_cost",
+          "customer_id", "shift_id",
+          "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
           "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6, $7, $8, $9,
-          $10, $11, $12, $13, $14, 0,
-          'UNPAID'::"PaymentStatus", $15, $16, $17, $18, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+          $6, $7,
+          $8, $9, $10, $11, $12,
+          'UNPAID'::"PaymentStatus", $13, $14, $15, $16, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
         );`,
         orderId,
         tenantId,
@@ -1476,8 +1482,6 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
         cashierId,
         invoiceNumber,
         customerId || null,
-        finalCustomerName,
-        customerPhone?.trim() || null,
         resolvedShiftId || null,
         subtotal,
         discountAmount,
@@ -1487,7 +1491,7 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
         channel,
         orderType,
         cleanTable,
-        orderNotes
+        openTabNotes
       );
 
       for (const item of preparedItems) {
@@ -1552,9 +1556,10 @@ export const getOpenTabs = async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId || req.tenantId;
 
     const orders = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o.*, u.name as cashier_name
+      `SELECT o.*, u.name as cashier_name, c.name as customer_name, c.phone as customer_phone
        FROM "orders" o
        LEFT JOIN "users" u ON u.id = o.cashier_id
+       LEFT JOIN "customers" c ON c.id = o.customer_id
        WHERE ($1::text IS NULL OR o.outlet_id = $1)
          AND ($2::text IS NULL OR o.tenant_id = $2)
          AND o.payment_status = 'UNPAID'
@@ -1596,27 +1601,37 @@ export const getOpenTabs = async (req: Request, res: Response) => {
       }
     }
 
-    const formatted = orders.map((o) => ({
-      id: o.id,
-      invoiceNumber: o.invoice_number,
-      outletId: o.outlet_id,
-      cashierId: o.cashier_id,
-      customerName: o.customer_name,
-      customerPhone: o.customer_phone,
-      channel: o.channel,
-      tableNumber: o.table_number,
-      notes: o.notes,
-      subtotal: Number(o.subtotal),
-      discountAmount: Number(o.discount_amount || 0),
-      taxAmount: Number(o.tax_amount || 0),
-      serviceCharge: Number(o.service_charge || 0),
-      grandTotal: Number(o.grand_total),
-      orderStatus: o.order_status,
-      paymentStatus: o.payment_status,
-      createdAt: o.created_at,
-      cashier: { name: o.cashier_name },
-      items: itemsByOrderId[o.id] || [],
-    }));
+    const formatted = orders.map((o) => {
+      let derivedCustomerName = o.customer_name;
+      if (!derivedCustomerName && o.notes) {
+        const guestMatch = o.notes.match(/Tamu:\s*([^|(]+)/i) || o.notes.match(/Pelanggan:\s*([^|(]+)/i);
+        if (guestMatch) {
+          derivedCustomerName = guestMatch[1].trim();
+        }
+      }
+
+      return {
+        id: o.id,
+        invoiceNumber: o.invoice_number,
+        outletId: o.outlet_id,
+        cashierId: o.cashier_id,
+        customerName: derivedCustomerName || 'Pelanggan Umum',
+        customerPhone: o.customer_phone || null,
+        channel: o.channel,
+        tableNumber: o.table_number,
+        notes: o.notes,
+        subtotal: Number(o.subtotal),
+        discountAmount: Number(o.discount_amount || 0),
+        taxAmount: Number(o.tax_amount || 0),
+        serviceCharge: Number(o.service_total || 0),
+        grandTotal: Number(o.grand_total),
+        orderStatus: o.order_status,
+        paymentStatus: o.payment_status,
+        createdAt: o.created_at,
+        cashier: { name: o.cashier_name },
+        items: itemsByOrderId[o.id] || [],
+      };
+    });
 
     return res.status(200).json({ status: 'success', data: formatted });
   } catch (error: any) {

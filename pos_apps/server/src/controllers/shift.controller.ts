@@ -257,7 +257,7 @@ export const getXReport = async (req: Request, res: Response) => {
 
     const orderRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT o.id, o.invoice_number as "invoiceNumber", o.subtotal, o.discount_amount as "discountAmount",
-              o.tax_amount as "taxAmount", o.service_charge as "serviceCharge", o.grand_total as "grandTotal",
+              o.tax_amount as "taxAmount", COALESCE(o.service_total, 0) as "serviceCharge", o.grand_total as "grandTotal",
               o.created_at as "createdAt", pt.payment_method as "paymentMethod", pt.amount
        FROM "orders" o
        LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'

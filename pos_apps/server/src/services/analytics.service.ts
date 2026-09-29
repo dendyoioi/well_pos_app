@@ -156,7 +156,7 @@ export class AnalyticsService {
         COALESCE(o.subtotal, 0) as subtotal,
         COALESCE(o.discount_amount, 0) as discount_amount,
         COALESCE(o.tax_amount, 0) as tax_amount,
-        COALESCE(o.service_charge, 0) as service_charge,
+        COALESCE(o.service_total, 0) as service_charge,
         COALESCE(o.grand_total, 0) as grand_total,
         o.created_at
       FROM "orders" o

@@ -339,7 +339,7 @@ export const qrMenuService = {
 
     if (matchedTable) {
       const activeOrders = await prisma.$queryRawUnsafe<any[]>(
-        `SELECT invoice_number, customer_name, channel
+        `SELECT invoice_number, channel, notes
          FROM "orders"
          WHERE outlet_id = $1
            AND tenant_id = $2
@@ -355,9 +355,10 @@ export const qrMenuService = {
 
       if (activeOrders.length > 0) {
         tableOccupied = true;
+        const guestMatch = activeOrders[0].notes?.match(/Tamu:\s*([^|(]+)/i);
         activeOrderInfo = {
           invoiceNumber: activeOrders[0].invoice_number,
-          customerName: activeOrders[0].customer_name || 'Tamu',
+          customerName: guestMatch ? guestMatch[1].trim() : 'Tamu',
           channel: activeOrders[0].channel,
         };
       }
@@ -555,7 +556,7 @@ export const qrMenuService = {
 
     // ─── Proteksi Ganda: Blokir order baru jika meja sedang aktif terisi tamu lain ───
     const occupiedCheck = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT id, invoice_number, customer_name
+      `SELECT id, invoice_number, notes
        FROM "orders"
        WHERE outlet_id = $1
          AND tenant_id = $2
@@ -586,22 +587,18 @@ export const qrMenuService = {
       await tx.$executeRawUnsafe(
         `INSERT INTO "orders" (
           "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
-          "customer_name", "customer_phone",
-          "subtotal", "discount_amount", "tax_amount", "service_charge", "grand_total", "total_cost",
+          "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
           "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6, $7,
-          $8, 0, $9, $10, $11, 0,
-          'UNPAID'::"PaymentStatus", 'QR_MENU', 'DINE_IN', $12, $13, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+          $6, 0, $7, $8, $9,
+          'UNPAID'::"PaymentStatus", 'QR_MENU', 'DINE_IN', $10, $11, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
         );`,
         orderId,
         tenantId,
         outlet.id,
         cashierId,
         invoiceNumber,
-        data.customerName.trim(),
-        data.customerPhone?.trim() || null,
         subtotal,
         taxAmount,
         serviceCharge,
@@ -681,9 +678,9 @@ export const qrMenuService = {
   async getQrOrders(tenantId: string, outletId?: string | null) {
     const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT 
-        o.id, o.invoice_number, o.created_at, o.subtotal, o.tax_amount, o.service_charge, 
+        o.id, o.invoice_number, o.created_at, o.subtotal, o.tax_amount, o.service_total as service_charge, 
         o.grand_total, o.order_status, o.payment_status, o.table_number, o.notes,
-        o.customer_name, o.customer_phone,
+        c.name as customer_name, c.phone as customer_phone,
         COALESCE(
           json_agg(
             json_build_object(
@@ -700,34 +697,45 @@ export const qrMenuService = {
           '[]'::json
         ) as items
        FROM "orders" o
+       LEFT JOIN "customers" c ON c.id = o.customer_id
        LEFT JOIN "order_items" oi ON o.id = oi.order_id
        LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
        WHERE o.tenant_id = $1
          AND o.channel = 'QR_MENU'
          AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
          ${outletId ? `AND o.outlet_id = $2` : ''}
-       GROUP BY o.id
+       GROUP BY o.id, c.name, c.phone
        ORDER BY o.created_at DESC
        LIMIT 50;`,
       ...(outletId ? [tenantId, outletId] : [tenantId])
     );
 
-    return rows.map((r) => ({
-      id: r.id,
-      invoiceNumber: r.invoice_number,
-      createdAt: r.created_at,
-      subtotal: Number(r.subtotal) || 0,
-      taxAmount: Number(r.tax_amount) || 0,
-      serviceCharge: Number(r.service_charge) || 0,
-      grandTotal: Number(r.grand_total) || 0,
-      orderStatus: r.order_status,
-      paymentStatus: r.payment_status,
-      tableNumber: r.table_number || 'Tanpa Meja',
-      notes: r.notes,
-      customerName: r.customer_name || 'Pelanggan',
-      customerPhone: r.customer_phone,
-      items: Array.isArray(r.items) ? r.items : [],
-    }));
+    return rows.map((r) => {
+      let derivedCustomerName = r.customer_name;
+      if (!derivedCustomerName && r.notes) {
+        const guestMatch = r.notes.match(/Tamu:\s*([^|(]+)/i);
+        if (guestMatch) {
+          derivedCustomerName = guestMatch[1].trim();
+        }
+      }
+
+      return {
+        id: r.id,
+        invoiceNumber: r.invoice_number,
+        createdAt: r.created_at,
+        subtotal: Number(r.subtotal) || 0,
+        taxAmount: Number(r.tax_amount) || 0,
+        serviceCharge: Number(r.service_charge) || 0,
+        grandTotal: Number(r.grand_total) || 0,
+        orderStatus: r.order_status,
+        paymentStatus: r.payment_status,
+        tableNumber: r.table_number || 'Tanpa Meja',
+        notes: r.notes,
+        customerName: derivedCustomerName || 'Pelanggan',
+        customerPhone: r.customer_phone || null,
+        items: Array.isArray(r.items) ? r.items : [],
+      };
+    });
   },
 
   /**

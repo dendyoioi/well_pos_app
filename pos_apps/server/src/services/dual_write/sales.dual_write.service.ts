@@ -39,7 +39,10 @@ export class SalesDualWriteService extends BaseDualWriteService {
       const channel = dto.channel || 'DINE_IN';
       const orderType = dto.orderType || channel || 'DINE_IN';
       const tableNumber = dto.tableNumber || null;
-      const orderNotes = dto.notes || (tableNumber ? `Meja ${tableNumber}` : null);
+      let orderNotes = dto.notes || (tableNumber ? `Meja ${tableNumber}` : null);
+      if (dto.customerName && (!orderNotes || !orderNotes.includes(dto.customerName))) {
+        orderNotes = orderNotes ? `${orderNotes} (Pelanggan: ${dto.customerName})` : `Pelanggan: ${dto.customerName}`;
+      }
       const actorUserId = await this.resolveActorUserId(tx, tenantId, ctx.actorUserId || dto.cashierId);
 
       // 1. ORDERS MUTATION VIA PARAMETERIZED RAW SQL (Enriched with F&B fields)
@@ -49,37 +52,29 @@ export class SalesDualWriteService extends BaseDualWriteService {
           `UPDATE "orders" SET
             "cashier_id" = $2,
             "customer_id" = $3,
-            "customer_name" = $4,
-            "customer_email" = $5,
-            "customer_phone" = $6,
-            "shift_id" = $7,
-            "subtotal" = $8,
-            "discount_amount" = $9,
-            "tax_amount" = $10,
-            "service_charge" = $11,
-            "grand_total" = $12,
-            "total_cost" = $13,
+            "shift_id" = $4,
+            "subtotal" = $5,
+            "discount_amount" = $6,
+            "tax_amount" = $7,
+            "service_total" = $8,
+            "grand_total" = $9,
             "payment_status" = 'PAID'::"PaymentStatus",
             "order_status" = 'COMPLETED'::"OrderStatus",
-            "channel" = COALESCE($14, "channel"),
-            "order_type" = COALESCE($15, "order_type"),
-            "table_number" = COALESCE($16, "table_number"),
-            "notes" = COALESCE($17, "notes"),
+            "channel" = COALESCE($10, "channel"),
+            "order_type" = COALESCE($11, "order_type"),
+            "table_number" = COALESCE($12, "table_number"),
+            "notes" = COALESCE($13, "notes"),
             "updated_at" = (NOW() AT TIME ZONE 'UTC')
            WHERE "id" = $1;`,
           orderId,
           dto.cashierId,
           dto.customerId || null,
-          dto.customerName || null,
-          dto.customerEmail || null,
-          dto.customerPhone || null,
           dto.shiftId || null,
           dto.subtotal,
           dto.globalDiscount || 0,
           dto.taxAmount || 0,
           dto.serviceCharge || 0,
           dto.grandTotal,
-          dto.totalCost,
           channel,
           orderType,
           tableNumber,
@@ -97,16 +92,16 @@ export class SalesDualWriteService extends BaseDualWriteService {
           tx,
           `INSERT INTO "orders" (
             "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
-            "customer_id", "customer_name", "customer_email", "customer_phone", "shift_id",
-            "subtotal", "discount_amount", "tax_amount", "service_charge", "grand_total", "total_cost",
+            "customer_id", "shift_id",
+            "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
             "paid_amount", "change_amount",
             "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
           ) VALUES (
             $1, $2, $3, $4, $5,
-            $6, $7, $8, $9, $10,
-            $11, $12, $13, $14, $15, $16,
-            $21, $22,
-            'PAID'::"PaymentStatus", $17, $18, $19, $20, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+            $6, $7,
+            $8, $9, $10, $11, $12,
+            $13, $14,
+            'PAID'::"PaymentStatus", $15, $16, $17, $18, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
           );`,
           orderId,
           tenantId,
@@ -114,22 +109,18 @@ export class SalesDualWriteService extends BaseDualWriteService {
           dto.cashierId,
           invoiceNumber,
           dto.customerId || null,
-          dto.customerName || null,
-          dto.customerEmail || null,
-          dto.customerPhone || null,
           dto.shiftId || null,
           dto.subtotal,
           dto.globalDiscount || 0,
           dto.taxAmount || 0,
           dto.serviceCharge || 0,
           dto.grandTotal,
-          dto.totalCost,
+          totalAmountPaidForOrder,
+          totalChangeGivenForOrder,
           channel,
           orderType,
           tableNumber,
-          orderNotes,
-          totalAmountPaidForOrder,
-          totalChangeGivenForOrder
+          orderNotes
         );
       }
 

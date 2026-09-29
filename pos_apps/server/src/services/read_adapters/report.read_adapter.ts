@@ -43,7 +43,7 @@ export class ReportReadAdapter extends BaseReadAdapter {
         o.subtotal,
         COALESCE(o.discount_amount, 0) as discount_total,
         COALESCE(o.tax_amount, 0) as tax_total,
-        COALESCE(o.service_total, o.service_charge, 0) as service_total,
+        COALESCE(o.service_total, 0) as service_total,
         COALESCE(o.grand_total, 0) as total_amount,
         COALESCE(o.channel, 'DINE_IN') as channel,
         o.created_at
