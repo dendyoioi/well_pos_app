@@ -376,7 +376,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar py-0.5">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Subtab toggle */}
           <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0">
             {(['data', 'grafik'] as const).map(t => (
@@ -395,24 +395,26 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
             ))}
           </div>
 
-          <button
-            onClick={() => loadOrders()}
-            disabled={loading}
-            title="Segarkan data ringkasan bisnis"
-            className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            <span>Segarkan</span>
-          </button>
-
-          {onOpenPos && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={onOpenPos}
-              className="px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
+              onClick={() => loadOrders()}
+              disabled={loading}
+              title="Segarkan data ringkasan bisnis"
+              className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
             >
-              <span>Buka Kasir</span>
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              <span>Segarkan</span>
             </button>
-          )}
+
+            {onOpenPos && (
+              <button
+                onClick={onOpenPos}
+                className="px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
+              >
+                <span>Buka Kasir</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -435,15 +437,15 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
 
       {/* Filter bar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-2xs space-y-3">
-        {/* Row 1: Saluran & Layanan Selector (Grid seimbang di mobile, sejajar di desktop) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-2.5 w-full">
+        {/* Row 1: Saluran & Layanan Selector (Grid 2 kolom seimbang di mobile, sejajar di desktop) */}
+        <div className="grid grid-cols-2 lg:flex items-center gap-2 sm:gap-2.5 w-full">
           {/* Saluran */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 lg:max-w-xs">
-            <span className="text-xs font-bold text-slate-500 shrink-0">Saluran:</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 flex-1 lg:max-w-xs transition-colors focus-within:border-blue-400 focus-within:bg-white">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase sm:normal-case tracking-wider sm:tracking-normal shrink-0">Saluran</span>
             <select
               value={channelFilter}
               onChange={e => setChannelFilter(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0"
+              className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0 truncate"
             >
               <option value="ALL">Semua Saluran</option>
               <option value="OFFLINE">Kasir Langsung (POS)</option>
@@ -455,12 +457,12 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           </div>
 
           {/* Jenis Layanan */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 lg:max-w-xs">
-            <span className="text-xs font-bold text-slate-500 shrink-0">Layanan:</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 flex-1 lg:max-w-xs transition-colors focus-within:border-blue-400 focus-within:bg-white">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase sm:normal-case tracking-wider sm:tracking-normal shrink-0">Layanan</span>
             <select
               value={serviceFilter}
               onChange={e => setServiceFilter(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0"
+              className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0 truncate"
             >
               <option value="ALL">Semua Jenis</option>
               <option value="DINE_IN">Makan di Tempat (Dine In)</option>
@@ -562,7 +564,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           <button
             type="button"
             onClick={handleExport}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
           >
             <Download size={13} className="text-slate-500" />
             <span>Ekspor CSV</span>
