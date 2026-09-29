@@ -420,53 +420,56 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           />
         </div>
 
-        {/* Buttons */}
-        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap sm:flex-nowrap justify-start sm:justify-end">
-          <button
-            type="button"
-            onClick={() => fetchData()}
-            title="Muat Ulang"
-            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+        {/* Buttons Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          {/* Secondary / Utility Actions (Refresh, Kategori, Ambil Katalog) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => fetchData()}
+              title="Muat Ulang"
+              className="w-10 h-10 sm:w-auto sm:h-auto p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs flex items-center justify-center shrink-0 cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
 
-          {canManage && (
-            <>
-              {onNavigateToCategories && (
-                <button
-                  type="button"
-                  onClick={onNavigateToCategories}
-                  className="px-3.5 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                  title="Buka menu Kelola Kategori Produk"
-                >
-                  <Layers className="w-4 h-4 text-blue-900" />
-                  <span>Kategori Produk</span>
-                </button>
-              )}
-
-
-              {outletId && (
-                <button
-                  type="button"
-                  onClick={() => setAssignModalOpen(true)}
-                  className="px-3.5 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-                  title="Ambil dan hubungkan menu dari Master Katalog Pusat ke outlet toko ini"
-                >
-                  <ShoppingBag className="w-4 h-4 text-blue-800" />
-                  <span>Ambil dari Master Katalog</span>
-                </button>
-              )}
-
+            {canManage && onNavigateToCategories && (
               <button
                 type="button"
-                onClick={handleAddNew}
-                className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                onClick={onNavigateToCategories}
+                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                title="Buka menu Kelola Kategori Produk"
               >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Produk</span>
+                <Layers className="w-4 h-4 text-blue-900 shrink-0" />
+                <span className="sm:hidden">Kategori</span>
+                <span className="hidden sm:inline">Kategori Produk</span>
               </button>
-            </>
+            )}
+
+            {canManage && outletId && (
+              <button
+                type="button"
+                onClick={() => setAssignModalOpen(true)}
+                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                title="Ambil dan hubungkan menu dari Master Katalog Pusat ke outlet toko ini"
+              >
+                <ShoppingBag className="w-4 h-4 text-blue-800 shrink-0" />
+                <span className="sm:hidden">Dari Master</span>
+                <span className="hidden sm:inline">Ambil dari Master Katalog</span>
+              </button>
+            )}
+          </div>
+
+          {/* Primary Action Button (Tambah Produk) */}
+          {canManage && (
+            <button
+              type="button"
+              onClick={handleAddNew}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Produk</span>
+            </button>
           )}
         </div>
       </div>

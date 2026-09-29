@@ -303,17 +303,17 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => fetchCategories()}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            className="w-10 h-10 sm:w-auto sm:h-auto p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center shrink-0"
             title="Muat Ulang"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={handleOpenCreate}
-            className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold rounded-xl flex items-center gap-2 transition-all shadow-md shadow-blue-900/20 text-xs sm:text-sm cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold rounded-xl flex items-center gap-2 transition-all shadow-md shadow-blue-900/20 text-xs sm:text-sm cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Kategori</span>
