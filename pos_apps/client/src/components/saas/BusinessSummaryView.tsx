@@ -356,99 +356,95 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
       )}
 
       {/* Header */}
-      <div style={{ display:'flex', flexWrap:'wrap', alignItems:'flex-start', justifyContent:'space-between',
-        gap:12, paddingBottom:12, borderBottom:'1px solid #e2e8f0' }}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
-          <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#64748b', marginBottom:4 }}>
-            <span>Laporan</span><span>/</span>
-            <span style={{ color:'#1e293b', fontWeight:700 }}>Ringkasan Bisnis</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold mb-1">
+            <span>Laporan</span>
+            <span>/</span>
+            <span className="text-slate-800 font-bold">Ringkasan Bisnis</span>
           </div>
-          <h1 style={{ margin:0, fontSize:22, fontWeight:900, color:'#0f172a', letterSpacing:'-0.4px',
-            display:'flex', alignItems:'center', gap:10 }}>
-            Ringkasan Bisnis
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Ringkasan Bisnis
+            </h1>
             {activeOutlet && (
-              <span style={{ fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:99,
-                background:'#f1f5f9', color:'#475569', border:'1px solid #e2e8f0' }}>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                 {activeOutlet.name}
               </span>
             )}
-          </h1>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar py-0.5">
           {/* Subtab toggle */}
-          <div style={{ display:'flex', background:'#f1f5f9', borderRadius:12, padding:3,
-            border:'1px solid #e2e8f0', gap:2 }}>
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0">
             {(['data', 'grafik'] as const).map(t => (
-              <button key={t} onClick={() => setSubTab(t)} style={{
-                padding:'5px 14px', borderRadius:9, fontSize:11, fontWeight:700, border:'none', cursor:'pointer',
-                background: subTab === t ? '#fff' : 'transparent',
-                color: subTab === t ? '#0f172a' : '#64748b',
-                boxShadow: subTab === t ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                display:'flex', alignItems:'center', gap:5, transition:'all 0.15s',
-              }}>
-                {t === 'data' ? <TableProperties size={11} /> : <BarChart2 size={11} />}
-                {t === 'data' ? 'Data' : 'Statistik Grafik'}
+              <button
+                key={t}
+                onClick={() => setSubTab(t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  subTab === t
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {t === 'data' ? <TableProperties size={13} /> : <BarChart2 size={13} />}
+                <span>{t === 'data' ? 'Data' : 'Statistik Grafik'}</span>
               </button>
             ))}
           </div>
+
           <button
             onClick={() => loadOrders()}
             disabled={loading}
             title="Segarkan data ringkasan bisnis"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '6px 12px',
-              borderRadius: 10,
-              background: '#f8fafc',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-            }}
+            className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
           >
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             <span>Segarkan</span>
           </button>
+
           {onOpenPos && (
-            <button onClick={onOpenPos} style={{ padding:'6px 14px', borderRadius:10, background:'#1d4ed8',
-              color:'#fff', fontWeight:700, fontSize:11, border:'none', cursor:'pointer' }}>
-              Buka Kasir
+            <button
+              onClick={onOpenPos}
+              className="px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
+            >
+              <span>Buka Kasir</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Category pills */}
-      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
         {(['operasional', 'pembayaran', 'produk'] as const).map(p => (
-          <button key={p} onClick={() => setPill(p)} style={{
-            padding:'6px 18px', borderRadius:10, fontSize:11, fontWeight:700,
-            border: pill === p ? 'none' : '1px solid #e2e8f0', cursor:'pointer',
-            background: pill === p ? '#1d4ed8' : '#fff',
-            color: pill === p ? '#fff' : '#475569', transition:'all 0.15s',
-          }}>
+          <button
+            key={p}
+            onClick={() => setPill(p)}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+              pill === p
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
             {p === 'operasional' ? 'Operasional' : p === 'pembayaran' ? 'Pembayaran' : 'Produk'}
           </button>
         ))}
       </div>
 
       {/* Filter bar */}
-      <div style={{ background:'#fff', borderRadius:16, border:'1px solid #e2e8f0',
-        boxShadow:'0 1px 3px rgba(0,0,0,0.04)', padding:'11px 16px',
-        display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:10, fontSize:11 }}>
-        <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10 }}>
-
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-2xs space-y-3">
+        {/* Row 1: Saluran & Layanan Selector (Grid seimbang di mobile, sejajar di desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-2.5 w-full">
           {/* Saluran */}
-          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <span style={{ color:'#64748b', fontWeight:600 }}>Saluran:</span>
-            <select value={channelFilter} onChange={e => setChannelFilter(e.target.value)}
-              style={{ padding:'4px 8px', borderRadius:8, border:'1px solid #e2e8f0', background:'#f8fafc',
-                fontWeight:700, color:'#1e293b', fontSize:11, outline:'none', cursor:'pointer' }}>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 lg:max-w-xs">
+            <span className="text-xs font-bold text-slate-500 shrink-0">Saluran:</span>
+            <select
+              value={channelFilter}
+              onChange={e => setChannelFilter(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0"
+            >
               <option value="ALL">Semua Saluran</option>
               <option value="OFFLINE">Kasir Langsung (POS)</option>
               <option value="ONLINE">Mitra Online (Semua Ojol)</option>
@@ -459,11 +455,13 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           </div>
 
           {/* Jenis Layanan */}
-          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <span style={{ color:'#64748b', fontWeight:600 }}>Layanan:</span>
-            <select value={serviceFilter} onChange={e => setServiceFilter(e.target.value)}
-              style={{ padding:'4px 8px', borderRadius:8, border:'1px solid #e2e8f0', background:'#f8fafc',
-                fontWeight:700, color:'#1e293b', fontSize:11, outline:'none', cursor:'pointer' }}>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 lg:max-w-xs">
+            <span className="text-xs font-bold text-slate-500 shrink-0">Layanan:</span>
+            <select
+              value={serviceFilter}
+              onChange={e => setServiceFilter(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0"
+            >
               <option value="ALL">Semua Jenis</option>
               <option value="DINE_IN">Makan di Tempat (Dine In)</option>
               <option value="TAKE_AWAY">Bawa Pulang (Take Away)</option>
@@ -471,107 +469,130 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
               <option value="ONLINE_DELIVERY">Mitra Online Delivery</option>
             </select>
           </div>
-
-          {/* Date picker */}
-          <div style={{ position:'relative' }}>
-            <button onClick={() => setShowDateDrop(v => !v)} style={{
-              display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:8,
-              border:'1px solid #e2e8f0', background:'#f8fafc', fontWeight:700, color:'#1e293b',
-              fontSize:11, cursor:'pointer' }}>
-              <Calendar size={12} style={{ color:'#64748b' }} />
-              {dateLabel}
-              <ChevronDown size={11} style={{ color:'#64748b' }} />
-            </button>
-            {showDateDrop && (
-              <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:'#fff',
-                border:'1px solid #e2e8f0', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.12)',
-                zIndex:100, minWidth:190, padding:8 }}>
-                {(['today','7days','30days','thismonth','custom'] as DatePreset[]).map(p => (
-                  <button key={p} onClick={() => { setPreset(p); if (p !== 'custom') setShowDateDrop(false); }}
-                    style={{ display:'block', width:'100%', textAlign:'left', padding:'6px 10px',
-                      borderRadius:8, border:'none', cursor:'pointer', fontSize:11,
-                      fontWeight: preset === p ? 700 : 500,
-                      background: preset === p ? '#eff6ff' : 'transparent',
-                      color: preset === p ? '#1d4ed8' : '#374151' }}>
-                    {PRESET_LABELS[p]}
-                  </button>
-                ))}
-                {preset === 'custom' && (
-                  <div style={{ padding:'8px 10px', borderTop:'1px solid #f1f5f9', marginTop:4,
-                    display:'flex', flexDirection:'column', gap:6 }}>
-                    {[['Dari:', customStart, setCustomStart], ['Sampai:', customEnd, setCustomEnd]].map(([lbl, val, setter]) => (
-                      <div key={lbl as string} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                        <span style={{ fontSize:10, color:'#64748b', minWidth:42 }}>{lbl as string}</span>
-                        <input type="date" value={val as string}
-                          onChange={e => (setter as Function)(e.target.value)}
-                          style={{ fontSize:11, border:'1px solid #e2e8f0', borderRadius:6, padding:'2px 5px', outline:'none', flex:1 }} />
-                      </div>
-                    ))}
-                    <button onClick={() => setShowDateDrop(false)} style={{ padding:'5px', borderRadius:6,
-                      background:'#1d4ed8', color:'#fff', fontWeight:700, border:'none', fontSize:11, cursor:'pointer' }}>
-                      Terapkan
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Time mode */}
-          <div style={{ display:'flex', alignItems:'center', gap:10, paddingLeft:10, borderLeft:'1px solid #e2e8f0' }}>
-            {(['24h','custom'] as const).map(tm => (
-              <label key={tm} style={{ display:'flex', alignItems:'center', gap:4, cursor:'pointer' }}>
-                <input type="radio" name="timeMode" checked={timeMode === tm} onChange={() => setTimeMode(tm)}
-                  style={{ accentColor:'#1d4ed8' }} />
-                <span style={{ fontWeight:600, color:'#374151' }}>{tm === '24h' ? '24 Jam' : 'Pilih Jam'}</span>
-              </label>
-            ))}
-            {timeMode === 'custom' && (
-              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                <Clock size={11} style={{ color:'#64748b' }} />
-                {[startHour, endHour].map((val, i) => (
-                  <React.Fragment key={i}>
-                    {i === 1 && <span style={{ color:'#94a3b8' }}>–</span>}
-                    <input type="time" value={val}
-                      onChange={e => i === 0 ? setStartHour(e.target.value) : setEndHour(e.target.value)}
-                      style={{ fontSize:11, border:'1px solid #e2e8f0', borderRadius:6, padding:'2px 5px', outline:'none', width:68 }} />
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
-        <button onClick={handleExport} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px',
-          borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', color:'#374151', fontWeight:700,
-          fontSize:11, cursor:'pointer', boxShadow:'0 1px 2px rgba(0,0,0,0.04)' }}>
-          <Download size={13} style={{ color:'#64748b' }} />
-          Ekspor CSV
-        </button>
+        {/* Row 2: Date Picker, Jam, & Ekspor CSV */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Date picker */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowDateDrop(v => !v)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
+              >
+                <Calendar size={13} className="text-slate-500" />
+                <span>{dateLabel}</span>
+                <ChevronDown size={12} className="text-slate-500" />
+              </button>
+              {showDateDrop && (
+                <div className="absolute top-[calc(100%+6px)] left-0 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 min-w-[200px] p-2 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                  {(['today','7days','30days','thismonth','custom'] as DatePreset[]).map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => { setPreset(p); if (p !== 'custom') setShowDateDrop(false); }}
+                      className={`block w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                        preset === p ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {PRESET_LABELS[p]}
+                    </button>
+                  ))}
+                  {preset === 'custom' && (
+                    <div className="p-2 border-t border-slate-100 mt-1 flex flex-col gap-2">
+                      {[['Dari:', customStart, setCustomStart], ['Sampai:', customEnd, setCustomEnd]].map(([lbl, val, setter]) => (
+                        <div key={lbl as string} className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-500 font-semibold min-w-[42px]">{lbl as string}</span>
+                          <input
+                            type="date"
+                            value={val as string}
+                            onChange={e => (setter as Function)(e.target.value)}
+                            className="text-xs border border-slate-200 rounded-lg px-2 py-1 outline-none flex-1 bg-white"
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setShowDateDrop(false)}
+                        className="w-full py-1.5 rounded-lg bg-blue-900 text-white font-bold text-xs hover:bg-blue-800 transition-colors"
+                      >
+                        Terapkan
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Time Mode Radio */}
+            <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              {(['24h','custom'] as const).map(tm => (
+                <label key={tm} className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-700">
+                  <input
+                    type="radio"
+                    name="timeMode"
+                    checked={timeMode === tm}
+                    onChange={() => setTimeMode(tm)}
+                    className="accent-blue-900 w-3.5 h-3.5"
+                  />
+                  <span>{tm === '24h' ? '24 Jam' : 'Pilih Jam'}</span>
+                </label>
+              ))}
+              {timeMode === 'custom' && (
+                <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-slate-200">
+                  <Clock size={12} className="text-slate-500" />
+                  {[startHour, endHour].map((val, i) => (
+                    <React.Fragment key={i}>
+                      {i === 1 && <span className="text-slate-400">–</span>}
+                      <input
+                        type="time"
+                        value={val}
+                        onChange={e => i === 0 ? setStartHour(e.target.value) : setEndHour(e.target.value)}
+                        className="text-xs border border-slate-200 rounded-lg px-1.5 py-0.5 outline-none w-16 bg-white"
+                      />
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ekspor CSV */}
+          <button
+            type="button"
+            onClick={handleExport}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+          >
+            <Download size={13} className="text-slate-500" />
+            <span>Ekspor CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* ── 3 KPI Cards ─────────────────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(210px,1fr))', gap:16 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
         {[
           { label:'Pembayaran Diterima', value: formatRupiah(m.totalSales), sub:`${m.totalSales > 0 ? m.dineInC + m.takeC + m.delC : 0} Transaksi`, icon:'Rp', bg:'#ecfdf5', ic:'#16a34a', foot:'Omset bersih masuk', fc:'#16a34a' },
-          { label:'Volume Pesanan', value:`${filtered.length} pesanan`, sub:`AOV ${formatRupiah(m.aov)}`, icon:<ShoppingCart size={14}/>, bg:'#eff6ff', ic:'#1d4ed8', foot:'Frekuensi transaksi', fc:'#1d4ed8' },
-          { label:'Laba Kotor (Est.)', value: formatRupiah(m.gp), sub:`~${m.margin}% Margin`, icon:<TrendingUp size={14}/>, bg:'#faf5ff', ic:'#7c3aed', foot:'Margin pendapatan kotor', fc:'#7c3aed' },
+          { label:'Volume Pesanan', value:`${filtered.length} pesanan`, sub:`AOV ${formatRupiah(m.aov)}`, icon:<ShoppingCart size={15}/>, bg:'#eff6ff', ic:'#1d4ed8', foot:'Frekuensi transaksi', fc:'#1d4ed8' },
+          { label:'Laba Kotor (Est.)', value: formatRupiah(m.gp), sub:`~${m.margin}% Margin`, icon:<TrendingUp size={15}/>, bg:'#faf5ff', ic:'#7c3aed', foot:'Margin pendapatan kotor', fc:'#7c3aed' },
         ].map(card2 => (
-          <div key={card2.label} style={{ background:'#fff', borderRadius:16, border:'1px solid #e2e8f0',
-            padding:20, boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-              <span style={{ fontSize:11, fontWeight:600, color:'#64748b' }}>{card2.label}</span>
-              <div style={{ width:32, height:32, borderRadius:10, background:card2.bg, color:card2.ic,
-                display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900 }}>
+          <div key={card2.label} className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{card2.label}</span>
+              <div
+                style={{ background: card2.bg, color: card2.ic }}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0"
+              >
                 {card2.icon}
               </div>
             </div>
-            <p style={{ margin:0, fontSize:24, fontWeight:900, color:'#0f172a', letterSpacing:'-0.4px' }}>{card2.value}</p>
-            <div style={{ marginTop:10, paddingTop:10, borderTop:'1px solid #f1f5f9',
-              display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:10, color:'#94a3b8' }}>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{card2.value}</p>
+            <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
               <span>{card2.foot}</span>
-              <span style={{ color:card2.fc, fontWeight:700, display:'flex', alignItems:'center', gap:2 }}>
-                <ArrowUpRight size={10} />{card2.sub}
+              <span style={{ color: card2.fc }} className="font-bold flex items-center gap-1">
+                <ArrowUpRight size={12} />
+                <span>{card2.sub}</span>
               </span>
             </div>
           </div>
