@@ -117,32 +117,32 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-gradient-to-b from-[#090d16] via-[#10244c] via-45% to-white text-slate-900 selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col font-sans bg-gradient-to-b from-[#090d16] via-[#10244c] via-45% to-white text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* =========================================================================
           TOP NAVIGATION BAR
       ========================================================================= */}
-      <nav className="sticky top-0 z-40 bg-[#090d16]/85 backdrop-blur-md border-b border-white/10 text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      <nav className="sticky top-0 z-40 w-full bg-[#090d16]/85 backdrop-blur-md border-b border-white/10 text-white">
+        <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
           {/* Logo & Brand Identity */}
-          <a href="#" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform shrink-0">
-              <Store className="w-5 h-5 stroke-[2.5]" />
+          <a href="#" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform shrink-0">
+              <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
             </div>
-            <div>
-              <span className="text-lg sm:text-xl font-black tracking-tight text-white block leading-tight">
+            <div className="min-w-0">
+              <span className="text-base sm:text-xl font-black tracking-tight text-white block leading-tight truncate">
                 Well POS
               </span>
-              <span className="text-[11px] text-slate-300 font-medium hidden sm:block">
+              <span className="text-[10px] sm:text-[11px] text-slate-300 font-medium hidden sm:block truncate">
                 Aplikasi Kasir &amp; Manajemen Toko
               </span>
             </div>
           </a>
 
           {/* Action CTAs (Uniform Buttons) */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={onOpenPos}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-white/10 hover:bg-white/15 text-white border border-white/20 transition-all active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm bg-white/10 hover:bg-white/15 text-white border border-white/20 transition-all active:scale-[0.98] cursor-pointer"
             >
               <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-200" />
               <span>Masuk</span>
@@ -152,7 +152,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 setRegisterSuccessData(null);
                 setRegisterModalOpen(true);
               }}
-              className="inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center gap-1 px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all active:scale-[0.98] cursor-pointer"
             >
               <span>Daftar Gratis</span>
             </button>
@@ -163,26 +163,26 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       {/* =========================================================================
           HERO SECTION (Gradasi Hitam -> Biru)
       ========================================================================= */}
-      <main className="flex-1 flex flex-col justify-center relative pt-12 pb-16 sm:pt-20 sm:pb-24">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col justify-center relative pt-10 pb-16 sm:pt-20 sm:pb-24">
+        <div className="max-w-5xl mx-auto px-3.5 sm:px-6 lg:px-8 text-center w-full">
           {/* Badge Pengantar */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-blue-200 text-xs sm:text-sm font-semibold mb-6">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Sistem Kasir Praktis &bull; Siap Pakai untuk Semua Jenis Usaha</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white/10 border border-white/15 text-blue-200 text-xs sm:text-sm font-semibold mb-5 sm:mb-6 max-w-full truncate">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="truncate">Sistem Kasir Praktis &bull; Siap Pakai untuk Semua Usaha</span>
           </div>
 
           {/* Headline Utama */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.2] max-w-4xl mx-auto">
+          <h1 className="text-2xl xs:text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.2] max-w-4xl mx-auto">
             Kelola Penjualan, Stok, dan Laporan Usaha Jadi Lebih Rapi.
           </h1>
 
           {/* Subtitle Sederhana & Tidak Berbelit */}
-          <p className="mt-5 sm:mt-6 text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
+          <p className="mt-4 sm:mt-6 text-xs xs:text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
             Aplikasi kasir yang dirancang praktis untuk operasional harian toko Anda — mulai dari transaksi penjualan cepat, kontrol stok bahan &amp; barang, hingga pencatatan keuntungan yang jelas.
           </p>
 
           {/* CTA Buttons (Uniform) */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
+          <div className="mt-7 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-4 max-w-md sm:max-w-none mx-auto w-full">
             <button
               onClick={() => {
                 setRegisterSuccessData(null);
@@ -205,37 +205,37 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
           {/* =========================================================================
               SHOWCASE DEVICE PREVIEW (PORTAL PEMILIK LAPTOP & HALAMAN KASIR HP)
           ========================================================================= */}
-          <div className="mt-14 sm:mt-20 max-w-6xl mx-auto">
-            {/* Toggle Segmented Control (Uniform Styling) */}
-            <div className="inline-flex p-1 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 gap-1 mb-8 shadow-xl">
+          <div className="mt-12 sm:mt-20 max-w-6xl mx-auto w-full">
+            {/* Toggle Segmented Control (Uniform Styling, 100% Mobile Safe) */}
+            <div className="w-full max-w-xs sm:max-w-md mx-auto p-1 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 grid grid-cols-2 lg:inline-flex lg:w-auto gap-1 mb-6 sm:mb-8 shadow-xl">
               <button
                 type="button"
                 onClick={() => setActiveDevice('laptop')}
-                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                   activeDevice === 'laptop'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                     : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Laptop className="w-4 h-4" />
-                <span>Portal Pemilik (Laptop)</span>
+                <Laptop className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Portal Pemilik</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveDevice('phone')}
-                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                   activeDevice === 'phone'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                     : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Smartphone className="w-4 h-4" />
-                <span>Halaman Kasir (HP)</span>
+                <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Halaman Kasir</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveDevice('both')}
-                className={`hidden lg:flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`hidden lg:flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                   activeDevice === 'both'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                     : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -490,29 +490,29 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200/80 p-3 shadow-xs">
-                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs font-bold text-slate-800">
-                        <span>Aktivitas Transaksi Masuk (Real-Time)</span>
+                    <div className="bg-white rounded-xl border border-slate-200/80 p-2.5 sm:p-3 shadow-xs">
+                      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 text-xs font-bold text-slate-800">
+                        <span>Aktivitas Transaksi (Real-Time)</span>
                         <span className="text-[10px] text-blue-600 font-semibold">Live Feed</span>
                       </div>
                       <div className="space-y-1.5 text-[11px]">
-                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/80">
-                          <div className="flex items-center gap-2 truncate mr-2">
-                            <span className="font-mono font-bold text-slate-700 shrink-0">INV-1054</span>
-                            <span className="text-slate-500 truncate">Meja 04 &bull; Kopi Aren Ori (2) + Croissant</span>
+                        <div className="flex items-center justify-between gap-1.5 p-1.5 rounded-lg bg-slate-50/80">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="font-mono font-bold text-slate-700 shrink-0 text-[10px] sm:text-[11px]">INV-1054</span>
+                            <span className="text-slate-500 truncate text-[10px] sm:text-[11px]">Meja 04 &bull; Kopi Aren Ori</span>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-bold text-slate-900">Rp 48.000</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="font-bold text-slate-900 text-[10px] sm:text-[11px]">Rp 48.000</span>
                             <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">QRIS</span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/80">
-                          <div className="flex items-center gap-2 truncate mr-2">
-                            <span className="font-mono font-bold text-slate-700 shrink-0">INV-1053</span>
-                            <span className="text-slate-500 truncate">Take Away &bull; Caffe Latte + Toast</span>
+                        <div className="flex items-center justify-between gap-1.5 p-1.5 rounded-lg bg-slate-50/80">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="font-mono font-bold text-slate-700 shrink-0 text-[10px] sm:text-[11px]">INV-1053</span>
+                            <span className="text-slate-500 truncate text-[10px] sm:text-[11px]">Take Away &bull; Caffe Latte</span>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-bold text-slate-900">Rp 36.000</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="font-bold text-slate-900 text-[10px] sm:text-[11px]">Rp 36.000</span>
                             <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">TUNAI</span>
                           </div>
                         </div>
