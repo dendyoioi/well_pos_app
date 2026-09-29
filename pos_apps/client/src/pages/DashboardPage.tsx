@@ -24,6 +24,10 @@ import {
   Lock,
   ExternalLink,
   Smartphone,
+  Menu,
+  X,
+  UtensilsCrossed,
+  Ticket,
 } from 'lucide-react';
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
@@ -207,6 +211,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
   const [healthStatus, setHealthStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [productCount, setProductCount] = useState<number>(8);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Multi-Outlet Management State (PRO Multi-Branch Architecture)
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -434,6 +439,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             onClearAppendOrder={() => setAppendOrderData(null)}
             loadQrOrderData={selectedQrOrderForPos}
             onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
+            onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+            onLogout={onLogout}
+            allowedTabs={allowedTabs}
           />
         ) : activeTab === 'overview' ? (
           <BusinessSummaryView
@@ -631,9 +639,301 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
+      {/* Mobile Navigation Drawer (Burger Menu Kasir & Gudang di Smartphone) */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex justify-start bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150 md:hidden">
+          <div className="bg-white w-[290px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-left duration-200">
+            <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
+              {/* Header Drawer */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    {activeOutlet?.name?.charAt(0).toUpperCase() || 'W'}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-black text-xs text-blue-950 truncate">
+                      {activeOutlet?.name || 'Well POS'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-semibold truncate">
+                      {user.name} • {badge.label}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Daftar Menu Navigasi Sesuai Role */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
+                  Menu Utama
+                </span>
+
+                {/* Tab POS Kasir */}
+                {allowedTabs.includes('pos') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('pos');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'pos'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Mesin Kasir (POS)</span>
+                  </button>
+                )}
+
+                {/* Tab Ringkasan Toko */}
+                {allowedTabs.includes('overview') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('overview');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'overview'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Ringkasan {user.role === 'WAREHOUSE' ? 'Gudang' : 'Toko'}</span>
+                  </button>
+                )}
+
+                {/* Tab Katalog Produk */}
+                {allowedTabs.includes('products') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('products');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-all text-left cursor-pointer ${
+                      activeTab === 'products'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>Katalog Produk</span>
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/60 text-slate-700">
+                      {productCount}
+                    </span>
+                  </button>
+                )}
+
+                {/* Tab Stok & Kartu Mutasi */}
+                {allowedTabs.includes('inventory') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('inventory');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'inventory'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Boxes className="w-4 h-4" />
+                    <span>Bahan Baku &amp; Stok</span>
+                  </button>
+                )}
+
+                {/* Tab Resep & Bahan Baku */}
+                {allowedTabs.includes('recipes') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('recipes');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'recipes'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <UtensilsCrossed className="w-4 h-4" />
+                    <span>Resep &amp; Bahan Baku</span>
+                  </button>
+                )}
+
+                {/* Tab Kartu Mutasi */}
+                {allowedTabs.includes('stock_movements') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('stock_movements');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'stock_movements'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    <span>Kartu Mutasi Stok</span>
+                  </button>
+                )}
+
+                {/* Tab Pemasok / Vendor */}
+                {allowedTabs.includes('suppliers') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('suppliers');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'suppliers'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Contact className="w-4 h-4" />
+                    <span>Pemasok (Vendor)</span>
+                  </button>
+                )}
+
+                {/* Tab Riwayat Transaksi */}
+                {allowedTabs.includes('orders') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('orders');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'orders'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Receipt className="w-4 h-4" />
+                    <span>Riwayat Transaksi</span>
+                  </button>
+                )}
+
+                {/* Tab Pesanan QR Meja */}
+                {allowedTabs.includes('qr_orders') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('qr_orders');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'qr_orders'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Ticket className="w-4 h-4" />
+                    <span>Pesanan QR Meja</span>
+                  </button>
+                )}
+
+                {/* Tab Pelanggan & Member */}
+                {allowedTabs.includes('customers') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('customers');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'customers'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Pelanggan &amp; Member</span>
+                  </button>
+                )}
+
+                {/* Tab Laporan Shift Kasir */}
+                {allowedTabs.includes('shifts') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('shifts');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'shifts'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span>Laporan Shift Kasir</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Actions Drawer: PIN Lock & Logout */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onLogout();
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+              >
+                <Lock className="w-4 h-4 text-amber-700" />
+                <span>Kunci Terminal Kasir</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onLogout();
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+              >
+                <LogOut className="w-4 h-4 text-rose-600" />
+                <span>Keluar Akun</span>
+              </button>
+            </div>
+          </div>
+          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+        </div>
+      )}
+
       {/* Top Header Navigation */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-20 px-3 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between shadow-xs">
+      <header className={`border-b border-slate-200 bg-white sticky top-0 z-20 px-3 sm:px-8 py-2.5 sm:py-3 items-center justify-between shadow-xs ${activeTab === 'pos' ? 'hidden md:flex' : 'flex'}`}>
         <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2">
+          {/* Tombol Hamburger Menu Mobile untuk Navigasi */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden p-1.5 rounded-xl bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100 transition-all shrink-0 cursor-pointer shadow-xs"
+            title="Buka Menu Navigasi"
+          >
+            <Menu className="w-4 h-4 stroke-[2.5]" />
+          </button>
+
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
             <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
           </div>
@@ -715,8 +1015,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         </div>
       </header>
 
-      {/* Subnav Navigation Tabs (Filtered strictly by Role) */}
-      <div className="bg-white border-b border-slate-200 px-4 sm:px-8 py-2 sticky top-[61px] lg:top-[65px] z-10 shadow-sm">
+      {/* Subnav Navigation Tabs (Filtered strictly by Role) - Disembunyikan di Mobile, Tampil di Desktop (md ke atas) */}
+      <div className="hidden md:block bg-white border-b border-slate-200 px-4 sm:px-8 py-2 sticky top-[61px] lg:top-[65px] z-10 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center gap-2 overflow-x-auto">
           {/* Tab POS Kasir */}
           {allowedTabs.includes('pos') && (
@@ -1028,6 +1328,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             onClearAppendOrder={() => setAppendOrderData(null)}
             loadQrOrderData={selectedQrOrderForPos}
             onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
+            onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+            onLogout={onLogout}
+            allowedTabs={allowedTabs}
           />
         ) : activeTab === 'overview' ? (
           <div className="space-y-8">

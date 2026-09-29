@@ -19,6 +19,10 @@ import {
   Package,
   Utensils,
   ChevronDown,
+  Receipt,
+  Lock,
+  LogOut,
+  Users,
 } from 'lucide-react';
 import type { Product, Category } from '../../types/product';
 import type { CartItem, OrderChannel } from '../../types/order';
@@ -86,11 +90,16 @@ export interface PosMobileViewProps {
   activeFees: OutletFee[];
   onDemandQuantities?: Record<string, number>;
   onOpenOnDemandPicker?: () => void;
+  onNavigateTab?: (tab: string) => void;
+  onLogout?: () => void;
+  allowedTabs?: string[];
+  currentUser?: { name?: string; role?: string; email?: string } | null;
 }
 
 export const PosMobileView: React.FC<PosMobileViewProps> = ({
   activeOutlet,
   currentShift,
+  currentUserRole,
   canCashOut,
   orderChannel,
   onChangeOrderChannel,
@@ -139,6 +148,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   activeFees,
   onDemandQuantities,
   onOpenOnDemandPicker,
+  onNavigateTab,
+  onLogout,
+  allowedTabs,
+  currentUser,
 }) => {
   // Mobile UI States
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -820,36 +833,129 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         </div>
       )}
 
-      {/* 6. Quick Menu Drawer (Hamburger Menu) */}
+      {/* 6. Quick Menu Drawer (Hamburger Menu Kasir Lengkap) */}
       {quickMenuOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
           <div className="flex-1" onClick={() => setQuickMenuOpen(false)} />
           <div className="bg-white w-[300px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-right duration-200">
-            <div className="space-y-4">
-              {/* Header */}
+            <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-135px)] pr-1">
+              {/* Header Drawer */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-black text-xs">
-                    POS
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    {activeOutlet?.name?.charAt(0).toUpperCase() || 'W'}
                   </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-900">Menu Kasir</h3>
-                    <p className="text-[10px] text-slate-400">Mode Handheld 6.8"</p>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-xs text-slate-900 truncate">
+                      {activeOutlet?.name || 'Well POS'}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {currentShift
+                        ? `Kasir: ${currentShift.cashier?.name || currentUser?.name || 'Kasir'}`
+                        : currentUser?.name
+                        ? `${currentUser.name} • ${currentUserRole || 'Kasir'}`
+                        : 'Shift Belum Aktif'}
+                    </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setQuickMenuOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Shift Actions */}
+              {/* 1. Navigasi Modul Kasir (Dipindahkan dari static top header) */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Manajemen Kasir &amp; Laci
+                  Navigasi Modul
+                </span>
+
+                {/* Mesin Kasir POS - Aktif */}
+                <div className="w-full p-2.5 rounded-xl bg-blue-900 text-white font-bold text-xs flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <CreditCard className="w-4 h-4 text-blue-200" />
+                    <span>Mesin Kasir (POS)</span>
+                  </div>
+                  <span className="text-[9px] font-black bg-blue-800 px-1.5 py-0.5 rounded text-blue-100">
+                    Aktif
+                  </span>
+                </div>
+
+                {/* Riwayat Transaksi */}
+                {(!allowedTabs || allowedTabs.includes('orders')) && onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onNavigateTab('orders');
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-900 text-slate-800 font-bold text-xs flex items-center gap-2.5 transition-colors border border-slate-200 text-left cursor-pointer"
+                  >
+                    <Receipt className="w-4 h-4 text-blue-900" />
+                    <span>Riwayat Transaksi</span>
+                  </button>
+                )}
+
+                {/* Pesanan QR Meja (Self-Ordering F&B) */}
+                {(!allowedTabs || allowedTabs.includes('qr_orders')) && onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onNavigateTab('qr_orders');
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-900 text-slate-800 font-bold text-xs flex items-center justify-between transition-colors border border-slate-200 text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Ticket className="w-4 h-4 text-emerald-700" />
+                      <span>Pesanan QR Meja</span>
+                    </div>
+                    {qrOrdersCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[10px] font-black">
+                        {qrOrdersCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Data Pelanggan */}
+                {(!allowedTabs || allowedTabs.includes('customers')) && onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onNavigateTab('customers');
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-900 text-slate-800 font-bold text-xs flex items-center gap-2.5 transition-colors border border-slate-200 text-left cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 text-blue-900" />
+                    <span>Pelanggan &amp; Member</span>
+                  </button>
+                )}
+
+                {/* Laporan Shift Kasir */}
+                {(!allowedTabs || allowedTabs.includes('shifts')) && onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onNavigateTab('shifts');
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-900 text-slate-800 font-bold text-xs flex items-center gap-2.5 transition-colors border border-slate-200 text-left cursor-pointer"
+                  >
+                    <Clock className="w-4 h-4 text-blue-900" />
+                    <span>Laporan Shift Kasir</span>
+                  </button>
+                )}
+              </div>
+
+              {/* 2. Shift & Laci Kasir */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Manajemen Shift &amp; Laci
                 </span>
 
                 {canCashOut && onOpenCashExpense && (
@@ -905,10 +1011,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                 )}
               </div>
 
-              {/* Order Lists */}
+              {/* 3. Antrean & Tagihan Meja */}
               <div className="space-y-1.5 pt-2 border-t border-slate-100">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Antrean &amp; Tagihan
+                  Antrean &amp; Tagihan Meja
                 </span>
 
                 <button
@@ -960,7 +1066,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <Ticket className="w-4 h-4 text-emerald-700" />
-                      <span>Pesanan QR Meja</span>
+                      <span>Pesanan QR Meja (Baru)</span>
                     </div>
                     <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[10px] font-black">
                       {qrOrdersCount}
@@ -970,19 +1076,49 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
               </div>
             </div>
 
-            {/* Bottom: Desktop Mode Switcher */}
-            <div className="pt-4 border-t border-slate-100">
+            {/* 4. Bottom Controls: Desktop Switcher & Kunci / Logout */}
+            <div className="pt-3 border-t border-slate-100 space-y-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setQuickMenuOpen(false);
                   onToggleDesktopMode();
                 }}
-                className="w-full py-2.5 px-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                <Monitor className="w-4 h-4 text-slate-600" />
-                <span>Beralih ke Tampilan Desktop</span>
+                <Monitor className="w-3.5 h-3.5 text-slate-500" />
+                <span>Beralih ke Mode Desktop</span>
               </button>
+
+              {onLogout && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="flex-1 py-2 px-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    title="Kunci Layar Terminal (PIN Lock)"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Kunci PIN</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="flex-1 py-2 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    title="Keluar dari Akun Kasir"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Keluar</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

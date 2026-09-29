@@ -44,6 +44,9 @@ interface PosTerminalViewProps {
   onClearAppendOrder?: () => void;
   loadQrOrderData?: QrLiveOrder | null;
   onClearLoadQrOrder?: () => void;
+  onNavigateTab?: (tab: string) => void;
+  onLogout?: () => void;
+  allowedTabs?: string[];
 }
 
 export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
@@ -55,6 +58,9 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   onClearAppendOrder,
   loadQrOrderData,
   onClearLoadQrOrder,
+  onNavigateTab,
+  onLogout,
+  allowedTabs,
 }) => {
   const { isFree } = usePlan();
   const dialog = useDialog();
@@ -1285,7 +1291,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const cartGrandTotal = cartAfterDiscount + onDemandFeesTotal + autoFeesTotal;
 
   return (
-    <div className={`flex flex-col ${isHandheld ? 'h-[calc(100dvh-105px)] sm:h-[calc(100vh-6.5rem)]' : 'h-[calc(100vh-6.5rem)]'} overflow-hidden bg-slate-100 font-sans`}>
+    <div className={`flex flex-col ${isHandheld ? 'h-[100dvh] md:h-[calc(100vh-6.5rem)]' : 'h-[calc(100vh-6.5rem)]'} overflow-hidden bg-slate-100 font-sans`}>
       {isHandheld ? (
         <PosMobileView
           activeOutlet={activeOutlet}
@@ -1350,6 +1356,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             refreshOutletFees(true);
             setOnDemandPickerOpen(true);
           }}
+          onNavigateTab={onNavigateTab}
+          onLogout={onLogout}
+          allowedTabs={allowedTabs}
+          currentUser={currentUser}
         />
       ) : (
         <>
