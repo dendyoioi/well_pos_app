@@ -768,23 +768,23 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     }
 
     try {
-      const totalAmount = cart.reduce((acc, item) => {
-        const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-        return acc + price * item.quantity;
-      }, 0);
-
       const payload = {
         outletId: activeOutlet?.id,
         customerName: customerName.trim() || undefined,
         channel: orderChannel,
+        tableNumber: tableNumber ? tableNumber.trim() : undefined,
         items: cart.map((i) => ({
           productId: i.product.id,
           name: i.product.name,
           quantity: i.quantity,
           unitPrice: i.customPrice || i.product.price || i.product.basePrice || 0,
           discountAmount: i.discountAmount || 0,
+          itemNote: i.itemNote,
+          selectedModifiers: i.selectedModifiers,
         })),
-        totalAmount,
+        onDemandQuantities: Object.keys(onDemandQuantities).length > 0 ? onDemandQuantities : undefined,
+        appliedPromotion: appliedPromotion || undefined,
+        totalAmount: cartGrandTotal,
       };
 
       const res = await api.holdOrder(payload);
@@ -823,27 +823,68 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     if (hold.channel) {
       setOrderChannel(hold.channel as OrderChannel);
     }
+    if (hold.tableNumber) {
+      setTableNumber(hold.tableNumber);
+    }
 
+    const rawItems = hold.items || hold.cartItems || [];
     const restoredCart: CartItem[] = [];
-    for (const item of hold.items || []) {
+    for (const item of rawItems) {
       const found = products.find((p) => p.id === item.productId);
       if (found) {
         restoredCart.push({
           product: found,
           quantity: item.quantity,
           discountAmount: item.discountAmount || 0,
+          itemNote: (item as any).itemNote || (item as any).note,
+          selectedModifiers: (item as any).selectedModifiers,
+        });
+      } else {
+        // Fallback: pulihkan item dari data snapshot agar item pelanggan tidak hilang jika sedang difilter
+        restoredCart.push({
+          product: {
+            id: item.productId,
+            name: item.name || 'Produk',
+            price: item.unitPrice || 0,
+            basePrice: item.unitPrice || 0,
+            sku: '',
+            category: 'Menu',
+            stock: 9999,
+          } as any,
+          quantity: item.quantity,
+          discountAmount: item.discountAmount || 0,
+          itemNote: (item as any).itemNote || (item as any).note,
+          selectedModifiers: (item as any).selectedModifiers,
         });
       }
     }
 
     setCart(restoredCart);
-    setCustomerName(hold.customerName || '');
+    setCustomerName(
+      hold.customerName && !hold.customerName.startsWith('Antrean #') ? hold.customerName : ''
+    );
+
+    // Pulihkan pilihan kemasan on-demand jika tersimpan
+    if (hold.onDemandQuantities && typeof hold.onDemandQuantities === 'object') {
+      setOnDemandQuantities(hold.onDemandQuantities);
+    } else {
+      setOnDemandQuantities({});
+    }
+
+    // Pulihkan voucher promo jika tersimpan
+    if (hold.appliedPromotion) {
+      setAppliedPromotion(hold.appliedPromotion);
+    } else {
+      setAppliedPromotion(null);
+    }
+
     try {
       await api.deleteHoldOrder(hold.id);
     } catch (e) {
       console.error('Gagal menghapus hold order setelah resume:', e);
     }
     loadHoldOrders(activeOutlet?.id);
+    dialog.toast('Pesanan berhasil dipulihkan ke keranjang kasir.', 'success');
   };
 
   const handleDeleteHoldOrder = async (id: string) => {

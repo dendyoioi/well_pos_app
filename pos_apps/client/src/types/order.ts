@@ -144,8 +144,12 @@ export interface HoldOrder {
   cashierId: string;
   customerName?: string | null;
   channel?: OrderChannel | string;
+  tableNumber?: string | null;
   note?: string | null;
   items: HoldOrderItem[];
+  cartItems?: HoldOrderItem[];
+  onDemandQuantities?: Record<string, number>;
+  appliedPromotion?: any;
   totalAmount: number;
   createdAt: string;
   cashier?: {

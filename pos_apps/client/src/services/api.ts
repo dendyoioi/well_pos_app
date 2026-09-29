@@ -604,8 +604,12 @@ export const api = {
   holdOrder: async (data: {
     outletId?: string;
     customerName?: string;
+    channel?: string;
+    tableNumber?: string;
     note?: string;
     items: any[];
+    onDemandQuantities?: Record<string, number>;
+    appliedPromotion?: any;
     totalAmount: number;
   }): Promise<{ status: string; data?: HoldOrder; message?: string }> => {
     const res = await fetch('/api/orders/hold', {

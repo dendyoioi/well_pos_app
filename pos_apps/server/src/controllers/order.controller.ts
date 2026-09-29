@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { z } from 'zod';
 import { PaymentMethod, PaymentStatus, PaymentTxStatus, StockMovementType, ShiftStatus } from '@prisma/client';
 import { prisma } from '../config/prisma';
@@ -828,15 +829,43 @@ export const sendOrderEmail = async (req: Request, res: Response) => {
 };
 
 /**
+ * Helper: Memastikan tabel antrean hold_orders tersedia di database (Self-Healing DDL)
+ */
+async function ensureHoldOrdersTable() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "hold_orders" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT,
+        "outlet_id" TEXT NOT NULL,
+        "cashier_id" TEXT NOT NULL,
+        "customer_name" TEXT,
+        "channel" TEXT DEFAULT 'DINE_IN',
+        "note" TEXT,
+        "cart_items" JSONB NOT NULL,
+        "total_amount" NUMERIC NOT NULL,
+        "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } catch (err) {
+    console.warn('[DB] ensureHoldOrdersTable notice:', err);
+  }
+}
+
+/**
  * Skema validasi Tahan Pesanan (Hold Order)
  */
 const holdOrderSchema = z.object({
-  outletId: z.string().uuid().optional(),
-  customerName: z.string().optional(),
+  outletId: z.string().optional().nullable(),
+  customerName: z.string().optional().nullable(),
   channel: z.string().optional().default('DINE_IN'),
-  note: z.string().optional(),
+  tableNumber: z.string().optional().nullable(),
+  note: z.string().optional().nullable(),
   items: z.array(z.any()).min(1, 'Item belanja tidak boleh kosong'),
   totalAmount: z.number().min(0),
+  onDemandQuantities: z.record(z.string(), z.number()).optional().nullable(),
+  appliedPromotion: z.any().optional().nullable(),
 });
 
 /**
@@ -845,6 +874,8 @@ const holdOrderSchema = z.object({
  */
 export const holdOrder = async (req: Request, res: Response) => {
   try {
+    await ensureHoldOrdersTable();
+
     const parseResult = holdOrderSchema.safeParse(req.body);
     if (!parseResult.success) {
       return res.status(400).json({
@@ -854,7 +885,18 @@ export const holdOrder = async (req: Request, res: Response) => {
       });
     }
 
-    const { outletId, customerName, channel, note, items, totalAmount } = parseResult.data;
+    const {
+      outletId,
+      customerName,
+      channel,
+      tableNumber,
+      note,
+      items,
+      totalAmount,
+      onDemandQuantities,
+      appliedPromotion,
+    } = parseResult.data;
+
     const cashierId = req.user?.id;
     if (!cashierId) {
       return res.status(401).json({ status: 'error', message: 'Kasir belum terautentikasi' });
@@ -877,32 +919,43 @@ export const holdOrder = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Outlet tidak ditemukan' });
     }
 
+    // Bungkus metadata kemasan, kupon voucher promo, dan meja ke dalam cart_items JSONB
+    const cartPayload = {
+      items,
+      onDemandQuantities: onDemandQuantities || {},
+      appliedPromotion: appliedPromotion || null,
+      tableNumber: tableNumber || null,
+    };
+
+    const newHoldId = crypto.randomUUID();
+
     const newHoldRows = await prisma.$queryRawUnsafe<any[]>(
       `INSERT INTO "hold_orders" (
         "id", "tenant_id", "outlet_id", "cashier_id", "customer_name", "channel", "note", "cart_items", "total_amount", "created_at", "updated_at"
       ) VALUES (
-        gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7::jsonb, $8, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, NOW(), NOW()
       ) RETURNING *;`,
+      newHoldId,
       tenantId,
       targetOutletId,
       cashierId,
       customerName || `Antrean #${Date.now().toString().slice(-4)}`,
       channel || 'DINE_IN',
       note || null,
-      JSON.stringify(items),
+      JSON.stringify(cartPayload),
       totalAmount
     );
 
     return res.status(201).json({
       status: 'success',
-      message: 'Pesanan berhasil ditahan sementara',
+      message: 'Pesanan berhasil ditahan di daftar antrean',
       data: newHoldRows[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saat menahan pesanan:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Gagal menahan pesanan kasir',
+      message: error?.message || 'Gagal menahan pesanan kasir',
     });
   }
 };
@@ -913,6 +966,8 @@ export const holdOrder = async (req: Request, res: Response) => {
  */
 export const getHoldOrders = async (req: Request, res: Response) => {
   try {
+    await ensureHoldOrdersTable();
+
     const outletId = (req.query.outletId as string) || req.user?.outletId;
     const tenantId = req.user?.tenantId || req.tenantId;
 
@@ -927,31 +982,43 @@ export const getHoldOrders = async (req: Request, res: Response) => {
       tenantId || null
     );
 
-    const formatted = holdOrders.map((h) => ({
-      id: h.id,
-      tenantId: h.tenant_id,
-      outletId: h.outlet_id,
-      cashierId: h.cashier_id,
-      customerName: h.customer_name,
-      channel: h.channel,
-      note: h.note,
-      cartItems: h.cart_items,
-      items: h.cart_items,
-      totalAmount: Number(h.total_amount),
-      createdAt: h.created_at,
-      updatedAt: h.updated_at,
-      cashier: { name: h.cashier_name },
-    }));
+    const formatted = holdOrders.map((h) => {
+      const rawPayload = h.cart_items;
+      const isObjectPayload = rawPayload && !Array.isArray(rawPayload) && Array.isArray(rawPayload.items);
+      const items = isObjectPayload ? rawPayload.items : (Array.isArray(rawPayload) ? rawPayload : []);
+      const onDemandQuantities = isObjectPayload ? rawPayload.onDemandQuantities || {} : {};
+      const appliedPromotion = isObjectPayload ? rawPayload.appliedPromotion || null : null;
+      const tableNumber = isObjectPayload ? rawPayload.tableNumber || null : null;
+
+      return {
+        id: h.id,
+        tenantId: h.tenant_id,
+        outletId: h.outlet_id,
+        cashierId: h.cashier_id,
+        customerName: h.customer_name,
+        channel: h.channel,
+        note: h.note,
+        cartItems: items,
+        items,
+        onDemandQuantities,
+        appliedPromotion,
+        tableNumber,
+        totalAmount: Number(h.total_amount),
+        createdAt: h.created_at,
+        updatedAt: h.updated_at,
+        cashier: { name: h.cashier_name },
+      };
+    });
 
     return res.status(200).json({
       status: 'success',
       data: formatted,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saat mengambil pesanan tertahan:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Gagal mengambil daftar pesanan tertahan',
+      message: error?.message || 'Gagal mengambil daftar pesanan tertahan',
     });
   }
 };
@@ -1425,17 +1492,19 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
           await tx.$executeRawUnsafe(
             `INSERT INTO "order_items" (
               "id", "tenant_id", "order_id", "product_variant_id",
-              "product_name", "variant_name", "quantity", "unit_price", "discount_amount", "subtotal", "notes"
+              "product_name", "variant_name", "quantity", "cost_price", "unit_price", "discount_amount", "subtotal", "notes"
             ) VALUES (
-              gen_random_uuid()::text, $1, $2, $3,
-              $4, $5, $6, $7, $8, $9, $10
+              $1, $2, $3, $4,
+              $5, $6, $7, $8, $9, $10, $11, $12
             );`,
+            crypto.randomUUID(),
             tenantId,
             targetOrderId,
             item.variantId,
             item.productName,
             item.variantName,
             item.quantity,
+            0,
             item.unitPrice,
             item.discountAmount,
             item.subtotal,
@@ -1507,17 +1576,19 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
         await tx.$executeRawUnsafe(
           `INSERT INTO "order_items" (
             "id", "tenant_id", "order_id", "product_variant_id",
-            "product_name", "variant_name", "quantity", "unit_price", "discount_amount", "subtotal", "notes"
+            "product_name", "variant_name", "quantity", "cost_price", "unit_price", "discount_amount", "subtotal", "notes"
           ) VALUES (
-            gen_random_uuid()::text, $1, $2, $3,
-            $4, $5, $6, $7, $8, $9, $10
+            $1, $2, $3, $4,
+            $5, $6, $7, $8, $9, $10, $11, $12
           );`,
+          crypto.randomUUID(),
           tenantId,
           orderId,
           item.variantId,
           item.productName,
           item.variantName,
           item.quantity,
+          0,
           item.unitPrice,
           item.discountAmount,
           item.subtotal,
