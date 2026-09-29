@@ -9,6 +9,8 @@ import {
   Boxes,
   BarChart3,
   ChevronRight,
+  Laptop,
+  Smartphone,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -22,6 +24,10 @@ interface SaasLandingPageProps {
 export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   onOpenPos,
 }) => {
+  const [activeDevice, setActiveDevice] = useState<'laptop' | 'phone' | 'both'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'both' : 'laptop';
+  });
+
   // Modal Registration State (5 Fields for Owner Account Only)
   const [registerModalOpen, setRegisterModalOpen] = useState(() => {
     return window.location.hash.toLowerCase() === '#register';
@@ -196,52 +202,420 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
             </button>
           </div>
 
-          {/* Ringkasan Dashboard Pratinjau (Menjembatani Transisi Biru ke Putih) */}
-          <div className="mt-14 sm:mt-20 max-w-4xl mx-auto">
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl p-4 sm:p-7 text-left text-slate-800">
-              {/* Top Bar Preview */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-900 flex items-center justify-center font-bold">
-                    <Store className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                      Pratinjau Ringkasan Toko Harian
-                    </h3>
-                    <p className="text-[11px] text-slate-500">Data penjualan dan mutasi stok tercatat langsung secara otomatis</p>
-                  </div>
-                </div>
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>Sistem Siap Digunakan</span>
-                </div>
-              </div>
-
-              {/* 4 Kartu Metrik Ringkas */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 block mb-1">Total Penjualan</span>
-                  <div className="text-sm sm:text-lg font-black text-slate-900">Rp 2.850.000</div>
-                  <span className="text-[10px] text-emerald-600 font-bold mt-0.5 block">&uarr; Rapi &amp; Real-time</span>
-                </div>
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 block mb-1">Jumlah Transaksi</span>
-                  <div className="text-sm sm:text-lg font-black text-slate-900">42 Pesanan</div>
-                  <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">Tunai &amp; Nontunai</span>
-                </div>
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 block mb-1">Pengingat Stok</span>
-                  <div className="text-sm sm:text-lg font-black text-slate-900">0 Stok Menipis</div>
-                  <span className="text-[10px] text-blue-600 font-bold mt-0.5 block">Persediaan Aman</span>
-                </div>
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 block mb-1">Status Kasir</span>
-                  <div className="text-sm sm:text-lg font-black text-slate-900">Shift Buka</div>
-                  <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">Kas Awal Sesuai</span>
-                </div>
-              </div>
+          {/* =========================================================================
+              SHOWCASE DEVICE PREVIEW (PORTAL PEMILIK LAPTOP & HALAMAN KASIR HP)
+          ========================================================================= */}
+          <div className="mt-14 sm:mt-20 max-w-6xl mx-auto">
+            {/* Toggle Segmented Control (Uniform Styling) */}
+            <div className="inline-flex p-1 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 gap-1 mb-8 shadow-xl">
+              <button
+                type="button"
+                onClick={() => setActiveDevice('laptop')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeDevice === 'laptop'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Laptop className="w-4 h-4" />
+                <span>Portal Pemilik (Laptop)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDevice('phone')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeDevice === 'phone'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Halaman Kasir (HP)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDevice('both')}
+                className={`hidden lg:flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeDevice === 'both'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>Tampilkan Keduanya</span>
+              </button>
             </div>
+
+            {/* Display Containers */}
+            {activeDevice === 'both' ? (
+              <div className="hidden lg:grid grid-cols-12 gap-8 items-start text-left">
+                <div className="col-span-7">
+                  {/* Laptop Mockup */}
+                  <div className="w-full bg-slate-900 rounded-3xl border border-slate-700/80 shadow-2xl overflow-hidden">
+                    <div className="bg-slate-950/90 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-900 border border-slate-800 text-[11px] text-slate-400 font-mono">
+                        <span>🔒 app.wellpos.id/backoffice</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-semibold">Portal Pemilik</div>
+                    </div>
+                    <div className="bg-slate-50 p-4 sm:p-5 flex flex-col gap-3.5 text-slate-800">
+                      <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold">
+                            <Store className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-extrabold text-xs sm:text-sm text-blue-950">Ura Coffee - UMS</span>
+                              <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded font-bold">Online</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500">Cabang Sukoharjo &bull; Multi-Outlet</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">Owner: Dendy</span>
+                          <div className="w-7 h-7 rounded-full bg-blue-900 text-white text-[11px] font-bold flex items-center justify-center">DA</div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                          <span className="text-[10px] font-semibold text-slate-500 block">Omzet Hari Ini</span>
+                          <span className="text-sm sm:text-base font-black text-slate-900">Rp 4.250.000</span>
+                          <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">&uarr; +18.5%</span>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                          <span className="text-[10px] font-semibold text-slate-500 block">Total Transaksi</span>
+                          <span className="text-sm sm:text-base font-black text-slate-900">54 Struk</span>
+                          <span className="text-[10px] text-slate-500 font-medium block mt-0.5">Rata-rata 78rb/struk</span>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                          <span className="text-[10px] font-semibold text-slate-500 block">Laba Kotor (HPP)</span>
+                          <span className="text-sm sm:text-base font-black text-slate-900">Rp 2.480.000</span>
+                          <span className="text-[10px] text-blue-600 font-bold block mt-0.5">Margin 58%</span>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                          <span className="text-[10px] font-semibold text-slate-500 block">Status Stok</span>
+                          <span className="text-sm sm:text-base font-black text-emerald-700">Aman</span>
+                          <span className="text-[10px] text-slate-500 font-medium block mt-0.5">0 Bahan Kritis</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-slate-200/80 p-3 shadow-xs">
+                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs font-bold text-slate-800">
+                          <span>Aktivitas Transaksi Masuk (Real-Time)</span>
+                          <span className="text-[10px] text-blue-600 font-semibold">Live Feed</span>
+                        </div>
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/80">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-slate-700">INV-1054</span>
+                              <span className="text-slate-500">Meja 04 &bull; Kopi Aren Ori (2) + Croissant</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900">Rp 48.000</span>
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">QRIS</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/80">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-slate-700">INV-1053</span>
+                              <span className="text-slate-500">Take Away &bull; Caffe Latte + Toast</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900">Rp 36.000</span>
+                              <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">TUNAI</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-5 flex justify-center">
+                  {/* Phone Mockup */}
+                  <div className="w-full max-w-[320px] bg-slate-950 rounded-[2.5rem] border-[7px] border-slate-800 shadow-2xl overflow-hidden text-left relative">
+                    <div className="bg-slate-950 pt-2 pb-1 px-5 flex items-center justify-between text-white text-[11px] font-semibold">
+                      <span>20:00</span>
+                      <div className="w-16 h-3 bg-black rounded-full mx-auto" />
+                      <div className="flex items-center gap-1.5 text-slate-300">
+                        <span className="text-[9px] font-bold">5G</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-950 text-white p-3 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-black leading-tight">Ura Coffee - UMS</h4>
+                        <div className="flex items-center gap-1.5 text-[10px] text-blue-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          <span>Meja 04 &bull; Kasir Budi</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-blue-900 text-blue-100 px-2 py-0.5 rounded font-bold border border-blue-800">
+                        Dine In
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900 px-2.5 py-1.5 flex items-center gap-1.5 overflow-x-auto text-[10px] no-scrollbar">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white font-bold shrink-0">Semua (12)</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium shrink-0">Coffee (6)</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium shrink-0">Non-Coffee</span>
+                    </div>
+
+                    <div className="bg-slate-100 p-2.5 grid grid-cols-2 gap-2 h-72 overflow-y-auto">
+                      <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                        <img src="/images/products/kopi-susu.jpg" alt="Kopi Susu Aren" className="w-full h-16 object-cover rounded-lg mb-1" />
+                        <div>
+                          <p className="font-bold text-[11px] text-slate-800 leading-tight">Kopi Aren Ori</p>
+                          <p className="text-[9px] text-slate-400">Coffee</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                          <span className="font-black text-[11px] text-slate-900">13.000</span>
+                          <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                        <img src="/images/products/latte.jpg" alt="Caffe Latte" className="w-full h-16 object-cover rounded-lg mb-1" />
+                        <div>
+                          <p className="font-bold text-[11px] text-slate-800 leading-tight">Caffe Latte</p>
+                          <p className="text-[9px] text-slate-400">Coffee</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                          <span className="font-black text-[11px] text-slate-900">18.000</span>
+                          <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                        <img src="/images/products/croissant.jpg" alt="Butter Croissant" className="w-full h-16 object-cover rounded-lg mb-1" />
+                        <div>
+                          <p className="font-bold text-[11px] text-slate-800 leading-tight">Croissant</p>
+                          <p className="text-[9px] text-slate-400">Pastry</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                          <span className="font-black text-[11px] text-slate-900">15.000</span>
+                          <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                        <img src="/images/products/matcha.jpg" alt="Matcha Latte" className="w-full h-16 object-cover rounded-lg mb-1" />
+                        <div>
+                          <p className="font-bold text-[11px] text-slate-800 leading-tight">Matcha Ice</p>
+                          <p className="text-[9px] text-slate-400">Non-Coffee</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                          <span className="font-black text-[11px] text-slate-900">16.000</span>
+                          <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border-t border-slate-200 p-2.5 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] text-slate-400 block font-semibold">Keranjang (3 Item)</span>
+                        <span className="text-xs font-black text-slate-900">Rp 46.000</span>
+                      </div>
+                      <div className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm">
+                        <span>Bayar &rarr;</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Mode Laptop Only (or fallback on mobile) */}
+            {activeDevice === 'laptop' || activeDevice === 'both' ? (
+              <div className={activeDevice === 'both' ? 'block lg:hidden text-left' : 'block text-left'}>
+                <div className="w-full bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-700/80 shadow-2xl overflow-hidden">
+                  <div className="bg-slate-950/90 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-900 border border-slate-800 text-[10px] sm:text-[11px] text-slate-400 font-mono">
+                      <span>🔒 app.wellpos.id/backoffice</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-semibold hidden sm:block">Portal Pemilik (Laptop/PC)</div>
+                  </div>
+
+                  <div className="bg-slate-50 p-3 sm:p-5 flex flex-col gap-3.5 text-slate-800">
+                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold shrink-0">
+                          <Store className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-xs sm:text-sm text-blue-950">Ura Coffee - UMS</span>
+                            <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded font-bold">Online</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 block truncate">Cabang Utama Sukoharjo &bull; Multi-Outlet</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-bold text-slate-600 hidden sm:inline">Owner: Dendy</span>
+                        <div className="w-7 h-7 rounded-full bg-blue-900 text-white text-[11px] font-bold flex items-center justify-center">DA</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                        <span className="text-[10px] font-semibold text-slate-500 block">Omzet Hari Ini</span>
+                        <span className="text-sm sm:text-base font-black text-slate-900">Rp 4.250.000</span>
+                        <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">&uarr; +18.5%</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                        <span className="text-[10px] font-semibold text-slate-500 block">Total Transaksi</span>
+                        <span className="text-sm sm:text-base font-black text-slate-900">54 Struk</span>
+                        <span className="text-[10px] text-slate-500 font-medium block mt-0.5">Rata-rata 78rb/struk</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                        <span className="text-[10px] font-semibold text-slate-500 block">Laba Kotor (HPP)</span>
+                        <span className="text-sm sm:text-base font-black text-slate-900">Rp 2.480.000</span>
+                        <span className="text-[10px] text-blue-600 font-bold block mt-0.5">Margin 58%</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-xs">
+                        <span className="text-[10px] font-semibold text-slate-500 block">Status Stok</span>
+                        <span className="text-sm sm:text-base font-black text-emerald-700">Aman</span>
+                        <span className="text-[10px] text-slate-500 font-medium block mt-0.5">0 Bahan Kritis</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200/80 p-3 shadow-xs">
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs font-bold text-slate-800">
+                        <span>Aktivitas Transaksi Masuk (Real-Time)</span>
+                        <span className="text-[10px] text-blue-600 font-semibold">Live Feed</span>
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/80">
+                          <div className="flex items-center gap-2 truncate mr-2">
+                            <span className="font-mono font-bold text-slate-700 shrink-0">INV-1054</span>
+                            <span className="text-slate-500 truncate">Meja 04 &bull; Kopi Aren Ori (2) + Croissant</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-bold text-slate-900">Rp 48.000</span>
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">QRIS</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-50/80">
+                          <div className="flex items-center gap-2 truncate mr-2">
+                            <span className="font-mono font-bold text-slate-700 shrink-0">INV-1053</span>
+                            <span className="text-slate-500 truncate">Take Away &bull; Caffe Latte + Toast</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-bold text-slate-900">Rp 36.000</span>
+                            <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">TUNAI</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Mode Phone Only */}
+            {activeDevice === 'phone' ? (
+              <div className="flex justify-center text-left">
+                <div className="w-full max-w-[330px] sm:max-w-[350px] bg-slate-950 rounded-[2.5rem] border-[7px] border-slate-800 shadow-2xl overflow-hidden text-left relative">
+                  <div className="bg-slate-950 pt-2 pb-1 px-5 flex items-center justify-between text-white text-[11px] font-semibold">
+                    <span>20:00</span>
+                    <div className="w-16 h-3 bg-black rounded-full mx-auto" />
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="text-[9px] font-bold">5G</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-950 text-white p-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-black leading-tight">Ura Coffee - UMS</h4>
+                      <div className="flex items-center gap-1.5 text-[10px] text-blue-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>Meja 04 &bull; Kasir Budi</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-blue-900 text-blue-100 px-2 py-0.5 rounded font-bold border border-blue-800">
+                      Dine In
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900 px-2.5 py-1.5 flex items-center gap-1.5 overflow-x-auto text-[10px] no-scrollbar">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-bold shrink-0">Semua (12)</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium shrink-0">Coffee (6)</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium shrink-0">Non-Coffee</span>
+                  </div>
+
+                  <div className="bg-slate-100 p-2.5 grid grid-cols-2 gap-2 h-72 overflow-y-auto">
+                    <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                      <img src="/images/products/kopi-susu.jpg" alt="Kopi Susu Aren" className="w-full h-16 object-cover rounded-lg mb-1" />
+                      <div>
+                        <p className="font-bold text-[11px] text-slate-800 leading-tight">Kopi Aren Ori</p>
+                        <p className="text-[9px] text-slate-400">Coffee</p>
+                      </div>
+                      <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                        <span className="font-black text-[11px] text-slate-900">13.000</span>
+                        <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                      <img src="/images/products/latte.jpg" alt="Caffe Latte" className="w-full h-16 object-cover rounded-lg mb-1" />
+                      <div>
+                        <p className="font-bold text-[11px] text-slate-800 leading-tight">Caffe Latte</p>
+                        <p className="text-[9px] text-slate-400">Coffee</p>
+                      </div>
+                      <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                        <span className="font-black text-[11px] text-slate-900">18.000</span>
+                        <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                      <img src="/images/products/croissant.jpg" alt="Butter Croissant" className="w-full h-16 object-cover rounded-lg mb-1" />
+                      <div>
+                        <p className="font-bold text-[11px] text-slate-800 leading-tight">Croissant</p>
+                        <p className="text-[9px] text-slate-400">Pastry</p>
+                      </div>
+                      <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                        <span className="font-black text-[11px] text-slate-900">15.000</span>
+                        <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-2 border border-slate-200/80 flex flex-col justify-between shadow-2xs">
+                      <img src="/images/products/matcha.jpg" alt="Matcha Latte" className="w-full h-16 object-cover rounded-lg mb-1" />
+                      <div>
+                        <p className="font-bold text-[11px] text-slate-800 leading-tight">Matcha Ice</p>
+                        <p className="text-[9px] text-slate-400">Non-Coffee</p>
+                      </div>
+                      <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                        <span className="font-black text-[11px] text-slate-900">16.000</span>
+                        <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">+</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border-t border-slate-200 p-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-semibold">Keranjang (3 Item)</span>
+                      <span className="text-xs font-black text-slate-900">Rp 46.000</span>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm">
+                      <span>Bayar &rarr;</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
