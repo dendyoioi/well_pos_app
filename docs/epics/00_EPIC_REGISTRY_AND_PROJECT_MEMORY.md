@@ -146,6 +146,20 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
       - Horizontal Scrollable Carousel Navigation (Merchants, Paket, Billing, Staff Platform, Promo B2B) dengan no-scrollbar dan sticky UX.
       - Hybrid Merchant View: Desktop Table (hidden lg:block) & Mobile Merchant Cards (block lg:hidden) dengan kuota token bar, accordion gerai fisik inline tanpa popup bertumpuk, email/phone, serta toolbar aksi lengkap (Setujui/Tolak, Inspeksi Impersonate, Top-Up, Reset Password, Freeze).
       - TablePagination Kanonikal terintegrasi mulus di kedua breakpoint.
+
+[2026-09-29] AUDIT & PERBAIKAN STABILITAS KASIR HANDHELD / MOBILE POS TERMINAL
+  ├── 1. Pencegahan Keyboard Virtual Pop-up Otomatis (PaymentModal.tsx):
+  │   - Menghilangkan autoFocus paksa pada input tunai saat modal pembayaran dibuka di perangkat mobile.
+  │   - Mencegah keyboard software menutupi tombol bayar & nominal pas, menjaga ruang pandang layar ponsel tetap optimal.
+  ├── 2. Stabilisasi Alur Tahan Pesanan (Hold Order Flow):
+  │   - Penanganan rincian biaya on-demand packaging, promosi aktif, serta pemulihan keranjang kasir (pull order) yang presisi.
+  │   - Integrasi notifikasi kanonikal dialog.toast dan dialog.alert saat penahanan antrean berhasil atau gagal.
+  ├── 3. Resolusi Tombol "Kirim Dapur" pada Tampilan Handheld (PosMobileView.tsx & PosTerminalView.tsx):
+  │   - Masalah: Drawer keranjang tertutup seketika dan tidak ada feedback visual karena scanMessage hanya di-render di desktop jika nomor meja/nama pelanggan belum diisi.
+  │   - Solusi: Drawer tetap dibuka, pemilih meja otomatis digelar (tablePickerOpen = true), dan modal dialog.alert muncul memandu kasir memilih meja dalam 1 sentuhan.
+  │   - Feedback Sukses/Error: Penyelarasan notifikasi simpan tagihan meja ke dialog.toast (sukses) dan dialog.alert (peringatan/error).
+  └── 4. Relaksasi Validasi Zod Backend (order.controller.ts):
+      - Relaksasi openTabSchema untuk field customerId, shiftId, dan outletId menjadi .optional().nullable() untuk mencegah penolakan HTTP 400 saat dikirim string kosong atau ID non-UUID dari antarmuka web/mobile.
 ===============================================================
 ```
 
