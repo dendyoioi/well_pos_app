@@ -1,6 +1,6 @@
 # WELL POS — CANONICAL PROJECT CONTEXT & ARCHITECTURAL MEMORY
-> **Status**: 100% Roadmap Completed (EPIC-01 through EPIC-21 COMPLETED ✅)  
-> **Terakhir Diperbarui**: 25 September 2026  
+> **Status**: 100% Roadmap Completed (EPIC-01 through EPIC-22 COMPLETED ✅)  
+> **Terakhir Diperbarui**: 30 September 2026  
 > **Target Pengguna Dokumen**: AI Coding Assistant (Antigravity), Tech Lead, Developer, DevOps  
 > **Lokasi Repository**: `/Users/dendyaditya/Projects/pos_project`  
 > **Master Project Memory**: [`docs/epics/00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md`](./epics/00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md)  
@@ -14,12 +14,12 @@
 - **Format Bisnis**: Multi-Tenant SaaS Point of Sale, Inventory Ledger & Supply Chain Platform
 - **Vertikal yang Didukung**:
   1. **Retail** (Packaged goods, barcode scan, varian kemasan/karton, SKU unik).
-  2. **Food & Beverage / F&B** (Resep/BOM, pemotongan bahan baku otomatis, modifiers/topping berbayar & gratis, Kitchen Display System).
+  2. **Food & Beverage / F&B** (Resep/BOM, pemotongan bahan baku otomatis, modifiers/topping berbayar & gratis, Kitchen Display System, Calling Queue Number).
   3. **Services** (`ProductType.SERVICE_LABOR`, non-stock billing dengan opsi pemakaian bahan baku/consumables).
 - **Status Migrasi Data**: **100% CUTOVER TO TARGET SCHEMA (`TARGET_ONLY`)**.
   - Seluruh tabel legacy lama monolith (`outlet_products`, `stock_movements`, `payments`) telah didekomisioning secara aman pada EPIC-04.
-  - Arus baca dan tulis 100% berjalan di atas skema target ternormalisasi penuh (kini telah berkembang menjadi 40 model Prisma aktif mencakup CRM, PO, SaaS billing, dan catalog scoping).
-- **Status Roadmap Epics**: **EPIC-01 s.d EPIC-21 SELESAI (100% COMPLETED ✅)**.
+  - Arus baca dan tulis 100% berjalan di atas skema target ternormalisasi penuh (kini telah berkembang menjadi 40 model Prisma aktif mencakup CRM, PO, SaaS billing, catalog scoping, dan queue calling).
+- **Status Roadmap Epics**: **EPIC-01 s.d EPIC-22 SELESAI (100% COMPLETED ✅)**.
 
 ---
 

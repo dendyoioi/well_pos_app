@@ -117,6 +117,7 @@ export interface OrderListItemDTO {
   userId: string;
   customerId: string | null;
   invoiceNumber: string;
+  queueNumber?: number | null;
   orderStatus: string;
   paymentStatus: string;
   orderType: string;

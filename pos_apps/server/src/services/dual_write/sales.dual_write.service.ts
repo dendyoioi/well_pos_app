@@ -26,16 +26,52 @@ export class SalesDualWriteService extends BaseDualWriteService {
     try {
       const orderId = dto.existingOrderId || crypto.randomUUID();
       let invoiceNumber = dto.invoiceNumber || `INV-${Date.now()}`;
+      // EPIC-22: Cek konfigurasi outlet untuk nomor antrean (queue_number) & warehouse routing
+      const outletRows = await this.queryRaw<{
+        name: string;
+        is_warehouse: boolean;
+        warehouse_id: string | null;
+        receipt_config: any;
+      }>(
+        tx,
+        `SELECT name, is_warehouse, warehouse_id, receipt_config FROM "outlets" WHERE id = $1 AND tenant_id = $2 LIMIT 1;`,
+        dto.targetOutletId,
+        tenantId
+      );
+      const outletConfig = outletRows[0]?.receipt_config;
+      const isQueueEnabled = outletConfig?.showQueueNumber !== false;
+
+      let queueNumber: number | null = null;
       if (dto.existingOrderId) {
-        const existingOrderRows = await this.queryRaw<{ invoice_number: string }>(
+        const existingOrderRows = await this.queryRaw<{ invoice_number: string; queue_number: number | null }>(
           tx,
-          `SELECT invoice_number FROM "orders" WHERE id = $1;`,
+          `SELECT invoice_number, queue_number FROM "orders" WHERE id = $1;`,
           dto.existingOrderId
         );
         if (existingOrderRows[0]?.invoice_number) {
           invoiceNumber = existingOrderRows[0].invoice_number;
         }
+        if (existingOrderRows[0]?.queue_number) {
+          queueNumber = existingOrderRows[0].queue_number;
+        }
       }
+
+      if (isQueueEnabled && !queueNumber) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const queueRes = await this.queryRaw<{ next_queue: number }>(
+          tx,
+          `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
+           FROM "orders" 
+           WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
+          tenantId,
+          dto.targetOutletId,
+          todayStart
+        );
+        queueNumber = queueRes[0]?.next_queue || 1;
+      }
+
       const channel = dto.channel || 'DINE_IN';
       const orderType = dto.orderType || channel || 'DINE_IN';
       const tableNumber = dto.tableNumber || null;
@@ -45,7 +81,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
       }
       const actorUserId = await this.resolveActorUserId(tx, tenantId, ctx.actorUserId || dto.cashierId);
 
-      // 1. ORDERS MUTATION VIA PARAMETERIZED RAW SQL (Enriched with F&B fields)
+      // 1. ORDERS MUTATION VIA PARAMETERIZED RAW SQL (Enriched with F&B fields & queue_number)
       if (dto.existingOrderId) {
         await this.executeRaw(
           tx,
@@ -64,6 +100,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
             "order_type" = COALESCE($11, "order_type"),
             "table_number" = COALESCE($12, "table_number"),
             "notes" = COALESCE($13, "notes"),
+            "queue_number" = COALESCE("queue_number", $14),
             "updated_at" = (NOW() AT TIME ZONE 'UTC')
            WHERE "id" = $1;`,
           orderId,
@@ -78,7 +115,8 @@ export class SalesDualWriteService extends BaseDualWriteService {
           channel,
           orderType,
           tableNumber,
-          orderNotes
+          orderNotes,
+          queueNumber
         );
 
         // Bersihkan order_items sebelumnya agar snapshot produk terbaru disimpan bersih
@@ -91,23 +129,24 @@ export class SalesDualWriteService extends BaseDualWriteService {
         await this.executeRaw(
           tx,
           `INSERT INTO "orders" (
-            "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
+            "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number", "queue_number",
             "customer_id", "shift_id",
             "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
             "paid_amount", "change_amount",
             "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
           ) VALUES (
-            $1, $2, $3, $4, $5,
-            $6, $7,
-            $8, $9, $10, $11, $12,
-            $13, $14,
-            'PAID'::"PaymentStatus", $15, $16, $17, $18, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+            $1, $2, $3, $4, $5, $6,
+            $7, $8,
+            $9, $10, $11, $12, $13,
+            $14, $15,
+            'PAID'::"PaymentStatus", $16, $17, $18, $19, 'CONFIRMED'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
           );`,
           orderId,
           tenantId,
           dto.targetOutletId,
           dto.cashierId,
           invoiceNumber,
+          queueNumber,
           dto.customerId || null,
           dto.shiftId || null,
           dto.subtotal,
@@ -143,14 +182,9 @@ export class SalesDualWriteService extends BaseDualWriteService {
 
       // EPIC-21 (Fase 3): Dynamic Warehouse Backflushing Routing
       // Cek apakah outlet toko pemroses order disuplai oleh Gudang Logistik (warehouse_id)
-      const outletRows = await this.queryRaw<{ name: string; is_warehouse: boolean; warehouse_id: string | null }>(
-        tx,
-        `SELECT name, is_warehouse, warehouse_id FROM "outlets" WHERE id = $1 AND tenant_id = $2 LIMIT 1;`,
-        dto.targetOutletId,
-        tenantId
-      );
       const outletName = outletRows[0]?.name || 'Outlet';
       const assignedWarehouseId = outletRows[0]?.warehouse_id;
+
 
       let warehouseStorageLocationId: string | null = null;
       let warehouseName: string | null = null;
@@ -757,6 +791,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
         legacyData: {
           id: orderId,
           invoiceNumber,
+          queueNumber,
           outletId: dto.targetOutletId,
           cashierId: dto.cashierId,
           grandTotal: dto.grandTotal,
@@ -768,6 +803,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
         targetDetails: {
           orderId,
           invoiceNumber,
+          queueNumber,
           storageLocationId,
           itemsProcessed: createdOrderItems.length,
           paymentsProcessed: createdPayments.length,

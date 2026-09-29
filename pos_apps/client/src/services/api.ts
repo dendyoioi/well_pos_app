@@ -1298,7 +1298,7 @@ export const api = {
       phone?: string;
       isWarehouse?: boolean;
       isActive?: boolean;
-      receiptConfig?: { paperSize: '58mm' | '80mm'; footerText?: string };
+      receiptConfig?: { paperSize: '58mm' | '80mm'; footerText?: string; showQueueNumber?: boolean };
     }
   ): Promise<{ status: string; data?: Outlet; message?: string }> => {
     const res = await fetch(`/api/outlets/${id}`, {

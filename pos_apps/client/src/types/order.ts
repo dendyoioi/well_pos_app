@@ -88,12 +88,14 @@ export interface Payment {
 export interface Order {
   id: string;
   invoiceNumber: string;
+  queueNumber?: number | null;
   outletId: string;
   cashierId: string;
   customerName?: string | null;
   customerPhone?: string | null;
   customerEmail?: string | null;
   customerId?: string | null;
+  tableNumber?: string | null;
   customer?: {
     id: string;
     name: string;
@@ -122,6 +124,7 @@ export interface Order {
     receiptConfig?: {
       paperSize: '58mm' | '80mm';
       footerText?: string;
+      showQueueNumber?: boolean;
     } | null;
   };
   cashier?: {
@@ -173,6 +176,7 @@ export interface OpenTabOrderItem {
 export interface OpenTabOrder {
   id: string;
   invoiceNumber: string;
+  queueNumber?: number | null;
   outletId: string;
   cashierId: string;
   customerName?: string | null;

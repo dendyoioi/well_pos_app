@@ -55,6 +55,7 @@ const updateOutletSchema = z.object({
   receiptConfig: z.object({
     paperSize: z.enum(['58mm', '80mm']).default('58mm'),
     footerText: z.string().optional(),
+    showQueueNumber: z.boolean().optional(),
   }).optional(),
 });
 

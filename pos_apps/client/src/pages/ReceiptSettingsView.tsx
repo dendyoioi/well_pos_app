@@ -23,6 +23,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 }) => {
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
   const [footerText, setFooterText] = useState('Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @wellpos.id');
+  const [showQueueNumber, setShowQueueNumber] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -34,6 +35,9 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
       }
       if (activeOutlet.receiptConfig.footerText !== undefined) {
         setFooterText(activeOutlet.receiptConfig.footerText);
+      }
+      if (activeOutlet.receiptConfig.showQueueNumber !== undefined) {
+        setShowQueueNumber(activeOutlet.receiptConfig.showQueueNumber);
       }
     }
   }, [activeOutlet]);
@@ -54,6 +58,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
         receiptConfig: {
           paperSize,
           footerText: footerText.trim(),
+          showQueueNumber,
         },
       });
 
@@ -189,10 +194,33 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             </p>
           </div>
 
+          {/* Pengaturan Nomor Antrean / Panggilan Pesanan */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
+                  3. Nomor Antrean / Panggilan Pesanan (#01)
+                </label>
+                <p className="text-xs text-slate-500 font-medium">
+                  Cetak nomor panggilan berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan barista/pelayan memanggil pelanggan secara cepat tanpa perlu input nama/meja.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={showQueueNumber}
+                  onChange={(e) => setShowQueueNumber(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900"></div>
+              </label>
+            </div>
+          </div>
+
           {/* Catatan Kaki (Footer Text) */}
           <div className="pt-4 border-t border-slate-100">
             <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">
-              3. Pesan Footer Struk (Catatan Kaki)
+              4. Pesan Footer Struk (Catatan Kaki)
             </label>
             <p className="text-xs text-slate-500 mb-2 font-medium">
               Teks yang tercetak di bagian paling bawah struk belanja kasir.
@@ -264,6 +292,18 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 
               {/* Dotted Divider */}
               <div className="border-b border-dashed border-slate-400 my-2" />
+
+              {/* Nomor Antrean Panggilan Box (Jika Aktif) */}
+              {showQueueNumber && (
+                <div className="border-2 border-dashed border-slate-800 p-2 my-1.5 rounded-sm text-center bg-white/70">
+                  <div className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-600">
+                    NOMOR ANTRIAN
+                  </div>
+                  <div className="text-base sm:text-lg font-black text-slate-900 tracking-wider">
+                    #05
+                  </div>
+                </div>
+              )}
 
               {/* Order Meta */}
               <div className="space-y-0.5 text-[9px] text-slate-600">

@@ -561,7 +561,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
            FROM "payment_transactions" WHERE order_id = $1;`,
           dwResult.legacyData.id
         ),
-        tx.$queryRawUnsafe<any[]>(`SELECT name, address, phone FROM "outlets" WHERE id = $1 LIMIT 1;`, targetOutletId),
+        tx.$queryRawUnsafe<any[]>(`SELECT name, address, phone, receipt_config FROM "outlets" WHERE id = $1 LIMIT 1;`, targetOutletId),
         tx.$queryRawUnsafe<any[]>(`SELECT name FROM "users" WHERE id = $1 LIMIT 1;`, cashierId),
         resolvedCustomerId
           ? tx.$queryRawUnsafe<any[]>(`SELECT id, name, phone, code FROM "customers" WHERE id = $1 LIMIT 1;`, resolvedCustomerId)
@@ -576,6 +576,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       const fullOrder = {
         id: o.id,
         invoiceNumber: o.invoice_number || o.invoiceNumber,
+        queueNumber: o.queue_number !== undefined && o.queue_number !== null ? Number(o.queue_number) : ((dwResult as any)?.legacyData?.queueNumber || null),
         outletId: o.outlet_id || o.outletId,
         cashierId: o.cashier_id || o.cashierId,
         shiftId: o.shift_id || o.shiftId,
@@ -618,7 +619,12 @@ export const checkoutOrder = async (req: Request, res: Response) => {
             qrisReference: prep?.qrisReference || null,
           };
         }),
-        outlet: outletRows[0] || null,
+        outlet: outletRows[0] ? {
+          name: outletRows[0].name,
+          address: outletRows[0].address,
+          phone: outletRows[0].phone,
+          receiptConfig: outletRows[0].receipt_config,
+        } : null,
         cashier: cashierRows[0] || null,
         customer: customerRows[0] || null,
       };
@@ -1541,24 +1547,46 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
       openTabNotes = openTabNotes ? `${openTabNotes} (Pelanggan: ${finalCustomerName})` : `Pelanggan: ${finalCustomerName}`;
     }
 
+    // Cek konfigurasi nomor antrean outlet
+    const outletInfoRows = await prisma.$queryRawUnsafe<{ receipt_config: any }[]>(
+      `SELECT receipt_config FROM "outlets" WHERE id = $1 LIMIT 1;`,
+      targetOutletId
+    );
+    const isQueueNumberEnabled = outletInfoRows[0]?.receipt_config?.showQueueNumber !== false;
+    let openTabQueueNumber: number | null = null;
+    if (isQueueNumberEnabled) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const queueResult = await prisma.$queryRawUnsafe<{ next_queue: number }[]>(
+        `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
+         FROM "orders" 
+         WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
+        tenantId,
+        targetOutletId,
+        todayStart
+      );
+      openTabQueueNumber = queueResult[0]?.next_queue || 1;
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(
         `INSERT INTO "orders" (
-          "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number",
+          "id", "tenant_id", "outlet_id", "cashier_id", "invoice_number", "queue_number",
           "customer_id", "shift_id",
           "subtotal", "discount_amount", "tax_amount", "service_total", "grand_total",
           "payment_status", "channel", "order_type", "table_number", "notes", "order_status", "created_at", "updated_at"
         ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7,
-          $8, $9, $10, $11, $12,
-          'UNPAID'::"PaymentStatus", $13, $14, $15, $16, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+          $1, $2, $3, $4, $5, $6,
+          $7, $8,
+          $9, $10, $11, $12, $13,
+          'UNPAID'::"PaymentStatus", $14, $15, $16, $17, 'IN_PROGRESS'::"OrderStatus", (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
         );`,
         orderId,
         tenantId,
         targetOutletId,
         cashierId,
         invoiceNumber,
+        openTabQueueNumber,
         customerId || null,
         resolvedShiftId || null,
         subtotal,
@@ -1691,6 +1719,7 @@ export const getOpenTabs = async (req: Request, res: Response) => {
       return {
         id: o.id,
         invoiceNumber: o.invoice_number,
+        queueNumber: o.queue_number ? Number(o.queue_number) : null,
         outletId: o.outlet_id,
         cashierId: o.cashier_id,
         customerName: derivedCustomerName || 'Pelanggan Umum',

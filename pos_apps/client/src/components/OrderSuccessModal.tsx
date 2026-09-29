@@ -307,9 +307,14 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       return str;
     }).join('\n') || '';
 
+    const queueText = (order.queueNumber !== undefined && order.queueNumber !== null)
+      ? `*NOMOR ANTRIAN : #${String(order.queueNumber).padStart(2, '0')}*\n`
+      : '';
+
     return `*${outletName.toUpperCase()}*\n` +
       `Bukti Pembayaran Digital (Well POS)\n` +
       `--------------------------------\n` +
+      queueText +
       `No. Faktur : #${order.invoiceNumber}\n` +
       `Waktu      : ${timeStr}\n` +
       `Kasir      : ${order.cashier?.name || 'Kasir Toko'}\n` +
@@ -370,7 +375,17 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-black tracking-tight">Transaksi Berhasil</h3>
-          <p className="text-xs text-blue-200/80 mt-0.5">Faktur #{order.invoiceNumber}</p>
+          {order.queueNumber !== undefined && order.queueNumber !== null && (
+            <div className="mt-2.5 px-5 py-2 rounded-2xl bg-white/10 border border-white/25 shadow-inner flex flex-col items-center animate-in fade-in zoom-in-95">
+              <span className="text-[10px] font-black tracking-widest text-amber-300 uppercase">
+                Nomor Antrean
+              </span>
+              <span className="text-3xl font-black tracking-wider text-white">
+                #{String(order.queueNumber).padStart(2, '0')}
+              </span>
+            </div>
+          )}
+          <p className="text-xs text-blue-200/80 mt-1">Faktur #{order.invoiceNumber}</p>
         </div>
 
         {/* Virtual Cash Drawer Simulator Banner (No Print) */}
@@ -490,6 +505,18 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
           </div>
 
           <div className="border-b border-dashed border-slate-300 my-2" />
+
+          {/* Nomor Antrean Panggilan (Jika Aktif) */}
+          {order.queueNumber !== undefined && order.queueNumber !== null && (
+            <div className="border-2 border-dashed border-slate-800 p-2 my-2 rounded text-center">
+              <div className="text-[9px] font-black uppercase tracking-widest text-slate-600">
+                NOMOR ANTRIAN
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-wider">
+                #{String(order.queueNumber).padStart(2, '0')}
+              </div>
+            </div>
+          )}
 
           {/* Info Invoice */}
           <div className="space-y-1 text-[11px] text-slate-600">

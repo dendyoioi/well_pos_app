@@ -135,6 +135,7 @@ export function normalizeOutletFees(savedFees?: OutletFee[] | null): OutletFee[]
 export interface ReceiptConfig {
   paperSize: '58mm' | '80mm';
   footerText?: string;
+  showQueueNumber?: boolean;
 }
 
 export interface SalesChannelConfig {

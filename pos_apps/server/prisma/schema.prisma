@@ -712,6 +712,7 @@ model Order {
   orderType     String?        @default("DINE_IN") @map("order_type") // DINE_IN, TAKEAWAY, DELIVERY, RETAIL
   channel       String?        @default("DINE_IN") @map("channel") // DINE_IN, TAKEAWAY, GOFOOD, GRABFOOD, SHOPEEFOOD, DELIVERY
   tableNumber   String?        @map("table_number")
+  queueNumber   Int?           @map("queue_number")
 
   subtotal            Decimal  @db.Decimal(15, 2)
   discountTotal       Decimal  @default(0) @map("discount_amount") @db.Decimal(15, 2)

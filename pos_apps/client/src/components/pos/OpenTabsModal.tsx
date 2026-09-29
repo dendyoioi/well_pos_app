@@ -57,6 +57,11 @@ export const OpenTabsModal: React.FC<OpenTabsModalProps> = ({
                 {/* Left: Table & Customer Info */}
                 <div className="min-w-0 space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {tab.queueNumber !== undefined && tab.queueNumber !== null && (
+                      <span className="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 font-black text-xs">
+                        #{String(tab.queueNumber).padStart(2, '0')}
+                      </span>
+                    )}
                     <span className="px-2.5 py-1 rounded-xl bg-blue-900 text-white font-black text-xs shadow-xs">
                       {tab.tableNumber ? `Meja ${tab.tableNumber}` : 'Tanpa Meja'}
                     </span>

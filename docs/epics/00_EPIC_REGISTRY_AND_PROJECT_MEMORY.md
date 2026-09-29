@@ -3,8 +3,8 @@
 
 **Dokumen Rujukan Utama**: `docs/00_PROJECT_CONTEXT.md`  
 **Basis Data**: PostgreSQL `pos_db` (40 Model Prisma Aktif Ternormalisasi Penuh)  
-**Terakhir Diperbarui**: 25 September 2026  
-**Status Keseluruhan**: **EPIC-01 s.d EPIC-21 SELESAI 100% (COMPLETED ✅)**  
+**Terakhir Diperbarui**: 30 September 2026  
+**Status Keseluruhan**: **EPIC-01 s.d EPIC-22 SELESAI 100% (COMPLETED ✅)**  
 
 ---
 
@@ -40,6 +40,7 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-19** | **Buku Menu QR Digital, Self-Ordering Meja & Manajemen Meja Resto** | **COMPLETED ✅** | Sprint 19.1 s.d 19.4<br/>[`EPIC-19.md`](./EPIC-19_QR_MENU_AND_CUSTOMER_SELF_ORDERING.md) | Self-ordering via pemindaian QR meja resto, menu publik mobile-first, tent card print engine, live kitchen feed & pay at cashier. |
 | **EPIC-20** | **Kanal Penjualan & Mitra Online Delivery Terpadu** | **COMPLETED ✅** | Sprint 20.1 s.d 20.4<br/>[`EPIC-20.md`](./EPIC-20_SALES_CHANNELS_AND_ONLINE_DELIVERY_PLATFORMS.md) | Kustomisasi kanal penjualan langsung & mitra online (GoFood, GrabFood, ShopeeFood, Maxim), pemisahan kontekstual input kasir (Meja vs ID Pesanan Driver), dan rincian omset per kanal di laporan keuangan. |
 | **EPIC-21** | **Multi-Outlet Catalog Isolation, Warehouse Backflushing & Stock Allocation** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-21.md`](./EPIC-21_MULTI_OUTLET_CATALOG_AND_WAREHOUSE_BOM.md) | Isolasi menu/kategori & resep BOM per jenis toko, resolusi dinamis gudang pasokan (`warehouseId`), direct backflushing kasir otomatis ke gudang, dan dashboard visibilitas multi-gudang serta alokasi transfer stok terpadu. |
+| **EPIC-22** | **Smart Calling Queue Numbering & Flexible Store Toggle** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-22.md`](./EPIC-22_CALLING_QUEUE_NUMBERING.md) | Standardisasi nomor antrean panggilan cepat lisan kasir F&B (`#01`, `#02`), reset harian otomatis per outlet, cetak thermal/PDF, teks WA, dan sakelar on/off fleksibel di menu format struk Backoffice. |
 
 ---
 

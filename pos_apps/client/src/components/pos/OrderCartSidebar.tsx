@@ -253,6 +253,11 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
         <div className="px-4 py-2 bg-blue-50 border-b border-blue-200 flex items-center justify-between text-xs animate-in fade-in duration-100 shrink-0">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-900 animate-pulse" />
+            {activeOpenTab.queueNumber !== undefined && activeOpenTab.queueNumber !== null && (
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-950 font-black text-[10px] border border-amber-300">
+                #{String(activeOpenTab.queueNumber).padStart(2, '0')}
+              </span>
+            )}
             <span className="font-black text-blue-950">
               {activeOpenTab.tableNumber ? `Meja ${activeOpenTab.tableNumber}` : 'Tagihan Meja'}
             </span>

@@ -58,6 +58,24 @@ export const generateReceiptPdf = (
   drawDashedLine(y);
   y += 4;
 
+  // Nomor Antrean Panggilan (Jika Aktif)
+  if (order.queueNumber !== undefined && order.queueNumber !== null) {
+    const boxHeight = paperSize === '58mm' ? 12 : 14;
+    doc.setLineDashPattern([1, 1], 0);
+    doc.setDrawColor(80, 80, 80);
+    doc.rect(margin + 2, y, contentWidth - 4, boxHeight);
+
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(paperSize === '58mm' ? 7 : 8);
+    doc.text('NOMOR ANTRIAN', widthMm / 2, y + 4, { align: 'center' });
+
+    doc.setFontSize(paperSize === '58mm' ? 13 : 15);
+    doc.text(`#${String(order.queueNumber).padStart(2, '0')}`, widthMm / 2, y + (paperSize === '58mm' ? 9.5 : 11), { align: 'center' });
+    y += boxHeight + 3;
+    drawDashedLine(y);
+    y += 4;
+  }
+
   // Info Faktur & Saluran
   doc.setFontSize(paperSize === '58mm' ? 7 : 8);
   doc.text(`No: ${order.invoiceNumber}`, margin, y);
