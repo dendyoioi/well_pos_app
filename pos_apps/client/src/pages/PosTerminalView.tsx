@@ -937,16 +937,30 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   // Open Tab Management (Simpan / Perbarui Tagihan Meja)
   const handleSaveOpenTab = async () => {
     if (!currentShift) {
-      setScanMessage('⚠️ Shift kasir belum dibuka! Silakan buka shift kasir terlebih dahulu.');
+      const msg = 'Shift kasir belum dibuka! Silakan buka shift kasir terlebih dahulu.';
+      setScanMessage(`⚠️ ${msg}`);
+      dialog.alert({
+        title: 'Shift Belum Dibuka',
+        message: msg,
+        variant: 'warning',
+      });
       setStartShiftModalOpen(true);
       return;
     }
     if (cart.length === 0) {
-      setScanMessage('Keranjang belanja masih kosong!');
+      const msg = 'Keranjang belanja masih kosong!';
+      setScanMessage(msg);
+      dialog.toast(msg, 'error');
       return;
     }
     if (!tableNumber && !customerName.trim()) {
-      setScanMessage('⚠️ Mohon pilih/isi Nomor Meja atau Nama Pelanggan sebelum menyimpan tagihan meja!');
+      const msg = 'Mohon pilih Nomor Meja atau isi Nama Pelanggan sebelum mengirim pesanan ke dapur.';
+      setScanMessage(`⚠️ ${msg}`);
+      dialog.alert({
+        title: 'Pilih Meja / Nama Pelanggan',
+        message: msg,
+        variant: 'warning',
+      });
       return;
     }
 
@@ -1028,6 +1042,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
       const res = await api.createOpenTab(payload);
       if (res.status === 'success' && res.data) {
+        const successMsg =
+          res.message ||
+          (targetExistingOrderId
+            ? `Tagihan Meja ${tableNumber || ''} berhasil diperbarui.`
+            : `Tagihan Meja ${tableNumber || ''} berhasil disimpan & dikirim ke dapur.`);
         setCart([]);
         setCustomerName('');
         setCustomerPhone('');
@@ -1040,17 +1059,25 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         setActivePulledOrder(null);
         setActiveOpenTab(null);
         loadTablesAndOrders();
-        setScanMessage(
-          res.message ||
-            (targetExistingOrderId
-              ? `Tagihan Meja ${tableNumber || ''} berhasil diperbarui.`
-              : `Tagihan Meja ${tableNumber || ''} berhasil disimpan & dikirim ke dapur.`)
-        );
+        setScanMessage(successMsg);
+        dialog.toast(successMsg, 'success');
       } else {
-        setScanMessage(`⚠️ ${res.message || 'Gagal menyimpan tagihan meja'}`);
+        const errorMsg = res.message || 'Gagal menyimpan tagihan meja';
+        setScanMessage(`⚠️ ${errorMsg}`);
+        dialog.alert({
+          title: 'Gagal Mengirim ke Dapur',
+          message: errorMsg,
+          variant: 'danger',
+        });
       }
     } catch (err: any) {
-      setScanMessage(`⚠️ ${err.message || 'Terjadi kesalahan sistem saat menyimpan tagihan meja'}`);
+      const errorMsg = err.message || 'Terjadi kesalahan sistem saat menyimpan tagihan meja';
+      setScanMessage(`⚠️ ${errorMsg}`);
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: errorMsg,
+        variant: 'danger',
+      });
     } finally {
       setCheckoutLoading(false);
     }

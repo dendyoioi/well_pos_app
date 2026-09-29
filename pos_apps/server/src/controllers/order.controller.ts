@@ -1283,14 +1283,14 @@ const openTabSchema = z.object({
   tableNumber: z.string().optional().nullable(),
   customerName: z.string().optional(),
   customerPhone: z.string().optional(),
-  customerId: z.string().uuid().optional().nullable(),
+  customerId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   discountAmount: z.number().min(0).default(0),
   taxRate: z.number().min(0).max(1).default(0),
   taxAmount: z.number().min(0).optional(),
   serviceCharge: z.number().min(0).default(0),
-  shiftId: z.string().uuid().optional(),
-  outletId: z.string().uuid().optional(),
+  shiftId: z.string().optional().nullable(),
+  outletId: z.string().optional().nullable(),
   existingOrderId: z.string().optional().nullable(),
 });
 

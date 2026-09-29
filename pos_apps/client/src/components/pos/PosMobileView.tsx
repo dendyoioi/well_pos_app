@@ -817,6 +817,14 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                       type="button"
                       disabled={cart.length === 0 || !currentShift}
                       onClick={() => {
+                        if (!tableNumber && !customerName.trim()) {
+                          if (orderChannel === 'DINE_IN') {
+                            setTablePickerOpen(true);
+                          }
+                          setShowCustomerInputs(true);
+                          onSaveOpenTab();
+                          return;
+                        }
                         setCartDrawerOpen(false);
                         onSaveOpenTab();
                       }}
