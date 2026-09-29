@@ -310,7 +310,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   inputClassName="py-3 text-lg font-black text-right text-slate-900 focus:border-blue-900"
                   prefixClassName="text-sm font-bold"
                   placeholder="0"
-                  autoFocus
                 />
               </div>
 
