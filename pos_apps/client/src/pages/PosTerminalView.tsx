@@ -1345,6 +1345,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           globalDiscount={globalDiscount}
           onChangeGlobalDiscount={(disc) => setGlobalDiscount(disc)}
           activeFees={outletFees}
+          onDemandQuantities={onDemandQuantities}
+          onOpenOnDemandPicker={() => {
+            refreshOutletFees(true);
+            setOnDemandPickerOpen(true);
+          }}
         />
       ) : (
         <>

@@ -127,36 +127,38 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-blue-200 shadow-xs">
-              <Wallet className="w-6 h-6 text-white" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh]">
+        {/* Header - Bersih, bebas tabrakan icon & badge */}
+        <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-blue-200 shadow-xs shrink-0">
+              <Wallet className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                <span>Pengeluaran Kasir (Kas Keluar)</span>
-                <span className="px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 rounded-full">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                  Pengeluaran Kasir
+                </h2>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 rounded-full shrink-0">
                   Petty Cash
                 </span>
-              </h2>
-              <p className="text-xs text-blue-200/80 mt-0.5">
+              </div>
+              <p className="text-[11px] sm:text-xs text-blue-200/80 mt-0.5 truncate">
                 Catat pengeluaran tunai dari laci kasir untuk iuran, belanja darurat, atau operasional toko.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body: Scrollable */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
           {/* Status Message Alerts */}
           {errorMsg && (
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-700 text-xs">
@@ -179,32 +181,32 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
           )}
 
           {/* Form Input Mutasi */}
-          <form onSubmit={handleSubmit} className="space-y-5 bg-slate-50/80 p-5 rounded-3xl border border-slate-200">
-            {/* Tab Tipe Mutasi: CASH_OUT vs CASH_IN */}
-            <div className="flex p-1 bg-slate-200/70 rounded-2xl">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 bg-slate-50/80 p-4 sm:p-5 rounded-3xl border border-slate-200">
+            {/* Tab Tipe Mutasi: CASH_OUT vs CASH_IN - Anti-kegencet */}
+            <div className="grid grid-cols-2 p-1.5 bg-slate-200/80 rounded-2xl gap-1">
               <button
                 type="button"
                 onClick={() => setMovementType('CASH_OUT')}
-                className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                className={`py-2 sm:py-2.5 px-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
                   movementType === 'CASH_OUT'
-                    ? 'bg-white text-rose-700 shadow-sm'
+                    ? 'bg-white text-rose-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <ArrowDownCircle className="w-4 h-4 text-rose-600" />
-                <span>Kas Keluar (Pengeluaran Kasir)</span>
+                <ArrowDownCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="truncate">Kas Keluar</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMovementType('CASH_IN')}
-                className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                className={`py-2 sm:py-2.5 px-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
                   movementType === 'CASH_IN'
-                    ? 'bg-white text-emerald-700 shadow-sm'
+                    ? 'bg-white text-emerald-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <ArrowUpCircle className="w-4 h-4 text-emerald-600" />
-                <span>Kas Masuk (Tambah Modal Kasir)</span>
+                <ArrowUpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="truncate">Kas Masuk</span>
               </button>
             </div>
 
@@ -379,14 +381,14 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
           <div className="text-xs text-slate-500">
             Sesi shift: <strong className="font-mono text-slate-800">#{currentShift?.id?.slice(0, 8)}</strong>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-colors shadow-xs"
+            className="px-5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-colors shadow-2xs"
           >
             Tutup
           </button>

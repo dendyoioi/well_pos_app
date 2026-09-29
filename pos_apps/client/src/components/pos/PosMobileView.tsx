@@ -84,6 +84,8 @@ export interface PosMobileViewProps {
   globalDiscount: number;
   onChangeGlobalDiscount: (discount: number) => void;
   activeFees: OutletFee[];
+  onDemandQuantities?: Record<string, number>;
+  onOpenOnDemandPicker?: () => void;
 }
 
 export const PosMobileView: React.FC<PosMobileViewProps> = ({
@@ -134,12 +136,23 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   appliedPromotion,
   onOpenVoucherPicker,
   onRemovePromotion,
+  activeFees,
+  onDemandQuantities,
+  onOpenOnDemandPicker,
 }) => {
   // Mobile UI States
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [showCustomerInputs, setShowCustomerInputs] = useState(false);
+
+  // Kalkulasi total biaya kemasan on-demand untuk mobile
+  const onDemandFeesTotal = useMemo(() => {
+    if (!activeFees || !onDemandQuantities) return 0;
+    return activeFees
+      .filter((f) => f.category === 'ON_DEMAND_PACKAGING')
+      .reduce((sum, f) => sum + (f.rate || 0) * (onDemandQuantities[f.id] || 0), 0);
+  }, [activeFees, onDemandQuantities]);
 
   // Total quantity in cart
   const cartItemCount = useMemo(() => {
@@ -532,26 +545,52 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
             {/* Table Quick Grid (Conditional dropdown) */}
             {tablePickerOpen && orderChannel === 'DINE_IN' && (
-              <div className="p-3 bg-amber-50/60 border-b border-amber-200 max-h-40 overflow-y-auto shrink-0">
-                <div className="grid grid-cols-4 gap-1.5">
-                  {tables.map((tbl) => (
-                    <button
-                      key={tbl.id}
-                      type="button"
-                      onClick={() => {
-                        onChangeTableNumber(tbl.tableNumber);
-                        setTablePickerOpen(false);
-                      }}
-                      className={`p-1.5 rounded-lg border text-xs font-bold text-center ${
-                        tableNumber === tbl.tableNumber
-                          ? 'bg-blue-900 text-white border-blue-900'
-                          : 'bg-white text-slate-800 border-slate-200 hover:border-amber-400'
-                      }`}
-                    >
-                      M-{tbl.tableNumber}
-                    </button>
-                  ))}
-                </div>
+              <div className="p-3 bg-amber-50/80 border-b border-amber-200 shrink-0">
+                {tables.length === 0 ? (
+                  <div className="text-center py-2.5 px-2">
+                    <p className="text-xs font-bold text-amber-900">Belum Ada Meja yang Dikonfigurasi</p>
+                    <p className="text-[11px] text-amber-700 mt-0.5 leading-snug">
+                      Outlet ini belum memiliki master meja. Anda dapat mengaturnya melalui menu <strong>Meja & QR Menu</strong> di Backoffice.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-amber-900">Pilih Nomor Meja:</span>
+                      {tableNumber && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onChangeTableNumber('');
+                            setTablePickerOpen(false);
+                          }}
+                          className="text-[11px] text-rose-600 font-bold hover:underline"
+                        >
+                          Hapus Pilihan Meja
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto">
+                      {tables.map((tbl) => (
+                        <button
+                          key={tbl.id}
+                          type="button"
+                          onClick={() => {
+                            onChangeTableNumber(tbl.tableNumber);
+                            setTablePickerOpen(false);
+                          }}
+                          className={`p-1.5 rounded-lg border text-xs font-bold text-center transition-colors ${
+                            tableNumber === tbl.tableNumber
+                              ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
+                              : 'bg-white text-slate-800 border-slate-200 hover:border-amber-400'
+                          }`}
+                        >
+                          M-{tbl.tableNumber}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -635,23 +674,41 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
             {/* Financial Summary & Promo */}
             <div className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-2 shrink-0">
-              {/* Voucher Action Pill */}
-              <div className="flex items-center justify-between">
+              {/* Voucher & Packaging Action Pills */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={onOpenVoucherPicker}
-                  className="px-2.5 py-1 rounded-lg border border-dashed border-blue-400 bg-blue-50/50 text-blue-900 text-xs font-bold flex items-center gap-1.5"
+                  className="flex-1 px-2.5 py-1.5 rounded-xl border border-dashed border-blue-400 bg-blue-50/50 text-blue-900 text-xs font-bold flex items-center justify-center gap-1.5 active:bg-blue-100"
                 >
-                  <Ticket className="w-3.5 h-3.5 text-blue-700" />
-                  <span>{appliedPromotion ? appliedPromotion.code : 'Pakai Voucher / Kupon'}</span>
+                  <Ticket className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                  <span className="truncate">{appliedPromotion ? appliedPromotion.code : 'Pakai Voucher'}</span>
                 </button>
                 {appliedPromotion && onRemovePromotion && (
                   <button
                     type="button"
                     onClick={onRemovePromotion}
-                    className="text-rose-600 text-[11px] font-bold"
+                    className="text-rose-600 text-[11px] font-bold px-1"
                   >
                     Batal
+                  </button>
+                )}
+
+                {onOpenOnDemandPicker && (
+                  <button
+                    type="button"
+                    onClick={onOpenOnDemandPicker}
+                    className={`flex-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 active:bg-slate-100 transition-colors ${
+                      onDemandFeesTotal > 0
+                        ? 'border-blue-400 bg-blue-50 text-blue-900 font-extrabold shadow-2xs'
+                        : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    <Package className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                    <span>Kemasan</span>
+                    {onDemandFeesTotal > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-blue-900 shrink-0" />
+                    )}
                   </button>
                 )}
               </div>
@@ -668,6 +725,12 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                   <div className="flex justify-between text-rose-600 font-bold">
                     <span>Potongan Diskon</span>
                     <span>-Rp {discountAmount.toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+                {onDemandFeesTotal > 0 && (
+                  <div className="flex justify-between text-blue-900 font-semibold">
+                    <span>Biaya Kemasan</span>
+                    <span>Rp {onDemandFeesTotal.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {taxAmount > 0 && (

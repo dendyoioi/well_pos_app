@@ -89,7 +89,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh]">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white p-4 sm:p-5 flex items-center justify-between no-print shrink-0">
           <div className="flex items-center gap-3">
@@ -231,7 +231,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={onClose}
@@ -405,7 +405,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
             </div>
 
             {/* Actions for Step 2 */}
-            <div className="w-full max-w-[360px] pt-4 flex items-center justify-between gap-3 no-print">
+            <div className="w-full max-w-[360px] pt-4 flex items-center justify-between gap-3 no-print pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
                 onClick={handlePrint}
                 className="flex-1 py-2.5 rounded-xl border-2 border-blue-900 text-blue-950 font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5"
