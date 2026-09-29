@@ -545,7 +545,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         tx.$queryRawUnsafe<any[]>(
           `SELECT oi.id, oi.order_id as "orderId", pv.product_id as "productId", oi.quantity,
                   oi.cost_price as "costPrice", oi.unit_price as "unitPrice", oi.discount_amount as "discountAmount",
-                  oi.subtotal, oi.created_at as "createdAt",
+                  oi.subtotal, (NOW() AT TIME ZONE 'UTC') as "createdAt",
                   json_build_object('name', oi.product_name, 'sku', oi.sku, 'unit', COALESCE(p.unit, 'PCS')) as product
            FROM "order_items" oi
            LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
@@ -1012,7 +1012,7 @@ export const getKitchenTicket = async (req: Request, res: Response) => {
               oi.modifiers_snapshot
        FROM "order_items" oi
        WHERE oi.order_id = $1
-       ORDER BY oi.created_at ASC;`,
+       ORDER BY oi.id ASC;`,
       id
     );
 
@@ -1414,12 +1414,10 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
           await tx.$executeRawUnsafe(
             `INSERT INTO "order_items" (
               "id", "tenant_id", "order_id", "product_variant_id",
-              "product_name", "variant_name", "quantity", "unit_price", "discount_amount", "subtotal", "notes",
-              "created_at"
+              "product_name", "variant_name", "quantity", "unit_price", "discount_amount", "subtotal", "notes"
             ) VALUES (
               gen_random_uuid()::text, $1, $2, $3,
-              $4, $5, $6, $7, $8, $9, $10,
-              CURRENT_TIMESTAMP
+              $4, $5, $6, $7, $8, $9, $10
             );`,
             tenantId,
             targetOrderId,
@@ -1498,12 +1496,10 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
         await tx.$executeRawUnsafe(
           `INSERT INTO "order_items" (
             "id", "tenant_id", "order_id", "product_variant_id",
-            "product_name", "variant_name", "quantity", "unit_price", "discount_amount", "subtotal", "notes",
-            "created_at"
+            "product_name", "variant_name", "quantity", "unit_price", "discount_amount", "subtotal", "notes"
           ) VALUES (
             gen_random_uuid()::text, $1, $2, $3,
-            $4, $5, $6, $7, $8, $9, $10,
-            CURRENT_TIMESTAMP
+            $4, $5, $6, $7, $8, $9, $10
           );`,
           tenantId,
           orderId,
@@ -1580,7 +1576,7 @@ export const getOpenTabs = async (req: Request, res: Response) => {
          LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
          LEFT JOIN "products" p ON p.id = pv.product_id
          WHERE oi.order_id = ANY($1::text[])
-         ORDER BY oi.created_at ASC;`,
+         ORDER BY oi.id ASC;`,
         orderIds
       );
 
