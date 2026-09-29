@@ -186,8 +186,24 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
     <div className="flex flex-col flex-1 h-full bg-slate-100 select-none font-sans overflow-hidden relative">
       {/* 1. Mobile Sticky Top Header */}
       <header className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3.5 py-2.5 shrink-0 shadow-md z-20 flex items-center justify-between gap-2">
-        {/* Left: Outlet & Shift Status */}
+        {/* Left: Mobile Hamburger & Outlet & Shift Status */}
         <div className="flex items-center gap-2 min-w-0">
+          {/* Unified Left Hamburger Menu Button */}
+          <button
+            type="button"
+            onClick={() => setQuickMenuOpen(true)}
+            className="p-1.5 rounded-xl bg-blue-900/90 hover:bg-blue-800 text-white border border-blue-700/70 relative transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+            title="Buka Menu Kasir & Navigasi"
+            aria-label="Buka Menu Kasir & Navigasi"
+          >
+            <Menu className="w-4 h-4 stroke-[2.5]" />
+            {(holdOrdersCount > 0 || openTabsCount > 0 || qrOrdersCount > 0) && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-blue-950">
+                {holdOrdersCount + openTabsCount + qrOrdersCount}
+              </span>
+            )}
+          </button>
+
           <div className="w-8 h-8 rounded-xl bg-blue-800 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-xs">
             {activeOutlet?.name?.charAt(0).toUpperCase() || 'W'}
           </div>
@@ -220,26 +236,11 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
               const nextIndex = (channels.indexOf(orderChannel) + 1) % channels.length;
               onChangeOrderChannel(channels[nextIndex]);
             }}
-            className="px-2 py-1 rounded-lg bg-blue-800/80 hover:bg-blue-700/80 border border-blue-700 text-[10px] font-bold text-white flex items-center gap-1 transition-all"
+            className="px-2.5 py-1.5 rounded-lg bg-blue-800/80 hover:bg-blue-700/80 border border-blue-700 text-[10px] font-bold text-white flex items-center gap-1 transition-all"
           >
             <span>{ORDER_CHANNEL_LABELS[orderChannel]?.label || orderChannel}</span>
             {orderChannel === 'DINE_IN' && tableNumber && (
               <span className="text-amber-300">#{tableNumber}</span>
-            )}
-          </button>
-
-          {/* Quick Menu Hamburger */}
-          <button
-            type="button"
-            onClick={() => setQuickMenuOpen(true)}
-            className="p-1.5 rounded-xl bg-blue-800 hover:bg-blue-700 text-white relative transition-colors"
-            title="Menu Operasional Kasir"
-          >
-            <Menu className="w-4 h-4" />
-            {(holdOrdersCount > 0 || openTabsCount > 0 || qrOrdersCount > 0) && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-blue-950">
-                {holdOrdersCount + openTabsCount + qrOrdersCount}
-              </span>
             )}
           </button>
         </div>
@@ -841,11 +842,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         </div>
       )}
 
-      {/* 6. Quick Menu Drawer (Hamburger Menu Kasir Lengkap) */}
+      {/* 6. Quick Menu Drawer (Hamburger Menu Kasir Lengkap - Unified Left Slide) */}
       {quickMenuOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="flex-1" onClick={() => setQuickMenuOpen(false)} />
-          <div className="bg-white w-[300px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-right duration-200">
+        <div className="fixed inset-0 z-50 flex justify-start bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white w-[300px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-left duration-200">
             <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-135px)] pr-1">
               {/* Header Drawer */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1129,6 +1129,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
               )}
             </div>
           </div>
+          <div className="flex-1" onClick={() => setQuickMenuOpen(false)} />
         </div>
       )}
     </div>
