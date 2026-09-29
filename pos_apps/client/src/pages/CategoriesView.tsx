@@ -227,7 +227,6 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 placeholder="Contoh: Signature Coffee, Non-Coffee, Makanan Utama, Pastry"
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 font-medium text-sm transition-all"
                 required
-                autoFocus
               />
               <p className="text-xs text-slate-500 mt-1.5">
                 Nama ini akan tampil sebagai tab kategori di layar kasir POS dan filter pada buku menu digital tamu.

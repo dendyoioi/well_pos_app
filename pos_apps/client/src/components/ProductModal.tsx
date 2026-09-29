@@ -576,7 +576,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="Nama kategori baru..."
                     className="flex-1 bg-white border border-blue-300 text-xs px-2.5 py-1.5 rounded-lg outline-none"
-                    autoFocus
                   />
                   <button
                     type="button"
@@ -622,7 +621,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       onChange={(e) => setCategorySearch(e.target.value)}
                       placeholder="Ketik untuk mencari kategori..."
                       className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-900 focus:bg-white"
-                      autoFocus
                     />
                   </div>
 
@@ -711,7 +709,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       onChange={(e) => setUnitSearch(e.target.value)}
                       placeholder="Cari atau ketik satuan baru..."
                       className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-900 focus:bg-white"
-                      autoFocus
                     />
                   </div>
 

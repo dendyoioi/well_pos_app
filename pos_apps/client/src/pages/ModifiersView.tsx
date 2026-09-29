@@ -296,7 +296,6 @@ export const ModifiersView: React.FC = () => {
                 placeholder="Contoh: Pilihan Susu, Level Gula, Tingkat Es, Ekstra Topping"
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 font-medium text-sm transition-all"
                 required
-                autoFocus
               />
               <p className="text-xs text-slate-500 mt-1.5">
                 Nama ini menjadi judul kelompok pilihan saat kasir atau pelanggan memesan menu.

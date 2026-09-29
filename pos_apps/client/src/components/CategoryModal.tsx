@@ -192,7 +192,6 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
                             className="flex-1 px-3 py-1.5 bg-white border border-blue-400 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/20"
-                            autoFocus
                           />
                           <button
                             type="submit"

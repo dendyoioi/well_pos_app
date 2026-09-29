@@ -324,7 +324,6 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                   value={memberSearchTerm}
                   onChange={(e) => setMemberSearchTerm(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs outline-none"
-                  autoFocus
                 />
                 <div className="max-h-28 overflow-y-auto divide-y divide-slate-100">
                   {filteredMembers.map((m) => (
@@ -498,7 +497,6 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                     }
                   }}
                   className="w-full bg-slate-50 border border-slate-300 focus:border-blue-900 focus:bg-white rounded-xl pl-8 pr-7 py-1.5 text-xs font-bold text-blue-950 outline-none"
-                  autoFocus
                 />
                 {tableSearchTerm && (
                   <button

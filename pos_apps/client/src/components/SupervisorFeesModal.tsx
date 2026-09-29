@@ -308,7 +308,6 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                 <input
                   type="password"
                   maxLength={6}
-                  autoFocus
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
                   placeholder="******"
@@ -467,7 +466,6 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                             <div className="flex items-center gap-1.5 w-full max-w-sm">
                               <input
                                 type="text"
-                                autoFocus
                                 value={editTitleValue}
                                 onChange={(e) => setEditTitleValue(e.target.value)}
                                 onKeyDown={(e) => {

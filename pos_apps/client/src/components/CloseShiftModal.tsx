@@ -179,7 +179,6 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
                 prefixClassName="text-sm font-extrabold"
                 placeholder="0"
-                autoFocus
                 required
               />
               <p className="text-[11px] text-slate-500 mt-1">
