@@ -122,13 +122,19 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
+import { runAutoSchemaPatcher } from './migrations/schema_patcher';
+
 // Jalankan Server jika dieksekusi secara langsung (bukan di-import oleh test suite)
 let server: any = null;
 if (process.env.NODE_ENV !== 'test' && require.main === module) {
-  // Non-blocking auto-patch column queue_number if not present
-  prisma.$executeRawUnsafe(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "queue_number" INTEGER;`)
-    .then(() => console.log('✅ Auto-migration: column queue_number ensured in orders table'))
-    .catch((err) => console.warn('⚠️ Auto-migration note (DDL via pooler might require direct execution):', err.message));
+  // Non-blocking auto-schema patcher pada saat server boot
+  runAutoSchemaPatcher(prisma)
+    .then((res) => {
+      if (res.applied.length > 0) {
+        console.log(`[Boot] ✅ Schema patches diterapkan: ${res.applied.join(', ')}`);
+      }
+    })
+    .catch((err) => console.warn('[Boot] ⚠️ Auto-schema patcher warning:', err.message));
 
   server = app.listen(PORT, () => {
     console.log(`=========================================`);

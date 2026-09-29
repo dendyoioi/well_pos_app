@@ -17,7 +17,9 @@
     "db:clean": "tsx prisma/wipe_dummy.ts",
     "seed:transactions": "tsx prisma/seed.transactions_september.ts",
     "seed:transactions:clean": "tsx prisma/seed.transactions_september.ts --clean",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:remote:patch": "tsx scripts/exec_remote_sql.ts --patch",
+    "db:remote:sql": "tsx scripts/exec_remote_sql.ts --sql"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
