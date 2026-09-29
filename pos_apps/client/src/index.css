@@ -15,6 +15,15 @@ body {
   overflow-x: hidden;
 }
 
+/* Mencegah iOS Safari auto-zoom liar saat field input/select/textarea diketuk */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Custom modern scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

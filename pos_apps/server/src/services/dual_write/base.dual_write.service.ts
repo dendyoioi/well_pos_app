@@ -150,7 +150,8 @@ export abstract class BaseDualWriteService {
       return tenantRows[0].allow_negative_stock;
     }
 
-    return false;
+    // Sesuai ADR-002, default F&B service layer menoleransi stok minus di operasional kasir
+    return true;
   }
 
   /**

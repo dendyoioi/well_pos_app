@@ -253,17 +253,25 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     // Peta produk untuk lookup cepat
     const productMap = new Map(productsInDb.map((p) => [p.id, p]));
 
-    // Validasi stok fisik sebelum eksekusi (hanya untuk barang jadi non-resep)
-    for (const item of items) {
-      const p = productMap.get(item.productId);
-      const isRecipeItem = Boolean(p?.recipeId || p?.type === 'COMPOSITE');
-      if (!isRecipeItem) {
-        const stock = Number(p?.stock ?? 0);
-        if (stock < item.quantity) {
-          return res.status(400).json({
-            status: 'error',
-            message: `Stok "${p?.name}" tidak mencukupi! Tersedia: ${stock} ${p?.unit}, diminta: ${item.quantity}`,
-          });
+    // Validasi stok fisik sebelum eksekusi (hanya untuk barang jadi non-resep jika tenant menolak stok negatif)
+    const tenantSetting = await prisma.tenant.findUnique({
+      where: { id: tenantId! },
+      select: { allowNegativeStock: true },
+    });
+    const isNegativeStockAllowed = tenantSetting?.allowNegativeStock ?? true;
+
+    if (!isNegativeStockAllowed) {
+      for (const item of items) {
+        const p = productMap.get(item.productId);
+        const isRecipeItem = Boolean(p?.recipeId || p?.type === 'COMPOSITE');
+        if (!isRecipeItem) {
+          const stock = Number(p?.stock ?? 0);
+          if (stock < item.quantity) {
+            return res.status(400).json({
+              status: 'error',
+              message: `Stok "${p?.name}" tidak mencukupi! Tersedia: ${stock} ${p?.unit}, diminta: ${item.quantity}`,
+            });
+          }
         }
       }
     }
@@ -436,6 +444,12 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     // EKSEKUSI DATABASE TRANSACTION (ACID & DUAL-WRITE)
     // ====================================================
     const result = await prisma.$transaction(async (tx) => {
+      if (tenantId) {
+        try {
+          await tx.$executeRawUnsafe(`SELECT set_config('app.current_tenant_id', $1, true);`, tenantId);
+        } catch (_) {}
+      }
+
       const dwResult = await salesDualWriteService.processCheckout(
         {
           targetOutletId: targetOutletId!,
@@ -553,28 +567,32 @@ export const checkoutOrder = async (req: Request, res: Response) => {
           : Promise.resolve([]),
       ]);
 
-      const o = orderRows[0];
+      const o = orderRows[0] || (dwResult as any)?.legacyData;
+      if (!o) {
+        throw new Error('Gagal memuat data pesanan setelah transaksi checkout.');
+      }
+
       const fullOrder = {
         id: o.id,
-        invoiceNumber: o.invoice_number,
-        outletId: o.outlet_id,
-        cashierId: o.cashier_id,
-        shiftId: o.shift_id,
-        customerId: o.customer_id,
-        customerName: o.customer_name,
-        customerEmail: o.customer_email,
-        customerPhone: o.customer_phone,
+        invoiceNumber: o.invoice_number || o.invoiceNumber,
+        outletId: o.outlet_id || o.outletId,
+        cashierId: o.cashier_id || o.cashierId,
+        shiftId: o.shift_id || o.shiftId,
+        customerId: o.customer_id || o.customerId,
+        customerName: o.customer_name || o.customerName,
+        customerEmail: o.customer_email || o.customerEmail,
+        customerPhone: o.customer_phone || o.customerPhone,
         channel: o.channel,
-        tableNumber: o.table_number || null,
-        subtotal: Number(o.subtotal),
-        discountAmount: Number(o.discount_amount),
-        taxAmount: Number(o.tax_amount),
-        serviceCharge: Number(o.service_charge),
-        grandTotal: Number(o.grand_total),
-        totalCost: Number(o.total_cost),
-        paymentStatus: o.payment_status,
-        createdAt: o.created_at,
-        updatedAt: o.updated_at,
+        tableNumber: o.table_number || o.tableNumber || null,
+        subtotal: Number(o.subtotal || subtotal),
+        discountAmount: Number(o.discount_amount || totalDiscount || 0),
+        taxAmount: Number(o.tax_amount || taxAmount || 0),
+        serviceCharge: Number(o.service_charge || serviceCharge || 0),
+        grandTotal: Number(o.grand_total || grandTotal),
+        totalCost: Number(o.total_cost || totalCost || 0),
+        paymentStatus: o.payment_status || 'PAID',
+        createdAt: o.created_at || new Date(),
+        updatedAt: o.updated_at || new Date(),
         orderItems: itemRows.map((it) => ({
           ...it,
           costPrice: Number(it.costPrice),
@@ -611,11 +629,11 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       message: 'Transaksi berhasil diselesaikan',
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saat memproses checkout order:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Gagal menyelesaikan transaksi checkout',
+      message: error?.message || 'Gagal menyelesaikan transaksi checkout',
     });
   }
 };

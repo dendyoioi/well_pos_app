@@ -303,13 +303,14 @@ export class SalesDualWriteService extends BaseDualWriteService {
         await this.executeRaw(
           tx,
           `INSERT INTO "order_items" (
-            "id", "order_id", "product_variant_id", "quantity", "cost_price",
-            "unit_price", "discount_amount", "subtotal", "product_name", "variant_name", "sku", "notes", "modifiers_snapshot", "created_at"
+            "id", "tenant_id", "order_id", "product_variant_id", "quantity", "cost_price",
+            "unit_price", "discount_amount", "subtotal", "product_name", "variant_name", "sku", "notes", "modifiers_snapshot"
           ) VALUES (
-            $1, $2, $3, $4, $5,
-            $6, $7, $8, $9, 'Default', $10, $11, $12::jsonb, (NOW() AT TIME ZONE 'UTC')
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, 'Default', $11, $12, $13::jsonb
           );`,
           orderItemId,
+          tenantId,
           orderId,
           defaultVariantId,
           item.quantity,
