@@ -773,104 +773,117 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
       {/* ========================================================================= */}
       {/* 1. TOP NAVBAR HEADER */}
       {/* ========================================================================= */}
-      <header className="shrink-0 border-b border-slate-200 bg-white px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+      <header className="shrink-0 border-b border-slate-200 bg-white px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
         {/* Title & Active Outlet Info */}
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-2xl border flex items-center justify-center shadow-xs transition-colors ${
-              operation === 'OPNAME'
-                ? 'bg-blue-50 text-blue-900 border-blue-200'
-                : operation === 'STOCK_IN'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : operation === 'STOCK_OUT'
-                ? 'bg-rose-50 text-rose-800 border-rose-200'
-                : 'bg-indigo-50 text-indigo-900 border-indigo-200'
-            }`}
-          >
-            {operation === 'OPNAME' && <ClipboardCheck className="w-5 h-5" />}
-            {operation === 'STOCK_IN' && <ArrowDownLeft className="w-5 h-5" />}
-            {operation === 'STOCK_OUT' && <ArrowUpRight className="w-5 h-5" />}
-            {operation === 'TRANSFER' && <ArrowLeftRight className="w-5 h-5" />}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                Lembar Kerja Inventori Massal
-              </h2>
-              {activeOutlet && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
-                  <Store className="w-3 h-3 text-slate-500" />
-                  <span>{activeOutlet.name}</span>
-                </span>
-              )}
+        <div className="flex items-center justify-between gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border flex items-center justify-center shadow-xs transition-colors shrink-0 ${
+                operation === 'OPNAME'
+                  ? 'bg-blue-50 text-blue-900 border-blue-200'
+                  : operation === 'STOCK_IN'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : operation === 'STOCK_OUT'
+                  ? 'bg-rose-50 text-rose-800 border-rose-200'
+                  : 'bg-indigo-50 text-indigo-900 border-indigo-200'
+              }`}
+            >
+              {operation === 'OPNAME' && <ClipboardCheck className="w-5 h-5 shrink-0" />}
+              {operation === 'STOCK_IN' && <ArrowDownLeft className="w-5 h-5 shrink-0" />}
+              {operation === 'STOCK_OUT' && <ArrowUpRight className="w-5 h-5 shrink-0" />}
+              {operation === 'TRANSFER' && <ArrowLeftRight className="w-5 h-5 shrink-0" />}
             </div>
-            <p className="text-xs text-slate-500 font-medium">
-              {operation === 'OPNAME' && 'Hitung dan sesuaikan seluruh stok fisik dalam 1 sesi audit yang aman & atomik'}
-              {operation === 'STOCK_IN' && 'Pencatatan barang datang dari supplier / belanja stok masuk secara kolektif'}
-              {operation === 'STOCK_OUT' && 'Pencatatan pembersihan barang rusak, kadaluarsa, basi, atau operasional internal'}
-              {operation === 'TRANSFER' && 'Mutasi distribusi stok antar cabang toko atau gudang dalam 1 manifest pengiriman'}
-            </p>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-sm sm:text-base md:text-lg font-black text-slate-900 tracking-tight">
+                  Lembar Kerja Inventori Massal
+                </h2>
+                {activeOutlet && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 shrink-0">
+                    <Store className="w-3 h-3 text-slate-500 shrink-0" />
+                    <span>{activeOutlet.name}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                {operation === 'OPNAME' && 'Hitung dan sesuaikan seluruh stok fisik dalam 1 sesi audit yang aman & atomik'}
+                {operation === 'STOCK_IN' && 'Pencatatan barang datang dari supplier / belanja stok masuk secara kolektif'}
+                {operation === 'STOCK_OUT' && 'Pencatatan pembersihan barang rusak, kadaluarsa, basi, atau operasional internal'}
+                {operation === 'TRANSFER' && 'Mutasi distribusi stok antar cabang toko atau gudang dalam 1 manifest pengiriman'}
+              </p>
+            </div>
           </div>
+
+          {/* Close Window (Handheld top-right) */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-all cursor-pointer shrink-0 md:hidden"
+            title="Tutup lembar kerja"
+          >
+            <X className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          </button>
         </div>
 
-        {/* 4 Operations Selector Pill */}
-        <div className="flex items-center gap-2">
-          <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+        {/* 4 Operations Selector Pill & Category Switcher */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 -mx-2 px-2 sm:mx-0 sm:px-0 flex-nowrap w-full md:w-auto">
+          {/* 4 Operations Selector Pill */}
+          <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shrink-0">
             <button
               type="button"
               onClick={() => handleOperationChange('OPNAME')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 operation === 'OPNAME'
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ClipboardCheck className="w-3.5 h-3.5" />
+              <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
               <span>Opname</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleOperationChange('STOCK_IN')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 operation === 'STOCK_IN'
                   ? 'bg-emerald-700 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ArrowDownLeft className="w-3.5 h-3.5" />
-              <span>Stok Masuk</span>
+              <ArrowDownLeft className="w-3.5 h-3.5 shrink-0" />
+              <span>Masuk</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleOperationChange('STOCK_OUT')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 operation === 'STOCK_OUT'
                   ? 'bg-rose-700 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>Stok Keluar</span>
+              <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+              <span>Keluar</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleOperationChange('TRANSFER')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 operation === 'TRANSFER'
                   ? 'bg-indigo-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
               <span>Transfer</span>
             </button>
           </div>
 
           {/* Item Category Switcher: Produk Jadi vs Bahan Baku */}
-          <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+          <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -878,14 +891,14 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                 setSearch('');
                 setCategoryFilter('ALL');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 mode === 'PRODUCTS'
                   ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Package className="w-3.5 h-3.5 text-blue-900" />
-              <span>Produk Jadi ({products.length})</span>
+              <Package className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+              <span>Produk ({products.length})</span>
             </button>
 
             <button
@@ -895,25 +908,25 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                 setSearch('');
                 setCategoryFilter('ALL');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 mode === 'INGREDIENTS'
                   ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Boxes className="w-3.5 h-3.5 text-amber-600" />
-              <span>Bahan Baku ({ingredients.length})</span>
+              <Boxes className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Bahan ({ingredients.length})</span>
             </button>
           </div>
 
-          {/* Close Window */}
+          {/* Close Window (Desktop) */}
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-all cursor-pointer"
+            className="w-9 h-9 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hidden md:flex items-center justify-center transition-all cursor-pointer shrink-0"
             title="Tutup lembar kerja"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 shrink-0" />
           </button>
         </div>
       </header>
@@ -922,12 +935,12 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
       {/* 2. OPERATION CONFIGURATION HEADER (DYNAMIC FOR EACH OPERATION) */}
       {/* ========================================================================= */}
       {operation === 'STOCK_IN' && (
-        <div className="shrink-0 bg-emerald-50/60 border-b border-emerald-100 px-6 py-2.5 flex flex-wrap items-center gap-4 text-xs">
+        <div className="shrink-0 bg-emerald-50/60 border-b border-emerald-100 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
           <div className="flex items-center gap-2 font-bold text-emerald-900">
-            <Truck className="w-4 h-4 text-emerald-700" />
+            <Truck className="w-4 h-4 text-emerald-700 shrink-0" />
             <span>Info Dokumen Pembelian:</span>
           </div>
-          <div className="flex items-center gap-2 flex-1 max-w-sm">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm">
             <span className="text-slate-500 font-semibold whitespace-nowrap">Supplier:</span>
             <input
               type="text"
@@ -937,7 +950,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
               className="flex-1 px-3 py-1.5 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-slate-800"
             />
           </div>
-          <div className="flex items-center gap-2 flex-1 max-w-sm">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm">
             <span className="text-slate-500 font-semibold whitespace-nowrap">No. Faktur / PO:</span>
             <input
               type="text"
@@ -951,10 +964,10 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
       )}
 
       {operation === 'STOCK_OUT' && (
-        <div className="shrink-0 bg-rose-50/60 border-b border-rose-100 px-6 py-2.5 flex flex-wrap items-center gap-4 text-xs">
+        <div className="shrink-0 bg-rose-50/60 border-b border-rose-100 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
           <div className="flex items-center gap-2 font-bold text-rose-900">
-            <AlertCircle className="w-4 h-4 text-rose-700" />
-            <span>Alasan Umum Pengeluaran:</span>
+            <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+            <span>Alasan Umum:</span>
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -964,26 +977,26 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
             >
               <option value="WASTE">Rusak / Basi / Pecah (WASTE)</option>
               <option value="EXPIRED">Kadaluarsa (EXPIRED)</option>
-              <option value="INTERNAL_USE">Konsumsi / Operasional Internal (INTERNAL_USE)</option>
+              <option value="INTERNAL_USE">Konsumsi / Operasional (INTERNAL_USE)</option>
               <option value="SHRINKAGE">Penyusutan / Selisih Hilang (SHRINKAGE)</option>
               <option value="OTHER">Lainnya (Catat di baris)</option>
             </select>
           </div>
-          <span className="text-slate-500 font-medium text-[11px]">
-            * Alasan ini menjadi default untuk seluruh baris, Anda juga dapat mengubah alasan secara spesifik per baris barang.
+          <span className="text-slate-500 font-medium text-[11px] hidden sm:inline">
+            * Menjadi default untuk seluruh baris, Anda juga dapat mengubah alasan secara spesifik per baris.
           </span>
         </div>
       )}
 
       {operation === 'TRANSFER' && (
-        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100 px-6 py-2.5 flex flex-wrap items-center gap-4 text-xs">
+        <div className="shrink-0 bg-indigo-50/60 border-b border-indigo-100 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
           <div className="flex items-center gap-2 font-bold text-indigo-900">
-            <Building2 className="w-4 h-4 text-indigo-700" />
+            <Building2 className="w-4 h-4 text-indigo-700 shrink-0" />
             <span>Rute Distribusi Transfer:</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-semibold">Dari Asal:</span>
+            <span className="text-slate-500 font-semibold whitespace-nowrap">Dari:</span>
             <select
               value={sourceOutletId}
               onChange={(e) => setSourceOutletId(e.target.value)}
@@ -1003,14 +1016,14 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-semibold">Ke Tujuan:</span>
+            <span className="text-slate-500 font-semibold whitespace-nowrap">Ke:</span>
             <select
               value={targetOutletId}
               onChange={(e) => setTargetOutletId(e.target.value)}
               disabled={loadingOutlets || allOutlets.length <= 1}
               className="py-1.5 px-3 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
             >
-              <option value="">-- Pilih Lokasi Tujuan --</option>
+              <option value="">-- Pilih Tujuan --</option>
               {allOutlets
                 .filter((o) => o.id !== sourceOutletId)
                 .map((o) => (
@@ -1021,8 +1034,8 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
             </select>
           </div>
 
-          <div className="flex items-center gap-2 flex-1 max-w-xs">
-            <span className="text-slate-500 font-semibold whitespace-nowrap">No. Surat Jalan:</span>
+          <div className="flex items-center gap-2 flex-1 min-w-[180px] max-w-xs">
+            <span className="text-slate-500 font-semibold whitespace-nowrap">No. SJ:</span>
             <input
               type="text"
               value={transferNumber}
@@ -1037,114 +1050,114 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
       {/* ========================================================================= */}
       {/* 3. TOOLBAR FILTER & QUICK ACTIONS */}
       {/* ========================================================================= */}
-      <div className="shrink-0 bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-[280px] max-w-xl">
+      <div className="shrink-0 bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1">
           {/* Search Box */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 shrink-0" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={`Cari ${mode === 'PRODUCTS' ? 'nama produk, SKU...' : 'nama bahan, kode item...'}`}
-              className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 font-medium transition-all"
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 font-medium transition-all"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5 shrink-0" />
               </button>
             )}
           </div>
 
-          {/* Category Dropdown (for Products) */}
-          {mode === 'PRODUCTS' && categories.length > 0 && (
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer"
-            >
-              <option value="ALL">Semua Kategori ({products.length})</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Toggle: Tampilkan Hanya yang Aktif / Diisi / Selisih */}
-          <button
-            type="button"
-            onClick={() => setFilterOnlyActive(!filterOnlyActive)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
-              filterOnlyActive
-                ? operation === 'OPNAME'
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                  : 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            {operation === 'OPNAME' ? (
-              <>
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Hanya yang Selisih ({opnameDivergentCount})</span>
-              </>
-            ) : operation === 'STOCK_IN' ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Hanya yang Diisi ({stockInActiveCount})</span>
-              </>
-            ) : operation === 'STOCK_OUT' ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Hanya yang Diisi ({stockOutActiveCount})</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Hanya yang Diisi ({transferActiveCount})</span>
-              </>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
+            {/* Category Dropdown (for Products) */}
+            {mode === 'PRODUCTS' && categories.length > 0 && (
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer shrink-0"
+              >
+                <option value="ALL">Semua Kategori ({products.length})</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             )}
-          </button>
+
+            {/* Toggle: Tampilkan Hanya yang Aktif / Diisi / Selisih */}
+            <button
+              type="button"
+              onClick={() => setFilterOnlyActive(!filterOnlyActive)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border shrink-0 ${
+                filterOnlyActive
+                  ? operation === 'OPNAME'
+                    ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                    : 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {operation === 'OPNAME' ? (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Hanya Selisih ({opnameDivergentCount})</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Hanya Diisi (
+                    {operation === 'STOCK_IN'
+                      ? stockInActiveCount
+                      : operation === 'STOCK_OUT'
+                      ? stockOutActiveCount
+                      : transferActiveCount}
+                    )
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Quick Batch Automation Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
           {operation === 'OPNAME' ? (
             <>
               <button
                 type="button"
                 onClick={handleSyncAllToSystem}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"
                 title="Salin seluruh nilai stok sistem ke kolom stok fisik aktual"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Samakan dengan Sistem</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Samakan Sistem</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleResetCurrentOperation}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"
                 title="Reset seluruh input fisik menjadi 0"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                <span>Kosongkan Semua (0)</span>
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>Nol-kan Semua (0)</span>
               </button>
             </>
           ) : (
             <button
               type="button"
               onClick={handleResetCurrentOperation}
-              className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"
               title="Reset seluruh input jumlah item menjadi 0"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-              <span>Reset Semua Jumlah (0)</span>
+              <RotateCcw className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              <span>Reset Qty (0)</span>
             </button>
           )}
         </div>
@@ -1153,17 +1166,18 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
       {/* ========================================================================= */}
       {/* 4. MAIN TABLE SHEET AREA (SCROLLABLE) */}
       {/* ========================================================================= */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4">
         {errorMsg && (
           <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center justify-between shadow-xs">
             <span>{errorMsg}</span>
             <button type="button" onClick={() => setErrorMsg(null)} className="text-rose-500 hover:text-rose-800">
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 shrink-0" />
             </button>
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
+        {/* Desktop Table View (Hidden on mobile / tablet) */}
+        <div className="hidden lg:block bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-black uppercase text-slate-500 tracking-wider">
@@ -1579,32 +1593,387 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
             </tbody>
           </table>
         </div>
+
+        {/* ========================================================================= */}
+        {/* HANDHELD MOBILE/TABLET CARD VIEW (ERGONOMIC & THUMB-FRIENDLY) */}
+        {/* ========================================================================= */}
+        <div className="block lg:hidden space-y-3 pb-6">
+          {filteredList.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 font-medium">
+              Tidak ada item yang sesuai dengan filter pencarian saat ini.
+            </div>
+          ) : (
+            filteredList.map((row, idx) => {
+              return (
+                <div
+                  key={row.id}
+                  className={`p-4 rounded-2xl border transition-all ${
+                    operation === 'OPNAME' && row.isOpnameModified
+                      ? 'bg-amber-50/40 border-amber-300 shadow-xs'
+                      : operation === 'STOCK_IN' && row.qtyIn > 0
+                      ? 'bg-emerald-50/40 border-emerald-300 shadow-xs'
+                      : operation === 'STOCK_OUT' && row.qtyOut > 0
+                      ? 'bg-rose-50/40 border-rose-300 shadow-xs'
+                      : operation === 'TRANSFER' && row.qtyTransfer > 0
+                      ? 'bg-indigo-50/40 border-indigo-300 shadow-xs'
+                      : 'bg-white border-slate-200 shadow-2xs'
+                  }`}
+                >
+                  {/* Card Header: No, Nama, SKU, UOM & Kategori */}
+                  <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[11px] font-bold text-slate-400">#{idx + 1}</span>
+                        <h4 className="text-sm font-extrabold text-slate-900 truncate">{row.name}</h4>
+                      </div>
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold text-slate-600">
+                          {row.code}
+                        </span>
+                        <span className="text-[10px] text-blue-900 bg-blue-50 px-1.5 py-0.5 rounded font-bold border border-blue-100">
+                          {row.unit}
+                        </span>
+                        <span className="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-medium">
+                          {row.categoryName}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Status badge pada Opname */}
+                    {operation === 'OPNAME' && (
+                      <div className="shrink-0">
+                        {!row.isOpnameModified ? (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>Cocok</span>
+                          </span>
+                        ) : row.opnameDelta < 0 ? (
+                          <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-black text-[10px] inline-flex items-center gap-1">
+                            <span>{row.opnameDelta}</span>
+                            <span className="text-[9px]">(Kurang)</span>
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-black text-[10px] inline-flex items-center gap-1">
+                            <span>+{row.opnameDelta}</span>
+                            <span className="text-[9px]">(Lebih)</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Body per Operasi */}
+                  <div className="pt-3 space-y-3">
+                    {/* OPNAME HANDHELD */}
+                    {operation === 'OPNAME' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl bg-slate-100/70 border border-slate-200/80">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                              Stok Sistem
+                            </span>
+                            <span className="text-base font-black text-slate-800">
+                              {row.systemStock.toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[11px] text-slate-400 ml-1 font-semibold">{row.unit}</span>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                              Harga Modal (HPP)
+                            </span>
+                            <span className="text-xs font-extrabold text-slate-700">
+                              {formatRupiah(row.costPrice)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">
+                            Input Stok Fisik Aktual:
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpnameStockChange(row.id, Math.max(0, row.actualStock - 1))}
+                              className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-slate-200 shrink-0"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.actualStock}
+                              onChange={(e) => handleOpnameStockChange(row.id, parseFloat(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                              className="flex-1 h-11 text-center text-base font-black bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 text-slate-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleOpnameStockChange(row.id, row.actualStock + 1)}
+                              className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-slate-200 shrink-0"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={row.opnameNotes}
+                            onChange={(e) => handleOpnameNotesChange(row.id, e.target.value)}
+                            placeholder="Catatan selisih (misal: pecah, basi, kemasan rusak)..."
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-900 font-medium"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* STOCK_IN HANDHELD */}
+                    {operation === 'STOCK_IN' && (
+                      <>
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/70 border border-slate-200/80 text-xs">
+                          <span className="font-bold text-slate-500">Stok Saat Ini:</span>
+                          <span className="font-black text-slate-800">{row.systemStock} {row.unit}</span>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-emerald-800 block mb-1">
+                            Qty Masuk (+):
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleStockInQtyChange(row.id, Math.max(0, row.qtyIn - 1))}
+                              className="w-11 h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-emerald-200 shrink-0"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.qtyIn}
+                              onChange={(e) => handleStockInQtyChange(row.id, parseFloat(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                              className="flex-1 h-11 text-center text-base font-black bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-emerald-950"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleStockInQtyChange(row.id, row.qtyIn + 1)}
+                              className="w-11 h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-emerald-200 shrink-0"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">Harga Beli Satuan</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.costPriceIn}
+                              onChange={(e) => handleStockInPriceChange(row.id, parseFloat(e.target.value))}
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl font-bold text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">Subtotal Belanja</span>
+                            <div className="h-8 flex items-center font-black text-slate-900">
+                              {formatRupiah(row.qtyIn * (row.costPriceIn || row.costPrice))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={row.stockInNotes}
+                            onChange={(e) => handleStockInNotesChange(row.id, e.target.value)}
+                            placeholder="Catatan masuk (no koli, batch, expired date)..."
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-emerald-600 font-medium"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* STOCK_OUT HANDHELD */}
+                    {operation === 'STOCK_OUT' && (
+                      <>
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/70 border border-slate-200/80 text-xs">
+                          <span className="font-bold text-slate-500">Stok Tersedia:</span>
+                          <span className="font-black text-slate-800">{row.systemStock} {row.unit}</span>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-rose-800 block mb-1">
+                            Qty Keluar (-):
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleStockOutQtyChange(row.id, Math.max(0, row.qtyOut - 1))}
+                              className="w-11 h-11 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-900 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-rose-200 shrink-0"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.qtyOut}
+                              onChange={(e) => handleStockOutQtyChange(row.id, parseFloat(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                              className={`flex-1 h-11 text-center text-base font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 ${
+                                row.qtyOut > row.systemStock
+                                  ? 'border-rose-600 text-rose-700 bg-rose-50/50'
+                                  : 'border-rose-300 text-rose-950'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleStockOutQtyChange(row.id, row.qtyOut + 1)}
+                              className="w-11 h-11 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-900 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-rose-200 shrink-0"
+                            >
+                              +
+                            </button>
+                          </div>
+                          {row.qtyOut > row.systemStock && (
+                            <p className="text-[10px] text-rose-600 font-black mt-1">Melebihi stok yang tersedia!</p>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">Alasan Pengeluaran</span>
+                            <select
+                              value={row.reasonOut}
+                              onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
+                              className="w-full py-1.5 px-2 bg-white border border-rose-200 rounded-xl font-bold text-rose-950 text-xs"
+                            >
+                              <option value="WASTE">Rusak / Basi</option>
+                              <option value="EXPIRED">Kadaluarsa</option>
+                              <option value="INTERNAL_USE">Operasional</option>
+                              <option value="SHRINKAGE">Penyusutan</option>
+                              <option value="OTHER">Lainnya</option>
+                            </select>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">Kerugian HPP</span>
+                            <div className="h-8 flex items-center font-black text-rose-800 text-xs">
+                              {formatRupiah(row.qtyOut * row.costPrice)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={row.stockOutNotes}
+                            onChange={(e) => handleStockOutNotesChange(row.id, e.target.value)}
+                            placeholder="Catatan detail barang keluar..."
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-rose-600 font-medium"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* TRANSFER HANDHELD */}
+                    {operation === 'TRANSFER' && (
+                      <>
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/70 border border-slate-200/80 text-xs">
+                          <span className="font-bold text-slate-500">Stok di Asal:</span>
+                          <span className="font-black text-slate-800">{row.systemStock} {row.unit}</span>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-indigo-900 block mb-1">
+                            Qty Transfer:
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTransferQtyChange(row.id, Math.max(0, row.qtyTransfer - 1))}
+                              className="w-11 h-11 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-indigo-200 shrink-0"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.qtyTransfer}
+                              onChange={(e) => handleTransferQtyChange(row.id, parseFloat(e.target.value))}
+                              onFocus={(e) => e.target.select()}
+                              className={`flex-1 h-11 text-center text-base font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 ${
+                                row.qtyTransfer > row.systemStock
+                                  ? 'border-rose-600 text-rose-700 bg-rose-50/50'
+                                  : row.qtyTransfer > 0
+                                  ? 'border-indigo-500 text-indigo-900'
+                                  : 'border-slate-300 text-slate-700'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleTransferQtyChange(row.id, row.qtyTransfer + 1)}
+                              className="w-11 h-11 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-lg font-black flex items-center justify-center transition-all active:scale-95 border border-indigo-200 shrink-0"
+                            >
+                              +
+                            </button>
+                          </div>
+                          {row.qtyTransfer > row.systemStock && (
+                            <p className="text-[10px] text-rose-600 font-black mt-1">Melebihi Stok Asal!</p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-slate-600">
+                          <span>Nilai Aset Transfer:</span>
+                          <span className="font-black text-indigo-900">{formatRupiah(row.qtyTransfer * row.costPrice)}</span>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={row.transferNotes}
+                            onChange={(e) => handleTransferNotesChange(row.id, e.target.value)}
+                            placeholder="Catatan transfer (koli / dus / kondisi)..."
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-indigo-600 font-medium"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* ========================================================================= */}
       {/* 5. STICKY BOTTOM SUMMARY & SUBMISSION BAR */}
       {/* ========================================================================= */}
-      <footer className="shrink-0 bg-white border-t border-slate-200 px-6 py-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+      <footer className="shrink-0 bg-white border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         {/* Ringkasan Dinamis Sesuai Operasi Terpilih */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-1 flex-nowrap w-full md:w-auto">
           {operation === 'OPNAME' && (
             <>
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Item Dihitung</span>
-                <div className="text-sm font-black text-slate-900">
+                <div className="text-xs sm:text-sm font-black text-slate-900">
                   {totalItems} Item{' '}
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-[11px] font-semibold text-slate-500">
                     ({opnameMatchCount} cocok, <span className="text-amber-600 font-bold">{opnameDivergentCount} selisih</span>)
                   </span>
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Selisih Unit</span>
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Selisih</span>
                 <div
-                  className={`text-sm font-black ${
+                  className={`text-xs sm:text-sm font-black ${
                     opnameTotalDeltaUnits === 0 ? 'text-slate-700' : opnameTotalDeltaUnits < 0 ? 'text-rose-600' : 'text-emerald-600'
                   }`}
                 >
@@ -1612,12 +1981,12 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Dampak Nilai Modal (HPP)</span>
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Dampak HPP</span>
                 <div
-                  className={`text-sm font-black ${
+                  className={`text-xs sm:text-sm font-black ${
                     opnameFinancialImpact === 0
                       ? 'text-slate-700'
                       : opnameFinancialImpact < 0
@@ -1633,27 +2002,27 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
           {operation === 'STOCK_IN' && (
             <>
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Item Masuk</span>
-                <div className="text-sm font-black text-emerald-800">
-                  {stockInActiveCount} Item Dari Total {totalItems}
+                <div className="text-xs sm:text-sm font-black text-emerald-800">
+                  {stockInActiveCount} Item
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Unit Masuk</span>
-                <div className="text-sm font-black text-emerald-800">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Qty</span>
+                <div className="text-xs sm:text-sm font-black text-emerald-800">
                   +{stockInTotalUnits} {mode === 'PRODUCTS' ? 'Unit' : 'Satuan'}
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Estimasi Nilai Belanja</span>
-                <div className="text-sm font-black text-slate-900">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Est. Belanja</span>
+                <div className="text-xs sm:text-sm font-black text-slate-900">
                   {formatRupiah(stockInTotalCost)}
                 </div>
               </div>
@@ -1662,27 +2031,27 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
           {operation === 'STOCK_OUT' && (
             <>
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Item Keluar</span>
-                <div className="text-sm font-black text-rose-800">
-                  {stockOutActiveCount} Item Dikeluarkan
+                <div className="text-xs sm:text-sm font-black text-rose-800">
+                  {stockOutActiveCount} Item
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Unit Keluar</span>
-                <div className="text-sm font-black text-rose-800">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Qty</span>
+                <div className="text-xs sm:text-sm font-black text-rose-800">
                   -{stockOutTotalUnits} {mode === 'PRODUCTS' ? 'Unit' : 'Satuan'}
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Kerugian HPP</span>
-                <div className="text-sm font-black text-rose-800">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Kerugian HPP</span>
+                <div className="text-xs sm:text-sm font-black text-rose-800">
                   {formatRupiah(stockOutTotalLoss)}
                 </div>
               </div>
@@ -1691,33 +2060,33 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
           {operation === 'TRANSFER' && (
             <>
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Rute Pengiriman</span>
-                <div className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
-                  <span className="bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Rute</span>
+                <div className="text-xs font-black text-indigo-900 flex items-center gap-1">
+                  <span className="bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 max-w-[90px] truncate">
                     {sourceOutletObj?.name || 'Asal'}
                   </span>
                   <span>➔</span>
-                  <span className="bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+                  <span className="bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 max-w-[90px] truncate">
                     {targetOutletObj?.name || 'Tujuan'}
                   </span>
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Item Ditransfer</span>
-                <div className="text-sm font-black text-indigo-900">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Transfer</span>
+                <div className="text-xs sm:text-sm font-black text-indigo-900">
                   {transferActiveCount} Item ({transferTotalUnits} Unit)
                 </div>
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200 shrink-0" />
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Nilai Aset</span>
-                <div className="text-sm font-black text-slate-900">
+              <div className="space-y-0.5 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Nilai Aset</span>
+                <div className="text-xs sm:text-sm font-black text-slate-900">
                   {formatRupiah(transferTotalAssetValue)}
                 </div>
               </div>
@@ -1726,7 +2095,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
         </div>
 
         {/* Input Catatan Global & Tombol Submit */}
-        <div className="flex items-center gap-3 flex-1 justify-end max-w-xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 flex-1 justify-end w-full md:max-w-xl">
           <input
             type="text"
             value={generalNotes}
@@ -1740,64 +2109,66 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                 ? 'Catatan umum stok keluar (misal: Kerusakan akibat mati lampu freezer)'
                 : 'Catatan umum transfer stok (misal: Pengiriman stok mingguan antar cabang)'
             }
-            className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 font-medium"
+            className="w-full sm:flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 font-medium"
           />
 
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-          >
-            Batal
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer text-center"
+            >
+              Batal
+            </button>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={
-              submitting ||
-              (operation === 'STOCK_IN' && stockInActiveCount === 0) ||
-              (operation === 'STOCK_OUT' && stockOutActiveCount === 0) ||
-              (operation === 'TRANSFER' && (transferActiveCount === 0 || !targetOutletId || sourceOutletId === targetOutletId))
-            }
-            className={`px-5 py-2.5 rounded-xl text-white text-xs font-black transition-all cursor-pointer flex items-center gap-2 shadow-md disabled:opacity-50 ${
-              operation === 'OPNAME'
-                ? 'bg-blue-900 hover:bg-blue-950 shadow-blue-950/20'
-                : operation === 'STOCK_IN'
-                ? 'bg-emerald-700 hover:bg-emerald-800 shadow-emerald-800/20'
-                : operation === 'STOCK_OUT'
-                ? 'bg-rose-700 hover:bg-rose-800 shadow-rose-800/20'
-                : 'bg-indigo-900 hover:bg-indigo-950 shadow-indigo-950/20'
-            }`}
-          >
-            {submitting ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Memproses...</span>
-              </>
-            ) : operation === 'OPNAME' ? (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Terapkan Opname Massal ({opnameDivergentCount} Disimpan)</span>
-              </>
-            ) : operation === 'STOCK_IN' ? (
-              <>
-                <ArrowDownLeft className="w-4 h-4" />
-                <span>Simpan Stok Masuk ({stockInActiveCount} Item)</span>
-              </>
-            ) : operation === 'STOCK_OUT' ? (
-              <>
-                <ArrowUpRight className="w-4 h-4" />
-                <span>Simpan Stok Keluar ({stockOutActiveCount} Item)</span>
-              </>
-            ) : (
-              <>
-                <Truck className="w-4 h-4" />
-                <span>Kirim Transfer Stok ({transferActiveCount} Item)</span>
-              </>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={
+                submitting ||
+                (operation === 'STOCK_IN' && stockInActiveCount === 0) ||
+                (operation === 'STOCK_OUT' && stockOutActiveCount === 0) ||
+                (operation === 'TRANSFER' && (transferActiveCount === 0 || !targetOutletId || sourceOutletId === targetOutletId))
+              }
+              className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-white text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50 whitespace-nowrap ${
+                operation === 'OPNAME'
+                  ? 'bg-blue-900 hover:bg-blue-950 shadow-blue-950/20'
+                  : operation === 'STOCK_IN'
+                  ? 'bg-emerald-700 hover:bg-emerald-800 shadow-emerald-800/20'
+                  : operation === 'STOCK_OUT'
+                  ? 'bg-rose-700 hover:bg-rose-800 shadow-rose-800/20'
+                  : 'bg-indigo-900 hover:bg-indigo-950 shadow-indigo-950/20'
+              }`}
+            >
+              {submitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                  <span>Memproses...</span>
+                </>
+              ) : operation === 'OPNAME' ? (
+                <>
+                  <Save className="w-4 h-4 shrink-0" />
+                  <span>Simpan Opname ({opnameDivergentCount})</span>
+                </>
+              ) : operation === 'STOCK_IN' ? (
+                <>
+                  <ArrowDownLeft className="w-4 h-4 shrink-0" />
+                  <span>Simpan Masuk ({stockInActiveCount})</span>
+                </>
+              ) : operation === 'STOCK_OUT' ? (
+                <>
+                  <ArrowUpRight className="w-4 h-4 shrink-0" />
+                  <span>Simpan Keluar ({stockOutActiveCount})</span>
+                </>
+              ) : (
+                <>
+                  <Truck className="w-4 h-4 shrink-0" />
+                  <span>Kirim Transfer ({transferActiveCount})</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </footer>
     </div>
