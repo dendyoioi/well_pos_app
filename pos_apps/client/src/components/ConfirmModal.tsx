@@ -54,10 +54,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   }[variant];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden animate-scaleUp">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-scaleUp">
         {/* Header with Icon */}
-        <div className="p-6 pb-4 flex items-start justify-between">
+        <div className="p-4 sm:p-6 pb-3 sm:pb-4 flex items-start justify-between">
           <div className="flex items-center gap-3.5">
             <div
               className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 shadow-xs ${variantStyles.bgIcon}`}

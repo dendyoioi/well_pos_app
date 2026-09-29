@@ -187,7 +187,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
               if (isLocked) {
@@ -197,14 +197,14 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               window.print();
             }}
             disabled={!data && !isLocked}
-            className={`px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-2 transition-all ${
+            className={`flex-1 sm:flex-initial justify-center px-3.5 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all ${
               isLocked
                 ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
           >
             {isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Printer className="w-4 h-4" />}
-            <span>Cetak Laporan</span>
+            <span>Cetak</span>
             {isLocked && <span className="px-1 py-0.2 bg-amber-200 text-amber-900 rounded text-[9px] font-black">PRO</span>}
           </button>
 
@@ -217,7 +217,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               handleExportCSV();
             }}
             disabled={!data && !isLocked}
-            className={`px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all ${
+            className={`flex-1 sm:flex-initial justify-center px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all ${
               isLocked
                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
                 : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
@@ -231,7 +231,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
       </div>
 
       {/* Filter Controls Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">
         {/* Preset Buttons */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
@@ -467,7 +467,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <tr>
@@ -547,6 +548,87 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </table>
             </div>
 
+            {/* Mobile Top Products Card List */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {(!data?.topProducts || data.topProducts.length === 0) ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  Belum ada data penjualan produk pada periode ini
+                </div>
+              ) : (() => {
+                const topProductsList = data.topProducts;
+                const topTotalPages = Math.max(1, Math.ceil(topProductsList.length / topPageSize));
+                const safeTopPage = Math.min(Math.max(1, topPage), topTotalPages);
+                const paginatedTopProducts = topProductsList.slice(
+                  (safeTopPage - 1) * topPageSize,
+                  safeTopPage * topPageSize
+                );
+
+                return paginatedTopProducts.map((p, idx) => {
+                  const rankNum = (safeTopPage - 1) * topPageSize + idx + 1;
+                  return (
+                    <div key={p.id} className="p-4 space-y-2.5 hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5">
+                          {rankNum === 1 ? (
+                            <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 inline-flex items-center justify-center font-black text-xs shrink-0 shadow-xs mt-0.5">
+                              🥇
+                            </span>
+                          ) : rankNum === 2 ? (
+                            <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 inline-flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                              🥈
+                            </span>
+                          ) : rankNum === 3 ? (
+                            <span className="w-6 h-6 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                              🥉
+                            </span>
+                          ) : (
+                            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 inline-flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                              #{rankNum}
+                            </span>
+                          )}
+                          <div>
+                            <div className="font-bold text-slate-900 text-sm leading-snug">{p.name}</div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] text-slate-400 font-mono">{p.sku}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-[10px] text-slate-500 font-medium">{p.categoryName}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className="text-xs font-black text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full shrink-0">
+                          {p.qtySold.toLocaleString('id-ID')} Terjual
+                        </span>
+                      </div>
+
+                      <div className="flex items-baseline justify-between pt-1">
+                        <span className="text-[11px] text-slate-400 font-medium">Total Omset</span>
+                        <span className="text-base font-black text-slate-900">
+                          Rp {p.revenue.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+
+                      {/* Mini Financial Comparison Grid */}
+                      <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Modal (HPP)</span>
+                          <span className="text-xs font-bold text-slate-600">
+                            Rp {p.cost.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Laba Bersih &amp; Margin</span>
+                          <span className="text-xs font-black text-emerald-700">
+                            Rp {p.profit.toLocaleString('id-ID')} ({p.profitMargin}%)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
             {data?.topProducts && data.topProducts.length > 0 && (
               <TablePagination
                 currentPage={Math.min(Math.max(1, topPage), Math.max(1, Math.ceil(data.topProducts.length / topPageSize)))}
@@ -579,7 +661,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <tr>
@@ -637,6 +720,63 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                   })()}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Slow-Moving Card List */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {(!data?.slowMovingProducts || data.slowMovingProducts.length === 0) ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  Tidak ada barang slow-moving. Perputaran stok barang Anda sangat sehat! 🎉
+                </div>
+              ) : (() => {
+                const slowList = data.slowMovingProducts;
+                const slowTotalPages = Math.max(1, Math.ceil(slowList.length / slowPageSize));
+                const safeSlowPage = Math.min(Math.max(1, slowPage), slowTotalPages);
+                const paginatedSlow = slowList.slice(
+                  (safeSlowPage - 1) * slowPageSize,
+                  safeSlowPage * slowPageSize
+                );
+
+                return paginatedSlow.map((p) => (
+                  <div key={p.id} className="p-4 space-y-2.5 hover:bg-amber-50/20 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-bold text-slate-900 text-sm leading-snug">{p.name}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-slate-400 font-mono">{p.sku}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-[10px] text-slate-500 font-medium">{p.categoryName}</span>
+                        </div>
+                      </div>
+
+                      <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                        {p.qtySold} Terjual
+                      </span>
+                    </div>
+
+                    {/* Stock & Idle Capital Comparison */}
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Sisa Stok Fisik</span>
+                        <span className="text-xs font-bold text-slate-900">
+                          {p.currentStock.toLocaleString('id-ID')} unit
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Modal Mengendap</span>
+                        <span className="text-xs font-black text-rose-600">
+                          Rp {(p.currentStock * p.costPrice).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                      <span>Harga Beli (HPP): <strong className="text-slate-700">Rp {p.costPrice.toLocaleString('id-ID')}</strong></span>
+                      <span>Harga Jual: <strong className="text-slate-800">Rp {p.basePrice.toLocaleString('id-ID')}</strong></span>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
 
             {data?.slowMovingProducts && data.slowMovingProducts.length > 0 && (

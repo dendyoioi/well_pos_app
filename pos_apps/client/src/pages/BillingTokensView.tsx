@@ -203,11 +203,11 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={fetchSubscriptionAndInvoices}
             disabled={loading}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Perbarui Data"
           >
             <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -215,7 +215,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           </button>
           <button
             onClick={() => setIsTopUpModalOpen(true)}
-            className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
+            className="flex-1 sm:flex-initial justify-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
             <Zap className="w-4 h-4 fill-white text-white" />
             <span>+ Top-Up Kuota Token</span>
@@ -449,7 +449,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
@@ -510,6 +511,63 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
               </table>
             </div>
 
+            {/* Mobile Card List View (Ergonomis Layar 6,8" Portrait) */}
+            <div className="block md:hidden space-y-3">
+              {paginatedInvoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black text-xs text-blue-900">
+                      {inv.invoiceNumber}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                        inv.status === 'PAID'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {inv.status === 'PAID' ? '✔ LUNAS' : '⏳ MENUNGGU'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-2 text-xs">
+                    <div>
+                      <div className="font-bold text-slate-900">{inv.notes || inv.planName}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {new Date(inv.paidAt || inv.createdAt).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </div>
+                    </div>
+                    {inv.tokenAmount > 0 && (
+                      <span className="shrink-0 text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                        +{Number(inv.tokenAmount).toLocaleString('id-ID')} Token
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Tagihan</span>
+                      <span className="font-black text-sm text-slate-900">{formatRupiah(Number(inv.amount))}</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedInvoiceModal(inv)}
+                      className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>Lihat Faktur</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {!loading && invoices.length > 0 && (
               <TablePagination
                 currentPage={safeInvoicePage}
@@ -529,8 +587,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           MODAL TOP-UP KUOTA TOKEN MANDIRI BAGI PEMILIK TOKO
           ========================================================================= */}
       {isTopUpModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full text-slate-900 animate-scaleUp max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full text-slate-900 animate-scaleUp max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -809,151 +867,154 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           MODAL FAKTUR DIGITAL RESMI (OFFICIAL TAX INVOICE WITH NITKU) - CLEAN WHITE-BLUE
           ========================================================================= */}
       {selectedInvoiceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl relative text-slate-800 animate-scaleUp">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 max-w-xl w-full shadow-2xl relative text-slate-800 animate-scaleUp max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setSelectedInvoiceModal(null)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all cursor-pointer"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all cursor-pointer z-10"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Invoice Top Header */}
-            <div className="border-b border-slate-200 pb-5 mb-5 flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-900 flex items-center justify-center font-black text-white text-xs">
-                    W
+            {/* Scrollable Invoice Content */}
+            <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-4">
+              {/* Invoice Top Header */}
+              <div className="border-b border-slate-200 pb-4 flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-900 flex items-center justify-center font-black text-white text-xs">
+                      W
+                    </div>
+                    <span className="font-black text-base text-slate-900 tracking-tight">Well POS Platform</span>
                   </div>
-                  <span className="font-black text-base text-slate-900 tracking-tight">Well POS Platform</span>
+                  <p className="text-[10px] text-slate-500 mt-1">Cloud POS &amp; Inventory Operating System</p>
+                  <p className="text-[10px] text-slate-500 font-mono font-semibold tracking-wider">
+                    NITKU: 3313122505910002000000 &bull; Indonesia
+                  </p>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1">Cloud POS &amp; Inventory Operating System</p>
-                <p className="text-[10px] text-slate-500 font-mono font-semibold tracking-wider">
-                  NITKU: 3313122505910002000000 &bull; Indonesia
-                </p>
+
+                <div className="text-right pr-7 sm:pr-0">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Official Tax Invoice</span>
+                  <span className="font-mono font-black text-xs sm:text-sm text-blue-900">{selectedInvoiceModal.invoiceNumber}</span>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border uppercase ${
+                      selectedInvoiceModal.status === 'PAID'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {selectedInvoiceModal.status === 'PAID' ? '✔ PAID' : '⏳ PENDING'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Official Tax Invoice</span>
-                <span className="font-mono font-black text-sm text-blue-900">{selectedInvoiceModal.invoiceNumber}</span>
-                <div className="mt-1">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase ${
-                    selectedInvoiceModal.status === 'PAID'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}>
-                    {selectedInvoiceModal.status === 'PAID' ? '✔ PAID / VERIFIED' : '⏳ PENDING PAYMENT'}
+              {/* Client & Date Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ditagihkan Kepada:</span>
+                  <p className="font-bold text-slate-900 text-sm">
+                    {selectedInvoiceModal.tenant?.name || selectedInvoiceModal.tenant?.businessName || selectedInvoiceModal.tenantName || tenant.businessName}
+                  </p>
+                  <p className="text-slate-600 mt-0.5">
+                    Pemilik: {selectedInvoiceModal.tenant?.owner?.name || tenant.ownerName || user.name}
+                  </p>
+                  <p className="text-slate-600 truncate">
+                    {selectedInvoiceModal.tenant?.owner?.email || tenant.ownerEmail || user.email}
+                  </p>
+                </div>
+
+                <div className="sm:text-right">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Detail Penerbitan:</span>
+                  <p className="text-slate-600">
+                    Tanggal:{' '}
+                    <strong className="text-slate-900">
+                      {new Date(selectedInvoiceModal.paidAt || selectedInvoiceModal.createdAt || Date.now()).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </strong>
+                  </p>
+                  <p className="text-slate-600 mt-0.5">Metode: {selectedInvoiceModal.paymentMethod || 'Transfer Manual'}</p>
+                  {selectedInvoiceModal.paidAt && (
+                    <p className="text-emerald-700 text-[11px] font-semibold mt-0.5">
+                      Dibayar: {new Date(selectedInvoiceModal.paidAt).toLocaleDateString('id-ID')}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Line Item Table */}
+              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs text-slate-700">
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] text-slate-600 uppercase font-black tracking-wider border-b border-slate-200">
+                      <th className="py-2.5 px-3">Deskripsi Layanan / Item</th>
+                      <th className="py-2.5 px-3 text-center">Token</th>
+                      <th className="py-2.5 px-3 text-right">Nominal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium bg-white">
+                    <tr>
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-slate-900 block">{selectedInvoiceModal.notes || 'Top-Up Kuota Token Pesanan Kasir'}</span>
+                        <span className="text-[10px] text-slate-500">Model Pay-As-You-Go &bull; Tanpa Batas Waktu Hangus</span>
+                      </td>
+                      <td className="py-3 px-3 text-center font-bold text-blue-900">
+                        {selectedInvoiceModal.tokenAmount > 0 ? `+${Number(selectedInvoiceModal.tokenAmount).toLocaleString('id-ID')}` : '-'}
+                      </td>
+                      <td className="py-3 px-3 text-right font-black text-slate-900">
+                        {formatRupiah(Number(selectedInvoiceModal.amount) + Number(selectedInvoiceModal.discountAmount || 0))}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Summary Breakdown */}
+              <div className="space-y-1.5 text-xs border-b border-slate-200 pb-3">
+                <div className="flex justify-between text-slate-600">
+                  <span>Subtotal Layanan:</span>
+                  <span className="text-slate-800 font-semibold">
+                    {formatRupiah(Number(selectedInvoiceModal.amount) + Number(selectedInvoiceModal.discountAmount || 0))}
+                  </span>
+                </div>
+                {selectedInvoiceModal.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>Diskon Kupon Promo ({selectedInvoiceModal.promoCode || 'PROMO'}):</span>
+                    <span className="font-bold">- {formatRupiah(Number(selectedInvoiceModal.discountAmount))}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-900 font-black text-base pt-2 border-t border-slate-200">
+                  <span>Total Tagihan:</span>
+                  <span className="text-blue-900">{formatRupiah(Number(selectedInvoiceModal.amount))}</span>
+                </div>
+              </div>
+
+              {/* Digital Stamp & Footer Notes */}
+              <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-center justify-between text-[11px] text-slate-600">
+                <div>
+                  <p className="font-bold text-blue-950">Electronic Receipt &amp; Tax Verification</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Secured by Well POS Platform HQ.</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-black tracking-wider uppercase text-[9px]">
+                    [VERIFIED]
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Client & Date Info */}
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 mb-5 text-xs">
-              <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ditagihkan Kepada:</span>
-                <p className="font-bold text-slate-900 text-sm">
-                  {selectedInvoiceModal.tenant?.name || selectedInvoiceModal.tenant?.businessName || selectedInvoiceModal.tenantName || tenant.businessName}
-                </p>
-                <p className="text-slate-600 mt-0.5">
-                  Pemilik: {selectedInvoiceModal.tenant?.owner?.name || tenant.ownerName || user.name}
-                </p>
-                <p className="text-slate-600">
-                  {selectedInvoiceModal.tenant?.owner?.email || tenant.ownerEmail || user.email}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Detail Penerbitan:</span>
-                <p className="text-slate-600">
-                  Tanggal:{' '}
-                  <strong className="text-slate-900">
-                    {new Date(selectedInvoiceModal.paidAt || selectedInvoiceModal.createdAt || Date.now()).toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </strong>
-                </p>
-                <p className="text-slate-600 mt-0.5">Metode: {selectedInvoiceModal.paymentMethod || 'Transfer Manual'}</p>
-                {selectedInvoiceModal.paidAt && (
-                  <p className="text-emerald-700 text-[11px] font-semibold mt-0.5">
-                    Dibayar: {new Date(selectedInvoiceModal.paidAt).toLocaleDateString('id-ID')}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Line Item Table */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden mb-5">
-              <table className="w-full text-left border-collapse text-xs text-slate-700">
-                <thead>
-                  <tr className="bg-slate-50 text-[10px] text-slate-600 uppercase font-black tracking-wider border-b border-slate-200">
-                    <th className="py-2.5 px-3">Deskripsi Layanan / Item</th>
-                    <th className="py-2.5 px-3 text-center">Token</th>
-                    <th className="py-2.5 px-3 text-right">Nominal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium bg-white">
-                  <tr>
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-slate-900 block">{selectedInvoiceModal.notes || 'Top-Up Kuota Token Pesanan Kasir'}</span>
-                      <span className="text-[10px] text-slate-500">Model Pay-As-You-Go &bull; Tanpa Batas Waktu Hangus</span>
-                    </td>
-                    <td className="py-3 px-3 text-center font-bold text-blue-900">
-                      {selectedInvoiceModal.tokenAmount > 0 ? `+${Number(selectedInvoiceModal.tokenAmount).toLocaleString('id-ID')}` : '-'}
-                    </td>
-                    <td className="py-3 px-3 text-right font-black text-slate-900">
-                      {formatRupiah(Number(selectedInvoiceModal.amount) + Number(selectedInvoiceModal.discountAmount || 0))}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Summary Breakdown */}
-            <div className="space-y-1.5 text-xs border-b border-slate-200 pb-4 mb-5">
-              <div className="flex justify-between text-slate-600">
-                <span>Subtotal Layanan:</span>
-                <span className="text-slate-800 font-semibold">
-                  {formatRupiah(Number(selectedInvoiceModal.amount) + Number(selectedInvoiceModal.discountAmount || 0))}
-                </span>
-              </div>
-              {selectedInvoiceModal.discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-700">
-                  <span>Diskon Kupon Promo ({selectedInvoiceModal.promoCode || 'PROMO'}):</span>
-                  <span className="font-bold">- {formatRupiah(Number(selectedInvoiceModal.discountAmount))}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-slate-900 font-black text-base pt-2 border-t border-slate-200">
-                <span>Total Tagihan:</span>
-                <span className="text-blue-900">{formatRupiah(Number(selectedInvoiceModal.amount))}</span>
-              </div>
-            </div>
-
-            {/* Digital Stamp & Footer Notes */}
-            <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 mb-5 flex items-center justify-between text-[11px] text-slate-600">
-              <div>
-                <p className="font-bold text-blue-950">Electronic Receipt &amp; Tax Verification</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">This document is electronically verified and issued by Well POS Platform HQ.</p>
-              </div>
-              <div className="text-right">
-                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded font-black tracking-wider uppercase text-[10px]">
-                  [DIGITALLY VERIFIED]
-                </span>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-3">
+            {/* Sticky Action Footer */}
+            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex items-center gap-3 bg-white">
               <button
                 type="button"
                 onClick={() => window.print()}
                 className="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Cetak / Simpan PDF</span>
+                <span>Cetak / PDF</span>
               </button>
               <button
                 type="button"

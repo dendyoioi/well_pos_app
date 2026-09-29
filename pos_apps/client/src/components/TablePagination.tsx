@@ -58,19 +58,19 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
   return (
     <div
-      className={`px-5 py-3.5 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 ${className}`}
+      className={`px-3 sm:px-5 py-3 sm:py-3.5 bg-slate-50/90 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 ${className}`}
     >
       {/* Kontrol Jumlah Baris & Info Rentang Data */}
-      <div className="flex items-center gap-3 text-xs text-slate-600 font-semibold flex-wrap justify-center sm:justify-start">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-medium">Baris per halaman:</span>
+      <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 text-xs text-slate-600 font-semibold w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-slate-500 font-medium text-[11px] sm:text-xs">Baris:</span>
           <select
             value={pageSize}
             onChange={(e) => {
               onPageSizeChange(Number(e.target.value));
               onPageChange(1);
             }}
-            className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-900/20 cursor-pointer shadow-2xs hover:border-slate-300 transition-all"
+            className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-2 py-1 sm:px-2.5 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-900/20 cursor-pointer shadow-2xs hover:border-slate-300 transition-all"
           >
             {pageSizeOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -82,9 +82,9 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
         <span className="text-slate-300 hidden sm:inline">|</span>
 
-        <span className="text-slate-500">
-          Menampilkan{' '}
-          <strong className="text-slate-900 font-bold">{startIndex}</strong> -{' '}
+        <span className="text-slate-500 text-[11px] sm:text-xs text-right sm:text-left">
+          <span className="hidden sm:inline">Menampilkan </span>
+          <strong className="text-slate-900 font-bold">{startIndex}</strong>-
           <strong className="text-slate-900 font-bold">{endIndex}</strong> dari{' '}
           <strong className="text-blue-900 font-extrabold">{totalItems}</strong> {itemLabel}
         </span>
@@ -92,19 +92,26 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
       {/* Kontrol Navigasi Halaman */}
       {totalPages > 1 && (
-        <div className="flex items-center gap-1.5 flex-wrap justify-center sm:justify-end">
+        <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
+          {/* Tombol Sebelumnya */}
           <button
             type="button"
             onClick={() => onPageChange(Math.max(1, safeCurrentPage - 1))}
             disabled={safeCurrentPage <= 1}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95"
+            className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 min-h-[36px]"
             title="Halaman Sebelumnya"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Sebelumnya</span>
           </button>
 
-          <div className="flex items-center gap-1">
+          {/* Indikator Halaman Mobile (Ringkas, Zero-Overflow) */}
+          <div className="flex sm:hidden items-center px-2 text-xs font-bold text-slate-700">
+            <span>Hal {safeCurrentPage} / {totalPages}</span>
+          </div>
+
+          {/* Nomor Halaman Desktop / Tablet */}
+          <div className="hidden sm:flex items-center gap-1">
             {getPageNumbers().map((p, idx) => {
               if (p === 'dots-left' || p === 'dots-right') {
                 return (
@@ -133,15 +140,16 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
             })}
           </div>
 
+          {/* Tombol Selanjutnya */}
           <button
             type="button"
             onClick={() => onPageChange(Math.min(totalPages, safeCurrentPage + 1))}
             disabled={safeCurrentPage >= totalPages}
-            className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95"
+            className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95 min-h-[36px]"
             title="Halaman Selanjutnya"
           >
             <span className="hidden sm:inline">Selanjutnya</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       )}

@@ -251,10 +251,10 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
     const qrImage = generateQrPngUri(tableUrl, 320);
 
     return (
-      <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in fade-in">
+      <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+        <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col p-5 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
             <div>
               <h3 className="text-base font-black text-blue-950">Pratinjau Tent Card Meja</h3>
               <p className="text-xs text-slate-500">Format cetak kartu meja untuk ditempatkan di atas meja resto.</p>
@@ -267,61 +267,63 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
             </button>
           </div>
 
-          {/* Printable Tent Card */}
-          <div
-            id="tent-card-print"
-            className="border-2 border-blue-900 rounded-3xl p-6 text-center bg-radial from-white to-blue-50/50 shadow-inner space-y-4"
-          >
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-900 text-white text-[11px] font-black uppercase tracking-wider mb-2">
-                <span>{activeOutlet.name}</span>
+          {/* Printable Tent Card Container with smooth scroll */}
+          <div className="flex-1 overflow-y-auto overscroll-contain py-4 pr-1">
+            <div
+              id="tent-card-print"
+              className="border-2 border-blue-900 rounded-3xl p-6 text-center bg-radial from-white to-blue-50/50 shadow-inner space-y-4"
+            >
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-900 text-white text-[11px] font-black uppercase tracking-wider mb-2">
+                  <span>{activeOutlet.name}</span>
+                </div>
+                <h2 className="text-3xl font-black text-blue-950 tracking-tight">{previewTable.name}</h2>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">Area: {previewTable.section}</p>
               </div>
-              <h2 className="text-3xl font-black text-blue-950 tracking-tight">{previewTable.name}</h2>
-              <p className="text-xs font-semibold text-slate-500 mt-0.5">Area: {previewTable.section}</p>
-            </div>
 
-            {/* QR Code Container */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 inline-block mx-auto">
-              <img src={qrImage} alt="QR Meja" className="w-48 h-48 sm:w-56 sm:h-56 mx-auto object-contain" />
-            </div>
+              {/* QR Code Container */}
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 inline-block mx-auto">
+                <img src={qrImage} alt="QR Meja" className="w-44 h-44 sm:w-56 sm:h-56 mx-auto object-contain" />
+              </div>
 
-            <div className="space-y-1">
-              <div className="text-sm font-black text-blue-950">SCAN QR UNTUK PESAN</div>
-              <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
-                Arahkan kamera smartphone Anda ke kode QR di atas untuk melihat buku menu & memesan langsung.
-              </p>
-            </div>
+              <div className="space-y-1">
+                <div className="text-sm font-black text-blue-950">SCAN QR UNTUK PESAN</div>
+                <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
+                  Arahkan kamera smartphone Anda ke kode QR di atas untuk melihat buku menu & memesan langsung.
+                </p>
+              </div>
 
-            <div className="pt-3 border-t border-blue-100 text-[11px] text-blue-900 font-bold flex items-center justify-center gap-2">
-              <span>💵 Pesan Mandiri • Bayar di Kasir</span>
+              <div className="pt-3 border-t border-blue-100 text-[11px] text-blue-900 font-bold flex items-center justify-center gap-2">
+                <span>💵 Pesan Mandiri • Bayar di Kasir</span>
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-3 pt-2">
+          {/* Sticky Action Footer */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 shrink-0">
             <a
               href={tableUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 hover:underline"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 hover:underline self-start sm:self-auto"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Coba Buka Menu Tamu</span>
             </a>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <a
                 href={qrImage}
                 download={`QR-${previewTable.tableNumber}.png`}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
+                className="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
                 <Download className="w-4 h-4" />
-                <span>Simpan Gambar</span>
+                <span>Simpan</span>
               </a>
 
               <button
                 onClick={() => window.print()}
-                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors shadow-md"
+                className="flex-1 sm:flex-initial justify-center px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors shadow-md"
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Kartu</span>

@@ -219,7 +219,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+          className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Outlet Toko</span>
@@ -633,9 +633,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
       {/* Modal: Tambah Toko Baru */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
               <div>
                 <h3 className="font-extrabold text-blue-950 text-base">Tambah Outlet Toko</h3>
                 <p className="text-xs text-slate-500">Buka outlet toko baru pada bisnis Anda</p>
@@ -650,153 +650,48 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             </div>
 
             {formError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleCreateOutlet} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Toko <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Kopi Nusantara - Kemang"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+            <form onSubmit={handleCreateOutlet} className="flex-1 flex flex-col overflow-hidden">
+              <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nama Toko <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Kopi Nusantara - Kemang"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Alamat Lengkap Toko
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Contoh: Jl. Kemang Raya No. 12, Jakarta Selatan"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
+                  />
+                </div>
+
+                <WhatsAppInput
+                  label="Nomor WhatsApp / Telepon Toko"
+                  value={formData.phone}
+                  onChange={(val) => setFormData({ ...formData, phone: val })}
+                  placeholder="81234567890"
                 />
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Alamat Lengkap Toko
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Contoh: Jl. Kemang Raya No. 12, Jakarta Selatan"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
-                />
-              </div>
-
-              <WhatsAppInput
-                label="Nomor WhatsApp / Telepon Toko"
-                value={formData.phone}
-                onChange={(val) => setFormData({ ...formData, phone: val })}
-                placeholder="81234567890"
-              />
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Gudang Sumber Pasokan (Backflush Warehouse)
-                </label>
-                <select
-                  value={formData.warehouseId || ''}
-                  onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                >
-                  <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
-                  {outlets
-                    .filter((o) => o.isWarehouse)
-                    .map((wh) => (
-                      <option key={wh.id} value={wh.id}>
-                        🏭 {wh.name}
-                      </option>
-                    ))}
-                </select>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
-                </p>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50"
-                >
-                  {submitting ? 'Menyimpan...' : 'Buat Toko Baru'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Edit Toko */}
-      {isEditModalOpen && editingOutlet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="font-extrabold text-blue-950 text-base">Edit Informasi Toko</h3>
-                <p className="text-xs text-slate-500">{editingOutlet.name}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setEditingOutlet(null);
-                }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {formError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{formError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleUpdateOutlet} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Toko <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Alamat Lengkap
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
-                />
-              </div>
-
-              <WhatsAppInput
-                label="Nomor WhatsApp / Telepon"
-                value={formData.phone}
-                onChange={(val) => setFormData({ ...formData, phone: val })}
-                placeholder="81234567890"
-              />
-
-              {!formData.isWarehouse && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Gudang Sumber Pasokan (Backflush Warehouse)
@@ -819,35 +714,146 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
                   </p>
                 </div>
-              )}
-
-              <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900"
-                  />
-                  <span>Toko Aktif dan Beroperasi</span>
-                </label>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Sticky Action Footer */}
+              <div className="pt-3 border-t border-slate-100 shrink-0 flex items-center justify-end gap-2 bg-white">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditingOutlet(null);
-                  }}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? 'Menyimpan...' : 'Buat Toko Baru'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Toko */}
+      {isEditModalOpen && editingOutlet && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+              <div>
+                <h3 className="font-extrabold text-blue-950 text-base">Edit Informasi Toko</h3>
+                <p className="text-xs text-slate-500">{editingOutlet.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingOutlet(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 shrink-0">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateOutlet} className="flex-1 flex flex-col overflow-hidden">
+              <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nama Toko <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Alamat Lengkap
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
+                  />
+                </div>
+
+                <WhatsAppInput
+                  label="Nomor WhatsApp / Telepon"
+                  value={formData.phone}
+                  onChange={(val) => setFormData({ ...formData, phone: val })}
+                  placeholder="81234567890"
+                />
+
+                {!formData.isWarehouse && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Gudang Sumber Pasokan (Backflush Warehouse)
+                    </label>
+                    <select
+                      value={formData.warehouseId || ''}
+                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                    >
+                      <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                      {outlets
+                        .filter((o) => o.isWarehouse)
+                        .map((wh) => (
+                          <option key={wh.id} value={wh.id}>
+                            🏭 {wh.name}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900"
+                    />
+                    <span>Toko Aktif dan Beroperasi</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="pt-3 border-t border-slate-100 shrink-0 flex items-center justify-end gap-2 bg-white">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingOutlet(null);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>

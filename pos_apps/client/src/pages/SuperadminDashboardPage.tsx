@@ -1221,18 +1221,19 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         </section>
 
         {/* Navigation Tabs: Merchants, Master Paket, Billing & Mutasi Token, Staff Platform, Promos */}
-        <div className="flex flex-wrap items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             type="button"
             onClick={() => setActiveMainTab('MERCHANTS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
               activeMainTab === 'MERCHANTS'
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-400/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Store className="w-4 h-4 text-indigo-300" />
-            <span>Manajemen Merchant &amp; Kuota Token</span>
+            <span className="hidden sm:inline">Manajemen Merchant &amp; Kuota Token</span>
+            <span className="sm:hidden">Merchant &amp; Kuota</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/20 font-black">
               {tenants.length}
             </span>
@@ -1241,14 +1242,15 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           <button
             type="button"
             onClick={() => setActiveMainTab('PLANS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
               activeMainTab === 'PLANS'
                 ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30 ring-2 ring-amber-400/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Layers className="w-4 h-4 text-amber-300" />
-            <span>Master Paket Kuota Fleksibel</span>
+            <span className="hidden sm:inline">Master Paket Kuota Fleksibel</span>
+            <span className="sm:hidden">Paket Kuota</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/20 text-amber-300 font-black">
               {plans.length || 4} Paket
             </span>
@@ -1257,14 +1259,15 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           <button
             type="button"
             onClick={() => setActiveMainTab('BILLING')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
               activeMainTab === 'BILLING'
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Receipt className="w-4 h-4 text-emerald-300" />
-            <span>Riwayat Billing &amp; Invoicing</span>
+            <span className="hidden sm:inline">Riwayat Billing &amp; Invoicing</span>
+            <span className="sm:hidden">Billing &amp; Invoice</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-400/20 text-emerald-300 font-black">
               {invoices.length} Faktur
             </span>
@@ -1273,14 +1276,15 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           <button
             type="button"
             onClick={() => setActiveMainTab('STAFF')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
               activeMainTab === 'STAFF'
                 ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Users className="w-4 h-4 text-purple-300" />
-            <span>Tim Staff Platform (RBAC)</span>
+            <span className="hidden sm:inline">Tim Staff Platform (RBAC)</span>
+            <span className="sm:hidden">Staff Platform</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-purple-400/20 text-purple-300 font-black">
               {platformUsers.length} Staf
             </span>
@@ -1289,14 +1293,15 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           <button
             type="button"
             onClick={() => setActiveMainTab('PROMOS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
               activeMainTab === 'PROMOS'
                 ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 ring-2 ring-rose-400/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Tag className="w-4 h-4 text-rose-300" />
-            <span>Master Promo SaaS (B2B)</span>
+            <span className="hidden sm:inline">Master Promo SaaS (B2B)</span>
+            <span className="sm:hidden">Promo B2B</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-400/20 text-rose-300 font-black">
               {promos.length} Kupon
             </span>
@@ -1480,7 +1485,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-bold border-b border-slate-800">
                 <tr>
@@ -2087,6 +2092,203 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Merchant Card List View (Ergonomis Layar 6,8" Portrait) */}
+          <div className="block lg:hidden space-y-3.5 my-4">
+            {paginatedTenants.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl text-xs">
+                {loadingData ? 'Memuat data akun pemilik...' : 'Tidak ada data pendaftar yang cocok dengan filter.'}
+              </div>
+            ) : (
+              paginatedTenants.map((t) => {
+                const isPending = t.status === 'PENDING';
+                const isSuspended = t.status === 'SUSPENDED';
+                const outletsCount = t.outlets?.length || t._count?.outlets || 0;
+                const primaryOutlet = t.outlets && t.outlets.length > 0 ? t.outlets[0] : null;
+                const quota = calculateTenantTokenQuota(t);
+
+                return (
+                  <div
+                    key={t.id}
+                    className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-3.5"
+                  >
+                    {/* Header Kartu Merchant */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-md border border-white/10">
+                          {(t.ownerName || 'OW').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-bold text-white text-sm">{t.ownerName}</div>
+                          <div className="text-xs font-semibold text-indigo-300 flex items-center gap-1">
+                            <Store className="w-3 h-3 text-indigo-400 shrink-0" />
+                            <span className="truncate max-w-[180px]">{t.businessName || t.name}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        {isPending ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                            PENDING
+                          </span>
+                        ) : isSuspended ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                            SUSPENDED
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Kuota Token Box */}
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Sisa Kuota Order</span>
+                        <span className={`font-black text-xs flex items-center gap-1 ${
+                          quota.quotaStatus === 'EMPTY' ? 'text-rose-400' : quota.quotaStatus === 'LOW' ? 'text-amber-400' : 'text-emerald-400'
+                        }`}>
+                          <Zap className="w-3 h-3 fill-current" />
+                          <span>{quota.remainingQuota.toLocaleString('id-ID')} Order</span>
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            quota.quotaStatus === 'EMPTY' ? 'bg-rose-500' : quota.quotaStatus === 'LOW' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.max(5, 100 - quota.percentUsed)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>Paket: {t.subscriptionPlan?.name || 'Starter'}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleExpandStores(t.id)}
+                          className="text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>{outletsCount} Gerai Fisik</span>
+                          {expandedOwnerId === t.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Accordion Gerai di Mobile */}
+                    {expandedOwnerId === t.id && (
+                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs">
+                        <span className="text-[10px] font-bold text-indigo-300 uppercase block">Daftar Gerai Toko:</span>
+                        {(!t.outlets || t.outlets.length === 0) ? (
+                          <p className="text-[11px] text-slate-500 italic">Belum ada gerai fisik terdaftar.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {t.outlets.map((out: any) => (
+                              <div key={out.id} className="p-2 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between text-[11px]">
+                                <div>
+                                  <span className="font-bold text-white block">{out.name}</span>
+                                  <span className="text-[10px] text-slate-400">{out.address || 'Alamat —'}</span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
+                                  out.isActive ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-slate-700'
+                                }`}>
+                                  {out.isActive ? 'AKTIF' : 'NONAKTIF'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Kontak Info */}
+                    <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                      <div className="flex items-center gap-1.5 truncate max-w-[200px]">
+                        <Mail className="w-3 h-3 text-slate-500 shrink-0" />
+                        <span className="truncate">{t.ownerEmail}</span>
+                      </div>
+                      {t.ownerPhone && (
+                        <span>📞 {t.ownerPhone}</span>
+                      )}
+                    </div>
+
+                    {/* Action Buttons Toolbar */}
+                    <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+                      {isPending ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === t.id}
+                            onClick={() => handleApproveTenant(t.id, t.ownerName)}
+                            className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Setujui</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === t.id}
+                            onClick={() => handleRejectTenant(t.id, t.ownerName)}
+                            className="py-2 px-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/60 text-rose-400 border border-rose-800 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Tolak</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleImpersonate(t.id, t.businessName || t.name)}
+                            disabled={actionLoadingId === t.id || isSuspended}
+                            className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-30"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{actionLoadingId === t.id ? 'Loading...' : 'Inspeksi'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenSubModal(t, primaryOutlet)}
+                            className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold border border-slate-700 flex items-center justify-center gap-1 cursor-pointer"
+                            title="Top-Up Kuota"
+                          >
+                            <Coins className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Top-Up</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleResetPassword(t)}
+                            disabled={actionLoadingId === t.id}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer disabled:opacity-50"
+                            title="Reset Password Owner"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === t.id}
+                            onClick={() => handleToggleStatus(t.id, t.status, t.ownerName || t.name)}
+                            className={`p-2 rounded-xl border cursor-pointer disabled:opacity-50 ${
+                              isSuspended
+                                ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400'
+                                : 'bg-rose-950/60 border-rose-800 text-rose-400'
+                            }`}
+                            title={isSuspended ? 'Aktifkan' : 'Bekukan'}
+                          >
+                            {isSuspended ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           {!loadingData && filteredTenants.length > 0 && (
@@ -3434,35 +3636,34 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         const estimatedCustomPrice = customTokenAmount * 110;
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
-            <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 my-8">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl relative text-slate-200 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
               <button
                 type="button"
                 onClick={() => setSubModalOpen(false)}
-                className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
               >
                 <X className="w-5 h-5" />
               </button>
 
               {/* Modal Header */}
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-md">
-                  <Coins className="w-6 h-6" />
+              <div className="text-center mb-4 shrink-0 pr-8">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-2 shadow-md">
+                  <Coins className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <h3 className="text-xl font-black text-white">Top-Up Saldo Kuota Token Transaksi</h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Suntik kuota transaksi model Pay-As-You-Go untuk merchant: <strong className="text-white">{subTenantTarget.businessName || subTenantTarget.name}</strong>
+                <h3 className="text-lg sm:text-xl font-black text-white">Top-Up Saldo Kuota Token Transaksi</h3>
+                <p className="text-xs text-slate-400 mt-0.5 truncate">
+                  Merchant: <strong className="text-white">{subTenantTarget.businessName || subTenantTarget.name}</strong>
                   {subOutletTarget && <span className="text-indigo-300 font-bold ml-1">• Gerai: {subOutletTarget.name}</span>}
-                  {subTenantTarget.ownerName && <span> (Pemilik: {subTenantTarget.ownerName})</span>}
                 </p>
               </div>
 
               {/* Current Quota Status Banner */}
-              <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl mb-5 flex items-center justify-between">
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-2xl mb-3 flex items-center justify-between shrink-0">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Saldo Saat Ini</span>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-lg font-black text-amber-400">
+                    <span className="text-base sm:text-lg font-black text-amber-400">
                       {currentQuota.remainingQuota.toLocaleString('id-ID')} Token
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
@@ -3486,7 +3687,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </div>
               </div>
 
-              <form onSubmit={handleSubmitSubscription} className="space-y-4">
+              <form onSubmit={handleSubmitSubscription} className="flex-1 flex flex-col overflow-hidden">
+                <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-3">
                 {/* Mode Selector Tabs */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -3751,25 +3953,28 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     </span>
                   </div>
                 </div>
+                </div>
 
-                {/* Submit Action */}
-                <button
-                  type="submit"
-                  disabled={submittingSub}
-                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 disabled:opacity-50 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/30 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {submittingSub ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
-                      <span>Memproses Top-Up Kuota...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Coins className="w-4 h-4 text-slate-950" />
-                      <span>Konfirmasi &amp; Suntik Kuota (+{addedTokens.toLocaleString('id-ID')} Token)</span>
-                    </>
-                  )}
-                </button>
+                {/* Sticky Submit Action Footer */}
+                <div className="pt-3 border-t border-slate-800 shrink-0">
+                  <button
+                    type="submit"
+                    disabled={submittingSub}
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 disabled:opacity-50 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/30 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {submittingSub ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                        <span>Memproses Top-Up Kuota...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Coins className="w-4 h-4 text-slate-950" />
+                        <span>Konfirmasi &amp; Suntik Kuota (+{addedTokens.toLocaleString('id-ID')} Token)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
           </div>

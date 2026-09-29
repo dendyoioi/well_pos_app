@@ -52,19 +52,19 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="flex min-h-full items-center justify-center p-3 sm:p-4 text-center">
+      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4 text-center">
         <div
-          className={`w-full ${sizeStyles[size]} transform overflow-hidden rounded-3xl bg-white text-left align-middle shadow-2xl transition-all border border-slate-200/80 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]`}
+          className={`w-full ${sizeStyles[size]} transform overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white text-left align-middle shadow-2xl transition-all border border-slate-200/80 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 flex flex-col max-h-[92vh] overscroll-contain`}
         >
           {/* Modal Header */}
           {(title || subtitle) && (
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
               <div className="pr-4">
                 {title && (
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">{title}</h3>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">{title}</h3>
                 )}
                 {subtitle && (
-                  <p className="text-xs text-slate-500 mt-0.5 font-medium">{subtitle}</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium">{subtitle}</p>
                 )}
               </div>
               <button
@@ -78,11 +78,11 @@ export const Modal: React.FC<ModalProps> = ({
           )}
 
           {/* Modal Body */}
-          <div className="p-6 overflow-y-auto flex-1">{children}</div>
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
 
           {/* Modal Footer */}
           {footer && (
-            <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0">
               {footer}
             </div>
           )}

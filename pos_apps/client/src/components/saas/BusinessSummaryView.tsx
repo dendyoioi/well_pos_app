@@ -375,7 +375,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           </h1>
         </div>
 
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Subtab toggle */}
           <div style={{ display:'flex', background:'#f1f5f9', borderRadius:12, padding:3,
             border:'1px solid #e2e8f0', gap:2 }}>
@@ -815,7 +815,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           {/* Donut: Metode Bayar */}
           <div style={card}>
             <PanelHeader icon={<CreditCard size={13} color="#7c3aed" />} title="Distribusi Metode Bayar" badge="Donut Chart" />
-            <div style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:20 }}>
+            <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
               <div style={{ flexShrink:0 }}>
                 <DonutChart size={110} data={[
                   { label:'Tunai', value: m.cash, color:'#16a34a' },
@@ -824,17 +824,19 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
                   { label:'Transfer', value: m.transfer, color:'#ca8a04' },
                 ]} />
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:8, width: '100%' }}>
                 {[
                   { l:'Tunai', c:'#16a34a', v: m.cash },
                   { l:'QRIS', c:'#1d4ed8', v: m.qris },
                   { l:'Kartu EDC', c:'#7c3aed', v: m.card },
                   { l:'Transfer', c:'#ca8a04', v: m.transfer },
                 ].map(leg => (
-                  <div key={leg.l} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    <span style={{ width:9, height:9, borderRadius:2, background:leg.c, flexShrink:0, display:'inline-block' }} />
-                    <span style={{ fontSize:10, color:'#64748b', minWidth:55 }}>{leg.l}</span>
-                    <strong style={{ fontSize:10, color:'#1e293b' }}>{formatRupiah(leg.v)}</strong>
+                  <div key={leg.l} style={{ display:'flex', alignItems:'center', justifyContent: 'space-between', gap:6 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <span style={{ width:9, height:9, borderRadius:2, background:leg.c, flexShrink:0, display:'inline-block' }} />
+                      <span style={{ fontSize:10, color:'#64748b' }}>{leg.l}</span>
+                    </div>
+                    <strong style={{ fontSize:11, color:'#1e293b' }}>{formatRupiah(leg.v)}</strong>
                   </div>
                 ))}
               </div>

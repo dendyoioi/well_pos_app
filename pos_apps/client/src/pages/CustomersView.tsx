@@ -355,7 +355,8 @@ export const CustomersView: React.FC = () => {
 
       {/* 4. Table Customer List */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View (Hidden on Mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 text-[11px] uppercase font-black tracking-wider text-slate-500 border-b border-slate-200">
@@ -522,6 +523,106 @@ export const CustomersView: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Customer Card List (Visible on Smartphone 6.8") */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="py-12 text-center text-slate-400">
+              <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+              <span className="text-xs">Memuat data pelanggan...</span>
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 px-4">
+              <Users className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+              <p className="font-semibold text-xs text-slate-700">Tidak ada pelanggan ditemukan</p>
+            </div>
+          ) : (
+            paginatedCustomers.map((c) => {
+              const waLink = getWaLink(c.phone);
+              return (
+                <div key={c.id} className="p-3.5 space-y-2.5 hover:bg-slate-50/70 transition-colors">
+                  {/* Top Bar: Avatar + Name + VIP + Code */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-900 to-indigo-700 text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0">
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 truncate">
+                          <span className="truncate">{c.name}</span>
+                          {c.visitCount > 3 && (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 shrink-0">
+                              ★ VIP
+                            </span>
+                          )}
+                        </div>
+                        {c.code && (
+                          <span className="font-mono text-[10px] font-bold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded inline-block mt-0.5">
+                            {c.code}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-slate-400 font-medium block">Total Belanja</span>
+                      <span className="font-black text-xs sm:text-sm text-blue-950">
+                        Rp {Number(c.totalSpent || 0).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Middle: Kontak & Kunjungan */}
+                  <div className="flex items-center justify-between gap-2 text-xs bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-1.5 text-slate-600 truncate">
+                      <span className="font-mono text-[11px] font-semibold text-slate-700">
+                        {c.phone || 'Tanpa No. HP'}
+                      </span>
+                      {waLink && (
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold hover:bg-emerald-200 transition-colors shrink-0"
+                        >
+                          Chat WA
+                        </a>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-semibold shrink-0">
+                      {c.visitCount || 0}x Kunjungan
+                    </span>
+                  </div>
+
+                  {/* Bottom: Action buttons */}
+                  <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                    <button
+                      onClick={() => handleOpenDetail(c)}
+                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-blue-50 hover:text-blue-900 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer min-h-[32px]"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Detail</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenEdit(c)}
+                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer min-h-[32px]"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-slate-200 transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                      title="Hapus Pelanggan"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination Pelanggan */}

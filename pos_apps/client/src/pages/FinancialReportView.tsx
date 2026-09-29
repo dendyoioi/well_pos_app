@@ -186,7 +186,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
               if (isLocked) {
@@ -196,14 +196,14 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               window.print();
             }}
             disabled={!data && !isLocked}
-            className={`px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-2 transition-all ${
+            className={`flex-1 sm:flex-initial justify-center px-3.5 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all ${
               isLocked
                 ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
           >
             {isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Printer className="w-4 h-4" />}
-            <span>Cetak Laporan</span>
+            <span>Cetak</span>
             {isLocked && <span className="px-1 py-0.2 bg-amber-200 text-amber-900 rounded text-[9px] font-black">PRO</span>}
           </button>
 
@@ -216,7 +216,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               handleExportCSV();
             }}
             disabled={!data && !isLocked}
-            className={`px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all ${
+            className={`flex-1 sm:flex-initial justify-center px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all ${
               isLocked
                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
                 : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
@@ -230,7 +230,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       </div>
 
       {/* Filter Controls Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">
         {/* Preset Buttons */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
@@ -620,7 +620,8 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <tr>
@@ -678,6 +679,74 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                   })()}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Daily Trend Card List */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {(!data?.dailyTrends || data.dailyTrends.length === 0) ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  Belum ada catatan penjualan harian pada periode ini
+                </div>
+              ) : (() => {
+                const dailyTrendsList = data.dailyTrends;
+                const totalPages = Math.max(1, Math.ceil(dailyTrendsList.length / pageSize));
+                const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+                const paginatedTrends = dailyTrendsList.slice(
+                  (safeCurrentPage - 1) * pageSize,
+                  safeCurrentPage * pageSize
+                );
+
+                return paginatedTrends.map((d) => (
+                  <div key={d.date} className="p-4 space-y-2.5 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {new Date(d.date).toLocaleDateString('id-ID', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {d.ordersCount} Faktur
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between pt-1">
+                      <span className="text-[11px] text-slate-400 font-medium">Omset Bersih</span>
+                      <span className="text-base font-black text-blue-900">
+                        Rp {d.revenue.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+
+                    {/* Breakdown Kas Tunai vs QRIS */}
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Uang Tunai</span>
+                        <span className="text-xs font-bold text-emerald-700">
+                          Rp {d.cashRevenue.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">QRIS / Non-Tunai</span>
+                        <span className="text-xs font-bold text-blue-700">
+                          Rp {d.qrisRevenue.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                      <span>Rata-rata Nilai Belanja (AOV):</span>
+                      <strong className="text-slate-800">
+                        Rp {d.ordersCount > 0 ? Math.round(d.revenue / d.ordersCount).toLocaleString('id-ID') : 0}
+                      </strong>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
 
             {data?.dailyTrends && data.dailyTrends.length > 0 && (

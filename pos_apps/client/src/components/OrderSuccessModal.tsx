@@ -235,8 +235,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn receipt-print-wrapper overflow-y-auto">
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[96vh] receipt-printable">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn receipt-print-wrapper overflow-hidden">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[96vh] receipt-printable">
         {/* Banner Sukses (No Print) */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-950 to-blue-900 text-white text-center flex flex-col items-center justify-center no-print relative">
           <button
@@ -348,7 +348,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
 
         {/* Printable Receipt Body */}
         <div
-          className={`p-6 overflow-y-auto space-y-3.5 font-mono text-slate-800 bg-white mx-auto w-full transition-all ${
+          className={`p-4 sm:p-6 overflow-y-auto flex-1 space-y-3.5 font-mono text-slate-800 bg-white mx-auto w-full transition-all overscroll-contain ${
             paperSize === '58mm'
               ? 'max-w-[240px] text-[11px] paper-58mm'
               : 'max-w-[340px] text-xs paper-80mm'
@@ -606,8 +606,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       {/* 1. WHATSAPP DIGITAL RECEIPT SANDBOX MODAL (POP-UP)     */}
       {/* ======================================================= */}
       {showWhatsAppModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
+        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-955/70 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
             {/* Header WhatsApp Bar */}
             <div className="px-4 py-3 bg-[#075E54] text-white flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2.5">
@@ -700,8 +700,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       {/* 2. EMAIL DIGITAL RECEIPT SANDBOX MODAL (POP-UP)        */}
       {/* ======================================================= */}
       {showEmailModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200">
+        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200">
             {/* Header Email Client Mockup */}
             <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2">

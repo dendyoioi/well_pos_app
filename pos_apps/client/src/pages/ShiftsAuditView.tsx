@@ -119,7 +119,8 @@ export const ShiftsAuditView: React.FC = () => {
 
       {/* Shifts Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               <tr>
@@ -238,6 +239,105 @@ export const ShiftsAuditView: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card List View */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-900" />
+              <span className="text-xs">Memuat riwayat shift...</span>
+            </div>
+          ) : filteredShifts.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              Tidak ada riwayat shift yang sesuai
+            </div>
+          ) : (
+            paginatedShifts.map((shift) => {
+              const isDiffZero = shift.difference === 0;
+              const isDiffPositive = (shift.difference || 0) > 0;
+
+              return (
+                <div key={shift.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                        <User className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>{shift.cashier?.name || 'Kasir'}</span>
+                      </div>
+                      <span className="text-[11px] text-slate-400 pl-5.5 block">{shift.outlet?.name}</span>
+                    </div>
+
+                    {shift.status === 'OPEN' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-black uppercase shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>AKTIF</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold uppercase shrink-0">
+                        SELESAI
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Waktu Shift */}
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-slate-50 p-2 rounded-xl">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>
+                      {new Date(shift.startTime).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} •{' '}
+                      {new Date(shift.startTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} -{' '}
+                      {shift.endTime
+                        ? new Date(shift.endTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                        : 'Sekarang'}
+                    </span>
+                  </div>
+
+                  {/* Financial Metrics Mini Cards */}
+                  <div className="grid grid-cols-3 gap-2 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 text-center">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-medium">Modal Awal</span>
+                      <span className="text-xs font-bold text-slate-700">
+                        Rp {shift.startingCash.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-medium">Uang Fisik</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {shift.actualCash != null ? `Rp ${shift.actualCash.toLocaleString('id-ID')}` : '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-medium">Selisih</span>
+                      {shift.difference != null ? (
+                        <span
+                          className={`text-xs font-black ${
+                            isDiffZero
+                              ? 'text-emerald-700'
+                              : isDiffPositive
+                              ? 'text-blue-700'
+                              : 'text-rose-700'
+                          }`}
+                        >
+                          {isDiffPositive ? '+' : ''}Rp {shift.difference.toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-normal">Berjalan</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <button
+                    onClick={() => handleViewDetail(shift.id)}
+                    className="w-full py-2.5 bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Lihat Rincian Audit</span>
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination Shift */}

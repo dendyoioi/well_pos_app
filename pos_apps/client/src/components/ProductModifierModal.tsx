@@ -110,10 +110,10 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header Modal */}
-        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+        <div className="p-3.5 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-3">
             {product.imageUrl ? (
               <img
@@ -146,7 +146,7 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1 text-slate-800">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5 flex-1 overscroll-contain text-slate-800">
           {validationError && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-bold">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -234,9 +234,9 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
         </div>
 
         {/* Footer Modal: Ringkasan Harga & Tombol Tambah */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between gap-4">
+        <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-3 sm:gap-4 shrink-0">
           <div>
-            <div className="text-[11px] text-slate-500">Total Harga Unit</div>
+            <div className="text-[11px] text-slate-500 font-medium">Total Harga Unit</div>
             <div className="text-base sm:text-lg font-black text-blue-950">
               Rp {finalPrice.toLocaleString('id-ID')}
             </div>
@@ -246,14 +246,14 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
+              className="px-3.5 sm:px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
             >
               Batal
             </button>
             <button
               type="button"
               onClick={handleConfirm}
-              className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5"
+              className="px-4 sm:px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 min-h-[42px]"
             >
               <ShoppingCart className="w-4 h-4" />
               <span>Masuk Keranjang</span>

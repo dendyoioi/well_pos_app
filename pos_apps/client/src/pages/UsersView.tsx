@@ -799,11 +799,11 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto shrink-0">
           {onNavigateToRoles && (
             <button
               onClick={onNavigateToRoles}
-              className="px-4 py-3 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-2xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2"
+              className="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >
               <Shield className="w-4 h-4 text-blue-900" />
               <span>Akses & Peran</span>
@@ -812,7 +812,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
 
           <button
             onClick={handleOpenCreateForm}
-            className="px-5 py-3 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            className="flex-1 sm:flex-initial justify-center px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>Tambah Staf</span>
@@ -936,7 +936,8 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
 
       {/* Staff Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
@@ -1083,6 +1084,106 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Staff Card List View (Ergonomis Layar 6,8" Portrait) */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="py-12 text-center text-slate-500">
+              <div className="inline-block w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mb-2" />
+              <p className="font-semibold text-xs">Memuat daftar staf...</p>
+            </div>
+          ) : filteredStaff.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 font-medium text-xs">
+              Tidak ditemukan staf dengan kriteria tersebut.
+            </div>
+          ) : (
+            paginatedStaff.map((u) => {
+              const badge = getRoleBadge(u.role);
+              const outletName = u.outlet?.name || outlets.find((o) => o.id === u.outletId)?.name;
+
+              return (
+                <div key={u.id} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 font-black flex items-center justify-center text-xs border border-blue-100 shrink-0">
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-blue-950 text-sm">{u.name}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          #{u.userCode || '—'}
+                        </div>
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${badge.color}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Toko</span>
+                      <span className="font-bold text-slate-700 truncate block">
+                        {outletName || 'Semua Toko'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">PIN Cepat</span>
+                      <span className="font-mono font-bold text-slate-700 block">
+                        {u.hasPin ? '••••••' : 'Belum set'}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex items-center justify-between pt-1 border-t border-slate-200/60">
+                      <div className="flex items-center gap-1.5 truncate text-slate-500 text-[11px]">
+                        <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate">{u.email}</span>
+                      </div>
+                      {u.isActive ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          <span>Aktif</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                          <XCircle className="w-2.5 h-2.5" />
+                          <span>Nonaktif</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Petty Cash Out Flag if any */}
+                  {(u.canCashOut || ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(u.role)) && (
+                    <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
+                      <span>💸</span>
+                      <span>Izin Kas Keluar Aktif (Petty Cash Out)</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditForm(u)}
+                      className="flex-1 py-2 px-3 bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Ubah Data Staf</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUser(u)}
+                      className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      title="Hapus Staf"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination Staf */}

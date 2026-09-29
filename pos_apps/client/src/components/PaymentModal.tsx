@@ -139,10 +139,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[95vh]">
         {/* Header Modal */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
           <div>
             <h3 className="font-extrabold text-blue-950 text-base sm:text-lg">
               Pembayaran Kasir
@@ -159,7 +159,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {/* Total Tagihan Banner */}
           <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200/80 text-center">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -345,8 +345,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {method === 'QRIS' && (
             <div className="space-y-4">
               {/* QRIS Static Display */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
-                <div className="w-56 bg-white p-3.5 border-2 border-slate-300 rounded-2xl shadow-md flex flex-col items-center justify-between">
+              <div className="p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+                <div className="w-48 sm:w-56 bg-white p-3 border-2 border-slate-300 rounded-2xl shadow-md flex flex-col items-center justify-between">
                   <div className="w-full flex items-center justify-between px-1 border-b border-slate-100 pb-1">
                     <span className="text-[10px] font-black tracking-wider text-rose-700">QRIS</span>
                     <span className="text-[9px] font-mono text-slate-500 font-bold">
@@ -364,7 +364,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </div>
 
                   {qrisConfig?.imageUrl ? (
-                    <div className="w-44 h-44 bg-white p-1 rounded-xl flex items-center justify-center overflow-hidden my-1 border border-slate-100">
+                    <div className="w-36 h-36 sm:w-44 sm:h-44 bg-white p-1 rounded-xl flex items-center justify-center overflow-hidden my-1 border border-slate-100">
                       <img
                         src={qrisConfig.imageUrl}
                         alt="Barcode QRIS Toko"
@@ -372,15 +372,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       />
                     </div>
                   ) : (
-                    <div className="w-44 h-44 bg-slate-100 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center my-1 gap-2">
-                      <QrCode className="w-10 h-10 text-slate-300" />
+                    <div className="w-36 h-36 sm:w-44 sm:h-44 bg-slate-100 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center my-1 gap-2">
+                      <QrCode className="w-8 h-8 sm:w-10 sm:h-10 text-slate-300" />
                       <p className="text-[10px] text-slate-400 font-semibold text-center px-2">
                         Upload QRIS statis di<br />Pengaturan › Metode Pembayaran
                       </p>
                     </div>
                   )}
 
-                  <div className="w-full bg-blue-50 py-1.5 px-2.5 rounded-lg border border-blue-100 flex items-center justify-between mt-1">
+                  <div className="w-full bg-blue-50 py-1.5 px-2 rounded-lg border border-blue-100 flex items-center justify-between mt-1">
                     <span className="text-[10px] text-blue-950 font-bold">Total:</span>
                     <span className="text-xs font-black text-blue-950 font-mono">
                       Rp {grandTotal.toLocaleString('id-ID')}
@@ -388,7 +388,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 mt-3 font-medium text-center">
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-2 font-medium text-center">
                   {qrisConfig?.imageUrl
                     ? 'Tunjukkan barcode QRIS di atas kepada konsumen untuk di-scan.'
                     : 'Belum ada QR yang dikonfigurasi. Hubungi pengelola toko.'}
@@ -554,38 +554,38 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </div>
             </div>
           )}
+        </div>
 
-          {/* Action Buttons */}
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-100 transition-colors"
-            >
-              Batal (Esc)
-            </button>
+        {/* Fixed Sticky Action Footer (Prime Thumb Zone) */}
+        <div className="p-3.5 sm:p-5 border-t border-slate-200 bg-white flex items-center justify-between gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 sm:px-5 py-3 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-bold hover:bg-slate-100 transition-colors"
+          >
+            Batal (Esc)
+          </button>
 
-            <button
-              type="button"
-              disabled={
-                loading ||
-                (method === 'CASH' && isCashInsufficient) ||
-                (method === 'QRIS' && !qrisPaid) ||
-                (method === 'SPLIT' && (isSplitCashInsufficient || !splitQrisPaid))
-              }
-              onClick={handlePay}
-              className="flex-1 py-3 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 tracking-wide"
-            >
-              {loading ? (
-                'Memproses Transaksi...'
-              ) : (
-                <>
-                  <span>Selesaikan & Cetak (Enter)</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={
+              loading ||
+              (method === 'CASH' && isCashInsufficient) ||
+              (method === 'QRIS' && !qrisPaid) ||
+              (method === 'SPLIT' && (isSplitCashInsufficient || !splitQrisPaid))
+            }
+            onClick={handlePay}
+            className="flex-1 py-3 px-4 sm:px-5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 tracking-wide min-h-[46px]"
+          >
+            {loading ? (
+              'Memproses Transaksi...'
+            ) : (
+              <>
+                <span>Selesaikan & Cetak (Enter)</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </div>
       </div>
 

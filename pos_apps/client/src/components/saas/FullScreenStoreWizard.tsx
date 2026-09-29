@@ -137,41 +137,41 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
       </div>
 
       {/* Top Navbar: Clean White-Blue SaaS Header */}
-      <header className="relative z-10 border-b border-slate-200 bg-white/90 backdrop-blur-md px-6 py-3.5 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
-            <Store className="w-5 h-5 stroke-[2.2]" />
+      <header className="relative z-10 border-b border-slate-200 bg-white/90 backdrop-blur-md px-3.5 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20 shrink-0">
+            <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-extrabold tracking-tight text-slate-900">WELL POS</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900">WELL POS</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
                 Setup Wizard
               </span>
             </div>
-            <p className="text-[11px] text-slate-500">Platform Kasir Multi-Store Indonesia</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-500">Platform Kasir Multi-Store Indonesia</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="hidden sm:block text-right">
             <p className="text-xs font-bold text-slate-800">{ownerName}</p>
             <p className="text-[11px] text-slate-500">{ownerEmail}</p>
           </div>
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-xs text-slate-600 font-medium transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-xs text-slate-600 font-medium transition-colors shadow-xs"
             title="Keluar / Ganti Akun"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Keluar</span>
+            <span className="hidden xs:inline">Keluar</span>
           </button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-4 py-8 sm:py-10">
-        <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-6 sm:p-9 shadow-xl shadow-slate-200/60">
+      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-10">
+        <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-9 shadow-xl shadow-slate-200/60">
           {/* Header Banner */}
           <div className="text-center max-w-2xl mx-auto mb-8">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold mb-3.5">
@@ -344,13 +344,13 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                   </div>
 
                   {/* Sector Tabs */}
-                  <div className="flex gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  <div className="flex gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto">
                     {(['ALL', 'Ritel', 'Restoran', 'Layanan'] as const).map((tab) => (
                       <button
                         key={tab}
                         type="button"
                         onClick={() => setActiveTab(tab)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                           activeTab === tab
                             ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
