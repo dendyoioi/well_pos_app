@@ -11,7 +11,7 @@ export interface PaymentWebhookDto {
   invoiceNumber: string;
   amount: number;
   paymentChannel: string;
-  transactionStatus: 'settlement' | 'capture' | 'PAID' | 'pending' | 'failed' | 'expire';
+  transactionStatus: 'settlement' | 'capture' | 'PAID' | 'completed' | 'pending' | 'failed' | 'expire';
   signatureKey?: string;
   paymentProofUrl?: string;
 }
@@ -96,7 +96,7 @@ export class BillingService {
       };
     }
 
-    const isSuccess = ['settlement', 'capture', 'PAID'].includes(transactionStatus);
+    const isSuccess = ['settlement', 'capture', 'PAID', 'completed'].includes(transactionStatus);
     if (!isSuccess) {
       return {
         alreadyProcessed: false,

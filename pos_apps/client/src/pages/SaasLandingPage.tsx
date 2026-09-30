@@ -106,6 +106,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
           email: regEmail.trim(),
           phone: formattedPhone,
         });
+        setRegisterModalOpen(true);
       } else {
         setError(res.message || 'Pendaftaran akun gagal. Mohon periksa kembali isian Anda.');
       }

@@ -11,6 +11,11 @@ import {
   getPublicPlatformPaymentConfig,
   handleBillingWebhook,
 } from '../controllers/saas.controller';
+import {
+  handlePakasirWebhook,
+  checkPakasirInvoiceStatus,
+  simulateSandboxPayment,
+} from '../controllers/pakasir.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { tenantContext } from '../middlewares/saas.middleware';
 
@@ -41,4 +46,12 @@ saasRouter.get('/invoices', authenticate, tenantContext, getSubscriptionInvoices
 // Endpoint Callback Webhook Payment Gateway (Public)
 saasRouter.post('/billing/webhook', handleBillingWebhook);
 
+// =========================================================================
+// PAKASIR.COM PAYMENT GATEWAY (API v2) — DIRECT QRIS & WEBHOOK
+// =========================================================================
+saasRouter.post('/pakasir/webhook', handlePakasirWebhook);
+saasRouter.get('/pakasir/status/:invoiceNumber', checkPakasirInvoiceStatus);
+saasRouter.post('/pakasir/simulate-sandbox-pay', simulateSandboxPayment);
+
 export default saasRouter;
+

@@ -19,6 +19,7 @@ import type { User } from '../types/auth';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
 import { TablePagination } from '../components/TablePagination';
+import { PakasirDirectQrisModal } from '../components/saas/PakasirDirectQrisModal';
 
 interface BillingTokensViewProps {
   user: User;
@@ -63,10 +64,19 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
   const [promoError, setPromoError] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER_MANUAL' | 'QRIS'>('BANK_TRANSFER_MANUAL');
+  const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER_MANUAL' | 'QRIS'>('QRIS');
   const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [platformPaymentConfig, setPlatformPaymentConfig] = useState<any>(null);
+
+  // State Direct QRIS Pakasir untuk Top-Up
+  const [qrisModalData, setQrisModalData] = useState<{
+    invoiceNumber: string;
+    amount: number;
+    tokenAmount: number;
+    qrString: string;
+  } | null>(null);
+  const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
 
   const fetchSubscriptionAndInvoices = async () => {
     setLoading(true);
@@ -136,18 +146,28 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
       });
 
       if (res.status === 'success') {
-        setActionFeedback({
-          message: res.message || 'Top-up kuota token berhasil diproses!',
-          type: 'success',
-        });
         setIsTopUpModalOpen(false);
         setAppliedPromo(null);
         setPromoCodeInput('');
-        // Refresh data
         await fetchSubscriptionAndInvoices();
-        // Langsung tampilkan invoice terbaru jika ada
-        if (res.data?.invoice) {
-          setSelectedInvoiceModal(res.data.invoice);
+
+        // Jika metode QRIS dan invoice memiliki qrString dari Pakasir, buka Direct QRIS Modal
+        if (paymentMethod === 'QRIS' && res.data?.invoice?.qrString) {
+          setQrisModalData({
+            invoiceNumber: res.data.invoice.invoiceNumber,
+            amount: res.data.invoice.amount || finalCost,
+            tokenAmount: res.data.invoice.tokenAmount || tokenAmount,
+            qrString: res.data.invoice.qrString,
+          });
+          setIsQrisModalOpen(true);
+        } else {
+          setActionFeedback({
+            message: res.message || 'Top-up kuota token berhasil diproses!',
+            type: 'success',
+          });
+          if (res.data?.invoice) {
+            setSelectedInvoiceModal(res.data.invoice);
+          }
         }
       } else {
         setActionFeedback({
@@ -1027,6 +1047,29 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           </div>
         </div>
       )}
+
+      {/* Modal Direct QRIS Pakasir untuk Top-Up Kuota Token */}
+      <PakasirDirectQrisModal
+        isOpen={isQrisModalOpen}
+        onClose={() => {
+          setIsQrisModalOpen(false);
+          fetchSubscriptionAndInvoices();
+        }}
+        title="Top-Up Kuota Token Transaksi"
+        subtitle="Pindai QRIS dinamis di bawah untuk menyelesaikan pembayaran top-up kuota token pesanan toko Anda."
+        invoiceNumber={qrisModalData?.invoiceNumber || ''}
+        amount={qrisModalData?.amount || 0}
+        tokenAmount={qrisModalData?.tokenAmount || 0}
+        qrString={qrisModalData?.qrString || ''}
+        successButtonText="Selesai & Cek Kuota Baru"
+        onSuccess={() => {
+          fetchSubscriptionAndInvoices();
+        }}
+        onSuccessButtonClick={() => {
+          setIsQrisModalOpen(false);
+          fetchSubscriptionAndInvoices();
+        }}
+      />
     </div>
   );
 };

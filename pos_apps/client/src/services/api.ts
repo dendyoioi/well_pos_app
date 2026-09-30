@@ -1019,6 +1019,20 @@ export const api = {
     return res.json();
   },
 
+  checkPakasirInvoiceStatus: async (invoiceNumber: string): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch(`/api/saas/pakasir/status/${encodeURIComponent(invoiceNumber)}`);
+    return res.json();
+  },
+
+  simulatePakasirSandboxPayment: async (invoiceNumber: string): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch('/api/saas/pakasir/simulate-sandbox-pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceNumber }),
+    });
+    return res.json();
+  },
+
   // ----------------------------------------------------
   // LEVEL 1: SAAS PLATFORM (INTERNAL WELL POS)
   // ----------------------------------------------------

@@ -56,18 +56,22 @@ export interface TenantQuotaInfo {
  * Masa aktif selamanya (Never Expires).
  */
 export const calculateTenantTokenQuota = (tenant: any): TenantQuotaInfo => {
-  let totalQuota = 500; // Starter quota default
-  const planFeatures = tenant?.subscriptionPlan?.features;
-  if (planFeatures && typeof planFeatures === 'object' && (planFeatures as any).tokenQuota) {
-    totalQuota = Number((planFeatures as any).tokenQuota);
-  } else if (tenant?.customTokenQuota !== undefined && tenant?.customTokenQuota !== null) {
+  let totalQuota = 100; // Starter quota default (100 Bonus Token saat pendaftaran di-approve)
+  if (tenant?.tokenQuota !== undefined && tenant?.tokenQuota !== null && Number(tenant.tokenQuota) > 0) {
+    totalQuota = Number(tenant.tokenQuota);
+  } else if (tenant?.customTokenQuota !== undefined && tenant?.customTokenQuota !== null && Number(tenant.customTokenQuota) > 0) {
     totalQuota = Number(tenant.customTokenQuota);
-  } else if (tenant?.subscriptionPlan?.code === 'ENTERPRISE') {
-    totalQuota = 5000;
-  } else if (tenant?.subscriptionPlan?.code === 'PRO') {
-    totalQuota = 2000;
-  } else if (tenant?.subscriptionPlan?.code === 'STARTER' || tenant?.subscriptionPlan?.code === 'ENTERPRISE_LITE') {
-    totalQuota = 1000;
+  } else {
+    const planFeatures = tenant?.subscriptionPlan?.features;
+    if (planFeatures && typeof planFeatures === 'object' && (planFeatures as any).tokenQuota) {
+      totalQuota = Number((planFeatures as any).tokenQuota);
+    } else if (tenant?.subscriptionPlan?.code === 'ENTERPRISE') {
+      totalQuota = 5000;
+    } else if (tenant?.subscriptionPlan?.code === 'PRO') {
+      totalQuota = 2000;
+    } else if (tenant?.subscriptionPlan?.code === 'STARTER' || tenant?.subscriptionPlan?.code === 'ENTERPRISE_LITE') {
+      totalQuota = 1000;
+    }
   }
 
   const usedOrders = tenant?.ordersCount || tenant?._count?.orders || 0;
@@ -401,8 +405,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const handleApproveTenant = (tenantId: string, businessName: string) => {
     showConfirm({
       title: 'Setujui Pendaftaran Owner',
-      message: `Setujui pendaftaran akun pemilik "${businessName}" dan aktifkan akses login untuk pembuatan toko?`,
-      confirmText: '✅ Ya, Setujui Akun Owner',
+      message: `Setujui pendaftaran akun pemilik "${businessName}" dan aktifkan akses login? Sistem otomatis menerbitkan & melunasi faktur aktivasi pendaftaran Rp 99.000 serta mengkreditkan 100 Bonus Token Transaksi.`,
+      confirmText: '✅ Ya, Setujui Akun Owner (Rp 99rb + 100 Token)',
       variant: 'emerald',
       onConfirm: async () => {
         setActionLoadingId(tenantId);
@@ -410,10 +414,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           const res = await api.updateTenantStatus(tenantId, 'ACTIVE', `Disetujui oleh Super Admin (${currentUser?.name || 'Superadmin'})`);
           if (res.status === 'success') {
             const recipient = (res as any).emailNotification?.recipient || 'email klien';
-            setActionFeedback(`Pendaftaran pemilik "${businessName}" telah disetujui! 📧 Email konfirmasi aktivasi otomatis terkirim ke ${recipient}.`);
+            setActionFeedback(`Pendaftaran pemilik "${businessName}" telah disetujui! Faktur Rp 99.000 lunas & 100 Bonus Token aktif. 📧 Email konfirmasi aktivasi otomatis terkirim ke ${recipient}.`);
             showAlert(
-              'Pendaftaran Disetujui & Email Terkirim',
-              `Akun pemilik "${businessName}" telah berhasil disetujui.\n\n📧 Simulasi Email Terkirim:\nKepada: ${recipient}\nSubjek: Selamat! Akun Pemilik "${businessName}" Telah Disetujui & Aktif\n\nOwner sekarang dapat langsung masuk ke dashboard dan menyelesaikan wizard pembuatan toko.`,
+              'Pendaftaran Disetujui & 100 Token Aktif',
+              `Akun pemilik "${businessName}" telah berhasil disetujui.\n\nFaktur aktivasi pendaftaran Rp 99.000 telah lunas (PAID) dan 100 Bonus Token Transaksi telah masuk ke saldo kuota owner.\n\n📧 Simulasi Email Terkirim:\nKepada: ${recipient}\nSubjek: Selamat! Akun Pemilik "${businessName}" Telah Disetujui & Aktif\n\nOwner sekarang dapat langsung masuk ke dashboard dan menyelesaikan wizard pembuatan toko.`,
               'success'
             );
             if (detailModalOpen && selectedTenantDetail?.tenant?.id === tenantId) {
@@ -994,8 +998,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         return acc;
       }, 0);
 
-  // Model Bisnis Enterprise-Lite F&B: Setup Fee Rp 199.000 / Merchant Onboarding
-  const ONBOARDING_SETUP_FEE = 199000;
+  // Model Bisnis F&B Pay-As-You-Go: Setup Fee Rp 99.000 / Merchant Onboarding (+100 Bonus Token)
+  const ONBOARDING_SETUP_FEE = 99000;
   const approvedTenants = tenants.filter((t) => t.status === 'ACTIVE' || t.status === 'TRIAL');
   const totalSetupFee = approvedTenants.length * ONBOARDING_SETUP_FEE;
 
@@ -1105,7 +1109,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 Control Tower Kuota Fleksibel &amp; Merchant F&amp;B
               </h2>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Skema Pay-As-You-Go khusus gerai F&amp;B: biaya registrasi awal Rp 199.000 saat pendaftaran disetujui, dipadukan sistem token transaksi yang berlaku selamanya tanpa masa kedaluwarsa.
+                Skema Pay-As-You-Go khusus gerai F&amp;B: biaya registrasi awal Rp 99.000 (+100 Bonus Token) saat pendaftaran disetujui, dipadukan sistem token transaksi yang berlaku selamanya tanpa masa kedaluwarsa.
               </p>
             </div>
 
@@ -1116,7 +1120,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-slate-400">Setup Fee Awal</p>
-                  <p className="text-xs font-black text-emerald-300">Rp 199.000 / Gerai</p>
+                  <p className="text-xs font-black text-emerald-300">Rp 99.000 (+100 Token)</p>
                 </div>
               </div>
 
@@ -1169,7 +1173,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <CreditCard className="w-4 h-4 text-emerald-400" />
               </div>
               <p className="text-lg sm:text-xl font-black text-emerald-300">{formatRupiah(totalSetupFee)}</p>
-              <p className="text-[11px] text-slate-400 mt-1">Rp 199.000 × {approvedTenants.length} Merchant</p>
+              <p className="text-[11px] text-slate-400 mt-1">Rp 99.000 × {approvedTenants.length} Merchant</p>
             </div>
 
             {/* KPI 2: Sirkulasi Kuota Token */}
@@ -1540,7 +1544,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-300 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/60">
                                     <Check className="w-2.5 h-2.5 text-emerald-400" />
-                                    <span>Setup Fee Lunas (Rp 199rb)</span>
+                                    <span>Setup Fee Lunas (Rp 99rb + 100 Token)</span>
                                   </span>
                                 )}
                               </div>
@@ -2327,7 +2331,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <h3 className="text-xl font-black text-white">Master Paket Kuota Fleksibel &amp; Layanan SaaS</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Struktur lisensi terdesentralisasi khusus bisnis F&amp;B (Resto, Cafe, Kedai Kopi, Roastery, dan Cloud Kitchen).
-                  Merchant membayar <strong className="text-emerald-300">Biaya Setup Onboarding Rp 199.000</strong> di awal, lalu mengisi ulang kuota token pesanan kasir secara fleksibel tanpa ancaman hangus setiap akhir bulan.
+                  Merchant membayar <strong className="text-emerald-300">Biaya Setup Onboarding Rp 99.000 (+100 Bonus Token)</strong> di awal, lalu mengisi ulang kuota token pesanan kasir secara fleksibel tanpa ancaman hangus setiap akhir bulan.
                 </p>
               </div>
 
@@ -2374,9 +2378,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2.5">
                   <CreditCard className="w-4 h-4" />
                 </div>
-                <h4 className="text-xs font-bold text-white mb-1">Setup Fee Rp 199.000</h4>
+                <h4 className="text-xs font-bold text-white mb-1">Setup Fee Rp 99.000 (+100 Token)</h4>
                 <p className="text-[11px] text-slate-400 leading-normal">
-                  Satu kali bayar di awal untuk provisioning database tenant, pairing printer thermal, dan aktivasi gerai perdana.
+                  Satu kali bayar di awal untuk provisioning database tenant, pairing printer thermal, aktivasi gerai perdana, dan bonus 100 token transaksi.
                 </p>
               </div>
 

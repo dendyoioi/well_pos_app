@@ -257,6 +257,10 @@ export const getPlatformTenants = async (req: Request, res: Response) => {
           take: 1,
           include: { plan: true },
         },
+        invoices: {
+          where: { status: InvoiceStatus.PAID, tokenAmount: { gt: 0 } },
+          select: { tokenAmount: true },
+        },
         outlets: {
           select: { id: true, name: true, merchantName: true, industries: true, phone: true, address: true, isWarehouse: true, isActive: true, createdAt: true },
         },
@@ -282,6 +286,10 @@ export const getPlatformTenants = async (req: Request, res: Response) => {
           ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || owner.name || 'Owner'
           : 'Owner';
 
+        const totalPaidTokens = t.invoices
+          ? t.invoices.reduce((sum: number, inv: any) => sum + (inv.tokenAmount || 0), 0)
+          : 0;
+
         return {
           id: t.id,
           businessName: t.name,
@@ -300,6 +308,7 @@ export const getPlatformTenants = async (req: Request, res: Response) => {
           },
           outlets: t.outlets,
           subscriptionPlan: activeSub?.plan || null,
+          tokenQuota: totalPaidTokens > 0 ? totalPaidTokens : (activeSub?.plan?.features as any)?.tokenQuota || 100,
           outletsCount: t.outlets.length,
           usersCount: t.users.length,
           ordersCount: t._count.orders,
@@ -413,29 +422,54 @@ export const updateTenantStatus = async (req: Request, res: Response) => {
     let emailNotification = null;
 
     if (isApproved) {
-      // Catat invoice onboarding fee ke Buku Besar Platform
+      // Catat invoice aktivasi pendaftaran (Rp 99.000 + 100 Bonus Token) ke Buku Besar Platform
       const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randSuffix = Math.floor(1000 + Math.random() * 9000);
-      const invoiceNumber = `INV-SETUP/${todayStr}/${randSuffix}`;
       const defaultPlan = await prisma.subscriptionPlan.findFirst({ where: { code: 'PRO' } });
       const platformUser = (req as any).platformUser;
 
-      if (defaultPlan) {
+      const existingRegInvoice = await prisma.saaSInvoice.findFirst({
+        where: {
+          tenantId: id,
+          invoiceNumber: { startsWith: 'INV-REG' },
+        },
+      });
+
+      if (existingRegInvoice) {
+        // Update invoice pendaftaran menjadi PAID dengan 100 bonus token
+        await prisma.saaSInvoice.update({
+          where: { id: existingRegInvoice.id },
+          data: {
+            amount: new Prisma.Decimal(99000),
+            tokenAmount: 100,
+            status: InvoiceStatus.PAID,
+            paidAt: new Date(),
+            notes: 'Biaya Aktivasi Pendaftaran Akun Pemilik + 100 Bonus Token Transaksi (Disetujui Super Admin)',
+            payments: {
+              create: {
+                paymentChannel: 'APPROVAL_SUPERADMIN',
+                verifiedById: platformUser?.id || null,
+              },
+            },
+          },
+        }).catch((err) => console.error('Error updating existing reg invoice on approval:', err));
+      } else if (defaultPlan) {
+        const invoiceNumber = `INV-REG-${todayStr}-${randSuffix}`;
         await prisma.saaSInvoice.create({
           data: {
             invoiceNumber,
             tenantId: id,
             planId: defaultPlan.id,
-            amount: new Prisma.Decimal(199000),
-            tokenAmount: 500,
-            notes: 'Biaya Onboarding Setup & Verifikasi Registrasi Merchant F&B',
+            amount: new Prisma.Decimal(99000),
+            tokenAmount: 100,
+            notes: 'Biaya Aktivasi Pendaftaran Akun Pemilik + 100 Bonus Token Transaksi (Disetujui Super Admin)',
             status: InvoiceStatus.PAID,
             dueDate: new Date(),
             paidAt: new Date(),
             paymentUrl: `https://checkout.wellpos.id/pay/${invoiceNumber}`,
             payments: {
               create: {
-                paymentChannel: 'BANK_TRANSFER_MANUAL',
+                paymentChannel: 'APPROVAL_SUPERADMIN',
                 verifiedById: platformUser?.id || null,
               },
             },
@@ -457,7 +491,7 @@ export const updateTenantStatus = async (req: Request, res: Response) => {
         recipientName,
         subject: `Selamat! Akun Bisnis "${updated.name}" Telah Disetujui & Aktif`,
         sentAt: new Date().toISOString(),
-        message: `Halo ${recipientName}, pendaftaran bisnis "${updated.name}" telah diverifikasi dan disetujui oleh Admin SaaS. Masa uji coba PRO 14 hari telah aktif. Silakan masuk ke aplikasi untuk menyelesaikan pengaturan toko.`,
+        message: `Halo ${recipientName}, pendaftaran bisnis "${updated.name}" telah diverifikasi dan disetujui oleh Super Admin SaaS. Akun Anda telah aktif dengan biaya aktivasi Rp 99.000 dan bonus 100 token transaksi. Silakan masuk ke aplikasi untuk menyelesaikan pengaturan toko.`,
       };
 
       console.log(`\n======================================================`);

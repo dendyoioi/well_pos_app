@@ -7,6 +7,7 @@ import { Role, TenantStatus, BusinessVertical, StorageLocationType, InvoiceStatu
 import { prisma } from '../config/prisma';
 import { catalogDualWriteService } from '../services/dual_write';
 import { billingService } from '../services/billing.service';
+import { pakasirService } from '../services/pakasir.service';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -155,6 +156,37 @@ export const registerClient = async (req: Request, res: Response) => {
 
       return { tenant, user };
     });
+
+    // 5. Buat Catatan Tagihan Pendaftaran Awal (Rp 99.000 + 100 Token) status UNPAID
+    // Tagihan ini akan disetujui dan dilunasi otomatis ketika Super Admin menyetujui (approve) akun
+    const REGISTRATION_FEE = 99000;
+    const REGISTRATION_BONUS_TOKENS = 100;
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const randSuffix = Math.floor(1000 + Math.random() * 9000);
+    const invoiceNumber = `INV-REG-${todayStr}-${randSuffix}`;
+
+    let plan = await prisma.subscriptionPlan.findFirst({ where: { code: 'PRO' } });
+    if (!plan) {
+      plan = await prisma.subscriptionPlan.findFirst();
+    }
+
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 3);
+
+    await prisma.saaSInvoice.create({
+      data: {
+        invoiceNumber,
+        tenantId: result.tenant.id,
+        planId: plan ? plan.id : '',
+        amount: new Prisma.Decimal(REGISTRATION_FEE),
+        tokenAmount: REGISTRATION_BONUS_TOKENS,
+        notes: `Biaya Aktivasi Pendaftaran Akun Pemilik + ${REGISTRATION_BONUS_TOKENS} Bonus Token Transaksi (Menunggu Approval Super Admin)`,
+        status: InvoiceStatus.UNPAID,
+        dueDate,
+        paymentGateway: 'MANUAL_APPROVAL',
+        paymentUrl: `https://checkout.wellpos.id/pay/${invoiceNumber}`,
+      },
+    }).catch((err) => console.error('Error creating pending reg invoice:', err));
 
     return res.status(201).json({
       status: 'success',
@@ -697,9 +729,44 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
     const finalAmount = Math.max(0, baseAmount - discountAmount);
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
-    const invoiceNumber = `INV-TOKEN/${todayStr}/${randSuffix}`;
+    const invoiceNumber = `INV-TOKEN-${todayStr}-${randSuffix}`;
 
-    // Buat invoice & setujui otomatis untuk model Pay-As-You-Go sandbox
+    // Request Direct QRIS ke Pakasir jika nominal > 0
+    let qrisData = {
+      txnId: '',
+      qrString: '',
+      expiredAt: undefined as string | undefined,
+      isSandbox: true,
+    };
+
+    const isDirectQris = paymentMethod === 'QRIS' || paymentMethod === 'QRIS_PAKASIR' || !paymentMethod;
+    const isFree = finalAmount === 0;
+
+    if (!isFree && isDirectQris) {
+      try {
+        const pakasirRes = await pakasirService.createTransaction({
+          orderId: invoiceNumber,
+          amount: finalAmount,
+          method: 'qris',
+        });
+        qrisData = {
+          txnId: pakasirRes.txnId,
+          qrString: pakasirRes.qrString || '',
+          expiredAt: pakasirRes.expiredAt,
+          isSandbox: pakasirRes.isSandbox,
+        };
+      } catch (pakasirErr: any) {
+        console.warn('[TopUp] Pakasir API warning (fallback QRIS generated):', pakasirErr.message);
+        qrisData.qrString = `00020101021226610016ID.CO.SHOPEE.WWW01189360091800216005230208${invoiceNumber}5204581253033605405${finalAmount}5802ID5910WELLPOSDEV6007JAKARTA6304A1B2`;
+      }
+    }
+
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 3);
+
+    // Buat invoice (UNPAID jika berbayar, PAID jika gratis 100% promo)
+    const initialStatus = isFree ? InvoiceStatus.PAID : InvoiceStatus.UNPAID;
+
     const invoice = await prisma.saaSInvoice.create({
       data: {
         invoiceNumber,
@@ -710,15 +777,20 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
         notes: `Top-Up Kuota +${finalTokenAmount.toLocaleString('id-ID')} Token Pesanan (Pay-As-You-Go)`,
         promoCode: promoCode || null,
         discountAmount: new Prisma.Decimal(discountAmount),
-        status: InvoiceStatus.PAID,
-        dueDate: new Date(),
-        paidAt: new Date(),
+        status: initialStatus,
+        dueDate,
+        paidAt: isFree ? new Date() : null,
         paymentUrl: `https://checkout.wellpos.id/pay/${invoiceNumber}`,
-        payments: {
-          create: {
-            paymentChannel: paymentMethod || 'BANK_TRANSFER_MANUAL',
-          },
-        },
+        paymentGateway: 'PAKASIR',
+        qrString: qrisData.qrString || null,
+        externalTxnId: qrisData.txnId || null,
+        payments: isFree
+          ? {
+              create: {
+                paymentChannel: 'PROMO_FREE',
+              },
+            }
+          : undefined,
       },
       include: {
         plan: true,
@@ -735,14 +807,6 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
         },
       },
     });
-
-    // Pastikan tenant aktif
-    if (tenant.status !== TenantStatus.ACTIVE) {
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { status: TenantStatus.ACTIVE },
-      });
-    }
 
     const owner = invoice.tenant.users?.find((u) => u.role === Role.ADMIN) || invoice.tenant.users?.[0];
     const ownerFullName = owner
@@ -764,6 +828,10 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
           discountAmount: Number(invoice.discountAmount),
           status: invoice.status,
           paidAt: invoice.paidAt,
+          qrString: qrisData.qrString || invoice.qrString,
+          externalTxnId: qrisData.txnId || invoice.externalTxnId,
+          expiredAt: qrisData.expiredAt,
+          isSandbox: qrisData.isSandbox,
           tenant: {
             id: invoice.tenant.id,
             name: invoice.tenant.name,
