@@ -308,7 +308,7 @@ export const getPlatformTenants = async (req: Request, res: Response) => {
           },
           outlets: t.outlets,
           subscriptionPlan: activeSub?.plan || null,
-          tokenQuota: totalPaidTokens > 0 ? totalPaidTokens : (activeSub?.plan?.features as any)?.tokenQuota || 100,
+          tokenQuota: totalPaidTokens > 0 ? totalPaidTokens : 100,
           outletsCount: t.outlets.length,
           usersCount: t.users.length,
           ordersCount: t._count.orders,
@@ -431,7 +431,10 @@ export const updateTenantStatus = async (req: Request, res: Response) => {
       const existingRegInvoice = await prisma.saaSInvoice.findFirst({
         where: {
           tenantId: id,
-          invoiceNumber: { startsWith: 'INV-REG' },
+          OR: [
+            { invoiceNumber: { startsWith: 'INV-REG' } },
+            { invoiceNumber: { startsWith: 'INV-SETUP' } },
+          ],
         },
       });
 

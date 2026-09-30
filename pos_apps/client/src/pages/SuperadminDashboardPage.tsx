@@ -56,22 +56,13 @@ export interface TenantQuotaInfo {
  * Masa aktif selamanya (Never Expires).
  */
 export const calculateTenantTokenQuota = (tenant: any): TenantQuotaInfo => {
-  let totalQuota = 100; // Starter quota default (100 Bonus Token saat pendaftaran di-approve)
+  let totalQuota = 100; // Starter quota default (100 Bonus Token saat pendaftaran tenant di-approve)
   if (tenant?.tokenQuota !== undefined && tenant?.tokenQuota !== null && Number(tenant.tokenQuota) > 0) {
     totalQuota = Number(tenant.tokenQuota);
   } else if (tenant?.customTokenQuota !== undefined && tenant?.customTokenQuota !== null && Number(tenant.customTokenQuota) > 0) {
     totalQuota = Number(tenant.customTokenQuota);
   } else {
-    const planFeatures = tenant?.subscriptionPlan?.features;
-    if (planFeatures && typeof planFeatures === 'object' && (planFeatures as any).tokenQuota) {
-      totalQuota = Number((planFeatures as any).tokenQuota);
-    } else if (tenant?.subscriptionPlan?.code === 'ENTERPRISE') {
-      totalQuota = 5000;
-    } else if (tenant?.subscriptionPlan?.code === 'PRO') {
-      totalQuota = 2000;
-    } else if (tenant?.subscriptionPlan?.code === 'STARTER' || tenant?.subscriptionPlan?.code === 'ENTERPRISE_LITE') {
-      totalQuota = 1000;
-    }
+    totalQuota = 100; // Alokasi perdana pendaftaran tenant: 100 Token
   }
 
   const usedOrders = tenant?.ordersCount || tenant?._count?.orders || 0;
@@ -1120,7 +1111,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </div>
                 <div>
                   <p className="text-[10px] uppercase font-bold text-slate-400">Setup Fee Awal</p>
-                  <p className="text-xs font-black text-emerald-300">Rp 99.000 (+100 Token)</p>
+                  <p className="text-xs font-black text-emerald-300">Rp 99.000 / Tenant (+100 Token)</p>
                 </div>
               </div>
 
@@ -1173,7 +1164,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <CreditCard className="w-4 h-4 text-emerald-400" />
               </div>
               <p className="text-lg sm:text-xl font-black text-emerald-300">{formatRupiah(totalSetupFee)}</p>
-              <p className="text-[11px] text-slate-400 mt-1">Rp 99.000 × {approvedTenants.length} Merchant</p>
+              <p className="text-[11px] text-slate-400 mt-1">Rp 99.000 × {approvedTenants.length} Tenant</p>
             </div>
 
             {/* KPI 2: Sirkulasi Kuota Token */}
@@ -1539,12 +1530,12 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                 {isPending ? (
                                   <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-300 bg-amber-950/70 px-1.5 py-0.5 rounded border border-amber-800/60">
                                     <Clock className="w-2.5 h-2.5" />
-                                    <span>Setup Fee Pending</span>
+                                    <span>Setup Fee Pending (Rp 99rb)</span>
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-300 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/60">
                                     <Check className="w-2.5 h-2.5 text-emerald-400" />
-                                    <span>Setup Fee Lunas (Rp 99rb + 100 Token)</span>
+                                    <span>Setup Fee Lunas (Rp 99rb / Tenant + 100 Token)</span>
                                   </span>
                                 )}
                               </div>
@@ -1582,7 +1573,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                             <div className="space-y-1">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
                                 <Clock className="w-3 h-3 text-amber-400" />
-                                <span>Alokasi Perdana 500 Token</span>
+                                <span>Alokasi Perdana 100 Token</span>
                               </span>
                               <p className="text-[10px] text-slate-500">Aktif otomatis saat disetujui</p>
                             </div>
