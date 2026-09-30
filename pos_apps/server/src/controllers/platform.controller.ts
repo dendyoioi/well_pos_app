@@ -556,16 +556,28 @@ export const getPlatformPlans = async (_req: Request, res: Response) => {
 };
 
 const updateSubscriptionSchema = z.object({
-  planId: z.string().uuid('ID paket langganan tidak valid').optional(),
-  planCode: z.string().optional(),
-  durationDays: z.number().int().positive('Durasi hari harus positif').optional().nullable(),
-  neverExpires: z.boolean().optional().default(true),
-  tokenAmount: z.number().int().positive('Jumlah token harus positif').optional(),
-  notes: z.string().optional(),
-  paymentMethod: z.string().optional(),
-  promoCode: z.string().optional(),
-  discountAmount: z.number().optional(),
-  amount: z.number().optional(),
+  planId: z.string().optional().nullable(),
+  planCode: z.string().optional().nullable(),
+  durationDays: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number().int().positive('Durasi hari harus positif').optional().nullable()
+  ),
+  neverExpires: z.preprocess((val) => (typeof val === 'boolean' ? val : val === 'true'), z.boolean().optional().default(true)),
+  tokenAmount: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number().int().positive('Jumlah token harus positif').optional()
+  ),
+  notes: z.string().optional().nullable(),
+  paymentMethod: z.string().optional().nullable(),
+  promoCode: z.string().optional().nullable(),
+  discountAmount: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number().min(0).optional()
+  ),
+  amount: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number().min(0).optional()
+  ),
 });
 
 /**
@@ -592,20 +604,46 @@ export const updateTenantSubscription = async (req: Request, res: Response) => {
     }
 
     let plan = null;
-    if (planId) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(planId || '');
+    if (planId && isUuid) {
       plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
     } else if (planCode) {
       plan = await prisma.subscriptionPlan.findFirst({ where: { code: planCode } });
     }
 
+    // Jika planId bukan UUID di subscription_plans (misal ID paket token "pkg-enterprise-5000" dari katalog),
+    // atau plan belum ditemukan, gunakan paket langganan aktif tenant yang sudah ada
     if (!plan) {
-      return res.status(404).json({ status: 'error', message: 'Paket langganan tidak ditemukan' });
+      const activeTenantSub = await prisma.tenantSubscription.findFirst({
+        where: { tenantId: id, isActive: true },
+        include: { plan: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (activeTenantSub?.plan) {
+        plan = activeTenantSub.plan;
+      }
+    }
+
+    // Jika tenant belum memiliki langganan sama sekali, fallback ke paket default sistem
+    if (!plan) {
+      plan = (await prisma.subscriptionPlan.findFirst({
+        where: { code: { in: ['ENTERPRISE', 'PRO', 'STARTER', 'FREE'] } },
+        orderBy: { price: 'desc' },
+      })) || (await prisma.subscriptionPlan.findFirst());
+    }
+
+    if (!plan) {
+      return res.status(404).json({ status: 'error', message: 'Paket langganan dasar platform tidak ditemukan' });
     }
 
     let expiresAt: Date | null = null;
     if (!neverExpires && durationDays && durationDays > 0) {
       expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + durationDays);
+    } else {
+      // Untuk paket pay-as-you-go tanpa masa hangus, set ke tanggal jauh di masa depan (2099)
+      // agar aman dari database constraint NOT NULL dan masa aktif tetap valid selamanya
+      expiresAt = new Date('2099-12-31T23:59:59.999Z');
     }
 
     // Non-aktifkan langganan aktif sebelumnya
@@ -635,15 +673,23 @@ export const updateTenantSubscription = async (req: Request, res: Response) => {
     });
 
     // Catat invoice otomatis ke Buku Besar SaaS Platform
+    const config = readPlatformPaymentConfig();
+    const activeTokenPrice = typeof config.tokenPrice === 'number' && config.tokenPrice > 0 ? config.tokenPrice : 69;
     const platformUser = (req as any).platformUser;
     const finalTokenAmount = tokenAmount || (plan.features as any)?.tokenQuota || 0;
-    const calculatedAmount = finalTokenAmount > 0 ? finalTokenAmount * 110 : Number(plan.price);
+    const calculatedAmount = finalTokenAmount > 0 ? finalTokenAmount * activeTokenPrice : Number(plan.price);
     const finalDiscount = Number(discountAmount || 0);
     const finalAmount = Math.max(0, (amount !== undefined ? Number(amount) : calculatedAmount) - finalDiscount);
 
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
     const invoiceNumber = `INV-TOKEN/${todayStr}/${randSuffix}`;
+
+    let validVerifiedById: string | null = null;
+    if (platformUser?.id) {
+      const exists = await prisma.platformUser.findUnique({ where: { id: platformUser.id } }).catch(() => null);
+      if (exists) validVerifiedById = exists.id;
+    }
 
     await prisma.saaSInvoice.create({
       data: {
@@ -662,7 +708,7 @@ export const updateTenantSubscription = async (req: Request, res: Response) => {
         payments: {
           create: {
             paymentChannel: paymentMethod || 'BANK_TRANSFER_MANUAL',
-            verifiedById: platformUser?.id || null,
+            verifiedById: validVerifiedById,
           },
         },
       },

@@ -724,7 +724,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           handleOpenDetail(subTenantTarget.id);
         }
       } else {
-        showAlert('Gagal Memperbarui', res.message || 'Gagal memperbarui langganan/kuota', 'error');
+        const errorDetails = (res as any).errors
+          ? Object.entries((res as any).errors).map(([f, msgs]) => `${f}: ${(msgs as any).join?.(', ') || msgs}`).join('; ')
+          : '';
+        showAlert('Gagal Memperbarui', errorDetails ? `${res.message || 'Validasi gagal'}: ${errorDetails}` : (res.message || 'Gagal memperbarui langganan/kuota'), 'error');
       }
     } catch (err: any) {
       showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
