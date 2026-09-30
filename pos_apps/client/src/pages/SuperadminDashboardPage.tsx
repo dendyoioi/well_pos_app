@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldAlert,
   Store,
@@ -39,6 +39,9 @@ import {
   DollarSign,
   Printer,
   QrCode,
+  Plus,
+  Edit3,
+  Settings,
 } from 'lucide-react';
 import { api, platformStorage, authStorage } from '../services/api';
 import { TablePagination } from '../components/TablePagination';
@@ -197,9 +200,17 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   }, [promos.length]);
   // ----------------------------------------------------
   const [isPaymentConfigModalOpen, setIsPaymentConfigModalOpen] = useState(false);
+  const isPaymentConfigModalOpenRef = useRef(false);
+  useEffect(() => {
+    isPaymentConfigModalOpenRef.current = isPaymentConfigModalOpen;
+  }, [isPaymentConfigModalOpen]);
+
   const [paymentConfigLoading, setPaymentConfigLoading] = useState(false);
   const [paymentConfigSubmitting, setPaymentConfigSubmitting] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState({
+    tokenPrice: 69,
+    minTokenPurchase: 250,
+    qrisEnabled: true,
     merchantName: 'WELL POS PLATFORM HQ',
     nmid: 'ID1020030040050',
     bankName: 'BCA',
@@ -207,6 +218,56 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     accountHolder: 'PT WELL DIGITAL ASIA',
     imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021126580014ID.GO.QRIS.WWW01189360000201122334450215ID10200300400500303UME51440014ID.GO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6013JAKARTA+SELATAN61051219062070703A016304E1F4',
     notes: 'Scan dengan BCA Mobile, GoPay, OVO, Dana, ShopeePay, atau Livin Mandiri.',
+  });
+
+  // Dedicated draft form state to prevent background polling from clobbering active user edits
+  const [paymentConfigForm, setPaymentConfigForm] = useState({
+    tokenPrice: 69,
+    minTokenPurchase: 250,
+    qrisEnabled: true,
+    merchantName: 'WELL POS PLATFORM HQ',
+    nmid: 'ID1020030040050',
+    bankName: 'BCA',
+    accountNumber: '8830129381',
+    accountHolder: 'PT WELL DIGITAL ASIA',
+    imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021126580014ID.GO.QRIS.WWW01189360000201122334450215ID10200300400500303UME51440014ID.GO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6013JAKARTA+SELATAN61051219062070703A016304E1F4',
+    notes: 'Scan dengan BCA Mobile, GoPay, OVO, Dana, ShopeePay, atau Livin Mandiri.',
+  });
+
+  // ----------------------------------------------------
+  // KATALOG PAKET KUOTA PAY-AS-YOU-GO AKTIF (SUPERADMIN CRUD)
+  // ----------------------------------------------------
+  interface TokenPackageItem {
+    id: string;
+    name: string;
+    tokens: number;
+    price?: number;
+    badge?: string;
+    isPopular?: boolean;
+    description?: string;
+  }
+
+  const [tokenPackages, setTokenPackages] = useState<TokenPackageItem[]>([
+    { id: 'pkg-starter-250', name: 'Starter 250', tokens: 250, price: 0, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
+    { id: 'pkg-basic-1000', name: 'Basic 1.000', tokens: 1000, price: 0, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
+    { id: 'pkg-pro-2500', name: 'Pro 2.500', tokens: 2500, price: 0, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
+    { id: 'pkg-enterprise-5000', name: 'Enterprise 5.000', tokens: 5000, price: 0, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
+  ]);
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const isPackageModalOpenRef = useRef(false);
+  useEffect(() => {
+    isPackageModalOpenRef.current = isPackageModalOpen;
+  }, [isPackageModalOpen]);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+  const [packageSaving, setPackageSaving] = useState(false);
+  const [packageForm, setPackageForm] = useState({
+    name: '',
+    tokens: 1000,
+    price: 0,
+    useCustomPrice: false,
+    badge: '',
+    isPopular: false,
+    description: '',
   });
 
   // ----------------------------------------------------
@@ -310,13 +371,14 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     setLoadingData(true);
     setActionFeedback(null);
     try {
-      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes] = await Promise.all([
+      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes] = await Promise.all([
         api.getPlatformDashboard(),
         api.getPlatformTenants({ search: searchQuery, status: statusFilter }),
         api.getPlatformPlans(),
         api.getPlatformInvoices(),
         api.getPlatformUsers(),
         api.getPlatformPromos(),
+        api.getPlatformPaymentSettings(),
       ]);
 
       if (dashRes.status === 'success') {
@@ -336,6 +398,38 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       }
       if (promosRes.status === 'success') {
         setPromos(promosRes.data || []);
+      }
+      if (paymentRes.status === 'success' && paymentRes.data) {
+        const d = paymentRes.data;
+        const qris = d.qris || {};
+        const isQrisActive = typeof d.qrisEnabled === 'boolean'
+          ? d.qrisEnabled
+          : (typeof qris.enabled === 'boolean' ? qris.enabled : true);
+
+        const freshConfig = {
+          tokenPrice: typeof d.tokenPrice === 'number' && !isNaN(d.tokenPrice) ? d.tokenPrice : 69,
+          minTokenPurchase: typeof d.minTokenPurchase === 'number' && !isNaN(d.minTokenPurchase) ? d.minTokenPurchase : 250,
+          qrisEnabled: isQrisActive,
+          merchantName: qris.merchantName || d.merchantName || 'WELL POS PLATFORM HQ',
+          nmid: qris.nmid || d.nmid || 'ID1020030040050',
+          bankName: qris.bankName || d.bankName || 'BCA',
+          accountNumber: qris.accountNumber || d.accountNumber || '8830129381',
+          accountHolder: qris.accountHolder || d.accountHolder || 'PT WELL DIGITAL ASIA',
+          imageUrl: qris.imageUrl || d.imageUrl || '',
+          notes: qris.notes || d.notes || '',
+        };
+
+        // Always update dashboard presentation state
+        setPaymentConfig(freshConfig);
+
+        // DO NOT overwrite form draft state while the user has the modal open!
+        if (!isPaymentConfigModalOpenRef.current) {
+          setPaymentConfigForm(freshConfig);
+        }
+
+        if (Array.isArray(d.packages) && d.packages.length > 0 && !isPackageModalOpenRef.current) {
+          setTokenPackages(d.packages);
+        }
       }
     } catch (err: any) {
       console.error('Failed loading platform data:', err);
@@ -561,8 +655,11 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     setTopUpPromoCode('');
     setCustomTokenAmount(1000);
 
-    // Pilih paket default
-    if (plans.length > 0) {
+    // Pilih paket default dari katalog kustom aktif atau paket sistem
+    if (tokenPackages.length > 0) {
+      const popular = tokenPackages.find((p) => p.isPopular);
+      setSelectedPlanId(popular ? popular.id : tokenPackages[0].id);
+    } else if (plans.length > 0) {
       const matched = plans.find((p) => p.code === tenant.subscriptionPlan?.code);
       setSelectedPlanId(matched ? matched.id : plans[0].id);
     }
@@ -578,13 +675,19 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     setSubmittingSub(true);
     try {
       const effectiveDays = topUpNeverExpires ? null : selectedDurationDays;
-      let finalTokenAmount = topUpMode === 'CUSTOM' ? customTokenAmount : undefined;
+      const selectedPkg = tokenPackages.find((p) => p.id === selectedPlanId);
+      const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+      const pkgTokens = selectedPkg ? selectedPkg.tokens : ((selectedPlan?.features as any)?.tokenQuota || 1000);
+      const pkgPrice = selectedPkg
+        ? (typeof selectedPkg.price === 'number' && selectedPkg.price > 0 ? selectedPkg.price : selectedPkg.tokens * (paymentConfig.tokenPrice || 69))
+        : Number(selectedPlan?.price || 0);
+
+      let finalTokenAmount = topUpMode === 'CUSTOM' ? customTokenAmount : pkgTokens;
 
       const activePromo = promos.find((p) => p.code === topUpPromoCode && p.isActive);
-      const selectedPlan = plans.find((p) => p.id === selectedPlanId);
       const baseCost = topUpMode === 'CUSTOM'
-        ? customTokenAmount * 110
-        : Number(selectedPlan?.price || 0);
+        ? customTokenAmount * paymentConfig.tokenPrice
+        : pkgPrice;
 
       let discountAmount = 0;
       if (activePromo) {
@@ -594,8 +697,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         } else if (activePromo.type === 'DISCOUNT_FIXED') {
           discountAmount = Math.min(baseCost, activePromo.value);
         } else if (activePromo.type === 'BONUS_TOKENS') {
-          const baseToken = topUpMode === 'CUSTOM' ? customTokenAmount : ((selectedPlan?.features as any)?.tokenQuota || 0);
-          finalTokenAmount = baseToken + activePromo.value;
+          finalTokenAmount = (topUpMode === 'CUSTOM' ? customTokenAmount : pkgTokens) + activePromo.value;
         }
       }
 
@@ -802,20 +904,47 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   // HANDLER PENGATURAN QRIS STATIS PLATFORM & REKENING HQ
   // ----------------------------------------------------
   const handleOpenPaymentConfigModal = async () => {
+    // Populate form draft with latest paymentConfig
+    setPaymentConfigForm({
+      tokenPrice: paymentConfig.tokenPrice,
+      minTokenPurchase: paymentConfig.minTokenPurchase,
+      qrisEnabled: paymentConfig.qrisEnabled,
+      merchantName: paymentConfig.merchantName,
+      nmid: paymentConfig.nmid,
+      bankName: paymentConfig.bankName,
+      accountNumber: paymentConfig.accountNumber,
+      accountHolder: paymentConfig.accountHolder,
+      imageUrl: paymentConfig.imageUrl,
+      notes: paymentConfig.notes,
+    });
     setIsPaymentConfigModalOpen(true);
     try {
       setPaymentConfigLoading(true);
       const res = await api.getPlatformPaymentSettings();
       if (res.status === 'success' && res.data) {
-        setPaymentConfig({
-          merchantName: res.data.merchantName || '',
-          nmid: res.data.nmid || '',
-          bankName: res.data.bankName || '',
-          accountNumber: res.data.accountNumber || '',
-          accountHolder: res.data.accountHolder || '',
-          imageUrl: res.data.imageUrl || '',
-          notes: res.data.notes || '',
-        });
+        const d = res.data;
+        const qris = d.qris || {};
+        const isQrisActive = typeof d.qrisEnabled === 'boolean'
+          ? d.qrisEnabled
+          : (typeof qris.enabled === 'boolean' ? qris.enabled : true);
+
+        const fresh = {
+          tokenPrice: typeof d.tokenPrice === 'number' && !isNaN(d.tokenPrice) ? d.tokenPrice : 69,
+          minTokenPurchase: typeof d.minTokenPurchase === 'number' && !isNaN(d.minTokenPurchase) ? d.minTokenPurchase : 250,
+          qrisEnabled: isQrisActive,
+          merchantName: qris.merchantName || d.merchantName || 'WELL POS PLATFORM HQ',
+          nmid: qris.nmid || d.nmid || 'ID1020030040050',
+          bankName: qris.bankName || d.bankName || 'BCA',
+          accountNumber: qris.accountNumber || d.accountNumber || '8830129381',
+          accountHolder: qris.accountHolder || d.accountHolder || 'PT WELL DIGITAL ASIA',
+          imageUrl: qris.imageUrl || d.imageUrl || '',
+          notes: qris.notes || d.notes || '',
+        };
+        setPaymentConfig(fresh);
+        setPaymentConfigForm(fresh);
+        if (Array.isArray(d.packages) && d.packages.length > 0) {
+          setTokenPackages(d.packages);
+        }
       }
     } catch (err: any) {
       console.error('Gagal mengambil konfigurasi QRIS platform:', err);
@@ -828,10 +957,49 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     e.preventDefault();
     try {
       setPaymentConfigSubmitting(true);
-      const res = await api.updatePlatformPaymentSettings(paymentConfig);
+      const payload = {
+        tokenPrice: Number(paymentConfigForm.tokenPrice),
+        minTokenPurchase: Number(paymentConfigForm.minTokenPurchase),
+        qrisEnabled: Boolean(paymentConfigForm.qrisEnabled),
+        qris: {
+          enabled: Boolean(paymentConfigForm.qrisEnabled),
+          merchantName: paymentConfigForm.merchantName,
+          nmid: paymentConfigForm.nmid,
+          bankName: paymentConfigForm.bankName,
+          accountNumber: paymentConfigForm.accountNumber,
+          accountHolder: paymentConfigForm.accountHolder,
+          imageUrl: paymentConfigForm.imageUrl,
+          notes: paymentConfigForm.notes,
+        },
+        packages: tokenPackages,
+      };
+      const res = await api.updatePlatformPaymentSettings(payload);
       if (res.status === 'success') {
-        showAlert('Berhasil Disimpan', 'Pengaturan QRIS Statis & Rekening Bank Platform HQ berhasil diperbarui.', 'success');
+        const savedData = res.data || payload;
+        const qris = savedData.qris || {};
+        const isQrisActive = typeof savedData.qrisEnabled === 'boolean'
+          ? savedData.qrisEnabled
+          : (typeof qris.enabled === 'boolean' ? qris.enabled : Boolean(paymentConfigForm.qrisEnabled));
+
+        const updatedConfig = {
+          tokenPrice: typeof savedData.tokenPrice === 'number' && !isNaN(savedData.tokenPrice) ? savedData.tokenPrice : Number(paymentConfigForm.tokenPrice),
+          minTokenPurchase: typeof savedData.minTokenPurchase === 'number' && !isNaN(savedData.minTokenPurchase) ? savedData.minTokenPurchase : Number(paymentConfigForm.minTokenPurchase),
+          qrisEnabled: isQrisActive,
+          merchantName: qris.merchantName || paymentConfigForm.merchantName,
+          nmid: qris.nmid || paymentConfigForm.nmid,
+          bankName: qris.bankName || paymentConfigForm.bankName,
+          accountNumber: qris.accountNumber || paymentConfigForm.accountNumber,
+          accountHolder: qris.accountHolder || paymentConfigForm.accountHolder,
+          imageUrl: qris.imageUrl || paymentConfigForm.imageUrl,
+          notes: qris.notes || paymentConfigForm.notes,
+        };
+        setPaymentConfig(updatedConfig);
+        setPaymentConfigForm(updatedConfig);
+        if (Array.isArray(savedData.packages) && savedData.packages.length > 0) {
+          setTokenPackages(savedData.packages);
+        }
         setIsPaymentConfigModalOpen(false);
+        showAlert('Berhasil Disimpan', 'Pengaturan Biaya Token, Batas Minimum & QRIS Platform HQ berhasil diperbarui.', 'success');
       } else {
         showAlert('Gagal Menyimpan', res.message || 'Gagal menyimpan pengaturan QRIS', 'error');
       }
@@ -840,6 +1008,160 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     } finally {
       setPaymentConfigSubmitting(false);
     }
+  };
+
+  // ----------------------------------------------------
+  // HANDLER KATALOG PAKET KUOTA PAY-AS-YOU-GO (PENAMAAN SENDIRI & CRUD)
+  // ----------------------------------------------------
+  const handleOpenAddPackage = () => {
+    setEditingPackageId(null);
+    setPackageForm({
+      name: '',
+      tokens: 1000,
+      price: 1000 * (paymentConfig.tokenPrice || 69),
+      useCustomPrice: false,
+      badge: '',
+      isPopular: false,
+      description: '',
+    });
+    setIsPackageModalOpen(true);
+  };
+
+  const handleOpenEditPackage = (pkg: TokenPackageItem) => {
+    setEditingPackageId(pkg.id);
+    const hasCustomPrice = typeof pkg.price === 'number' && pkg.price > 0;
+    setPackageForm({
+      name: pkg.name || '',
+      tokens: pkg.tokens,
+      price: hasCustomPrice ? Number(pkg.price) : pkg.tokens * (paymentConfig.tokenPrice || 69),
+      useCustomPrice: hasCustomPrice,
+      badge: pkg.badge || '',
+      isPopular: Boolean(pkg.isPopular),
+      description: pkg.description || '',
+    });
+    setIsPackageModalOpen(true);
+  };
+
+  const handleSavePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!packageForm.name.trim()) {
+      showAlert('Validasi Gagal', 'Nama paket wajib diisi', 'error');
+      return;
+    }
+    const tokenCount = Number(packageForm.tokens);
+    if (!tokenCount || tokenCount <= 0) {
+      showAlert('Validasi Gagal', 'Jumlah token harus minimal 1', 'error');
+      return;
+    }
+
+    try {
+      setPackageSaving(true);
+      const computedPrice = packageForm.useCustomPrice && Number(packageForm.price) > 0 ? Number(packageForm.price) : 0;
+
+      let updatedList: TokenPackageItem[] = [];
+      if (editingPackageId) {
+        updatedList = tokenPackages.map((p) =>
+          p.id === editingPackageId
+            ? {
+                ...p,
+                name: packageForm.name.trim(),
+                tokens: tokenCount,
+                price: computedPrice,
+                badge: packageForm.badge.trim(),
+                isPopular: packageForm.isPopular,
+                description: packageForm.description.trim(),
+              }
+            : p
+        );
+      } else {
+        const newPkg: TokenPackageItem = {
+          id: `pkg-${Date.now()}`,
+          name: packageForm.name.trim(),
+          tokens: tokenCount,
+          price: computedPrice,
+          badge: packageForm.badge.trim(),
+          isPopular: packageForm.isPopular,
+          description: packageForm.description.trim(),
+        };
+        updatedList = [...tokenPackages, newPkg];
+      }
+
+      const payload = {
+        tokenPrice: Number(paymentConfig.tokenPrice),
+        minTokenPurchase: Number(paymentConfig.minTokenPurchase),
+        qrisEnabled: Boolean(paymentConfig.qrisEnabled),
+        qris: {
+          enabled: Boolean(paymentConfig.qrisEnabled),
+          merchantName: paymentConfig.merchantName,
+          nmid: paymentConfig.nmid,
+          bankName: paymentConfig.bankName,
+          accountNumber: paymentConfig.accountNumber,
+          accountHolder: paymentConfig.accountHolder,
+          imageUrl: paymentConfig.imageUrl,
+          notes: paymentConfig.notes,
+        },
+        packages: updatedList,
+      };
+
+      const res = await api.updatePlatformPaymentSettings(payload);
+      if (res.status === 'success') {
+        setTokenPackages(updatedList);
+        setIsPackageModalOpen(false);
+        showAlert(
+          'Katalog Diperbarui',
+          editingPackageId
+            ? `Paket "${packageForm.name}" berhasil diperbarui.`
+            : `Paket baru "${packageForm.name}" berhasil dibuat dan ditambahkan ke katalog aktif.`,
+          'success'
+        );
+      } else {
+        showAlert('Gagal Menyimpan', res.message || 'Gagal menyimpan paket kuota', 'error');
+      }
+    } catch (err: any) {
+      showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
+    } finally {
+      setPackageSaving(false);
+    }
+  };
+
+  const handleDeletePackage = (pkg: TokenPackageItem) => {
+    showConfirm({
+      title: 'Hapus Paket Kuota?',
+      message: `Apakah Anda yakin ingin menghapus paket "${pkg.name}" (${pkg.tokens.toLocaleString('id-ID')} token)? Paket ini tidak akan lagi tampil di halaman Top-Up Backoffice merchant.`,
+      confirmText: 'Ya, Hapus Paket',
+      cancelText: 'Batal',
+      variant: 'rose',
+      onConfirm: async () => {
+        try {
+          const updatedList = tokenPackages.filter((p) => p.id !== pkg.id);
+          const payload = {
+            tokenPrice: Number(paymentConfig.tokenPrice),
+            minTokenPurchase: Number(paymentConfig.minTokenPurchase),
+            qrisEnabled: Boolean(paymentConfig.qrisEnabled),
+            qris: {
+              enabled: Boolean(paymentConfig.qrisEnabled),
+              merchantName: paymentConfig.merchantName,
+              nmid: paymentConfig.nmid,
+              bankName: paymentConfig.bankName,
+              accountNumber: paymentConfig.accountNumber,
+              accountHolder: paymentConfig.accountHolder,
+              imageUrl: paymentConfig.imageUrl,
+              notes: paymentConfig.notes,
+            },
+            packages: updatedList,
+          };
+          const res = await api.updatePlatformPaymentSettings(payload);
+          if (res.status === 'success') {
+            setTokenPackages(updatedList);
+            showAlert('Berhasil Dihapus', `Paket "${pkg.name}" telah dihapus dari katalog aktif.`, 'success');
+          } else {
+            showAlert('Gagal Menghapus', res.message || 'Gagal menghapus paket', 'error');
+          }
+        } catch (err: any) {
+          showAlert('Kesalahan Sistem', err.message || 'Gagal menghapus paket', 'error');
+        }
+      },
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -2329,6 +2651,14 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  onClick={handleOpenPaymentConfigModal}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold rounded-xl text-xs border border-indigo-500/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <Coins className="w-4 h-4 text-amber-400" />
+                  <span>⚙️ Kelola Biaya Token &amp; QRIS</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     const target = tenants.find((t) => t.status === 'ACTIVE') || tenants[0];
                     if (target) {
@@ -2386,45 +2716,68 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               </div>
             </div>
 
-            {/* Plan Cards Grid */}
+            {/* Plan Cards Grid - Dynamic Customizable Token Packages */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-black text-white flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-amber-400" />
-                  <span>Katalog Paket Kuota Pay-As-You-Go Aktif</span>
-                </h4>
-                <span className="text-xs text-slate-400">Pilih paket untuk alokasi dan simulasi ke akun merchant</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h4 className="text-sm font-black text-white flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-amber-400" />
+                    <span>Katalog Paket Kuota Pay-As-You-Go Aktif</span>
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Buat paket kustom, beri penamaan sendiri, dan tentukan kuota token yang tersedia untuk dibeli oleh merchant.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOpenAddPackage}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>+ Buat Paket Baru</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenPaymentConfigModal}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Atur Biaya &amp; QRIS</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {plans.map((p) => {
-                  const features = (p.features && typeof p.features === 'object') ? p.features : {};
-                  const tokenQuota = features.tokenQuota || (p.code === 'PRO' ? 2000 : p.code === 'ENTERPRISE' ? 5000 : p.code === 'STARTER' ? 1000 : 500);
-                  const isPopular = p.code === 'PRO' || features.isPopular;
-                  const isScale = p.code === 'ENTERPRISE';
-                  const costPerOrder = tokenQuota > 0 && p.price > 0 ? Math.round(Number(p.price) / tokenQuota) : 0;
+                {tokenPackages.map((pkg) => {
+                  const tokenQuota = Number(pkg.tokens) || 250;
+                  const isPopular = Boolean(pkg.isPopular);
+                  const customPrice = typeof pkg.price === 'number' && pkg.price > 0 ? pkg.price : 0;
+                  const finalPrice = customPrice > 0 ? customPrice : tokenQuota * (paymentConfig.tokenPrice || 69);
+                  const costPerOrder = tokenQuota > 0 && finalPrice > 0 ? Math.round(finalPrice / tokenQuota) : paymentConfig.tokenPrice;
+                  const badgeText = pkg.badge || (isPopular ? '⭐ Paling Diminati' : null);
 
                   return (
                     <div
-                      key={p.id}
+                      key={pkg.id}
                       className={`p-5 rounded-2xl border transition-all flex flex-col justify-between relative ${
                         isPopular
                           ? 'bg-gradient-to-b from-indigo-950/60 to-slate-950 border-indigo-500/70 shadow-xl shadow-indigo-950/40 ring-1 ring-indigo-500/40'
-                          : isScale
-                          ? 'bg-gradient-to-b from-purple-950/40 to-slate-950 border-purple-800/60 shadow-lg'
                           : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      {isPopular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md">
-                          ⭐ Paling Diminati
+                      {badgeText && (
+                        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-white text-[10px] font-black uppercase tracking-wider shadow-md ${
+                          isPopular ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
+                        }`}>
+                          {badgeText}
                         </div>
                       )}
 
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
-                            {p.code}
+                            PAY-AS-YOU-GO
                           </span>
                           <span className="text-[10px] font-bold text-amber-300 flex items-center gap-0.5">
                             <Infinity className="w-3 h-3 text-amber-400" />
@@ -2432,7 +2785,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                           </span>
                         </div>
 
-                        <h5 className="text-sm font-black text-white mb-2">{p.name}</h5>
+                        <h5 className="text-sm font-black text-white mb-2 line-clamp-1" title={pkg.name}>
+                          {pkg.name}
+                        </h5>
 
                         {/* Token Callout */}
                         <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800/80 mb-4">
@@ -2444,7 +2799,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                           </div>
                           <div className="flex items-center justify-between mt-1 text-[11px]">
                             <span className="text-white font-extrabold">
-                              {p.price > 0 ? formatRupiah(p.price) : 'Gratis'}
+                              {formatRupiah(finalPrice)}
                             </span>
                             {costPerOrder > 0 && (
                               <span className="text-emerald-400 font-bold">
@@ -2454,51 +2809,67 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                           </div>
                         </div>
 
-                        {/* Limits & Features */}
-                        <div className="space-y-2 text-xs text-slate-300 mb-6">
-                          <div className="flex items-center gap-2">
-                            <Store className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                            <span>Maksimal <strong className="text-white">{p.maxOutlets} Gerai</strong> F&amp;B / Gudang</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                            <span>Maksimal <strong className="text-white">{p.maxCashiers} Kasir</strong> Aktif</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                            <span>Resep BOM &amp; Pemotongan Stok Bahan</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                            <span>Cetak Struk Thermal &amp; WhatsApp</span>
-                          </div>
-                          {p.code !== 'FREE' && (
-                            <div className="flex items-center gap-2">
+                        {/* Description or Features */}
+                        {pkg.description ? (
+                          <p className="text-xs text-slate-400 mb-4 line-clamp-2" title={pkg.description}>
+                            {pkg.description}
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5 text-xs text-slate-300 mb-4">
+                            <div className="flex items-center gap-1.5">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span>Multi-Gudang &amp; Transfer Stok Pasokan</span>
+                              <span>Masa aktif selamanya</span>
                             </div>
-                          )}
-                        </div>
+                            <div className="flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <span>Semua fitur Backoffice &amp; POS aktif</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = tenants.find((t) => t.status === 'ACTIVE') || tenants[0];
-                          if (target) {
-                            handleOpenSubModal(target);
-                            setSelectedPlanId(p.id);
-                          }
-                        }}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
-                          isPopular
-                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                        }`}
-                      >
-                        <Coins className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Suntik Paket ke Merchant</span>
-                      </button>
+                      <div className="space-y-2 pt-2 border-t border-slate-900">
+                        {/* Edit & Delete Action Buttons */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditPackage(pkg)}
+                            className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 border border-slate-700 cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3 text-indigo-400" />
+                            <span>Edit Paket</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePackage(pkg)}
+                            className="py-1.5 px-2.5 bg-slate-800/80 hover:bg-rose-950/50 text-slate-400 hover:text-rose-400 rounded-lg text-[11px] font-bold transition-all border border-slate-700 hover:border-rose-800/50 cursor-pointer"
+                            title="Hapus Paket"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* Suntik Kuota ke Merchant */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const target = tenants.find((t) => t.status === 'ACTIVE') || tenants[0];
+                            if (target) {
+                              handleOpenSubModal(target);
+                              setTopUpMode('CUSTOM');
+                              setCustomTokenAmount(tokenQuota);
+                            }
+                          }}
+                          className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                            isPopular
+                              ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                          }`}
+                        >
+                          <Coins className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Suntik ke Merchant</span>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -2534,9 +2905,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     <tr>
                       <td className="py-2.5 px-3 font-semibold text-white">Biaya per Order Selesai</td>
                       <td className="py-2.5 px-3 text-slate-400">Rp 0 (Trial)</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">Rp 99 / order</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">Rp 110 / order</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-black">Rp 90 / order (Termurah)</td>
+                      <td className="py-2.5 px-3 text-emerald-400 font-bold">Rp 69 / order</td>
+                      <td className="py-2.5 px-3 text-emerald-400 font-bold">Rp {paymentConfig.tokenPrice} / order</td>
+                      <td className="py-2.5 px-3 text-emerald-400 font-black">Rp 69 / order (Termurah)</td>
                     </tr>
                     <tr>
                       <td className="py-2.5 px-3 font-semibold text-white">Masa Berlaku Kuota</td>
@@ -3606,12 +3977,15 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       ========================================================================= */}
       {subModalOpen && subTenantTarget && (() => {
         const currentQuota = calculateTenantTokenQuota(subTenantTarget);
-        const selectedPlan = plans.find((p) => p.id === selectedPlanId) || plans[0];
-        const selectedPlanFeatures = (selectedPlan?.features && typeof selectedPlan.features === 'object') ? (selectedPlan.features as any) : {};
-        const planTokenAmount = selectedPlanFeatures.tokenQuota || (selectedPlan?.code === 'PRO' ? 2000 : selectedPlan?.code === 'ENTERPRISE' ? 5000 : selectedPlan?.code === 'STARTER' ? 1000 : 500);
+        const selectedPkg = tokenPackages.find((p) => p.id === selectedPlanId);
+        const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+        const planTokenAmount = selectedPkg ? selectedPkg.tokens : ((selectedPlan?.features as any)?.tokenQuota || 1000);
+        const planCost = selectedPkg
+          ? (typeof selectedPkg.price === 'number' && selectedPkg.price > 0 ? selectedPkg.price : selectedPkg.tokens * (paymentConfig.tokenPrice || 69))
+          : Number(selectedPlan?.price || 0);
 
         const activeSelectedPromo = promos.find((p) => p.code === topUpPromoCode && p.isActive);
-        const rawCost = topUpMode === 'CUSTOM' ? customTokenAmount * 110 : Number(selectedPlan?.price || 0);
+        const rawCost = topUpMode === 'CUSTOM' ? customTokenAmount * paymentConfig.tokenPrice : planCost;
         let promoDiscount = 0;
         let bonusTokenVal = 0;
         if (activeSelectedPromo) {
@@ -3628,7 +4002,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         const baseAddedTokens = topUpMode === 'CUSTOM' ? customTokenAmount : planTokenAmount;
         const addedTokens = baseAddedTokens + bonusTokenVal;
         const projectedNewTotal = currentQuota.remainingQuota + addedTokens;
-        const estimatedCustomPrice = customTokenAmount * 110;
+        const estimatedCustomPrice = customTokenAmount * paymentConfig.tokenPrice;
 
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -3714,16 +4088,17 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   {/* Mode 1: Pilihan Paket Instan */}
                   {topUpMode === 'PACKAGES' ? (
                     <div className="space-y-2">
-                      {plans.map((p) => {
-                        const isSelected = selectedPlanId === p.id;
-                        const features = (p.features && typeof p.features === 'object') ? p.features : {};
-                        const tokens = features.tokenQuota || (p.code === 'PRO' ? 2000 : p.code === 'ENTERPRISE' ? 5000 : p.code === 'STARTER' ? 1000 : 500);
-                        const costPerOrder = tokens > 0 && p.price > 0 ? Math.round(Number(p.price) / tokens) : 0;
+                      {tokenPackages.map((pkg) => {
+                        const isSelected = selectedPlanId === pkg.id;
+                        const tokens = pkg.tokens;
+                        const customPrice = typeof pkg.price === 'number' && pkg.price > 0 ? pkg.price : 0;
+                        const finalPrice = customPrice > 0 ? customPrice : tokens * (paymentConfig.tokenPrice || 69);
+                        const costPerOrder = tokens > 0 && finalPrice > 0 ? Math.round(finalPrice / tokens) : paymentConfig.tokenPrice;
 
                         return (
                           <div
-                            key={p.id}
-                            onClick={() => setSelectedPlanId(p.id)}
+                            key={pkg.id}
+                            onClick={() => setSelectedPlanId(pkg.id)}
                             className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                               isSelected
                                 ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/50'
@@ -3738,21 +4113,26 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                               </div>
                               <div>
                                 <p className="font-bold text-xs text-white flex items-center gap-1.5">
-                                  <span>{p.name}</span>
-                                  {p.code === 'PRO' && (
+                                  <span>{pkg.name}</span>
+                                  {pkg.isPopular && (
                                     <span className="px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-black uppercase">
                                       Populer
                                     </span>
                                   )}
+                                  {pkg.badge && !pkg.isPopular && (
+                                    <span className="px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 text-[9px] font-bold">
+                                      {pkg.badge}
+                                    </span>
+                                  )}
                                 </p>
                                 <p className="text-[11px] text-amber-300/90 font-medium">
-                                  +{tokens.toLocaleString('id-ID')} Token Order &bull; Maks. {p.maxOutlets} Toko
+                                  +{tokens.toLocaleString('id-ID')} Token Order &bull; Tanpa Masa Hangus
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
                               <span className="font-black text-xs text-indigo-300 block">
-                                {p.price > 0 ? formatRupiah(p.price) : 'Gratis'}
+                                {formatRupiah(finalPrice)}
                               </span>
                               {costPerOrder > 0 && (
                                 <span className="text-[10px] text-emerald-400 font-semibold">
@@ -3806,7 +4186,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                       </div>
 
                       <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Estimasi Biaya (@ Rp 110/order):</span>
+                        <span className="text-slate-400">Estimasi Biaya (@ Rp {paymentConfig.tokenPrice}/order):</span>
                         <span className="font-black text-amber-300">{formatRupiah(estimatedCustomPrice)}</span>
                       </div>
                     </div>
@@ -4452,11 +4832,11 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       )}
 
       {/* =========================================================================
-          MODAL: PENGATURAN QRIS STATIS PLATFORM & REKENING HQ (SUPERADMIN)
+          MODAL: PENGATURAN BIAYA TOKEN, PAKET & QRIS PLATFORM (SUPERADMIN)
       ========================================================================= */}
       {isPaymentConfigModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200">
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 max-h-[92vh] overflow-y-auto">
             <button
               type="button"
               onClick={() => setIsPaymentConfigModalOpen(false)}
@@ -4467,12 +4847,12 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
-                <QrCode className="w-5 h-5" />
+                <Coins className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">Pengaturan QRIS &amp; Rekening Platform HQ</h3>
+                <h3 className="text-lg font-black text-white">Pengaturan Biaya Token, Paket &amp; QRIS Platform</h3>
                 <p className="text-xs text-slate-400">
-                  Data ini ditampilkan langsung ke seluruh Owner saat melakukan Top-Up Token di portal Backoffice.
+                  Kelola tarif per token, kuota minimal beli, sakelar aktif/nonaktif QRIS, dan kredensial QRIS Platform HQ.
                 </p>
               </div>
             </div>
@@ -4484,112 +4864,178 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               </div>
             ) : (
               <form onSubmit={handleSavePaymentConfig} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Nama Merchant QRIS:</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Contoh: WELL POS PLATFORM HQ"
-                      value={paymentConfig.merchantName}
-                      onChange={(e) => setPaymentConfig({ ...paymentConfig, merchantName: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                    />
+                {/* Bagian 1: Pengaturan Biaya Token & Minimum Beli */}
+                <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">
+                      1. Tarif Token &amp; Batas Minimum Pembelian
+                    </h4>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">NMID (National Merchant ID):</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Contoh: ID1020030040050"
-                      value={paymentConfig.nmid}
-                      onChange={(e) => setPaymentConfig({ ...paymentConfig, nmid: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">
+                        Harga per Token (Rp):
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">Rp</span>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={paymentConfigForm.tokenPrice}
+                          onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, tokenPrice: Math.max(1, Number(e.target.value)) })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Tarif acuan saat merchant beli kuota (default: Rp 69/token).
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">
+                        Minimum Pembelian Token:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        required
+                        value={paymentConfigForm.minTokenPurchase}
+                        onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, minTokenPurchase: Math.max(1, Number(e.target.value)) })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-amber-400"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Batas terkecil order token kasir (default: 250 token).
+                      </span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Nama Bank:</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Contoh: BCA"
-                      value={paymentConfig.bankName}
-                      onChange={(e) => setPaymentConfig({ ...paymentConfig, bankName: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Nomor Rekening:</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Contoh: 8830129381"
-                      value={paymentConfig.accountNumber}
-                      onChange={(e) => setPaymentConfig({ ...paymentConfig, accountNumber: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Atas Nama:</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Contoh: PT WELL DIGITAL ASIA"
-                      value={paymentConfig.accountHolder}
-                      onChange={(e) => setPaymentConfig({ ...paymentConfig, accountHolder: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                    />
+                  <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-[11px] text-slate-300 flex items-center justify-between">
+                    <span className="text-slate-400">Simulasi Order Minimal:</span>
+                    <span className="font-mono font-black text-amber-300">
+                      {paymentConfigForm.minTokenPurchase.toLocaleString('id-ID')} token × Rp {paymentConfigForm.tokenPrice} = {formatRupiah(paymentConfigForm.tokenPrice * paymentConfigForm.minTokenPurchase)}
+                    </span>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">URL Gambar QRIS Statis:</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://..."
-                    value={paymentConfig.imageUrl}
-                    onChange={(e) => setPaymentConfig({ ...paymentConfig, imageUrl: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
-                  />
-                  <span className="text-[10px] text-slate-500 mt-1 block">
-                    URL gambar barcode QRIS statis standar QRIS/BI yang dapat dipindai oleh semua aplikasi m-banking dan e-wallet.
-                  </span>
+                {/* Bagian 2: Sakelar Pembayaran QRIS */}
+                <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="w-4 h-4 text-indigo-400" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-indigo-400">
+                        2. Status Metode Pembayaran QRIS
+                      </h4>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        paymentConfigForm.qrisEnabled
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      {paymentConfigForm.qrisEnabled ? '● QRIS AKTIF' : '○ NONAKTIF (MAINTENANCE)'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                    <div>
+                      <p className="text-xs font-bold text-white">Aktifkan Saluran Pembayaran QRIS</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Transfer Manual ditiadakan permanen. Jika nonaktif, Owner tidak dapat melakukan checkout kuota.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentConfigForm({ ...paymentConfigForm, qrisEnabled: !paymentConfigForm.qrisEnabled })}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        paymentConfigForm.qrisEnabled ? 'bg-indigo-600' : 'bg-slate-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          paymentConfigForm.qrisEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Live Preview QR */}
-                {paymentConfig.imageUrl && (
-                  <div className="bg-slate-950 border border-slate-800 p-3 rounded-2xl flex items-center gap-4">
-                    <div className="bg-white p-2 rounded-xl shadow-xs shrink-0">
-                      <img
-                        src={paymentConfig.imageUrl}
-                        alt="QRIS Preview"
-                        className="w-16 h-16 object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
+                {/* Bagian 3: Kredensial QRIS Platform HQ */}
+                <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Store className="w-4 h-4 text-slate-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                      3. Kredensial &amp; Barcode QRIS Platform HQ
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Nama Merchant QRIS:</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: WELL POS PLATFORM HQ"
+                        value={paymentConfigForm.merchantName}
+                        onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, merchantName: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
                       />
                     </div>
-                    <div className="text-xs">
-                      <p className="font-bold text-white">{paymentConfig.merchantName || 'Pratinjau Merchant'}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">NMID: {paymentConfig.nmid || '-'}</p>
-                      <p className="text-[10px] text-emerald-400 mt-0.5">✔ Tampil langsung di modal Top-Up Owner</p>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">NMID (National Merchant ID):</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: ID1020030040050"
+                        value={paymentConfigForm.nmid}
+                        onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, nmid: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                      />
                     </div>
                   </div>
-                )}
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Catatan / Panduan untuk Merchant:</label>
-                  <textarea
-                    rows={2}
-                    value={paymentConfig.notes}
-                    onChange={(e) => setPaymentConfig({ ...paymentConfig, notes: e.target.value })}
-                    placeholder="Petunjuk transfer / scan untuk merchant..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 resize-none"
-                  />
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">URL Gambar QRIS Statis:</label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://..."
+                      value={paymentConfigForm.imageUrl}
+                      onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, imageUrl: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  {paymentConfigForm.imageUrl && (
+                    <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-4">
+                      <div className="bg-white p-2 rounded-xl shadow-xs shrink-0">
+                        <img
+                          src={paymentConfigForm.imageUrl}
+                          alt="QRIS Preview"
+                          className="w-16 h-16 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                      <div className="text-xs">
+                        <p className="font-bold text-white">{paymentConfigForm.merchantName || 'Pratinjau Merchant'}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">NMID: {paymentConfigForm.nmid || '-'}</p>
+                        <p className="text-[10px] text-emerald-400 mt-0.5">✔ Tampil otomatis di modal Top-Up Owner</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Catatan / Panduan untuk Merchant:</label>
+                    <textarea
+                      rows={2}
+                      value={paymentConfigForm.notes}
+                      onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, notes: e.target.value })}
+                      placeholder="Petunjuk scan QRIS untuk merchant..."
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 resize-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-2 flex items-center gap-3">
@@ -4606,11 +5052,228 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     {paymentConfigSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    <span>{paymentConfigSubmitting ? 'Menyimpan...' : 'Simpan Konfigurasi QRIS'}</span>
+                    <span>{paymentConfigSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
                   </button>
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: KELOLA PAKET KUOTA PAY-AS-YOU-GO (TAMBAH / EDIT DENGAN NAMA SENDIRI)
+      ========================================================================= */}
+      {isPackageModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 max-h-[92vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setIsPackageModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <Layers className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">
+                  {editingPackageId ? 'Edit Paket Kuota Pay-As-You-Go' : 'Buat Paket Kuota Baru'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Tentukan penamaan paket sendiri, kuota token, harga, dan badge penanda untuk katalog merchant.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSavePackage} className="space-y-4">
+              {/* Nama Paket (Bebas / Penamaan Sendiri) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Nama Paket <span className="text-rose-400">*</span> (Bebas / Penamaan Sendiri)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Starter 250, Paket Warung Mantap, Paket Ramadhan Cuan..."
+                  value={packageForm.name}
+                  onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Nama ini akan tampil di menu Top-Up Owner Backoffice pada katalog pilihan paket kuota.
+                </p>
+              </div>
+
+              {/* Jumlah Kuota Token */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Jumlah Kuota Token (Order Selesai) <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    step={1}
+                    value={packageForm.tokens}
+                    onChange={(e) => {
+                      const val = Math.max(1, Number(e.target.value) || 0);
+                      setPackageForm((prev) => ({
+                        ...prev,
+                        tokens: val,
+                        price: prev.useCustomPrice ? prev.price : val * (paymentConfig.tokenPrice || 69),
+                      }));
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl pl-3.5 pr-16 py-2.5 text-xs text-white font-bold outline-none transition-colors"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">
+                    Token
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-slate-400">
+                  <Infinity className="w-3 h-3 text-amber-400" />
+                  <span>Dapat digunakan untuk {Number(packageForm.tokens).toLocaleString('id-ID')} transaksi order tanpa batas masa hangus.</span>
+                </div>
+              </div>
+
+              {/* Model Penentuan Harga */}
+              <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">
+                    Harga Paket (Rp)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextUseCustom = !packageForm.useCustomPrice;
+                      setPackageForm({
+                        ...packageForm,
+                        useCustomPrice: nextUseCustom,
+                        price: nextUseCustom
+                          ? (packageForm.price > 0 ? packageForm.price : packageForm.tokens * (paymentConfig.tokenPrice || 69))
+                          : packageForm.tokens * (paymentConfig.tokenPrice || 69),
+                      });
+                    }}
+                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                  >
+                    {packageForm.useCustomPrice ? 'Gunakan Hitungan Standar (@ Rp ' + paymentConfig.tokenPrice + ')' : 'Atur Harga Kustom / Promo'}
+                  </button>
+                </div>
+
+                {!packageForm.useCustomPrice ? (
+                  <div className="p-2.5 bg-slate-900 border border-slate-800/80 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-slate-400 block">Kalkulasi Otomatis Platform:</span>
+                      <span className="text-xs text-slate-300 font-semibold">
+                        {Number(packageForm.tokens).toLocaleString('id-ID')} token × Rp {paymentConfig.tokenPrice}
+                      </span>
+                    </div>
+                    <span className="text-base font-black text-emerald-400">
+                      {formatRupiah(packageForm.tokens * paymentConfig.tokenPrice)}
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="number"
+                      min={0}
+                      value={packageForm.price}
+                      onChange={(e) => setPackageForm({ ...packageForm, price: Math.max(0, Number(e.target.value) || 0) })}
+                      className="w-full bg-slate-900 border border-indigo-500/50 rounded-xl px-3.5 py-2 text-xs text-white font-bold outline-none"
+                      placeholder="Masukkan nominal harga khusus paket"
+                    />
+                    <div className="flex justify-between items-center text-[10px] mt-1 text-slate-400">
+                      <span>Harga kustom: {formatRupiah(packageForm.price)}</span>
+                      {packageForm.tokens > 0 && (
+                        <span className="text-emerald-400 font-bold">
+                          ~ Rp {Math.round(packageForm.price / packageForm.tokens)} / token
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Badge & Popular Toggle */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Badge / Label (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: ⭐ Paling Diminati, Hemat 10%"
+                    value={packageForm.badge}
+                    onChange={(e) => setPackageForm({ ...packageForm, badge: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Highlight Paket Populer
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setPackageForm({ ...packageForm, isPopular: !packageForm.isPopular })}
+                    className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                      packageForm.isPopular
+                        ? 'bg-indigo-950/80 border-indigo-500 text-indigo-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <span>{packageForm.isPopular ? '⭐ Ditandai Populer' : 'Biasa (Non-Highlight)'}</span>
+                    <span className={`w-3.5 h-3.5 rounded-full ${packageForm.isPopular ? 'bg-indigo-500 shadow-sm' : 'bg-slate-700'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Deskripsi Paket */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Deskripsi / Catatan Paket (Opsional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Contoh: Sangat direkomendasikan untuk restoran dengan perputaran order harian yang ramai."
+                  value={packageForm.description}
+                  onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none resize-none"
+                />
+              </div>
+
+              {/* Tombol Aksi Modal */}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsPackageModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={packageSaving}
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  {packageSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>{editingPackageId ? 'Simpan Perubahan' : 'Buat Paket Sekarang'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

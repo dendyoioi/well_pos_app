@@ -8,6 +8,7 @@ import { prisma } from '../config/prisma';
 import { catalogDualWriteService } from '../services/dual_write';
 import { billingService } from '../services/billing.service';
 import { pakasirService } from '../services/pakasir.service';
+import { readPlatformPaymentConfig } from './platform.controller';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -641,7 +642,7 @@ export const getSubscriptionStatus = async (req: Request, res: Response) => {
 const topUpTokenSchema = z.object({
   tokenAmount: z.number().int().positive('Jumlah token harus lebih dari 0'),
   promoCode: z.string().optional(),
-  paymentMethod: z.string().default('BANK_TRANSFER_MANUAL'),
+  paymentMethod: z.string().default('QRIS'),
 });
 
 /**
@@ -690,8 +691,27 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
       return res.status(500).json({ status: 'error', message: 'Master paket langganan belum diatur' });
     }
 
+    const config = readPlatformPaymentConfig();
+    const tokenPrice = typeof config.tokenPrice === 'number' ? config.tokenPrice : 69;
+    const minTokenPurchase = typeof config.minTokenPurchase === 'number' ? config.minTokenPurchase : 250;
+    const qrisEnabled = typeof config.qrisEnabled === 'boolean' ? config.qrisEnabled : (config.qris?.enabled ?? true);
+
+    if (!qrisEnabled) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Metode pembayaran QRIS saat ini sedang dinonaktifkan / pemeliharaan sementara oleh platform HQ.',
+      });
+    }
+
+    if (tokenAmount < minTokenPurchase) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Minimal pembelian token adalah ${minTokenPurchase.toLocaleString('id-ID')} token`,
+      });
+    }
+
     let finalTokenAmount = tokenAmount;
-    let baseAmount = tokenAmount * 110; // Rp 110 per token order
+    let baseAmount = tokenAmount * tokenPrice;
     let discountAmount = 0;
 
     // Evaluasi Promo jika ada
@@ -883,8 +903,10 @@ export const validateTenantPromoCode = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Kuota penggunaan kupon promo ini telah habis' });
     }
 
+    const config = readPlatformPaymentConfig();
+    const tokenPrice = typeof config.tokenPrice === 'number' ? config.tokenPrice : 69;
     const tokens = Number(tokenAmount) || 1000;
-    const baseAmount = tokens * 110;
+    const baseAmount = tokens * tokenPrice;
 
     if (promo.minSpend && baseAmount < Number(promo.minSpend)) {
       return res.status(400).json({
@@ -1210,8 +1232,6 @@ export const createInitialStore = async (req: Request, res: Response) => {
     });
   }
 };
-
-import { readPlatformPaymentConfig } from './platform.controller';
 
 export const getPublicPlatformPaymentConfig = async (_req: Request, res: Response) => {
   try {

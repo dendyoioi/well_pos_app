@@ -1,4 +1,7 @@
 {
+  "tokenPrice": 100,
+  "minTokenPurchase": 100,
+  "qrisEnabled": true,
   "qris": {
     "enabled": true,
     "merchantName": "WELL POS PLATFORM HQ",
@@ -8,6 +11,48 @@
     "accountHolder": "PT Well POS Solusi",
     "imageUrl": "https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C",
     "notes": "Pindai kode QRIS di atas menggunakan GoPay, OVO, Dana, ShopeePay, BCA Mobile, Livin by Mandiri, atau m-Banking apa pun. Saldo token otomatis langsung bertambah setelah konfirmasi.",
-    "updatedAt": "2026-09-27T12:00:00.000Z"
-  }
+    "updatedAt": "2026-09-30T13:05:15.413Z"
+  },
+  "packages": [
+    {
+      "id": "pkg-starter-250",
+      "name": "Starter 250",
+      "tokens": 250,
+      "label": "Starter 250",
+      "price": 25000,
+      "badge": "Trial Ramah",
+      "isPopular": false,
+      "description": "Cocok untuk bisnis baru mulai buka"
+    },
+    {
+      "id": "pkg-basic-1000",
+      "name": "Basic 500",
+      "tokens": 500,
+      "label": "Basic 500",
+      "price": 37500,
+      "badge": "Paling Fleksibel",
+      "isPopular": false,
+      "description": "Ideal untuk operasional harian kafe kecil"
+    },
+    {
+      "id": "pkg-pro-2500",
+      "name": "Pro 1.500",
+      "tokens": 1500,
+      "label": "Pro 1.500",
+      "price": 90000,
+      "badge": "⭐ Paling Diminati",
+      "isPopular": true,
+      "description": "Pilihan favorit resto dengan perputaran order tinggi"
+    },
+    {
+      "id": "pkg-enterprise-5000",
+      "name": "Enterprise 5.000",
+      "tokens": 5000,
+      "label": "Enterprise 5.000",
+      "price": 225000,
+      "badge": "Kapasitas Besar",
+      "isPopular": false,
+      "description": "Untuk multi-cabang dengan volume transaksi masif"
+    }
+  ]
 }

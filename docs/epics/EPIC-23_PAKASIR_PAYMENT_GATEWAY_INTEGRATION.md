@@ -81,3 +81,45 @@ ALTER TABLE "saas_invoices"
   3. Pelunasan transaksi pendaftaran & aktivasi otomatis tenant `PENDING` $\rightarrow$ `ACTIVE`.
   4. Akumulasi kuota token (100 token pendaftaran + 2.000 token top-up = 2.100 token).
   5. Idempotensi webhook terhadap pengiriman notifikasi ganda.
+
+---
+
+### 6. PENGELOLAAN TARIF TOKEN, BATAS MINIMUM & KONTROL QRIS SUPERADMIN (DYNAMIC CONFIG)
+
+Pembaruan arsitektur pada konfigurasi SaaS platform (`platform_payment_config.json`):
+1. **Harga Acuan Dinamis**:
+   * Default tarif acuan ditetapkan **Rp 69 / token** (dapat diubah dinamis kapan saja oleh Superadmin).
+2. **Batas Minimal Pembelian**:
+   * Minimum order ditetapkan **250 token** ($250 \times \text{Rp } 69 = \text{Rp } 17.250$).
+   * Paket kuota preset default disesuaikan:
+     * **Starter**: +250 Token (Rp 17.250)
+     * **Basic**: +1.000 Token (Rp 69.000)
+     * **Pro (Populer)**: +2.500 Token (Rp 172.500)
+     * **Enterprise**: +5.000 Token (Rp 345.000)
+3. **Eksklusivitas QRIS & Eliminasi Transfer Manual**:
+   * Opsi Transfer Manual ke rekening bank ditiadakan secara permanen dari modal Top-Up Owner (`BillingTokensView.tsx`).
+   * Tersedia sakelar Superadmin **Aktifkan / Nonaktifkan QRIS** (`qrisEnabled`). Jika dinonaktifkan, modal sisi Owner secara otomatis menampilkan status pemeliharaan dan menonaktifkan proses *checkout*.
+4. **Voucher Diskon B2B (`SaaSPromo`)**:
+   * Terintegrasi penuh dengan kalkulasi dinamis (`tokenAmount * tokenPrice`).
+   * Superadmin dapat menerbitkan voucher persentase diskon, potongan nominal rupiah, maupun bonus kuota token secara mandiri dari tab **PROMOS**.
+
+---
+
+### 7. PENGELOLAAN KATALOG PAKET KUOTA PAY-AS-YOU-GO AKTIF (CUSTOM NAMING & PACKAGES)
+
+Fitur pengelolaan katalog mandiri oleh Superadmin pada Tab **PLANS** (`SuperadminDashboardPage.tsx`):
+1. **Penamaan Paket Sendiri (*Custom Naming*)**:
+   * Superadmin bebas memberi nama paket kustom (contoh: *"Starter 250"*, *"Paket Usaha Siap Cuan"*, *"Paket Ramadhan Berkah"*, *"Paket Warkop Mantap"*).
+2. **Fleksibilitas Kuota & Harga**:
+   * Superadmin dapat menentukan jumlah kuota token secara bebas (misal 250, 1.000, 2.500, 5.000, 10.000, dst.).
+   * Opsi penentuan harga:
+     * **Kalkulasi Otomatis**: $\text{Token} \times \text{Tarif Dasar Platform (Rp 69/token)}$.
+     * **Harga Kustom / Promo**: Superadmin dapat mengunci nominal harga khusus (misal diskon bundling khusus).
+3. **Badge & Penanda Populer**:
+   * Kolom badge kustom (misal *"⭐ Paling Diminati"*, *"Diskon 10%"*, *"Trial Ramah"*, *"Rekomendasi"*).
+   * Tombol *highlight* paket populer dengan aksen visual gradien dan elevasi bayangan halus.
+4. **Sinkronisasi Otomatis ke Backoffice Owner**:
+   * Setiap kali Superadmin menambah, mengubah, atau menghapus paket, data otomatis tersimpan di `platform_payment_config.json` via endpoint `api.updatePlatformPaymentSettings()`.
+   * Pilihan paket pada modal Top-Up Kuota Owner (`BillingTokensView.tsx`) langsung menampilkan nama kustom, badge, dan harga terbaru secara *real-time*.
+
+

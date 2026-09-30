@@ -1460,38 +1460,106 @@ export const deletePlatformPromo = async (req: Request, res: Response) => {
 
 const PAYMENT_CONFIG_FILE = path.join(__dirname, '../../data/platform_payment_config.json');
 
+const DEFAULT_PLATFORM_CONFIG = {
+  tokenPrice: 69,
+  minTokenPurchase: 250,
+  qrisEnabled: true,
+  qris: {
+    enabled: true,
+    merchantName: 'WELL POS PLATFORM HQ',
+    nmid: 'ID1020030040050',
+    bankName: 'Bank Central Asia (BCA)',
+    accountNumber: '8830129381',
+    accountHolder: 'PT Well POS Solusi',
+    imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C',
+    notes: 'Pindai kode QRIS di atas menggunakan GoPay, OVO, Dana, ShopeePay, BCA Mobile, Livin by Mandiri, atau m-Banking apa pun. Saldo token otomatis langsung bertambah setelah konfirmasi.',
+    updatedAt: new Date().toISOString(),
+  },
+  packages: [
+    { id: 'pkg-starter-250', name: 'Starter 250', tokens: 250, label: 'Starter 250', price: 0, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
+    { id: 'pkg-basic-1000', name: 'Basic 1.000', tokens: 1000, label: 'Basic 1.000', price: 0, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
+    { id: 'pkg-pro-2500', name: 'Pro 2.500', tokens: 2500, label: 'Pro 2.500', price: 0, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
+    { id: 'pkg-enterprise-5000', name: 'Enterprise 5.000', tokens: 5000, label: 'Enterprise 5.000', price: 0, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
+  ],
+};
+
 export const readPlatformPaymentConfig = () => {
   try {
     if (fs.existsSync(PAYMENT_CONFIG_FILE)) {
       const raw = fs.readFileSync(PAYMENT_CONFIG_FILE, 'utf-8');
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      const packagesList = Array.isArray(parsed.packages) ? parsed.packages : DEFAULT_PLATFORM_CONFIG.packages;
+      const isQrisActive = typeof parsed.qrisEnabled === 'boolean'
+        ? parsed.qrisEnabled
+        : (typeof parsed.qris?.enabled === 'boolean' ? parsed.qris.enabled : true);
+
+      return {
+        ...DEFAULT_PLATFORM_CONFIG,
+        ...parsed,
+        tokenPrice: typeof parsed.tokenPrice === 'number' && !isNaN(parsed.tokenPrice) ? parsed.tokenPrice : DEFAULT_PLATFORM_CONFIG.tokenPrice,
+        minTokenPurchase: typeof parsed.minTokenPurchase === 'number' && !isNaN(parsed.minTokenPurchase) ? parsed.minTokenPurchase : DEFAULT_PLATFORM_CONFIG.minTokenPurchase,
+        qrisEnabled: isQrisActive,
+        qris: {
+          ...DEFAULT_PLATFORM_CONFIG.qris,
+          ...(parsed.qris || {}),
+          enabled: isQrisActive,
+        },
+        packages: packagesList.map((p: any, idx: number) => ({
+          id: p.id || `pkg-${idx + 1}`,
+          name: p.name || p.label || `Paket ${p.tokens || 250} Token`,
+          tokens: Number(p.tokens) || 250,
+          label: p.name || p.label || `Paket ${p.tokens || 250} Token`,
+          price: typeof p.price === 'number' ? Number(p.price) : 0,
+          badge: p.badge || '',
+          isPopular: Boolean(p.isPopular),
+          description: p.description || '',
+        })),
+      };
     }
   } catch (err) {
     console.error('Error reading platform payment config:', err);
   }
-  return {
-    qris: {
-      enabled: true,
-      merchantName: 'WELL POS PLATFORM HQ',
-      nmid: 'ID1020030040050',
-      bankName: 'Bank Central Asia (BCA)',
-      accountNumber: '8830129381',
-      accountHolder: 'PT Well POS Solusi',
-      imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C',
-      notes: 'Pindai kode QRIS di atas menggunakan GoPay, OVO, Dana, ShopeePay, BCA Mobile, Livin by Mandiri, atau m-Banking apa pun. Saldo token otomatis langsung bertambah setelah konfirmasi.',
-      updatedAt: new Date().toISOString(),
-    },
-  };
+  return DEFAULT_PLATFORM_CONFIG;
 };
 
 export const writePlatformPaymentConfig = (data: any) => {
   const current = readPlatformPaymentConfig();
+  const qrisEnabledVal = typeof data.qrisEnabled === 'boolean'
+    ? data.qrisEnabled
+    : (typeof data.qris?.enabled === 'boolean'
+      ? data.qris.enabled
+      : (data.qrisEnabled === 'true' ? true : data.qrisEnabled === 'false' ? false : current.qrisEnabled));
+
+  const parsedTokenPrice = Number(data.tokenPrice);
+  const tokenPriceVal = !isNaN(parsedTokenPrice) && parsedTokenPrice > 0 ? parsedTokenPrice : current.tokenPrice;
+
+  const parsedMinToken = Number(data.minTokenPurchase);
+  const minTokenPurchaseVal = !isNaN(parsedMinToken) && parsedMinToken > 0 ? parsedMinToken : current.minTokenPurchase;
+
+  const rawPackages = Array.isArray(data.packages) ? data.packages : current.packages;
+  const normalizedPackages = rawPackages.map((p: any, idx: number) => ({
+    id: p.id || `pkg-${Date.now()}-${idx + 1}`,
+    name: p.name || p.label || `Paket ${p.tokens || 250} Token`,
+    tokens: Math.max(1, Number(p.tokens) || 250),
+    label: p.name || p.label || `Paket ${p.tokens || 250} Token`,
+    price: typeof p.price === 'number' && p.price >= 0 ? Number(p.price) : 0,
+    badge: p.badge ? String(p.badge).trim() : '',
+    isPopular: Boolean(p.isPopular),
+    description: p.description ? String(p.description).trim() : '',
+  }));
+
   const updated = {
+    ...current,
+    tokenPrice: tokenPriceVal,
+    minTokenPurchase: minTokenPurchaseVal,
+    qrisEnabled: qrisEnabledVal,
     qris: {
       ...current.qris,
-      ...data.qris,
+      ...(data.qris || {}),
+      enabled: qrisEnabledVal,
       updatedAt: new Date().toISOString(),
     },
+    packages: normalizedPackages,
   };
   try {
     const dir = path.dirname(PAYMENT_CONFIG_FILE);
@@ -1521,7 +1589,7 @@ export const updatePlatformPaymentSettings = async (req: Request, res: Response)
     const updated = writePlatformPaymentConfig(req.body);
     return res.status(200).json({
       status: 'success',
-      message: 'Pengaturan QRIS Statis Platform berhasil diperbarui',
+      message: 'Pengaturan Biaya Token & QRIS Platform berhasil diperbarui',
       data: updated,
     });
   } catch (error) {

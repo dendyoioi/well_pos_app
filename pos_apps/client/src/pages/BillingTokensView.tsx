@@ -58,16 +58,36 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
 
   // Top-Up Modal State
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
-  const [topUpPreset, setTopUpPreset] = useState<number>(2000);
-  const [customTokenAmount, setCustomTokenAmount] = useState<number>(2000);
+  const [topUpPreset, setTopUpPreset] = useState<number>(1000);
+  const [customTokenAmount, setCustomTokenAmount] = useState<number>(250);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
   const [promoError, setPromoError] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER_MANUAL' | 'QRIS'>('QRIS');
+  const [paymentMethod] = useState<'QRIS'>('QRIS');
   const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [platformPaymentConfig, setPlatformPaymentConfig] = useState<any>(null);
+
+  // Dynamic token config from platform HQ
+  const tokenPrice = platformPaymentConfig?.tokenPrice ?? 69;
+  const minTokenPurchase = platformPaymentConfig?.minTokenPurchase ?? 250;
+  const qrisEnabled = platformPaymentConfig?.qrisEnabled ?? (platformPaymentConfig?.qris?.enabled ?? true);
+  const presetPackages: Array<{
+    id?: string;
+    tokens: number;
+    label?: string;
+    name?: string;
+    price?: number;
+    badge?: string;
+    isPopular?: boolean;
+    description?: string;
+  }> = platformPaymentConfig?.packages || [
+    { tokens: 250, name: 'Starter 250', label: 'Starter 250', badge: 'Trial Ramah', isPopular: false },
+    { tokens: 1000, name: 'Basic 1.000', label: 'Basic 1.000', badge: 'Paling Fleksibel', isPopular: false },
+    { tokens: 2500, name: 'Pro 2.500', label: 'Pro 2.500', badge: '⭐ Paling Diminati', isPopular: true },
+    { tokens: 5000, name: 'Enterprise 5.000', label: 'Enterprise 5.000', badge: 'Kapasitas Besar', isPopular: false },
+  ];
 
   // State Direct QRIS Pakasir untuk Top-Up
   const [qrisModalData, setQrisModalData] = useState<{
@@ -108,7 +128,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   }, []);
 
   const tokenAmount = isCustomMode ? customTokenAmount : topUpPreset;
-  const baseCost = tokenAmount * 110;
+  const baseCost = tokenAmount * tokenPrice;
   const discountCost = appliedPromo ? appliedPromo.discountAmount || 0 : 0;
   const bonusTokens = appliedPromo ? appliedPromo.bonusTokens || 0 : 0;
   const finalCost = Math.max(0, baseCost - discountCost);
@@ -344,7 +364,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                   <Receipt className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Efisiensi Biaya</span>
                 </div>
-                <p className="text-xs font-black text-slate-900 mt-1">Rp 110 / Transaksi</p>
+                <p className="text-xs font-black text-slate-900 mt-1">Rp {tokenPrice} / Transaksi</p>
                 <p className="text-[10px] text-slate-400 mt-0.5">Termasuk sinkronisasi cloud real-time</p>
               </div>
 
@@ -635,250 +655,238 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
             {/* Modal Body (Scrollable) */}
             <div className="p-5 overflow-y-auto space-y-3.5 flex-1">
               {/* Paket Pilihan */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 block">Pilih Jumlah Kuota Token:</label>
-              <div className="grid grid-cols-3 gap-2.5">
-                {[
-                  { tokens: 1000, label: 'Starter', price: 110000 },
-                  { tokens: 2000, label: 'Pro (Populer)', price: 220000 },
-                  { tokens: 5000, label: 'Enterprise', price: 550000 },
-                ].map((item) => (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 block">Pilih Jumlah Kuota Token:</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {presetPackages.map((item, idx) => {
+                    const price = (typeof item.price === 'number' && item.price > 0) ? item.price : item.tokens * tokenPrice;
+                    const isSelected = !isCustomMode && topUpPreset === item.tokens;
+                    const packageName = item.name || item.label || `Paket ${item.tokens.toLocaleString('id-ID')} Token`;
+                    const badgeText = item.badge || (item.isPopular ? 'Populer' : null);
+                    return (
+                      <button
+                        key={item.id || `${item.tokens}-${idx}`}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomMode(false);
+                          setTopUpPreset(item.tokens);
+                        }}
+                        className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                          isSelected
+                            ? 'border-blue-700 bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        {badgeText && (
+                          <span className={`absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-white text-[8px] font-black uppercase tracking-wider shadow-xs ${
+                            item.isPopular ? 'bg-blue-900' : 'bg-slate-700'
+                          }`}>
+                            {badgeText}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-black text-blue-900 block uppercase truncate pr-6" title={packageName}>
+                          {packageName}
+                        </span>
+                        <span className="text-sm font-black text-slate-900 block mt-0.5">
+                          +{item.tokens.toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-500 block mt-0.5">
+                          {formatRupiah(price)}
+                        </span>
+                        {item.description && (
+                          <span className="text-[9px] text-slate-400 block mt-1 truncate" title={item.description}>
+                            {item.description}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Opsi Kustom Kuota */}
+                <div className="pt-1">
                   <button
-                    key={item.tokens}
                     type="button"
-                    onClick={() => {
-                      setIsCustomMode(false);
-                      setTopUpPreset(item.tokens);
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                      !isCustomMode && topUpPreset === item.tokens
-                        ? 'border-blue-700 bg-blue-50/80 ring-2 ring-blue-500/20'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+                    onClick={() => setIsCustomMode(!isCustomMode)}
+                    className="text-xs font-bold text-blue-900 hover:text-blue-950 flex items-center gap-1 cursor-pointer"
                   >
-                    <span className="text-[10px] font-bold text-blue-900 block uppercase">
-                      {item.label}
-                    </span>
-                    <span className="text-base font-black text-slate-900 block mt-0.5">
-                      +{item.tokens.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-500 block mt-1">
-                      {formatRupiah(item.price)}
-                    </span>
+                    <span>{isCustomMode ? 'Gunakan Paket Pilihan Di Atas' : '+ Butuh kuota kustom lainnya?'}</span>
                   </button>
-                ))}
+                  {isCustomMode && (
+                    <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-bold text-slate-600">Jumlah Token Kustom:</label>
+                        <span className="text-[10px] text-slate-500">Min. {minTokenPurchase.toLocaleString('id-ID')} token</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={minTokenPurchase}
+                          step="50"
+                          value={customTokenAmount}
+                          onChange={(e) => setCustomTokenAmount(Math.max(minTokenPurchase, Number(e.target.value)))}
+                          className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold bg-white text-slate-900"
+                        />
+                        <span className="text-xs font-black text-slate-700">Token</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Opsi Kustom Kuota */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsCustomMode(!isCustomMode)}
-                  className="text-xs font-bold text-blue-900 hover:text-blue-950 flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{isCustomMode ? 'Gunakan Paket Pilihan Di Atas' : '+ Butuh kuota kustom lainnya?'}</span>
-                </button>
-                {isCustomMode && (
-                  <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <label className="text-[11px] font-bold text-slate-600">Jumlah Token Kustom:</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="500"
-                        step="500"
-                        value={customTokenAmount}
-                        onChange={(e) => setCustomTokenAmount(Math.max(100, Number(e.target.value)))}
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold bg-white text-slate-900"
-                      />
-                      <span className="text-xs font-black text-slate-700">Token</span>
+              {/* Input Kupon Promo */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Tag className="w-3.5 h-3.5 text-blue-700" />
+                  <span>Punya Kupon Diskon B2B?</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Contoh: HEMAT20 atau LAUNCHWELL"
+                    value={promoCodeInput}
+                    onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase bg-white text-slate-900 placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-blue-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                  >
+                    Terapkan
+                  </button>
+                </div>
+                {appliedPromo && (
+                  <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+                    <span className="font-bold">
+                      Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name || 'Diskon diterapkan'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setAppliedPromo(null);
+                        setPromoCodeInput('');
+                      }}
+                      className="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                )}
+                {promoError && (
+                  <p className="text-[11px] text-rose-600 font-semibold">{promoError}</p>
+                )}
+              </div>
+
+              {/* Metode Pembayaran: HANYA QRIS */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 block">Metode Pembayaran:</label>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-[10px] font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Hanya QRIS (Otomatis)
+                  </span>
+                </div>
+
+                {!qrisEnabled ? (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5 text-amber-900">
+                      <span>⚠️</span>
+                      <span>Pembayaran QRIS Sedang Dalam Pemeliharaan</span>
+                    </p>
+                    <p className="text-[11px] text-amber-700">
+                      Metode pembayaran QRIS sedang dinonaktifkan sementara oleh platform HQ. Silakan hubungi admin platform.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded bg-blue-900 text-white text-[10px] font-black tracking-wider uppercase">
+                          QRIS RESMI
+                        </span>
+                        <span className="text-xs font-black text-blue-950">
+                          {platformPaymentConfig?.qris?.merchantName || 'WELL POS PLATFORM HQ'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-slate-500">
+                        NMID: {platformPaymentConfig?.qris?.nmid || 'ID1020030040050'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3.5">
+                      {/* QR Code Container */}
+                      <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-xs shrink-0 flex flex-col items-center">
+                        <img
+                          src={platformPaymentConfig?.qris?.imageUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C'}
+                          alt="QRIS Statis Well POS Platform HQ"
+                          className="w-24 h-24 object-contain"
+                        />
+                        <span className="text-[9px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">
+                          Scan QRIS
+                        </span>
+                      </div>
+
+                      {/* Instructions */}
+                      <div className="space-y-1.5 text-xs flex-1">
+                        <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-blue-950 text-[11px] leading-relaxed">
+                          <p className="font-bold mb-0.5 text-blue-950">Panduan Pembayaran QRIS:</p>
+                          <p className="text-slate-600">
+                            {platformPaymentConfig?.qris?.notes || 'Buka aplikasi e-Wallet (GoPay, OVO, Dana, ShopeePay) atau m-Banking (BCA, Livin Mandiri, BRImo, BNI) lalu scan QRIS di samping.'}
+                          </p>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] pt-1 text-slate-600">
+                          <span>Nominal Pas:</span>
+                          <span className="font-mono font-black text-blue-900 text-sm">{formatRupiah(finalCost)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Input Kupon Promo */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-blue-700" />
-                <span>Punya Kupon Diskon B2B?</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Contoh: HEMAT20 atau LAUNCHWELL"
-                  value={promoCodeInput}
-                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
-                  className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase bg-white text-slate-900 placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-blue-700"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyPromo}
-                  className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-                >
-                  Terapkan
-                </button>
-              </div>
-              {appliedPromo && (
-                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
-                  <span className="font-bold">
-                    Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name || 'Diskon diterapkan'}
+              {/* Rincian Total */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
+                <div className="flex justify-between text-slate-500">
+                  <span>Kuota Tambahan:</span>
+                  <span className="font-bold text-slate-800">
+                    +{totalTokensReceived.toLocaleString('id-ID')} Token
                   </span>
-                  <button
-                    onClick={() => {
-                      setAppliedPromo(null);
-                      setPromoCodeInput('');
-                    }}
-                    className="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer"
-                  >
-                    Batal
-                  </button>
                 </div>
-              )}
-              {promoError && (
-                <p className="text-[11px] text-rose-600 font-semibold">{promoError}</p>
-              )}
+                <div className="flex justify-between text-slate-500">
+                  <span>Subtotal (Rp {tokenPrice} / token):</span>
+                  <span>{formatRupiah(baseCost)}</span>
+                </div>
+                {discountCost > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Potongan Promo:</span>
+                    <span>- {formatRupiah(discountCost)}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
+                  <span>Total Tagihan:</span>
+                  <span className="text-blue-900 text-base">{formatRupiah(finalCost)}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Metode Pembayaran */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 block">Metode Pembayaran:</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('BANK_TRANSFER_MANUAL')}
-                  className={`p-2.5 rounded-xl border text-left text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'BANK_TRANSFER_MANUAL'
-                      ? 'border-blue-700 bg-blue-50/70 text-blue-950 ring-1 ring-blue-600/30'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4 text-blue-700" />
-                  <span>Transfer Manual</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('QRIS')}
-                  className={`p-2.5 rounded-xl border text-left text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'QRIS'
-                      ? 'border-blue-700 bg-blue-50/70 text-blue-950 ring-1 ring-blue-600/30'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <span className="px-1.5 py-0.5 rounded bg-blue-900 text-white text-[9px] font-black tracking-wider">QRIS</span>
-                  <span>QRIS Statis HQ</span>
-                </button>
-              </div>
-
-              {/* TAMPILAN QRIS STATIS RESMI PLATFORM (WELL POS HQ) */}
-              {paymentMethod === 'QRIS' && (
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded bg-blue-900 text-white text-[10px] font-black tracking-wider uppercase">
-                        QRIS RESMI
-                      </span>
-                      <span className="text-xs font-black text-blue-950">
-                        {platformPaymentConfig?.qris?.merchantName || 'WELL POS PLATFORM HQ'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold text-slate-500">
-                      NMID: {platformPaymentConfig?.qris?.nmid || 'ID1020030040050'}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-3.5">
-                    {/* QR Code Container */}
-                    <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-xs shrink-0 flex flex-col items-center">
-                      <img
-                        src={platformPaymentConfig?.qris?.imageUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C'}
-                        alt="QRIS Statis Well POS Platform HQ"
-                        className="w-24 h-24 object-contain"
-                      />
-                      <span className="text-[9px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">
-                        Scan QRIS
-                      </span>
-                    </div>
-
-                    {/* Instructions */}
-                    <div className="space-y-1.5 text-xs flex-1">
-                      <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-blue-950 text-[11px] leading-relaxed">
-                        <p className="font-bold mb-0.5 text-blue-950">Panduan Pembayaran QRIS:</p>
-                        <p className="text-slate-600">
-                          {platformPaymentConfig?.qris?.notes || 'Buka aplikasi e-Wallet (GoPay, OVO, Dana, ShopeePay) atau m-Banking (BCA, Livin Mandiri, BRImo, BNI) lalu scan QRIS di samping.'}
-                        </p>
-                      </div>
-                      <div className="flex justify-between items-center text-[11px] pt-1 text-slate-600">
-                        <span>Nominal Pas:</span>
-                        <span className="font-mono font-black text-blue-900 text-sm">{formatRupiah(finalCost)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAMPILAN REKENING TRANSFER BANK */}
-              {paymentMethod === 'BANK_TRANSFER_MANUAL' && (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                    Rekening Resmi Pembayaran Well POS:
-                  </span>
-                  <div className="flex items-center justify-between font-bold text-slate-800">
-                    <span>{platformPaymentConfig?.qris?.bankName || 'Bank Central Asia (BCA)'}</span>
-                    <span className="font-mono font-black text-blue-900 text-sm">
-                      {platformPaymentConfig?.qris?.accountNumber || '8830129381'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    a.n. {platformPaymentConfig?.qris?.accountHolder || 'PT Well POS Solusi'}
-                  </p>
-                </div>
-              )}
+            {/* Modal Footer Action (Fixed & Never Cut Off) */}
+            <div className="p-4 border-t border-slate-100 shrink-0 bg-slate-50/80 rounded-b-3xl flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsTopUpModalOpen(false)}
+                className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteTopUp}
+                disabled={isSubmittingTopUp || !qrisEnabled}
+                className="flex-2 py-2.5 px-4 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer whitespace-nowrap text-center"
+              >
+                {isSubmittingTopUp ? 'Memproses...' : !qrisEnabled ? 'QRIS Dinonaktifkan' : 'Beli Kuota Sekarang'}
+              </button>
             </div>
-
-            {/* Rincian Total */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
-              <div className="flex justify-between text-slate-500">
-                <span>Kuota Tambahan:</span>
-                <span className="font-bold text-slate-800">
-                  +{totalTokensReceived.toLocaleString('id-ID')} Token
-                </span>
-              </div>
-              <div className="flex justify-between text-slate-500">
-                <span>Subtotal (Rp 110 / token):</span>
-                <span>{formatRupiah(baseCost)}</span>
-              </div>
-              {discountCost > 0 && (
-                <div className="flex justify-between text-emerald-700 font-bold">
-                  <span>Potongan Promo:</span>
-                  <span>- {formatRupiah(discountCost)}</span>
-                </div>
-              )}
-              <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
-                <span>Total Tagihan:</span>
-                <span className="text-blue-900 text-base">{formatRupiah(finalCost)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Modal Footer Action (Fixed & Never Cut Off) */}
-          <div className="p-4 border-t border-slate-100 shrink-0 bg-slate-50/80 rounded-b-3xl flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsTopUpModalOpen(false)}
-              className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="button"
-              onClick={handleExecuteTopUp}
-              disabled={isSubmittingTopUp}
-              className="flex-2 py-2.5 px-4 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer whitespace-nowrap text-center"
-            >
-              {isSubmittingTopUp ? 'Memproses...' : 'Beli Kuota Sekarang'}
-            </button>
-          </div>
         </div>
       </div>
     )}
