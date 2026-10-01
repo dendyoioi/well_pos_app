@@ -89,6 +89,25 @@ export const generateReceiptPdf = (
     y += 4;
   }
 
+  // Label jika Transaksi Pesanan Tambahan / Susulan
+  if (order.notes?.includes('SUSULAN') || order.notes?.includes('TAMBAHAN') || order.customerName?.includes('Susulan')) {
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(paperSize === '58mm' ? 7.5 : 9);
+    doc.setTextColor(180, 83, 9);
+    doc.text('*** MENU TAMBAHAN / SUSULAN ***', widthMm / 2, y, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('courier', 'normal');
+    y += 3.5;
+    if (order.notes) {
+      doc.setFontSize(paperSize === '58mm' ? 6 : 7);
+      const splitNote = doc.splitTextToSize(order.notes, contentWidth);
+      doc.text(splitNote, widthMm / 2, y, { align: 'center' });
+      y += splitNote.length * 3;
+    }
+    drawDashedLine(y);
+    y += 4;
+  }
+
   // Info Faktur & Saluran
   doc.setFontSize(paperSize === '58mm' ? 7 : 8);
   doc.text(`No: ${order.invoiceNumber}`, margin, y);

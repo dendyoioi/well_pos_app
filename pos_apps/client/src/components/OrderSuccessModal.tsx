@@ -530,6 +530,20 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             </div>
           )}
 
+          {/* Label / Banner Menu Tambahan / Susulan */}
+          {(order.notes?.includes('SUSULAN') || order.notes?.includes('TAMBAHAN') || order.customerName?.includes('Susulan')) && (
+            <div className="border border-amber-500 bg-amber-50 text-amber-900 p-2 my-2 rounded text-center">
+              <div className="text-[10px] font-black tracking-wider uppercase">
+                *** MENU TAMBAHAN / SUSULAN ***
+              </div>
+              {order.notes && (
+                <div className="text-[9px] text-amber-800 font-medium mt-0.5">
+                  {order.notes}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Info Invoice */}
           <div className="space-y-1 text-[11px] text-slate-600">
             <div className="flex justify-between">
@@ -760,7 +774,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
               <span>Tutup</span>
             </button>
 
-            {onAppendOrder && (
+            {onAppendOrder && order?.channel === 'DINE_IN' && order?.orderStatus !== 'VOIDED' && (
               <button
                 type="button"
                 onClick={() => {

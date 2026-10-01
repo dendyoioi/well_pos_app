@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { QrCode, ArrowRight, X, Clock } from 'lucide-react';
+import { QrCode, ArrowRight, X, Clock, UtensilsCrossed } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import type { CartItem, PaymentPayload, Order, HoldOrder, OrderChannel, OpenTabOrder, OpenTabPayload } from '../types/order';
 import type { Shift } from '../types/shift';
@@ -411,9 +411,14 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
   useEffect(() => {
     if (appendOrderData) {
-      setCustomerName(`${appendOrderData.customerName || 'Pelanggan'} (Susulan #${appendOrderData.invoiceNumber})`);
-      if (appendOrderData.channel) {
-        setOrderChannel(appendOrderData.channel as OrderChannel);
+      setOrderChannel('DINE_IN');
+      if (appendOrderData.tableNumber) {
+        setTableNumber(appendOrderData.tableNumber);
+      }
+      const baseCust = appendOrderData.customerName || (appendOrderData.tableNumber ? `Meja ${appendOrderData.tableNumber}` : 'Pelanggan');
+      setCustomerName(`${baseCust} (Susulan #${appendOrderData.invoiceNumber})`);
+      if (appendOrderData.customerPhone) {
+        setCustomerPhone(appendOrderData.customerPhone);
       }
     }
   }, [appendOrderData]);
@@ -1246,6 +1251,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
       const targetOrderId = activePulledOrder?.id || activeOpenTab?.id || undefined;
 
+      const susulanNote = appendOrderData
+        ? `[PESANAN SUSULAN] Ref Faktur #${appendOrderData.invoiceNumber}${appendOrderData.tableNumber ? ` (Meja ${appendOrderData.tableNumber})` : ''}`
+        : undefined;
+
       const res = await api.checkoutOrder({
         items: cart.map((i) => ({
           productId: i.product.id,
@@ -1255,6 +1264,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         channel: targetChannel,
         tableNumber: tableNumber ? tableNumber.trim() : undefined,
         onlineOrderId: onlineOrderId ? onlineOrderId.trim() : undefined,
+        notes: susulanNote,
         customerId: selectedCustomer?.id || undefined,
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
@@ -1455,6 +1465,32 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             channelsConfig={activeOutlet?.channelsConfig || undefined}
             onToggleHandheldMode={() => setHandheldModeOverride(true)}
           />
+
+          {/* Banner Mode Pesanan Susulan */}
+          {appendOrderData && (
+            <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between gap-2 text-amber-900 text-xs shrink-0">
+              <div className="flex items-center gap-2">
+                <UtensilsCrossed className="w-4 h-4 text-amber-700 shrink-0" />
+                <div>
+                  <span className="font-extrabold">Mode Menu Tambahan / Susulan:</span> Menambahkan menu ke Faktur{' '}
+                  <span className="font-mono font-black text-amber-950">#{appendOrderData.invoiceNumber}</span>
+                  {appendOrderData.tableNumber && (
+                    <span className="ml-1 font-bold">({`Meja ${appendOrderData.tableNumber}`})</span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClearAppendOrder?.();
+                  resetTransactionState();
+                }}
+                className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+              >
+                Batalkan Susulan
+              </button>
+            </div>
+          )}
 
           {/* 2. Main Workspace: Split Catalog Grid & Order Cart */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

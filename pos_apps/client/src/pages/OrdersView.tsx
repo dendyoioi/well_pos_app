@@ -14,12 +14,15 @@ import {
   ChevronDown,
   Ban,
   CheckCircle2,
+  Eye,
+  UtensilsCrossed,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import type { Outlet } from '../types/outlet';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
 import { OrderSuccessModal } from '../components/OrderSuccessModal';
 import { VoidOrderModal } from '../components/VoidOrderModal';
+import { OrderDetailModal } from '../components/OrderDetailModal';
 import { TablePagination } from '../components/TablePagination';
 import { generateSalesRecapPdf } from '../utils/salesRecapPdf';
 import { exportOrdersToCsv } from '../utils/salesExportCsv';
@@ -57,7 +60,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const [modalOpen, setModalOpen] = useState(false);
   const [voidModalOpen, setVoidModalOpen] = useState(false);
   const [orderToVoid, setOrderToVoid] = useState<Order | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [orderForDetail, setOrderForDetail] = useState<Order | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const handleViewDetail = (order: Order) => {
+    setOrderForDetail(order);
+    setDetailModalOpen(true);
+  };
 
   // Date Filter State
   const [datePreset, setDatePreset] = useState<DatePreset>('thismonth');
@@ -468,44 +478,58 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex items-center justify-center gap-1.5">
+                            {/* Tombol Detail Transaksi */}
+                            <button
+                              type="button"
+                              onClick={() => handleViewDetail(order)}
+                              className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                              title="Lihat Rincian Lengkap Transaksi"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {/* Tombol Cetak / Lihat Struk */}
+                            <button
+                              type="button"
+                              onClick={() => handleViewReceipt(order)}
+                              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                              title="Cetak / Pratinjau Struk Termal"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
+
                             {order.orderStatus === 'VOIDED' ? (
-                              <span className="px-2 py-1 text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
+                              <span className="px-2 py-1 text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
                                 VOIDED
                               </span>
                             ) : (
                               <>
-                                {onAppendOrder && (
+                                {/* Tombol + Susulan: HANYA DINE_IN & BUKAN VOID */}
+                                {onAppendOrder && order.channel === 'DINE_IN' && (
                                   <button
                                     type="button"
                                     onClick={() => onAppendOrder(order)}
-                                    className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
-                                    title="Buat Transaksi Tambahan / Susulan untuk Pesanan Ini"
+                                    className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                                    title="Tambah Pesanan Susulan (Khusus Makan di Tempat)"
                                   >
-                                    <span>+ Susulan</span>
+                                    <UtensilsCrossed className="w-4 h-4 text-amber-700" />
                                   </button>
                                 )}
+
+                                {/* Tombol Void: BUKAN VOID */}
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setOrderToVoid(order);
                                     setVoidModalOpen(true);
                                   }}
-                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                                  className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                                   title="Batalkan Transaksi (Approval Supervisor/Owner)"
                                 >
-                                  <Ban className="w-3.5 h-3.5" />
-                                  <span>Void</span>
+                                  <Ban className="w-4 h-4" />
                                 </button>
                               </>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => handleViewReceipt(order)}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                              <span>Lihat Struk</span>
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -594,43 +618,59 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                     </div>
 
                     {/* Bottom Actions Row */}
-                    <div className="flex items-center justify-end gap-2 pt-1">
+                    <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-100/80">
+                      {/* Tombol Detail Transaksi */}
+                      <button
+                        type="button"
+                        onClick={() => handleViewDetail(order)}
+                        className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                        title="Lihat Rincian Lengkap Transaksi"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      {/* Tombol Cetak / Lihat Struk */}
+                      <button
+                        type="button"
+                        onClick={() => handleViewReceipt(order)}
+                        className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                        title="Cetak / Pratinjau Struk Termal"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+
                       {order.orderStatus === 'VOIDED' ? (
-                        <span className="px-2.5 py-1 text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
+                        <span className="px-2 py-1 text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
                           VOIDED
                         </span>
                       ) : (
                         <>
-                          {onAppendOrder && (
+                          {/* Tombol + Susulan: HANYA DINE_IN & BUKAN VOID */}
+                          {onAppendOrder && order.channel === 'DINE_IN' && (
                             <button
                               type="button"
                               onClick={() => onAppendOrder(order)}
-                              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                              className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                              title="Tambah Pesanan Susulan (Khusus Makan di Tempat)"
                             >
-                              <span>+ Susulan</span>
+                              <UtensilsCrossed className="w-4 h-4 text-amber-700" />
                             </button>
                           )}
+
+                          {/* Tombol Void: BUKAN VOID */}
                           <button
                             type="button"
                             onClick={() => {
                               setOrderToVoid(order);
                               setVoidModalOpen(true);
                             }}
-                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                            title="Batalkan Transaksi (Approval Supervisor/Owner)"
                           >
-                            <Ban className="w-3.5 h-3.5" />
-                            <span>Void</span>
+                            <Ban className="w-4 h-4" />
                           </button>
                         </>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => handleViewReceipt(order)}
-                        className="px-3.5 py-1.5 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 active:scale-95 cursor-pointer min-h-[34px]"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>Lihat Struk</span>
-                      </button>
                     </div>
                   </div>
                 );
@@ -674,6 +714,33 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
         onClose={() => setModalOpen(false)}
         order={selectedOrder}
         onAppendOrder={onAppendOrder}
+      />
+
+      {/* Modal Rincian Lengkap Transaksi */}
+      <OrderDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setOrderForDetail(null);
+        }}
+        order={orderForDetail}
+        onViewReceipt={(ord) => {
+          setDetailModalOpen(false);
+          handleViewReceipt(ord);
+        }}
+        onAppendOrder={
+          onAppendOrder
+            ? (ord) => {
+                setDetailModalOpen(false);
+                onAppendOrder(ord);
+              }
+            : undefined
+        }
+        onVoidOrder={(ord) => {
+          setDetailModalOpen(false);
+          setOrderToVoid(ord);
+          setVoidModalOpen(true);
+        }}
       />
 
       {/* Modal Void Transaksi */}

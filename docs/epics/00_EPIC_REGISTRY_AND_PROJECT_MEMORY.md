@@ -939,5 +939,19 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
   - Header subtab Data vs Statistik Grafik dan tombol aksi dibuat flex-wrap responsif tanpa tabrakan.
   - Diagram Donut Chart metode bayar bertumpuk vertikal pada mobile portrait (`flex-col sm:flex-row`) agar diagram dan rincian rupiah metode bayar tidak saling berdesakan.
   - Grafik batang kurva MiniBarChart dibungkus overflow horizontal lembut (`overflow-x-auto`) menjaga integritas tampilan ponsel 19.5:9 s.d 20:9.
+
+[FASE 5: DETAIL TRANSAKSI MODERN, RESTRIKSI SUSULAN DINE-IN & ICON ACTIONS] - SELESAI ✅
+• Dedicated Order Detail View (`<OrderDetailModal />`):
+  - Rincian komprehensif transaksi: Invoice header dengan quick copy, badge status (PAID/VOID), waktu WIB, kasir, pelanggan, meja/antrean, tabel item lengkap (nama, varian, SKU, qty, harga satuan, diskon item, subtotal).
+  - Ringkasan finansial (Subtotal, Diskon Promo, Biaya Layanan, Pajak PB1, Grand Total) & informasi pembayaran (Metode, Uang Bayar, Kembalian, Ref QRIS).
+  - Zero Stacked Modals: tombol navigasi cepat "Lihat Struk", "+ Susulan", dan "Void" yang menutup modal detail sebelum membuka modal aksi berikutnya.
+• Restriksi Pesanan Susulan (`+ Susulan`):
+  - Hanya dapat diaktifkan pada transaksi berstatus `channel === 'DINE_IN'` dan tidak dibatalkan (`orderStatus !== 'VOIDED'`). Tombol susulan otomatis disembunyikan untuk pesanan Takeaway, Delivery, Online Platforms, ataupun invoice yang berstatus VOID.
+  - POS Terminal otomatis mengunci channel ke Dine In, mengisi nomor meja asal, dan menampilkan banner konfirmasi mode susulan di atas workspace.
+• Label & Watermark Menu Tambahan / Susulan di Struk:
+  - Pada preview struk termal (`OrderSuccessModal.tsx`) dan cetak PDF termal 58mm/80mm (`receiptPdf.ts`), transaksi susulan otomatis dicap dengan label tebal `*** MENU TAMBAHAN / SUSULAN ***` beserta nomor faktur referensi asal.
+• Icon-Only Action Buttons with Tooltips (`OrdersView.tsx`):
+  - Tombol aksi pada tabel desktop dan kartu mobile beralih menjadi icon-only yang rapi dan seragam (Eye: Detail, Printer: Struk, UtensilsCrossed: Susulan, Ban: Void) dengan tooltip `title` informatif.
 ================================================================================
 ```
+
