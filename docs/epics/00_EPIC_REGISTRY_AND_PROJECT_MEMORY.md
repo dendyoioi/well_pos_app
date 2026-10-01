@@ -952,6 +952,8 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
   - Pada preview struk termal (`OrderSuccessModal.tsx`) dan cetak PDF termal 58mm/80mm (`receiptPdf.ts`), transaksi susulan otomatis dicap dengan label tebal `*** MENU TAMBAHAN / SUSULAN ***` beserta nomor faktur referensi asal.
 • Icon-Only Action Buttons with Tooltips (`OrdersView.tsx`):
   - Tombol aksi pada tabel desktop dan kartu mobile beralih menjadi icon-only yang rapi dan seragam (Eye: Detail, Printer: Struk, UtensilsCrossed: Susulan, Ban: Void) dengan tooltip `title` informatif.
+• Default Filter Periode Tanggal Harian (`today`):
+  - Seluruh modul laporan dan riwayat transaksi (`OrdersView`, `FinancialReportView`, `ProductAnalyticsView`, `BusinessSummaryView`) kini menggunakan default filter tanggal `today` (Hari Ini) alih-alih per bulan atau 30 hari.
 ================================================================================
 ```
 
