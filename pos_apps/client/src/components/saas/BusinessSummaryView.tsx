@@ -175,7 +175,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
   // Filter state
   const [channelFilter, setChannelFilter] = useState('ALL');
   const [serviceFilter, setServiceFilter] = useState('ALL');
-  const [preset, setPreset] = useState<DatePreset>('7days');
+  const [preset, setPreset] = useState<DatePreset>('today');
   const [customStart, setCustomStart] = useState(toLocalDateStr(new Date()));
   const [customEnd, setCustomEnd] = useState(toLocalDateStr(new Date()));
   const [showDateDrop, setShowDateDrop] = useState(false);

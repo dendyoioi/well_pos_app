@@ -103,8 +103,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
     }
   };
 
-  // Date Filter State
-  const [datePreset, setDatePreset] = useState<DatePreset>('thismonth');
+  // Date Filter State (Default: Hari Ini)
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
   const [customStart, setCustomStart] = useState(toLocalDateStr(new Date()));
   const [customEnd, setCustomEnd] = useState(toLocalDateStr(new Date()));
   const [showDateDrop, setShowDateDrop] = useState(false);
@@ -337,7 +337,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2.5 py-1 mb-1">
                 Pilih Periode Transaksi
               </div>
-              {(['thismonth', 'today', '7days', '30days', 'all', 'custom'] as DatePreset[]).map((p) => (
+              {(['today', '7days', '30days', 'thismonth', 'all', 'custom'] as DatePreset[]).map((p) => (
                 <button
                   key={p}
                   type="button"

@@ -32,7 +32,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
   const [loading, setLoading] = useState<boolean>(true);
   const [isLockedByApi, setIsLockedByApi] = useState<boolean>(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState<boolean>(false);
-  const [periodPreset, setPeriodPreset] = useState<'today' | '7days' | '30days' | 'thisMonth' | 'custom'>('30days');
+  const [periodPreset, setPeriodPreset] = useState<'today' | '7days' | '30days' | 'thisMonth' | 'custom'>('today');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
 
