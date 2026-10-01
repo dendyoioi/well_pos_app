@@ -8,6 +8,8 @@ interface JwtPayloadDecoded {
   userId: string;
   role: Role;
   outletId: string | null;
+  tenantId?: string;
+  tokenVersion?: number;
 }
 
 /**
@@ -45,7 +47,7 @@ export const authenticate = async (
       });
     }
 
-    // Pastikan user masih aktif di database
+    // Pastikan user masih aktif di database dan periksa versi token (session revocation)
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -56,6 +58,7 @@ export const authenticate = async (
         outletId: true,
         tenantId: true,
         isActive: true,
+        tokenVersion: true,
       },
     });
 
@@ -63,6 +66,15 @@ export const authenticate = async (
       return res.status(401).json({
         status: 'error',
         message: 'Akun pengguna tidak aktif atau tidak ditemukan',
+      });
+    }
+
+    // Periksa apakah sesi perangkat telah dicabut (force logout / session revoked)
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion < user.tokenVersion) {
+      return res.status(401).json({
+        status: 'error',
+        code: 'SESSION_REVOKED',
+        message: 'Sesi login perangkat Anda telah dicabut oleh pemilik toko. Silakan login kembali.',
       });
     }
 

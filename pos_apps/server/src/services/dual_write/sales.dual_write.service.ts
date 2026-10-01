@@ -7,11 +7,16 @@ import {
 } from './types';
 
 /**
- * SalesDualWriteService
- * Orchestrates checkout transactions across Legacy (orders, order_items, payments, outlet_products, stock_movements)
- * and Target (order_items.product_variant_id, payment_transactions, inventory_balances, inventory_ledgers).
- * Adheres to OD-14.1-01 (Atomic Transaction with Emergency Drift Logger fallback)
- * and OD-14.1-02 (Parameterized Raw SQL data access - Zero prisma generate).
+ * SalesDualWriteService (Unified Sales & Inventory Transaction Engine)
+ * Orchestrates checkout transactions for the active target database schema:
+ * - Orders & OrderItems (with F&B Recipe BOM & Modifiers)
+ * - PaymentTransactions (Multi-tender: CASH, QRIS, Split)
+ * - InventoryBalances & InventoryLedgers (ADR-002 Negative stock policy & ADR-003 Multipliers)
+ * - CRM Customers (visit count & lifetime spending)
+ * - Dynamic Warehouse Backflushing Routing (EPIC-21)
+ *
+ * Designed to be zero-downtime, pooler-safe, and compatible with both Free-Tier PaaS
+ * and Dedicated Enterprise PostgreSQL deployments (ADR-008).
  */
 export class SalesDualWriteService extends BaseDualWriteService {
   /**
@@ -572,7 +577,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
 
           for (const ri of recipeItems) {
             const rawNeededQty = (Number(ri.quantity) / yieldQty) * item.quantity;
-            
+
             // EPIC-21 (Fase 3): Dynamic Warehouse Backflushing Routing
             // Jika toko memiliki Gudang Sumber Pasokan yang ditunjuk, kurangi stok bahan baku langsung di Gudang.
             // Jika toko mandiri (tanpa gudang), potong di storage location toko lokal.

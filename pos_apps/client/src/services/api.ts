@@ -1,13 +1,21 @@
 import type { AuthResponse, User } from '../types/auth';
 import type { Category, Product, StockMovement, LowStockProduct } from '../types/product';
 import type { CheckoutPayload, Order, HoldOrder, OpenTabOrder, OpenTabPayload } from '../types/order';
-import type { Customer, CustomerFormData, CustomerSummaryStats } from '../types/customer';
-import type { Outlet, OutletFee, SalesChannelConfig, PaymentConfig } from '../types/outlet';
+import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
+import type { Outlet, OutletFee, SalesChannelConfig, PaymentConfig, OutletLoyaltyConfig } from '../types/outlet';
 import type { QrTable, QrMenuSettings, QrLiveOrder, PublicMenuResponse } from '../types/qr_menu';
 import type { ModifierGroup, UpsertModifierGroupInput } from '../types/modifier';
 import type { Recipe, UpsertRecipeInput, RecipeInventoryItem } from '../types/recipe';
 import type { Supplier, SupplierFormData } from '../types/supplier';
 import type { Promotion, PromotionFormData } from '../types/promotion';
+import type {
+  PurchaseOrder,
+  CreatePurchaseOrderInput,
+  ReceivePOInput,
+  StockTransfer,
+  CreateStockTransferInput,
+  ExpiryAlertBatch,
+} from '../types/purchasing';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -29,6 +37,36 @@ export const authStorage = {
     localStorage.removeItem(USER_KEY);
   },
 };
+
+// Intersepsi otomatis jika sesi perangkat dicabut oleh pemilik toko (Force Logout)
+if (typeof window !== 'undefined' && window.fetch) {
+  const nativeFetch = window.fetch;
+  window.fetch = async (...args) => {
+    const response = await nativeFetch(...args);
+    if (response.status === 401) {
+      try {
+        const clone = response.clone();
+        clone.json().then((body) => {
+          if (body?.code === 'SESSION_REVOKED') {
+            authStorage.clearSession();
+            window.dispatchEvent(
+              new CustomEvent('auth:session_revoked', {
+                detail: {
+                  message:
+                    body.message ||
+                    'Sesi login perangkat Anda telah dicabut oleh pemilik toko. Silakan login kembali.',
+                },
+              })
+            );
+          }
+        }).catch(() => {});
+      } catch {
+        // Abaikan clone error
+      }
+    }
+    return response;
+  };
+}
 
 const PAIRED_DEVICE_KEY = 'wellpos_paired_device';
 
@@ -337,6 +375,42 @@ export const api = {
     return res.json();
   },
 
+  bulkImportProducts: async (data: {
+    items: Array<{
+      name: string;
+      sku: string;
+      barcode?: string | null;
+      categoryName?: string | null;
+      costPrice: number;
+      basePrice: number;
+      unit?: string;
+      description?: string | null;
+      initialStock?: number;
+      minStockAlert?: number;
+    }>;
+    outletId?: string;
+  }): Promise<{
+    status: string;
+    message: string;
+    data?: {
+      total: number;
+      created: number;
+      updated: number;
+      failed: number;
+      errors: Array<{ sku: string; name: string; error: string }>;
+    };
+  }> => {
+    const res = await fetch('/api/products/bulk-import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   getAvailableProductsForOutlet: async (
     outletId: string,
     search?: string
@@ -629,6 +703,21 @@ export const api = {
     return res.json();
   },
 
+  voidOrderItem: async (
+    orderId: string,
+    payload: { orderItemId: string; quantityToVoid?: number; pin?: string; reason: string; notes?: string }
+  ): Promise<{ status: string; message: string; data?: any }> => {
+    const res = await fetch(`/api/orders/${orderId}/void-item`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
   // Fitur Tahan Pesanan Kasir (Hold Orders)
   holdOrder: async (data: {
     outletId?: string;
@@ -799,6 +888,67 @@ export const api = {
     return res.json();
   },
 
+  getShiftDiscrepanciesReport: async (params?: { startDate?: string; endDate?: string; outletId?: string }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.outletId) query.append('outletId', params.outletId);
+
+    const res = await fetch(`/api/reports/shifts?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getProductPerformanceReport: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    outletId?: string;
+    sortBy?: 'volume' | 'revenue' | 'profit';
+    limit?: number;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.limit) query.append('limit', String(params.limit));
+
+    const res = await fetch(`/api/reports/product-performance?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getDeadStockReport: async (params?: { days?: number; outletId?: string }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.days) query.append('days', String(params.days));
+    if (params?.outletId) query.append('outletId', params.outletId);
+
+    const res = await fetch(`/api/reports/dead-stock?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  exportAnalyticsReport: async (
+    type: 'pnl' | 'products' | 'shifts' | 'deadstock',
+    params?: { startDate?: string; endDate?: string }
+  ): Promise<Blob> => {
+    const query = new URLSearchParams();
+    query.append('type', type);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+
+    const res = await fetch(`/api/reports/export?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    if (!res.ok) {
+      throw new Error('Gagal mengunduh file ekspor laporan');
+    }
+    return res.blob();
+  },
+
   // ----------------------------------------------------
   // MANAJEMEN PENGGUNA & STAF
   // ----------------------------------------------------
@@ -859,6 +1009,26 @@ export const api = {
     const res = await fetch(`/api/users/${id}`, {
       method: 'DELETE',
       headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  revokeUserSession: async (userId: string): Promise<{ status: string; message: string; data?: any }> => {
+    const res = await fetch(`/api/users/${userId}/revoke-session`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  revokeAllSessions: async (excludeCurrent: boolean = true): Promise<{ status: string; message: string; data?: any }> => {
+    const res = await fetch('/api/users/revoke-all-sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify({ excludeCurrent }),
     });
     return res.json();
   },
@@ -1387,6 +1557,7 @@ export const api = {
       isWarehouse?: boolean;
       isActive?: boolean;
       receiptConfig?: { paperSize: '58mm' | '80mm'; footerText?: string; showQueueNumber?: boolean };
+      loyaltyConfig?: OutletLoyaltyConfig;
     }
   ): Promise<{ status: string; data?: Outlet; message?: string }> => {
     const res = await fetch(`/api/outlets/${id}`, {
@@ -1748,6 +1919,166 @@ export const api = {
     });
     return res.json();
   },
+
+  getPromotionById: async (id: string): Promise<{ status: string; data?: Promotion & { usages?: any[] }; message?: string }> => {
+    const res = await fetch(`/api/promotions/${id}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ==========================================
+  // PURCHASE ORDERS (PENGADAAN)
+  // ==========================================
+  getPurchaseOrders: async (params?: {
+    outletId?: string;
+    supplierId?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    status: string;
+    data?: PurchaseOrder[];
+    pagination?: { total: number; page: number; limit: number; totalPages: number };
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.supplierId) query.append('supplierId', params.supplierId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+    const res = await fetch(`/api/purchasing/orders?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getPurchaseOrderById: async (id: string): Promise<{ status: string; data?: PurchaseOrder; message?: string }> => {
+    const res = await fetch(`/api/purchasing/orders/${id}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createPurchaseOrder: async (data: CreatePurchaseOrderInput): Promise<{ status: string; data?: PurchaseOrder; message?: string }> => {
+    const res = await fetch('/api/purchasing/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  issuePurchaseOrder: async (id: string): Promise<{ status: string; data?: PurchaseOrder; message?: string }> => {
+    const res = await fetch(`/api/purchasing/orders/${id}/issue`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  receivePurchaseOrder: async (id: string, data: ReceivePOInput): Promise<{ status: string; data?: PurchaseOrder; message?: string }> => {
+    const res = await fetch(`/api/purchasing/orders/${id}/receive`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  cancelPurchaseOrder: async (id: string): Promise<{ status: string; data?: PurchaseOrder; message?: string }> => {
+    const res = await fetch(`/api/purchasing/orders/${id}/cancel`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ==========================================
+  // STOCK TRANSFERS (TRANSFER ANTAR CABANG)
+  // ==========================================
+  getStockTransfers: async (params?: {
+    sourceOutletId?: string;
+    targetOutletId?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    status: string;
+    data?: StockTransfer[];
+    pagination?: { total: number; page: number; limit: number; totalPages: number };
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.sourceOutletId) query.append('sourceOutletId', params.sourceOutletId);
+    if (params?.targetOutletId) query.append('targetOutletId', params.targetOutletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+    const res = await fetch(`/api/transfers?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getStockTransferById: async (id: string): Promise<{ status: string; data?: StockTransfer; message?: string }> => {
+    const res = await fetch(`/api/transfers/${id}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createStockTransfer: async (data: CreateStockTransferInput): Promise<{ status: string; data?: StockTransfer; message?: string }> => {
+    const res = await fetch('/api/transfers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  dispatchStockTransfer: async (id: string): Promise<{ status: string; data?: StockTransfer; message?: string }> => {
+    const res = await fetch(`/api/transfers/${id}/dispatch`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  receiveStockTransfer: async (id: string): Promise<{ status: string; data?: StockTransfer; message?: string }> => {
+    const res = await fetch(`/api/transfers/${id}/receive`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ==========================================
+  // EXPIRY ALERTS
+  // ==========================================
+  getExpiryAlerts: async (params?: { days?: number; outletId?: string }): Promise<{
+    status: string;
+    data?: ExpiryAlertBatch[];
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.days) query.append('days', String(params.days));
+    if (params?.outletId) query.append('outletId', params.outletId);
+    const res = await fetch(`/api/inventory/expiry-alerts?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
 };
 
 // ----------------------------------------------------
@@ -1818,6 +2149,28 @@ export const customerApi = {
     });
     return res.json();
   },
+
+  getPointsHistory: async (id: string): Promise<{ status: string; customer?: any; data?: CustomerPointLedger[]; message?: string }> => {
+    const res = await fetch(`/api/customers/${id}/points-history`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  adjustPoints: async (
+    id: string,
+    data: { deltaPoints: number; notes: string; type?: string }
+  ): Promise<{ status: string; message?: string; data?: any }> => {
+    const res = await fetch(`/api/customers/${id}/adjust-points`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
 };
 
 export const supplierApi = {
@@ -1829,8 +2182,26 @@ export const supplierApi = {
 
 export const promotionApi = {
   getPromotions: api.getPromotions,
+  getPromotionById: api.getPromotionById,
   createPromotion: api.createPromotion,
   updatePromotion: api.updatePromotion,
   deletePromotion: api.deletePromotion,
+};
+
+export const purchasingApi = {
+  getPurchaseOrders: api.getPurchaseOrders,
+  getPurchaseOrderById: api.getPurchaseOrderById,
+  createPurchaseOrder: api.createPurchaseOrder,
+  issuePurchaseOrder: api.issuePurchaseOrder,
+  receivePurchaseOrder: api.receivePurchaseOrder,
+  cancelPurchaseOrder: api.cancelPurchaseOrder,
+};
+
+export const stockTransferApi = {
+  getStockTransfers: api.getStockTransfers,
+  getStockTransferById: api.getStockTransferById,
+  createStockTransfer: api.createStockTransfer,
+  dispatchStockTransfer: api.dispatchStockTransfer,
+  receiveStockTransfer: api.receiveStockTransfer,
 };
 

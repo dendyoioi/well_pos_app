@@ -104,10 +104,15 @@ Untuk mencegah transaksi yang dibatalkan mengotori kas fisik kasir dan menguras 
    - Tombol aksi *"Void"* dengan ikon `Ban` pada setiap baris pesanan aktif.
    - Badge penanda status `VOID` berwarna rose-100 dan coret teks (*line-through*) pada nomor faktur serta nominal total bayar.
    - Auto-reload tabel dan notifikasi toast hijau saat pembatalan berhasil.
-3. **Struk Digital & Thermal Print Watermark (`OrderSuccessModal.tsx` & `receiptPdf.ts`)**:
+3. **Item-Level Partial Void (`POST /api/orders/:id/void-item`) & `<VoidOrderItemModal />`**:
+   - Memungkinkan pembatalan sebagian item tanpa harus membatalkan keseluruhan transaksi.
+   - Stok bahan/barang dikembalikan secara proporsional sesuai kuantitas yang dibatalkan.
+   - Grand total dan subtotal dihitung ulang secara otomatis.
+   - Jika seluruh item pada faktur habis dibatalkan, sistem secara otomatis mengeskalasi faktur menjadi Full `VOIDED` dan merilis meja.
+4. **Slip Cetak Fisik Bukti Void Termal 58mm/80mm (`receiptPdf.ts`)**:
    - Struk untuk transaksi yang telah dibatalkan memiliki watermark/banner tegas:  
      `*** VOID / DIBATALKAN ***`  
-     sehingga tidak dapat disalahgunakan kembali sebagai bukti pembelian yang sah.
+   - Dilengkapi signature block fisik (Kasir Bertugas & Supervisor/Owner) untuk diarsipkan di laci kasir (*cash drawer*) sebagai bukti fisik pemotongan kas saat audit shift (*X/Z-Report*).
 
 ---
 
@@ -117,5 +122,8 @@ Untuk mencegah transaksi yang dibatalkan mengotori kas fisik kasir dan menguras 
   - Kasir dengan PIN Salah: Ditolak dengan HTTP 401 Unauthorized.
   - Kasir dengan PIN Benar: Berhasil dibatalkan (HTTP 200).
   - Percobaan re-void transaksi yang sudah void: Ditolak dengan HTTP 400 Bad Request.
+  - Void Parsial Item: Berhasil mengurangi subtotal, mengembalikan stok proporsional, dan mencatat audit refund (HTTP 200).
 - Server Build: `tsc` Exit code 0.
 - Client Build: `tsc -b && vite build` Exit code 0.
+- **Status Akhir: 100% COMPLETED (GAP: 0%)**
+

@@ -14,6 +14,7 @@ import {
   getDigitalReceipt,
   sendDigitalReceipt,
   voidOrder,
+  voidOrderItem,
 } from '../controllers/order.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { tenantContext, verifyTenantLicense } from '../middlewares/saas.middleware';
@@ -50,6 +51,7 @@ orderRouter.post('/:id/send-email', sendOrderEmail);
 
 // Fitur Pembatalan Transaksi (Void Order) dengan Approval Supervisor/Owner
 orderRouter.post('/:id/void', voidOrder);
+orderRouter.post('/:id/void-item', voidOrderItem);
 
 export default orderRouter;
 

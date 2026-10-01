@@ -252,14 +252,68 @@ export class ReportReadAdapter extends BaseReadAdapter {
       d.qrisRevenue += (orderQrisMap.get(order.id) || 0);
     }
 
+    // 3b. Fetch operating cash expenses (CASH_OUT from shifts)
+    const expParams: any[] = [tenantId, start, end];
+    let expOutletCondition = '';
+    if (targetOutletId) {
+      expParams.push(targetOutletId);
+      expOutletCondition = `AND cm.outlet_id = $${expParams.length}`;
+    }
+
+    const expensesSql = `
+      SELECT COALESCE(SUM(cm.amount), 0) as total_expenses
+      FROM "cash_movements" cm
+      WHERE cm.tenant_id = $1
+        AND cm.type = 'CASH_OUT'
+        AND cm.created_at >= $2
+        AND cm.created_at <= $3
+        ${expOutletCondition};
+    `;
+    const expenseRows = await this.queryRaw<any>(expensesSql, ...expParams);
+    const totalOperatingExpenses = Number(expenseRows[0]?.total_expenses || 0);
+
     const netSalesExTax = Math.max(0, totalNetRevenue - totalTax);
     const grossProfit = netSalesExTax - totalCOGS;
     const grossProfitMargin =
       netSalesExTax > 0 ? Number(((grossProfit / netSalesExTax) * 100).toFixed(2)) : 0;
+    const netOperatingProfit = grossProfit - totalOperatingExpenses;
+    const netOperatingProfitMargin =
+      netSalesExTax > 0 ? Number(((netOperatingProfit / netSalesExTax) * 100).toFixed(2)) : 0;
 
     const totalTransactions = orders.length;
     const averageOrderValue =
       totalTransactions > 0 ? Math.round(totalNetRevenue / totalTransactions) : 0;
+
+    // Hourly Distribution & Peak Hour calculation (WIB = UTC + 7)
+    const hourlyMap = new Map<number, { ordersCount: number; revenue: number }>();
+    for (let h = 0; h < 24; h++) {
+      hourlyMap.set(h, { ordersCount: 0, revenue: 0 });
+    }
+
+    for (const order of orders) {
+      const d = new Date(order.created_at);
+      const wibHour = (d.getUTCHours() + 7) % 24;
+      const hData = hourlyMap.get(wibHour)!;
+      hData.ordersCount += 1;
+      hData.revenue += Number(order.total_amount || 0);
+    }
+
+    let peakHourNum = 12;
+    let peakHourMaxOrders = 0;
+    const hourlyDistribution = Array.from(hourlyMap.entries()).map(([hour, val]) => {
+      if (val.ordersCount > peakHourMaxOrders) {
+        peakHourMaxOrders = val.ordersCount;
+        peakHourNum = hour;
+      }
+      return {
+        hour,
+        label: `${String(hour).padStart(2, '0')}:00`,
+        ordersCount: val.ordersCount,
+        revenue: val.revenue,
+      };
+    });
+
+    const peakHourLabel = `${String(peakHourNum).padStart(2, '0')}:00 - ${String((peakHourNum + 1) % 24).padStart(2, '0')}:00`;
 
     const topProducts = Array.from(productStatsMap.values())
       .map((p) => ({
@@ -269,6 +323,23 @@ export class ReportReadAdapter extends BaseReadAdapter {
       }))
       .sort((a, b) => b.qtySold - a.qtySold)
       .slice(0, 10);
+
+    let profitHealthStatus: 'SEHAT' | 'WASPADA' | 'KRITIS' = 'SEHAT';
+    if (grossProfitMargin < 20) {
+      profitHealthStatus = 'KRITIS';
+    } else if (grossProfitMargin < 40) {
+      profitHealthStatus = 'WASPADA';
+    }
+
+    const highMarginChampion =
+      topProducts.length > 0
+        ? topProducts.reduce((prev, curr) => (curr.profitMargin > prev.profitMargin ? curr : prev)).name
+        : undefined;
+
+    const marginKiller =
+      topProducts.length > 0
+        ? topProducts.reduce((prev, curr) => (curr.profitMargin < prev.profitMargin ? curr : prev)).name
+        : undefined;
 
     // 4. Slow moving items using inventory_balances
     let outletLocId: string | null = null;
@@ -364,6 +435,9 @@ export class ReportReadAdapter extends BaseReadAdapter {
         grossProfitMargin,
         totalTransactions,
         averageOrderValue,
+        totalOperatingExpenses,
+        netOperatingProfit,
+        netOperatingProfitMargin,
       },
       cashFlow: {
         cash: {
@@ -388,6 +462,15 @@ export class ReportReadAdapter extends BaseReadAdapter {
       salesByCategory,
       dailyTrends,
       channelSales,
+      hourlyDistribution,
+      insights: {
+        peakHour: peakHourLabel,
+        peakHourOrdersCount: peakHourMaxOrders,
+        averageBasketSize: averageOrderValue,
+        highMarginChampion,
+        marginKiller,
+        profitHealthStatus,
+      },
     };
   }
 }

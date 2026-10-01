@@ -382,15 +382,58 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
 
               {/* Non Cash Summary */}
               <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-3">
+                <div className="font-bold text-slate-800 uppercase text-[10px] tracking-wider mb-1">
+                  REKAP METODE PEMBAYARAN
+                </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Total Penjualan QRIS:</span>
+                  <span className="text-slate-600">Total Tunai (CASH):</span>
+                  <span>Rp {zReportData.cashDrawer.totalCashSales.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Total QRIS / Non-Tunai:</span>
                   <span>Rp {zReportData.nonCashSummary.totalQrisSales.toLocaleString('id-ID')}</span>
                 </div>
-                <div className="flex justify-between font-black text-blue-950 pt-1">
+                {zReportData.nonCashSummary.avgOrderValue !== undefined && zReportData.nonCashSummary.avgOrderValue > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Rata-rata (AOV):</span>
+                    <span className="font-semibold">
+                      Rp {zReportData.nonCashSummary.avgOrderValue.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between font-black text-blue-950 pt-1 border-t border-slate-200">
                   <span>TOTAL OMSET SHIFT:</span>
                   <span>Rp {zReportData.nonCashSummary.totalRevenue.toLocaleString('id-ID')}</span>
                 </div>
               </div>
+
+              {/* Channel Breakdown — breakdown per kanal penjualan */}
+              {zReportData.channelBreakdown && zReportData.channelBreakdown.length > 0 && (
+                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                    OMSET PER KANAL PENJUALAN
+                  </div>
+                  {zReportData.channelBreakdown.map((ch) => {
+                    const channelLabel: Record<string, string> = {
+                      DINE_IN: 'Dine In',
+                      TAKEAWAY: 'Takeaway',
+                      DELIVERY: 'Delivery',
+                      GOFOOD: 'GoFood',
+                      GRABFOOD: 'GrabFood',
+                      SHOPEEFOOD: 'ShopeeFood',
+                      QR_MENU: 'Self-Order QR',
+                    };
+                    return (
+                      <div key={ch.channel} className="flex justify-between text-slate-600">
+                        <span>{channelLabel[ch.channel] || ch.channel} ({ch.count}x)</span>
+                        <span className="font-mono font-semibold">
+                          Rp {Number(ch.revenue).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {zReportData.notes && (
                 <div className="text-[10px] text-slate-500 italic">

@@ -27,6 +27,7 @@ import {
 import type { Product, StockMovement } from '../types/product';
 import type { Outlet } from '../types/outlet';
 import type { RecipeInventoryItem } from '../types/recipe';
+import type { ExpiryAlertBatch } from '../types/purchasing';
 import { StockMovementModal } from '../components/StockMovementModal';
 import { StockTransferModal } from '../components/StockTransferModal';
 import { CreateIngredientModal } from '../components/modals/CreateIngredientModal';
@@ -61,6 +62,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   // Pagination State for Raw Materials (Bahan Baku Mentah F&B)
   const [ingredientPage, setIngredientPage] = useState(1);
   const [ingredientPageSize, setIngredientPageSize] = useState(10);
+
+  // Expiry Alerts State
+  const [expiryAlerts, setExpiryAlerts] = useState<ExpiryAlertBatch[]>([]);
+  const [showExpiryModal, setShowExpiryModal] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -211,10 +216,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
   };
 
+  const fetchExpiryAlerts = async () => {
+    try {
+      const res = await api.getExpiryAlerts({ days: 30, outletId: activeOutlet?.id });
+      if (res.status === 'success' && res.data) {
+        setExpiryAlerts(res.data);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil alert kadaluarsa:', err);
+    }
+  };
+
   useEffect(() => {
     fetchInventory();
     fetchIngredients();
     fetchWarehouses();
+    fetchExpiryAlerts();
   }, [movementTypeFilter, activeOutlet?.id, ingredientScope]);
 
   useEffect(() => {
@@ -607,6 +624,38 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Expiry Alerts Banner if any batches <= 30 days */}
+          {expiryAlerts.length > 0 && (
+            <div className="p-4 rounded-3xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 text-amber-800 rounded-2xl shrink-0 mt-0.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-extrabold text-amber-950 text-sm">
+                      Peringatan Bahan Baku Mendekati Kadaluarsa
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900">
+                      {expiryAlerts.length} Batch
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Terdapat batch bahan baku fisik dengan masa simpan kurang dari 30 hari atau telah kadaluarsa. Pastikan bahan segera digunakan (FIFO) atau dimusnahkan.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowExpiryModal(true)}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+              >
+                Lihat Detail Batch
+              </button>
+            </div>
+          )}
 
           {/* 3 Ringkasan KPI Bahan Baku */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2329,6 +2378,108 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setViewingWarehouse(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Detail Batch Kadaluarsa */}
+      {showExpiryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-50 text-amber-700 rounded-2xl border border-amber-200">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base">
+                    Batch Bahan Baku Mendekati Kadaluarsa
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Daftar persediaan fisik dengan tanggal kedaluwarsa &le; 30 hari
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExpiryModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 text-[11px] font-extrabold text-slate-500 uppercase border-b border-slate-200">
+                      <th className="py-2.5 px-3">Bahan Baku</th>
+                      <th className="py-2.5 px-3">No. Batch</th>
+                      <th className="py-2.5 px-3">Tgl Kadaluarsa</th>
+                      <th className="py-2.5 px-3 text-right">Sisa Stok</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {expiryAlerts.map((batch) => {
+                      const expDate = new Date(batch.expirationDate);
+                      const isExpired = expDate.getTime() < Date.now();
+                      const totalStock = (batch.balances || []).reduce(
+                        (sum, b) => sum + (b.quantityOnHand || 0),
+                        0
+                      );
+
+                      return (
+                        <tr key={batch.id} className="hover:bg-slate-50/60">
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-slate-900 block">
+                              {batch.inventoryItem?.name || 'Bahan Baku'}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {batch.inventoryItem?.itemCode || '-'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-mono font-bold text-slate-800">
+                            {batch.batchNumber}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-slate-700">
+                            {expDate.toLocaleDateString('id-ID', {
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </td>
+                          <td className="py-3 px-3 text-right font-extrabold text-slate-900">
+                            {totalStock} {batch.inventoryItem?.canonicalUom || ''}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {isExpired ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                Sudah Lewat
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                Segera Habis
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowExpiryModal(false)}
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Tutup

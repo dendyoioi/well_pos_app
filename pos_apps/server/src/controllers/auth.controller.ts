@@ -160,6 +160,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
         role: user.role,
         outletId: user.outletId,
         tenantId: user.tenantId,
+        tokenVersion: user.tokenVersion || 1,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -251,6 +252,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
         userCode: true,
         canCashOut: true,
         pinHash: true,
+        tokenVersion: true,
         tenantId: true,
         outletId: true,
         outlet: {
@@ -302,6 +304,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
         role: user.role,
         outletId: user.outletId,
         tenantId: user.tenantId,
+        tokenVersion: (user as any).tokenVersion || 1,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -487,6 +490,7 @@ export const pairDevice = async (req: Request, res: Response) => {
         role: true,
         userCode: true,
         pinHash: true,
+        tokenVersion: true,
         outletId: true,
         outlet: {
           select: {
@@ -529,6 +533,7 @@ export const pairDevice = async (req: Request, res: Response) => {
         role: authorizedUser.role,
         outletId: authorizedUser.outletId,
         tenantId: tenant.id,
+        tokenVersion: (authorizedUser as any).tokenVersion || 1,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }

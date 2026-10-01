@@ -118,26 +118,17 @@ Basis data `pos_db` menggunakan skema relasional terpadu yang memisahkan ranah *
 
 ---
 
-## 4. ARSITEKTUR KEAMANAN ROW-LEVEL SECURITY (RLS)
+## 4. ARSITEKTUR KEAMANAN ROW-LEVEL SECURITY (RLS) & INFRASTRUKTUR HYBRID (ADR-008)
 
-Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11), isolasi tenant ditegakkan di dua lapisan:
-1. **Application Layer**: Validasi `tenantId` eksplisit di setiap service dan Prisma query.
-2. **Kernel Database Layer**: PostgreSQL Row-Level Security (RLS) via [`rls.service.ts`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/server/src/services/rls.service.ts):
-   - Semua tabel ber-tenant diberi `ENABLE ROW LEVEL SECURITY` dan `FORCE ROW LEVEL SECURITY`.
-   - Policy:
-     ```sql
-     CREATE POLICY tenant_isolation_policy ON "<table_name>"
-     FOR ALL USING (
-       current_setting('app.is_super_admin', true) = 'true'
-       OR current_setting('app.bypass_rls', true) = 'on'
-       OR (
-         NULLIF(current_setting('app.current_tenant_id', true), '') IS NOT NULL
-         AND tenant_id = current_setting('app.current_tenant_id', true)
-       )
-     );
-     ```
-   - Setiap transaksi tenant dijalankan dengan role non-superuser `pos_app` (`SET LOCAL ROLE pos_app;`) dan `SELECT set_config('app.current_tenant_id', $1, true)`.
-   - Otomatis reset saat transaksi selesai, menjamin connection pooling bebas kontaminasi.
+Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi infrastruktur (**ADR-008**), isolasi tenant dan caching ditegakkan secara fleksibel:
+1. **Application Layer (100% Mandatory)**: Validasi `tenantId` eksplisit di setiap domain service, middleware JWT, dan Prisma query.
+2. **Kernel Database Layer & Connection Pooler Safety**:
+   - Skrip DDL kebijakan `tenant_isolation_policy` terpasang pada 33 tabel tenant utama via [`rls.service.ts`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/server/src/services/rls.service.ts).
+   - **Mode Free-Tier Cloud (Supabase PgBouncer Port 6543)**: `withTenantContext` membungkus session variable secara defensif (`try/catch`) di dalam `$transaction` agar terbebas dari crash *connection state leakage* PgBouncer.
+   - **Mode Dedicated Cloud (Direct Port 5432 / Self-Hosted RDS)**: Role `pos_app` membatasi superuser dan kebijakan RLS dieksekusi secara ketat di level kernel database.
+3. **Universal Hybrid Cache Adapter** ([`cache.service.ts`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/server/src/services/cache.service.ts)):
+   - **Driver IN_MEMORY (Default Free Tier)**: Menggunakan Node.js `Map` berkecepatan sub-millisecond dengan TTL auto-cleanup dan invalidasi berbasis pola prefix (`delByPrefix`).
+   - **Driver REDIS (Plug-and-Play)**: Langsung aktif otomatis saat variabel `REDIS_URL` dikonfigurasikan di hosting baru tanpa perlu merombak kode.
 
 ---
 
@@ -151,8 +142,8 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11), isolasi tenant ditega
 | **EPIC-04** | Cutover & Legacy Decommission | Cutover 100% ke `TARGET_ONLY`, drop tabel legacy (`outlet_products`, `stock_movements`, `payments`). | **COMPLETED ✅** |
 | **EPIC-05** | Frontend Client & Core POS | Kasir `PosTerminalView.tsx`, Varian produk, Struk nota, Shift kasir (X/Z Report). | **COMPLETED ✅** |
 | **EPIC-06** | F&B Engine (Recipes/Modifiers) | Resep minuman/makanan, modifier topping, pemotongan stok bahan baku, KDS state. | **COMPLETED ✅** |
-| **EPIC-07** | Supply Chain & Purchasing | PO Supplier, Goods Receipt (Moving Average Cost), Transfer antar-outlet. | **COMPLETED ✅** |
-| **EPIC-08** | CRM, Loyalty & Promotions | Database pelanggan, poin & tier membership, voucher promo checkout, WhatsApp link. | **COMPLETED ✅** |
+| **EPIC-07** | Supply Chain & Purchasing | PO Supplier, Goods Receipt (Moving Average Cost), Transfer antar-outlet, antarmuka Backoffice (PurchaseOrdersView, StockTransfersView) & Expiry Alerts. | **COMPLETED ✅** |
+| **EPIC-08** | CRM, Loyalty & Promotions | Database pelanggan, tier membership, program loyalitas per-outlet (opsional/netral), audit mutasi poin ledger, voucher promo & struk WhatsApp. | **COMPLETED ✅** |
 | **EPIC-09** | Financial Analytics & BI | Laba kotor real-time (COGS), audit selisih kas (*over/short*), Pareto best-seller, CSV export. | **COMPLETED ✅** |
 | **EPIC-10** | SaaS SuperAdmin & Billing | Portal SuperAdmin (`SuperadminDashboardPage.tsx`), invoice langganan, auto-suspend lisensi. | **COMPLETED ✅** |
 | **EPIC-11** | Production Hardening & DevOps | PostgreSQL RLS, Redis Cache-Aside, OWASP Headers, Auth Rate Limiting, Docker Compose. | **COMPLETED ✅** |
@@ -232,11 +223,11 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11), isolasi tenant ditega
 - **Modul Operasional & Backoffice Merchant**:
   - `pages/PosTerminalView.tsx`: Terminal Kasir POS modular (keranjang, multi-tender, cetak struk virtual, cash drawer kick).
   - `pages/OutletsView.tsx`: Manajemen unit outlet toko & gudang pusat, alokasi pasokan `warehouseId`, konfigurasi pajak PB1 & kanal.
-  - `pages/ProductsView.tsx`: Manajemen katalog produk master, varian, dan tombol *"Ambil dari Master Katalog"* untuk toko cabang.
+  - `pages/ProductsView.tsx`: Manajemen katalog produk master, varian, tombol *"Ambil dari Master Katalog"* untuk cabang, ekspor CSV/Excel (UTF-8 BOM), dan wizard layar penuh `FullScreenProductImportModal.tsx` untuk impor massal ratusan produk sekaligus (`POST /api/products/bulk-import`).
   - `pages/CategoriesView.tsx`: Manajemen kategori produk hirarkis terisolasi per toko.
   - `pages/InventoryView.tsx`: Inventori terpadu (Tab Bahan Baku F&B, Tab Produk Jadi Retail, Tab Kelola Gudang & Kartu Riwayat Mutasi Stok, dan dialog alokasi transfer stok gudang).
   - `pages/RecipesView.tsx`: Visual Bill of Materials (BOM) & formula resep minuman/makanan olahan F&B terisolasi per toko aktif.
-  - `pages/ModifiersView.tsx`: Manajemen grup modifier / topping berbayar & gratis.
+  - `pages/ModifiersView.tsx`: Manajemen grup modifier / topping berbayar & gratis, dilengkapi koneksi pemotongan stok bahan baku mentah (`inventory_items`) langsung dari opsi modifier (BOM Modifier) dengan takaran unit kustom.
   - `pages/SuppliersView.tsx`: Manajemen pemasok / vendor bahan baku mentah (kontak WA, termin tempo).
   - `pages/PromotionsView.tsx`: Manajemen voucher diskon persen/nominal & kuota penggunaan.
   - `pages/OrdersView.tsx`: Riwayat transaksi penjualan, open tabs meja terisi, cetak ulang struk, dan pembatalan (*void*).
@@ -317,6 +308,16 @@ Well POS menerapkan arsitektur kredensial multi-tier yang terpisah sesuai ranah 
      - Mesin kasir fisik dihubungkan menggunakan Identitas Toko (Slug/Tenant ID) dan diotorisasi dengan PIN Admin/Supervisor.
      - Konteks tersimpan aman di `localStorage` perangkat (`pairedDeviceContext`: tenantId, outletId, outletName).
      - Kasir login cepat menggunakan PIN pada terminal yang telah terhubung (`POST /api/auth/login-pin`).
+
+4. **Pencabutan Sesi Perangkat & Force Logout (Instant Device Session Revocation)**:
+   - **Kolom Token Version**: Kolom `token_version` (INTEGER DEFAULT 1) pada tabel `users`.
+   - **JWT Claim**: Setiap token JWT (`loginWithPassword`, `loginWithPin`, `pairCashierDevice`) menyematkan `tokenVersion`.
+   - **Enforcement di Auth Middleware**: `auth.middleware.ts` memvalidasi `decoded.tokenVersion < user.tokenVersion`. Jika terdeteksi lebih rendah, request langsung ditolak dengan HTTP 401 `code: 'SESSION_REVOKED'`.
+   - **Endpoint Pencabutan Per Staf**: `POST /api/users/:id/revoke-session` (memutus sesi perangkat staf tertentu secara instan).
+   - **Endpoint Pencabutan Massal**: `POST /api/users/revoke-all-sessions` (memutus seluruh sesi perangkat kasir/staf di toko; default `excludeCurrent: true` agar sesi pemanggil tetap aktif).
+   - **Auto-Revocation**: Otomatis menaikkan `token_version` saat password diubah, PIN kasir diganti, atau status staf dinonaktifkan (`isActive: false`).
+   - **Penanganan Sisi Klien**: Interceptor respons otomatis mendeteksi 401 `SESSION_REVOKED`, menghapus cache autentikasi lokal, dan mengarahkan layar ke form login kasir dengan alert informatif.
+
 ### 7.3 Tata Kelola Akses & Peran Staf (Granular Functional RBAC)
 Well POS menerapkan sistem hak akses berbasis domain fungsional operasional nyata (bukan pemisahan hardware channel perangkat ala Mekari):
 

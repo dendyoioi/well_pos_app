@@ -87,6 +87,10 @@ Sebelumnya, pencatatan transaksi di kasir POS belum memisahkan kanal-kanal penju
      3. Paper Bag Kraft (Rp 3.000)
      4. Set Sendok & Garpu Higienis (Rp 1.000)
    - Sinkronisasi `PosTerminalView.tsx`, `SupervisorFeesModal.tsx`, `TaxesSettingsView.tsx`, dan basis data outlet.
+4. **Kasir POS Mobile Handheld & Cetak Struk Fisik (`PosMobileView.tsx` & `receiptPdf.ts`)**:
+   - Antarmuka mobile POS mendukung penuh seluruh saluran aktif outlet (`activeChannels`) secara scrollable pill dinamis dengan icon sepeda motor untuk mitra online.
+   - Input kontekstual `ID Driver / No. Pesanan Online` (`onlineOrderId`) tersedia langsung di sheet keranjang belanja mobile.
+   - Struk termal / PDF kasir (`receiptPdf.ts`) otomatis mencetak Nomor Meja untuk Dine In (`Meja: ...`) dan ID Pesanan Driver Mitra Online (`ID Driver/Order: #...`).
 
 #### E. Laporan Finansial & Keputusan Bisnis (`src/pages/FinancialReportView.tsx`)
 1. **Kartu & Tabel Kontribusi Omset per Kanal**:
@@ -95,13 +99,20 @@ Sebelumnya, pencatatan transaksi di kasir POS belum memisahkan kanal-kanal penju
 2. **Integrasi Ekspor CSV**:
    - File CSV hasil unduhan otomatis memuat lembar rekapitulasi penjualan per kanal penjualan untuk kebutuhan audit akuntansi toko.
 
+#### F. Keamanan DDL & Migrasi Database (`src/migrations/schema_patcher.ts`)
+1. **Pendaftaran Otomatis Kolom Saluran**:
+   - Patch `20261002_04_outlets_channels_config` terdaftar di `SCHEMA_PATCHES` untuk memastikan tabel `outlets` selalu memiliki kolom `channels_config JSONB` pada server Render dan database Supabase.
+
 ---
 
 ### 3. KRITERIA PENERIMAAN (ACCEPTANCE CRITERIA)
 - [x] Istilah informal "online ojol" telah digantikan sepenuhnya dengan "Mitra Online Delivery" / "Layanan Pesan Antar Online".
 - [x] Menu pengaturan kanal berada di Backoffice Owner under `Pengaturan Resto` ➔ `Kanal Penjualan & Mitra`.
 - [x] Role `OWNER` dan `ADMIN` dapat mengelola kanal secara penuh; `SUPERVISOR` dapat toggle on/off operasional; `CASHIER` tidak memiliki akses.
-- [x] Terminal kasir menampilkan pemilih meja saat Dine In, dan otomatis menggantinya dengan input ID Pesanan Driver saat memilih kanal Mitra Online.
+- [x] Terminal kasir menampilkan pemilih meja saat Dine In, dan otomatis menggantinya dengan input ID Pesanan Driver saat memilih kanal Mitra Online (baik di Desktop maupun Mobile Handheld).
 - [x] Transaksi checkout dengan mitra online tercatat dengan kanal spesifik dan ID pesanan driver tersemat rapi di catatan transaksi.
+- [x] Struk termal dan dokumen PDF mencetak nomor meja (Dine In) dan ID pesanan driver (Mitra Online).
+- [x] Kolom `channels_config` terdaftar di `schema_patcher.ts` untuk migrasi otomatis ke Supabase.
 - [x] Laporan finansial menampilkan rincian kontribusi omset per kanal dan dapat diekspor ke CSV.
 - [x] Seluruh komponen frontend dan backend lolos uji build (`npm run build`) dengan exit code 0 tanpa error TypeScript.
+- [x] Status pengerjaan modul: **100% SELESAI (COMPLETED ✅)**.

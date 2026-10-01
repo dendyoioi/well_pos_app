@@ -14,7 +14,7 @@ export const generateReceiptPdf = (
   const widthMm = paperSize === '58mm' ? 58 : 80;
   
   // Hitung perkiraan tinggi konten berdasarkan jumlah item
-  const baseHeight = 110;
+  const baseHeight = order.orderStatus === 'VOIDED' ? 140 : 110;
   const itemHeight = (order.orderItems?.length || 1) * 12;
   const totalHeight = Math.max(160, baseHeight + itemHeight);
 
@@ -121,6 +121,24 @@ export const generateReceiptPdf = (
   doc.setFont('courier', 'normal');
   y += 3.5;
 
+  // Meja (Dine In) jika ada
+  if (order.tableNumber) {
+    doc.setFont('courier', 'bold');
+    doc.text(`Meja   : ${order.tableNumber}`, margin, y);
+    doc.setFont('courier', 'normal');
+    y += 3.5;
+  }
+
+  // ID Pesanan Driver / Online Delivery jika ada
+  const onlineOrderMatch = order.notes?.match(/\[(?:[A-Z0-9_]+)\s+#([^\]]+)\]/i);
+  const driverOrderId = order.onlineOrderId || (onlineOrderMatch ? onlineOrderMatch[1] : null);
+  if (driverOrderId) {
+    doc.setFont('courier', 'bold');
+    doc.text(`ID Driver/Order: #${driverOrderId}`, margin, y);
+    doc.setFont('courier', 'normal');
+    y += 3.5;
+  }
+
   const dateStr = new Date(order.createdAt).toLocaleString('id-ID', {
     day: '2-digit',
     month: 'short',
@@ -192,11 +210,17 @@ export const generateReceiptPdf = (
   if (order.discountAmount > 0) {
     printRow('Diskon:', `-Rp ${Number(order.discountAmount).toLocaleString('id-ID')}`);
   }
+  if (Number(order.pointsRedeemed || 0) > 0) {
+    printRow('Tukar Poin:', `-Rp ${Number(order.pointDiscountAmount || (order.pointsRedeemed || 0) * 100).toLocaleString('id-ID')}`);
+  }
   if (order.serviceCharge > 0) {
     printRow('Biaya/Layanan:', `+Rp ${Number(order.serviceCharge).toLocaleString('id-ID')}`);
   }
   if (order.taxAmount > 0) {
     printRow('Pajak (PB1/PPN):', `+Rp ${Number(order.taxAmount).toLocaleString('id-ID')}`);
+  }
+  if (Number(order.pointsEarned || 0) > 0) {
+    printRow('Poin Didapat:', `+${order.pointsEarned} Poin`);
   }
 
   y += 1;
@@ -231,9 +255,36 @@ export const generateReceiptPdf = (
   // Footer Message
   doc.setFont('courier', 'normal');
   doc.setFontSize(paperSize === '58mm' ? 6 : 7);
-  doc.text('Terima kasih atas kunjungan Anda!', widthMm / 2, y, { align: 'center' });
-  y += 3;
-  doc.text('Bukti pembayaran yang sah', widthMm / 2, y, { align: 'center' });
+
+  if (order.orderStatus === 'VOIDED') {
+    doc.setTextColor(220, 38, 38);
+    doc.setFont('courier', 'bold');
+    doc.text('*** BUKTI FISIK PEMBATALAN TRANSAKSI ***', widthMm / 2, y, { align: 'center' });
+    y += 3.5;
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Wajib diarsipkan di laci kasir untuk audit shift', widthMm / 2, y, { align: 'center' });
+    y += 5;
+
+    // Kolom Tanda Tangan Kasir & Supervisor
+    const colWidth = (widthMm - margin * 2) / 2;
+    const col1X = margin + colWidth / 2;
+    const col2X = margin + colWidth + colWidth / 2;
+
+    doc.setFontSize(paperSize === '58mm' ? 6 : 7);
+    doc.text('Kasir Bertugas', col1X, y, { align: 'center' });
+    doc.text('Supervisor/Owner', col2X, y, { align: 'center' });
+    y += 12;
+
+    doc.text('( .................... )', col1X, y, { align: 'center' });
+    doc.text('( .................... )', col2X, y, { align: 'center' });
+    y += 4;
+    doc.setTextColor(0, 0, 0);
+  } else {
+    doc.text('Terima kasih atas kunjungan Anda!', widthMm / 2, y, { align: 'center' });
+    y += 3;
+    doc.text('Bukti pembayaran yang sah', widthMm / 2, y, { align: 'center' });
+  }
 
   if (isFree) {
     y += 3.5;
@@ -244,5 +295,6 @@ export const generateReceiptPdf = (
 
   // Unduh File PDF
   const cleanInv = order.invoiceNumber.replace(/\//g, '-');
-  doc.save(`Struk_${cleanInv}.pdf`);
+  const prefix = order.orderStatus === 'VOIDED' ? 'SlipVoid_' : 'Struk_';
+  doc.save(`${prefix}${cleanInv}.pdf`);
 };

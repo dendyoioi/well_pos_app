@@ -45,6 +45,12 @@ Tujuan **EPIC-11** adalah:
   - Security headers OWASP (`X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, HSTS, `X-XSS-Protection`).
   - Sliding-window rate limiter pada route autentikasi (`authRateLimiter`).
   - Eksekusi automated load simulation 100 concurrent requests: throughput ~2000 req/sec, p95 latency ~44ms (< 150ms SLA), 0% error rate.
+- [x] **Task 11.5: Universal Hybrid Cache Architecture (Free-Tier & Redis Ready)**
+  - Implementasi dual-driver pada `cache.service.ts`: otomatis mendeteksi ketersediaan `REDIS_URL` untuk dedicated cloud atau defaulting ke optimized Node.js In-Memory `Map` dengan zero cost di Render Free Tier.
+  - Logging status transparan saat runtime startup dan pelacakan metrik hit-rate terpadu.
+- [x] **Task 11.6: PgBouncer Pooler-Safe RLS & Evolution Strategy (ADR-008)**
+  - Penyempurnaan `withTenantContext`, `withSuperAdminContext`, dan `withBypassRLS` pada `rls.service.ts` agar tahan terhadap pembatasan session pooler Supabase PgBouncer (Port 6543) tanpa risiko *connection leakage*.
+  - Penyusunan blueprint migrasi [`ADR-008`](file:///Users/dendyaditya/Projects/pos_project/docs/decisions/ADR-008-free-tier-infrastructure-and-evolution-strategy.md) untuk kepastian upgrade mulus ke dedicated PostgreSQL/VPS di masa depan.
 
 ---
 

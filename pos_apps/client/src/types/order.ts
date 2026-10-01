@@ -55,6 +55,7 @@ export interface CheckoutPayload {
   shiftId?: string;
   outletId?: string;
   promotionId?: string;
+  pointsToRedeem?: number;
 }
 
 export interface OrderItem {
@@ -96,6 +97,7 @@ export interface Order {
   customerEmail?: string | null;
   customerId?: string | null;
   tableNumber?: string | null;
+  onlineOrderId?: string | null;
   customer?: {
     id: string;
     name: string;
@@ -111,6 +113,9 @@ export interface Order {
   serviceTotal?: number;
   grandTotal: number;
   totalAmount?: number;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  pointDiscountAmount?: number;
   channel?: OrderChannel | string;
   orderType?: string;
   orderStatus?: string;

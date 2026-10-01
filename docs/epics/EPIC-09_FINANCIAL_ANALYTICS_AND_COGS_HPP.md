@@ -42,6 +42,26 @@ Tujuan **EPIC-09** adalah:
 - [x] **Task 9.4: Multi-Format Data Export Engine**
   - Endpoint download ekspor CSV streaming dengan header `\uFEFF` (UTF-8 BOM) untuk kompatibilitas Excel Indonesia.
   - Mendukung tipe ekspor: `pnl`, `products`, `shifts`, `deadstock`.
+- [x] **Task 9.5: Frontend Financial & Real-Time COGS Dashboard Integration**
+  - Visualisasi 6 KPI Cards terpadu di `FinancialReportView.tsx`: Total Omset Bersih, Total HPP / Modal Pokok (`totalCOGS`), Laba Kotor / Gross Profit (`grossProfit`) beserta badge margin %, Total Faktur Transaksi, Total Pajak PPN & Service, serta Total Diskon Promosi.
+  - Breakdown tren harian (Daily Trends) kini menyertakan kolom HPP dan Laba Kotor baik pada Desktop Table View maupun Mobile Card List View.
+  - Ekspor CSV Finansial terpadu dengan UTF-8 BOM (`\uFEFF`) yang mencakup rincian HPP, Laba Kotor, dan persentase Gross Profit Margin.
+- [x] **Task 9.6: Frontend Cashier Shift & Discrepancy Audit View**
+  - Integrasi API `GET /api/reports/shifts` pada `ShiftsAuditView.tsx` dengan filter periode preset (Hari Ini, 7 Hari, 30 Hari, Bulan Ini, Kustom) dan penyaringan outlet aktif.
+  - 4 Kartu KPI Ringkasan Audit Kasir: Total Sesi Diaudit, Kas Seimbang / Sesuai (Rp 0), Kas Kurang (Shortage) beserta akumulasi nominal minus, dan Net Selisih Kas (Net Variance).
+  - Status selisih kas cerdas (`SEIMBANG`, `LEBIH`, `KURANG`, `AKTIF`) pada tabel desktop dan kartu smartphone handheld.
+  - Ekspor CSV audit shift kasir berformat UTF-8 BOM (`\uFEFF`).
+- [x] **Task 9.7: Product Matrix & Dead-Stock CSV UTF-8 BOM Standard**
+  - Standarisasi ekspor CSV pada `ProductAnalyticsView.tsx` menggunakan UTF-8 BOM (`\uFEFF`) dan Blob URL untuk kompatibilitas mutlak Microsoft Excel dan spreadsheet modern tanpa karakter rusak.
+- [x] **Task 9.8: Net Operating Profit Engine (Gross Profit - Kas OPEX Shift)**
+  - Mengintegrasikan pengeluaran kas kecil laci kasir (`cash_movements` tipe `CASH_OUT`) ke dalam pembukuan laba rugi.
+  - Menghasilkan perhitungan real-time Laba Bersih Operasional (*Net Operating Profit*) dan Marjin Bersih (*Net Profit Margin %*).
+- [x] **Task 9.9: Visual Trendline Chart (Native SVG Omzet vs HPP vs Laba Kotor)**
+  - Komponen `<SalesProfitTrendChart />` Native SVG ultra-cepat tanpa dependensi library eksternal yang berat.
+  - Mendukung visualisasi Batang (Bar) dan Garis/Area (Line) dengan interactive floating tooltip.
+- [x] **Task 9.10: Executive BI Smart Insights Panel**
+  - Deteksi otomatis jam tersibuk toko (*Peak Sales Hours*), rata-rata keranjang belanja (*Average Basket Size / AOV*), menu andalan margin tinggi (*Champion*), dan status kesehatan marjin toko (*Health Status*).
+- **Status Akhir: 100% COMPLETED (GAP: 0%)**
 
 ---
 

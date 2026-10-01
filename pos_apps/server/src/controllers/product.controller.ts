@@ -919,3 +919,260 @@ export const assignProductsToOutlet = async (req: Request, res: Response) => {
     });
   }
 };
+
+const bulkImportItemSchema = z.object({
+  name: z.string().min(1, 'Nama produk wajib diisi'),
+  sku: z.string().min(1, 'SKU wajib diisi'),
+  barcode: z.string().optional().nullable(),
+  categoryName: z.string().optional().nullable(),
+  costPrice: z.number().min(0).default(0),
+  basePrice: z.number().min(0).default(0),
+  unit: z.string().default('Pcs'),
+  description: z.string().optional().nullable(),
+  initialStock: z.number().min(0).default(0),
+  minStockAlert: z.number().min(0).default(5),
+});
+
+const bulkImportProductsSchema = z.object({
+  outletId: z.string().uuid().optional(),
+  items: z.array(bulkImportItemSchema).min(1, 'Minimal 1 produk untuk diimpor'),
+});
+
+/**
+ * Controller: Impor massal katalog produk dari spreadsheet / CSV
+ * @route POST /api/products/bulk-import
+ */
+export const bulkImportProducts = async (req: Request, res: Response) => {
+  try {
+    const parseResult = bulkImportProductsSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi data impor gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { items, outletId } = parseResult.data;
+    let userTenantId = req.user?.tenantId || req.tenantId;
+
+    if (!userTenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Silakan login kembali.' });
+    }
+
+    // Resolusi Outlet Cabang
+    let targetOutletId = outletId || req.user?.outletId;
+    if (!targetOutletId) {
+      const defaultOutlet = await prisma.outlet.findFirst({
+        where: { tenantId: userTenantId },
+        select: { id: true },
+      });
+      targetOutletId = defaultOutlet?.id;
+    }
+
+    if (!targetOutletId) {
+      return res.status(400).json({ status: 'error', message: 'Outlet cabang tidak ditemukan untuk alokasi produk' });
+    }
+
+    // Cache kategori yang ada untuk tenant ini
+    const existingCategories = await prisma.category.findMany({
+      where: { tenantId: userTenantId },
+    });
+    const categoryMap = new Map<string, string>();
+    for (const c of existingCategories) {
+      categoryMap.set(c.name.trim().toLowerCase(), c.id);
+    }
+
+    // Default category jika kategori kosong
+    let defaultCategoryId = categoryMap.get('umum') || categoryMap.get('general');
+    if (!defaultCategoryId && existingCategories.length > 0) {
+      defaultCategoryId = existingCategories[0].id;
+    } else if (!defaultCategoryId) {
+      const newGeneral = await prisma.category.create({
+        data: {
+          tenantId: userTenantId,
+          name: 'Umum',
+          slug: `umum-${userTenantId.slice(0, 6)}`,
+        },
+      });
+      defaultCategoryId = newGeneral.id;
+      categoryMap.set('umum', defaultCategoryId);
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    const errors: Array<{ sku: string; name: string; error: string }> = [];
+
+    // Proses setiap item secara sekuensial
+    for (const item of items) {
+      try {
+        const skuTrimmed = item.sku.trim();
+        const nameTrimmed = item.name.trim();
+        const barcodeTrimmed = (item.barcode && item.barcode.trim()) || skuTrimmed;
+
+        // Resolusi Kategori
+        let categoryId = defaultCategoryId!;
+        if (item.categoryName && item.categoryName.trim()) {
+          const catNameClean = item.categoryName.trim();
+          const catNameLower = catNameClean.toLowerCase();
+          if (categoryMap.has(catNameLower)) {
+            categoryId = categoryMap.get(catNameLower)!;
+          } else {
+            const catSlug = catNameLower.replace(/[^a-z0-9]+/g, '-') || 'kategori';
+            const createdCat = await prisma.category.create({
+              data: {
+                tenantId: userTenantId,
+                name: catNameClean,
+                slug: `${catSlug}-${userTenantId.slice(0, 6)}`,
+              },
+            });
+            categoryId = createdCat.id;
+            categoryMap.set(catNameLower, categoryId);
+          }
+        }
+
+        // Cek apakah produk dengan SKU ini sudah ada
+        const existingProduct = await prisma.product.findFirst({
+          where: {
+            tenantId: userTenantId,
+            sku: skuTrimmed,
+          },
+          include: {
+            variants: true,
+          },
+        });
+
+        if (existingProduct) {
+          // Update data produk, varian, dan inventory item yang sudah ada
+          await prisma.$transaction(async (tx) => {
+            await tx.product.update({
+              where: { id: existingProduct.id },
+              data: {
+                name: nameTrimmed,
+                categoryId,
+                unit: item.unit || 'Pcs',
+                description: item.description || existingProduct.description,
+                isActive: true,
+              },
+            });
+
+            if (existingProduct.variants && existingProduct.variants.length > 0) {
+              const primaryVariant = existingProduct.variants[0];
+              await tx.productVariant.update({
+                where: { id: primaryVariant.id },
+                data: {
+                  name: nameTrimmed,
+                  barcode: barcodeTrimmed,
+                  price: item.basePrice,
+                  isActive: true,
+                },
+              });
+
+              if (primaryVariant.inventoryItemId) {
+                await tx.inventoryItem.update({
+                  where: { id: primaryVariant.inventoryItemId },
+                  data: {
+                    name: nameTrimmed,
+                    averageCost: item.costPrice,
+                    reorderPoint: item.minStockAlert,
+                  },
+                });
+              }
+            }
+
+            // Pastikan produk teralokasi ke outlet
+            await tx.outletProduct.upsert({
+              where: {
+                outletId_productId: {
+                  outletId: targetOutletId!,
+                  productId: existingProduct.id,
+                },
+              },
+              update: { isAvailable: true },
+              create: {
+                tenantId: userTenantId,
+                outletId: targetOutletId!,
+                productId: existingProduct.id,
+                isAvailable: true,
+              },
+            });
+          });
+          updatedCount++;
+        } else {
+          // Cek apakah barcode bentrok dengan varian produk lain
+          const barcodeConflict = await prisma.productVariant.findFirst({
+            where: {
+              tenantId: userTenantId,
+              barcode: barcodeTrimmed,
+            },
+          });
+
+          const finalBarcode = barcodeConflict ? `${skuTrimmed}-${Date.now().toString().slice(-4)}` : barcodeTrimmed;
+
+          // Buat produk baru via dual-write service
+          await prisma.$transaction(async (tx) => {
+            const dwResult = await catalogDualWriteService.createProduct(
+              {
+                name: nameTrimmed,
+                sku: skuTrimmed,
+                barcode: finalBarcode,
+                categoryId,
+                costPrice: item.costPrice,
+                basePrice: item.basePrice,
+                unit: item.unit || 'Pcs',
+                description: item.description || null,
+                initialStock: item.initialStock,
+                minStockAlert: item.minStockAlert,
+                outletId: targetOutletId!,
+              },
+              { tx, tenantId: userTenantId, actorUserId: req.user?.id }
+            );
+
+            // Alokasikan ke outlet
+            await tx.outletProduct.upsert({
+              where: {
+                outletId_productId: {
+                  outletId: targetOutletId!,
+                  productId: dwResult.legacyData.id,
+                },
+              },
+              update: { isAvailable: true },
+              create: {
+                tenantId: userTenantId,
+                outletId: targetOutletId!,
+                productId: dwResult.legacyData.id,
+                isAvailable: true,
+              },
+            });
+          });
+          createdCount++;
+        }
+      } catch (err: any) {
+        console.error(`Gagal mengimpor item SKU ${item.sku}:`, err);
+        errors.push({
+          sku: item.sku,
+          name: item.name,
+          error: err.message || 'Gagal menyimpan ke database',
+        });
+      }
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Impor produk selesai: ${createdCount} baru dibuat, ${updatedCount} diperbarui${errors.length > 0 ? `, ${errors.length} gagal` : ''}`,
+      data: {
+        total: items.length,
+        created: createdCount,
+        updated: updatedCount,
+        failed: errors.length,
+        errors,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error saat bulk import products:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Terjadi kesalahan sistem saat memproses impor produk massal',
+    });
+  }
+};

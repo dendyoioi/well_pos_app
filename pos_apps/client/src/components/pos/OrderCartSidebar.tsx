@@ -19,15 +19,20 @@ import {
   UtensilsCrossed,
   Utensils,
   Ticket,
+  ChefHat,
+  Printer,
 } from 'lucide-react';
 import type { CartItem, OrderChannel } from '../../types/order';
 import { ORDER_CHANNEL_LABELS } from '../../types/order';
 import type { Customer } from '../../types/customer';
-import type { OutletFee } from '../../types/outlet';
+import type { Outlet, OutletFee } from '../../types/outlet';
 import type { Promotion } from '../../types/promotion';
 import { Button } from '../ui';
 
 export interface OrderCartSidebarProps {
+  outlet?: Outlet | null;
+  pointsToRedeem?: number;
+  onChangePointsToRedeem?: (points: number) => void;
   cart: CartItem[];
   onUpdateQuantity: (index: number, delta: number) => void;
   onRemoveItem: (index: number) => void;
@@ -90,9 +95,14 @@ export interface OrderCartSidebarProps {
   appliedPromotion?: Promotion | null;
   onOpenPromotionModal?: () => void;
   onRemovePromotion?: () => void;
+  /** Callback cetak tiket dapur tanpa harga (KDS Kitchen Check) */
+  onPrintKitchenTicket?: () => void;
 }
 
 export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
+  outlet,
+  pointsToRedeem = 0,
+  onChangePointsToRedeem,
   cart,
   onUpdateQuantity,
   onRemoveItem,
@@ -131,6 +141,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
   appliedPromotion = null,
   onOpenPromotionModal,
   onRemovePromotion,
+  onPrintKitchenTicket,
 }) => {
   const [showMemberSearch, setShowMemberSearch] = useState(false);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
@@ -217,7 +228,23 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
     }
   });
 
-  const grandTotal = totalAfterDiscount + onDemandFeesTotal + autoFeesTotal;
+  // Perhitungan Program Loyalitas & Poin Per-Outlet
+  const loyaltyConfig = outlet?.loyaltyConfig;
+  const isLoyaltyActive = Boolean(loyaltyConfig?.isActive);
+  const pointValueIdr = loyaltyConfig?.pointValueIdr || 100;
+  const minPointsToRedeem = loyaltyConfig?.minPointsToRedeem || 0;
+  const customerPoints = Number(selectedCustomer?.loyaltyPoints || 0);
+  const maxPointsPossible = Math.min(
+    customerPoints,
+    Math.floor((totalAfterDiscount + onDemandFeesTotal + autoFeesTotal) / pointValueIdr)
+  );
+  const pointDiscountAmount =
+    isLoyaltyActive && pointsToRedeem > 0 ? pointsToRedeem * pointValueIdr : 0;
+
+  const grandTotal = Math.max(
+    0,
+    totalAfterDiscount + onDemandFeesTotal + autoFeesTotal - pointDiscountAmount
+  );
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const filteredMembers = customers.filter(
@@ -280,25 +307,125 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
       {/* Identitas Pelanggan & CRM Member */}
       <div className="p-3 border-b border-slate-100 space-y-2 shrink-0 bg-white">
         {selectedCustomer ? (
-          <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/70 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs">
-                <UserCheck className="w-4 h-4" />
+          <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/70 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-xs font-bold text-slate-900">{selectedCustomer.name}</p>
+                    {selectedCustomer.tier && (
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-black border ${
+                        selectedCustomer.tier === 'PLATINUM' ? 'bg-purple-100 text-purple-900 border-purple-300' :
+                        selectedCustomer.tier === 'GOLD' ? 'bg-amber-100 text-amber-900 border-amber-300' :
+                        selectedCustomer.tier === 'SILVER' ? 'bg-slate-200 text-slate-800 border-slate-300' :
+                        'bg-orange-100 text-orange-900 border-orange-300'
+                      }`}>
+                        {selectedCustomer.tier === 'PLATINUM' ? '💎 PLATINUM' :
+                         selectedCustomer.tier === 'GOLD' ? '🥇 GOLD' :
+                         selectedCustomer.tier === 'SILVER' ? '🥈 SILVER' : '🥉 BRONZE'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] mt-0.5">
+                    <span className="text-slate-500 font-medium">{selectedCustomer.phone || selectedCustomer.email || 'Member'}</span>
+                    {isLoyaltyActive && (
+                      <span className="font-extrabold text-amber-800 bg-amber-100/80 px-1.5 py-0.2 rounded border border-amber-300">
+                        ★ {customerPoints.toLocaleString('id-ID')} Poin
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-900">{selectedCustomer.name}</p>
-                <p className="text-[10px] text-blue-900 font-bold">
-                  {selectedCustomer.phone || selectedCustomer.email || 'Member Terdaftar'}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectCustomer(null);
+                  onChangePointsToRedeem?.(0);
+                }}
+                className="text-[10px] text-slate-500 hover:text-rose-600 font-bold p-1 cursor-pointer"
+                title="Lepas Member"
+              >
+                Lepas
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => onSelectCustomer(null)}
-              className="text-[10px] text-slate-500 hover:text-rose-600 font-bold"
-            >
-              Lepas
-            </button>
+
+            {/* Section Tukar Poin Loyalitas (Hanya jika aktif di outlet ini & member punya poin) */}
+            {isLoyaltyActive && (
+              <div className="pt-2 border-t border-blue-200/60 space-y-1.5">
+                {customerPoints === 0 ? (
+                  <p className="text-[10px] text-slate-500 italic">
+                    Member belum memiliki saldo poin.
+                  </p>
+                ) : customerPoints < minPointsToRedeem ? (
+                  <p className="text-[10px] text-slate-500 italic">
+                    Min. penukaran {minPointsToRedeem} poin (Saldo: {customerPoints} poin).
+                  </p>
+                ) : maxPointsPossible <= 0 ? (
+                  <p className="text-[10px] text-slate-500 italic">
+                    Tambahkan pesanan untuk mulai menukarkan poin.
+                  </p>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
+                        <span>Tukar Poin Diskon</span>
+                        <span className="text-[9px] text-slate-400 font-normal">
+                          (1 Poin = Rp {pointValueIdr})
+                        </span>
+                      </span>
+                      {pointsToRedeem > 0 && (
+                        <span className="text-[10px] font-black text-amber-800">
+                          - Rp {(pointsToRedeem * pointValueIdr).toLocaleString('id-ID')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        max={maxPointsPossible}
+                        value={pointsToRedeem || ''}
+                        onChange={(e) => {
+                          const val = Math.max(0, Math.min(maxPointsPossible, Number(e.target.value) || 0));
+                          onChangePointsToRedeem?.(val);
+                        }}
+                        placeholder="0"
+                        className="w-20 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 outline-none focus:border-blue-900"
+                      />
+                      <div className="flex gap-1 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => onChangePointsToRedeem?.(Math.floor(maxPointsPossible / 2))}
+                          className="flex-1 py-1 text-[10px] font-bold bg-white border border-slate-300 hover:bg-slate-100 rounded text-slate-700 transition-colors cursor-pointer"
+                        >
+                          50%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onChangePointsToRedeem?.(maxPointsPossible)}
+                          className="flex-1 py-1 text-[10px] font-black bg-amber-500 hover:bg-amber-600 text-slate-950 rounded transition-colors shadow-2xs cursor-pointer"
+                        >
+                          Semua ({maxPointsPossible})
+                        </button>
+                        {pointsToRedeem > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onChangePointsToRedeem?.(0)}
+                            className="px-2 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded cursor-pointer"
+                            title="Batal tukar poin"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -931,6 +1058,13 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
             </div>
           )}
 
+          {pointDiscountAmount > 0 && (
+            <div className="flex justify-between text-amber-800 font-bold">
+              <span>Tukar Poin ({pointsToRedeem} Poin)</span>
+              <span>- Rp {pointDiscountAmount.toLocaleString('id-ID')}</span>
+            </div>
+          )}
+
           {onDemandFeesTotal > 0 && (
             <div className="flex justify-between text-slate-600">
               <span>Kemasan &amp; Kantong</span>
@@ -1019,6 +1153,20 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                 ? 'Perbarui Tagihan Meja (Simpan ke Dapur)'
                 : 'Simpan & Kirim Dapur (Bayar Nanti)'}
             </Button>
+          )}
+
+          {/* Kitchen Ticket Print (KDS) — Tombol cetak tiket dapur tanpa harga */}
+          {(orderChannel === 'DINE_IN' || orderChannel === 'QR_MENU') && onPrintKitchenTicket && cart.length > 0 && (
+            <button
+              type="button"
+              onClick={onPrintKitchenTicket}
+              title="Cetak tiket pesanan ke printer dapur (tanpa harga)"
+              className="w-full py-2 px-3 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+            >
+              <ChefHat className="w-3.5 h-3.5" />
+              <span>Cetak Tiket Dapur (KDS)</span>
+              <Printer className="w-3.5 h-3.5 ml-auto opacity-50" />
+            </button>
           )}
 
           <div className="grid grid-cols-2 gap-2">

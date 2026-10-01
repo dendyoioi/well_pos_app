@@ -12,9 +12,10 @@ const modifierItemInputSchema = z.object({
   inventoryEffect: z
     .object({
       inventoryItemId: z.string().uuid(),
-      quantityDelta: z.number(), // positif = menambah pemotongan stok bahan, negatif = mengurangi
+      quantityDelta: z.number(), // positif = takaran pemotongan stok bahan baku
     })
-    .optional(),
+    .optional()
+    .nullable(),
 });
 
 // Skema Validasi Grup Modifier
@@ -173,24 +174,22 @@ export const upsertModifierGroup = async (req: Request, res: Response) => {
           });
         }
 
-        // Jika memiliki efek bahan baku persediaan (ModifierRecipeEffect)
-        if (item.inventoryEffect) {
-          await tx.modifierRecipeEffect.upsert({
-            where: {
-              modifierItemId_inventoryItemId: {
-                modifierItemId: modifierItem.id,
-                inventoryItemId: item.inventoryEffect.inventoryItemId,
-              },
-            },
-            create: {
+        // Kelola efek bahan baku persediaan (ModifierRecipeEffect)
+        if (item.inventoryEffect && item.inventoryEffect.inventoryItemId && Number(item.inventoryEffect.quantityDelta) > 0) {
+          await tx.modifierRecipeEffect.deleteMany({
+            where: { modifierItemId: modifierItem.id },
+          });
+          await tx.modifierRecipeEffect.create({
+            data: {
               tenantId,
               modifierItemId: modifierItem.id,
               inventoryItemId: item.inventoryEffect.inventoryItemId,
               quantityDelta: item.inventoryEffect.quantityDelta,
             },
-            update: {
-              quantityDelta: item.inventoryEffect.quantityDelta,
-            },
+          });
+        } else {
+          await tx.modifierRecipeEffect.deleteMany({
+            where: { modifierItemId: modifierItem.id },
           });
         }
       }

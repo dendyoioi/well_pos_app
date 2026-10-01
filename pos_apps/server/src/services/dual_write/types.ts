@@ -185,6 +185,7 @@ export interface UpdateUserDTO {
   avatarUrl?: string | null;
   canCashOut?: boolean;
   isActive?: boolean;
+  incrementTokenVersion?: boolean;
 }
 
 // ==========================================

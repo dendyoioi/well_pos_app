@@ -238,6 +238,13 @@ export interface PaymentConfig {
   qris?: QrisConfig | null;
 }
 
+export interface OutletLoyaltyConfig {
+  isActive: boolean;
+  pointsPerSpend?: number; // default: 10000 (Rp 10.000 = 1 Poin)
+  pointValueIdr?: number; // default: 100 (1 Poin = Rp 100)
+  minPointsToRedeem?: number; // default: 10 (minimal tukar 10 poin)
+}
+
 export interface Outlet {
   id: string;
   tenantId?: string | null;
@@ -252,6 +259,7 @@ export interface Outlet {
   receiptConfig?: ReceiptConfig | null;
   channelsConfig?: SalesChannelConfig[] | null;
   paymentConfig?: PaymentConfig | null;
+  loyaltyConfig?: OutletLoyaltyConfig | null;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

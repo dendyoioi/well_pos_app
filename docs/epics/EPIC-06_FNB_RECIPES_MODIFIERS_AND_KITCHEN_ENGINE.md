@@ -53,3 +53,10 @@ Skema basis data target 18 tabel Well POS telah siap dan terverifikasi secara pe
   - Memperbarui query verifikasi barcode (`existingRows`) dan `prodRows` agar melakukan JOIN ke `product_variants` & `inventory_items` alih-alih merujuk ke kolom lama pada tabel `products`.
   - Melonggarkan skema validasi `linkProductModifierSchema` untuk mengizinkan array kosong `[]` (unlinking semua modifier dari produk).
   - Melindungi integritas validasi `updateProductSchema` dengan dukungan field opsional yang bersifat nullable (`description`, `imageUrl`, dll.).
+- [x] **Task 6.7: Modifier BOM UI Linkage & Bulk Product Import/Export (100% Completion)**
+  - **Koneksi Bahan Baku ke Modifier**: Antarmuka `ModifiersView.tsx` kini memungkinkan pemilihan bahan baku (`inventory_items`) dan takaran konsumsi (`quantityDelta`) langsung pada tiap opsi modifier. Menampilkan badge pengurangan bahan baku di kartu modifier dan mengeksekusi pemotongan saldo persediaan secara otomatis saat pesanan kasir dibayar via `sales.dual_write.service.ts`.
+  - **Impor & Ekspor Massal Katalog (CSV / Excel)**:
+    - Utilitas `productExportCsv.ts` untuk ekspor instan seluruh produk ke format CSV dengan UTF-8 BOM untuk kompatibilitas Microsoft Excel.
+    - Template kosong standar `template_impor_produk_wellpos.csv` untuk panduan merchant.
+    - Antarmuka layar penuh `FullScreenProductImportModal.tsx` (Zero Stacked Modals) dengan parser CSV client-side, validasi baris real-time, dan kalkulasi cerdas upsert.
+    - Backend API `POST /api/products/bulk-import` yang memproses pembuatan/pembaruan produk, varian, kategori otomatis, dan alokasi outlet secara atomik.

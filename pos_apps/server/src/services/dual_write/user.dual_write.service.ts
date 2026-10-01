@@ -188,6 +188,13 @@ export class UserDualWriteService extends BaseDualWriteService {
       const isActive = dto.isActive !== undefined ? dto.isActive : current.is_active;
       const canCashOut = dto.canCashOut !== undefined ? dto.canCashOut : (current.can_cash_out ?? false);
 
+      // Otomatis naikkan token_version jika password/PIN diubah, user dinonaktifkan, atau diminta eksplisit
+      const shouldIncrementToken =
+        dto.incrementTokenVersion === true ||
+        dto.passwordHash !== undefined ||
+        pinHashUpdate !== undefined ||
+        (dto.isActive !== undefined && dto.isActive === false && current.is_active === true);
+
       // Update user with Parameterized Raw SQL
       let targetAffected = 0;
       if (pinHashUpdate !== undefined) {
@@ -197,6 +204,7 @@ export class UserDualWriteService extends BaseDualWriteService {
            SET "name" = $1, "email" = $2, "password_hash" = $3,
                "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6, "pin_hash" = $7,
                "can_cash_out" = $8,
+               "token_version" = CASE WHEN $11::boolean THEN "token_version" + 1 ELSE "token_version" END,
                "updated_at" = CURRENT_TIMESTAMP
            WHERE "id" = $9 AND "tenant_id" = $10;`,
           name,
@@ -208,7 +216,8 @@ export class UserDualWriteService extends BaseDualWriteService {
           pinHashUpdate,
           canCashOut,
           userId,
-          tenantId
+          tenantId,
+          shouldIncrementToken
         );
         targetAffected = 1;
       } else {
@@ -218,6 +227,7 @@ export class UserDualWriteService extends BaseDualWriteService {
            SET "name" = $1, "email" = $2, "password_hash" = $3,
                "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6,
                "can_cash_out" = $7,
+               "token_version" = CASE WHEN $10::boolean THEN "token_version" + 1 ELSE "token_version" END,
                "updated_at" = CURRENT_TIMESTAMP
            WHERE "id" = $8 AND "tenant_id" = $9;`,
           name,
@@ -228,7 +238,8 @@ export class UserDualWriteService extends BaseDualWriteService {
           isActive,
           canCashOut,
           userId,
-          tenantId
+          tenantId,
+          shouldIncrementToken
         );
       }
 
@@ -236,7 +247,7 @@ export class UserDualWriteService extends BaseDualWriteService {
         legacyData: { id: userId, name, email, role, outletId, isActive, canCashOut },
         targetSynced: true,
         targetRecordsAffected: targetAffected,
-        targetDetails: { userId, pinHashUpdated: pinHashUpdate !== undefined },
+        targetDetails: { userId, pinHashUpdated: pinHashUpdate !== undefined, tokenVersionIncremented: shouldIncrementToken },
       };
     } catch (err: any) {
       if (ctx.strictAtomic !== false) {
@@ -254,5 +265,50 @@ export class UserDualWriteService extends BaseDualWriteService {
       });
       throw err;
     }
+  }
+
+  /**
+   * Mencabut sesi satu staf spesifik secara instan (force logout)
+   */
+  public async revokeUserSession(
+    tx: any,
+    userId: string,
+    tenantId: string
+  ): Promise<number> {
+    return await this.executeRaw(
+      tx,
+      `UPDATE "users" 
+       SET "token_version" = "token_version" + 1, "updated_at" = CURRENT_TIMESTAMP 
+       WHERE "id" = $1 AND "tenant_id" = $2;`,
+      userId,
+      tenantId
+    );
+  }
+
+  /**
+   * Mencabut sesi seluruh staf/kasir di tenant ini secara massal (force logout massal)
+   */
+  public async revokeAllSessions(
+    tx: any,
+    tenantId: string,
+    excludeUserId?: string
+  ): Promise<number> {
+    if (excludeUserId) {
+      return await this.executeRaw(
+        tx,
+        `UPDATE "users" 
+         SET "token_version" = "token_version" + 1, "updated_at" = CURRENT_TIMESTAMP 
+         WHERE "tenant_id" = $1 AND "id" != $2;`,
+        tenantId,
+        excludeUserId
+      );
+    }
+    return await this.executeRaw(
+      tx,
+      `UPDATE "users" 
+       SET "token_version" = "token_version" + 1, "updated_at" = CURRENT_TIMESTAMP 
+       WHERE "tenant_id" = $1;`,
+      tenantId
+    );
   }
 }

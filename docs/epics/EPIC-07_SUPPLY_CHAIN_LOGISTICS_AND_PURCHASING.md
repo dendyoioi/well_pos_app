@@ -29,6 +29,8 @@ EPIC-07 menghadirkan modul logistik dan rantai pasok multi-cabang terintegrasi (
 | **Sprint 7.5** | **Automated Integration Verification Suite** | **DONE ✅** | `pos_apps/server/src/migrations/contract/test_epic07_supply_chain.ts` |
 | **Sprint 7.6** | **Bulk Stock Opname Workspace & Atomic Adjustment Engine** | **DONE ✅** | `POST /api/inventory/bulk-adjustment`<br/>`pos_apps/server/src/controllers/inventory.controller.ts`<br/>`pos_apps/client/src/components/FullScreenBulkOpnameModal.tsx`<br/>`pos_apps/client/src/pages/InventoryView.tsx` |
 | **Sprint 7.7** | **Unified Bulk Inventory Workspace (Opname, Stock In, Stock Out, Inter-Outlet Transfer)** | **DONE ✅** | `POST /api/inventory/bulk-stock-in`<br/>`POST /api/inventory/bulk-stock-out`<br/>`POST /api/inventory/bulk-transfer`<br/>`pos_apps/client/src/components/FullScreenBulkOpnameModal.tsx`<br/>`pos_apps/client/src/services/api.ts` |
+| **Sprint 7.8** | **Backoffice UI: Purchase Orders (PO) & Physical Goods Receiving** | **DONE ✅** | `pos_apps/client/src/pages/PurchaseOrdersView.tsx`<br/>`pos_apps/client/src/services/api.ts`<br/>`pos_apps/client/src/types/purchasing.ts` |
+| **Sprint 7.9** | **Backoffice UI: Inter-Outlet Transfers & Expiry Alert Widget** | **DONE ✅** | `pos_apps/client/src/pages/StockTransfersView.tsx`<br/>`pos_apps/client/src/pages/InventoryView.tsx`<br/>`pos_apps/client/src/components/saas/BackofficeLayout.tsx`<br/>`pos_apps/client/src/pages/DashboardPage.tsx` |
 
 ---
 

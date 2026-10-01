@@ -14,9 +14,11 @@ import {
   ToggleLeft,
   ToggleRight,
   Layers,
+  Package,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { ModifierGroup, ModifierItem, UpsertModifierGroupInput } from '../types/modifier';
+import type { RecipeInventoryItem } from '../types/recipe';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { TablePagination } from '../components/TablePagination';
 import { formatRupiah } from '../utils/currency';
@@ -25,6 +27,7 @@ import { useDialog } from '../context/DialogContext';
 export const ModifiersView: React.FC = () => {
   const dialog = useDialog();
   const [groups, setGroups] = useState<ModifierGroup[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<RecipeInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -53,12 +56,18 @@ export const ModifiersView: React.FC = () => {
   const fetchModifierGroups = async () => {
     setLoading(true);
     try {
-      const res = await api.getModifierGroups();
-      if (res.status === 'success') {
-        setGroups(res.data);
+      const [groupsRes, itemsRes] = await Promise.all([
+        api.getModifierGroups(),
+        api.getRecipeInventoryItems(),
+      ]);
+      if (groupsRes.status === 'success') {
+        setGroups(groupsRes.data);
+      }
+      if (itemsRes.status === 'success' && Array.isArray(itemsRes.data)) {
+        setInventoryItems(itemsRes.data);
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Gagal memuat grup modifier' });
+      setFeedback({ type: 'error', message: err.message || 'Gagal memuat grup modifier & bahan baku' });
     } finally {
       setLoading(false);
     }
@@ -94,15 +103,46 @@ export const ModifiersView: React.FC = () => {
       minSelection: group.minSelection,
       maxSelection: group.maxSelection,
       isRequired: group.isRequired,
-      items: group.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        priceAdjustment: Number(item.priceAdjustment) || 0,
-        isDefault: item.isDefault,
-      })),
+      items: group.items.map((item) => {
+        const eff = item.recipeEffects?.[0];
+        return {
+          id: item.id,
+          name: item.name,
+          priceAdjustment: Number(item.priceAdjustment) || 0,
+          isDefault: item.isDefault,
+          inventoryEffect: eff
+            ? {
+                inventoryItemId: eff.inventoryItemId,
+                quantityDelta: Number(eff.quantityDelta) || 0,
+              }
+            : undefined,
+        };
+      }),
     });
     setIsFormOpen(true);
     setFeedback(null);
+  };
+
+  const handleItemInventoryEffectChange = (
+    index: number,
+    inventoryItemId: string,
+    quantityDelta: number
+  ) => {
+    setFormData((prev) => {
+      const newItems = [...prev.items];
+      if (!inventoryItemId) {
+        newItems[index] = { ...newItems[index], inventoryEffect: undefined };
+      } else {
+        newItems[index] = {
+          ...newItems[index],
+          inventoryEffect: {
+            inventoryItemId,
+            quantityDelta: Number(quantityDelta) || 0,
+          },
+        };
+      }
+      return { ...prev, items: newItems };
+    });
   };
 
   const handleCloseForm = () => {
@@ -453,6 +493,77 @@ export const ModifiersView: React.FC = () => {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+
+                  {/* Efek Pengurangan Bahan Baku (BOM / Resep Modifier) */}
+                  <div className="sm:col-span-12 pt-2.5 border-t border-slate-200/80 mt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                        <Package className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Koneksi Bahan Baku (BOM / Pemotongan Stok)</span>
+                      </div>
+                      {item.inventoryEffect?.inventoryItemId && (
+                        <button
+                          type="button"
+                          onClick={() => handleItemInventoryEffectChange(index, '', 0)}
+                          className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Lepas Bahan Baku
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                      <div className="sm:col-span-8">
+                        <select
+                          value={item.inventoryEffect?.inventoryItemId || ''}
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            handleItemInventoryEffectChange(
+                              index,
+                              selectedId,
+                              item.inventoryEffect?.quantityDelta || 1
+                            );
+                          }}
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        >
+                          <option value="">-- Tanpa Efek Bahan Baku (Hanya Selisih Harga) --</option>
+                          {inventoryItems.map((inv) => (
+                            <option key={inv.id} value={inv.id}>
+                              {inv.name} (Satuan: {inv.canonicalUom})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {item.inventoryEffect?.inventoryItemId ? (
+                        <div className="sm:col-span-4 flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0.001"
+                            step="any"
+                            value={item.inventoryEffect.quantityDelta || ''}
+                            onChange={(e) =>
+                              handleItemInventoryEffectChange(
+                                index,
+                                item.inventoryEffect!.inventoryItemId,
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            placeholder="Takaran pemotongan"
+                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                          />
+                          <span className="text-xs font-bold text-slate-700 bg-amber-50 px-2 py-1.5 rounded-lg border border-amber-200 shrink-0">
+                            {inventoryItems.find((ii) => ii.id === item.inventoryEffect?.inventoryItemId)
+                              ?.canonicalUom || 'Satuan'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="sm:col-span-4 text-[11px] text-slate-400 italic">
+                          Pilih bahan baku jika opsi ini memotong stok (cth: Susu, Biji Kopi, Topping)
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -655,20 +766,31 @@ export const ModifiersView: React.FC = () => {
                   {group.items?.map((item) => (
                     <div
                       key={item.id || item.name}
-                      className="flex items-center justify-between py-1 px-2 rounded-lg text-xs bg-slate-50 text-slate-700 font-medium"
+                      className="py-1.5 px-2.5 rounded-lg text-xs bg-slate-50 text-slate-700 font-medium space-y-1"
                     >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                        <span className="truncate">{item.name}</span>
-                        {item.isDefault && (
-                          <span className="text-[10px] text-blue-700 font-bold bg-blue-100/70 px-1.5 py-0.2 rounded">
-                            Bawaan
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                          <span className="truncate">{item.name}</span>
+                          {item.isDefault && (
+                            <span className="text-[10px] text-blue-700 font-bold bg-blue-100/70 px-1.5 py-0.5 rounded">
+                              Bawaan
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-bold text-slate-900 ml-2 flex-shrink-0">
+                          {Number(item.priceAdjustment) > 0 ? `+${formatRupiah(Number(item.priceAdjustment))}` : 'Gratis'}
+                        </span>
                       </div>
-                      <span className="font-bold text-slate-900 ml-2 flex-shrink-0">
-                        {Number(item.priceAdjustment) > 0 ? `+${formatRupiah(Number(item.priceAdjustment))}` : 'Gratis'}
-                      </span>
+
+                      {item.recipeEffects && item.recipeEffects.length > 0 && item.recipeEffects[0].inventoryItem && (
+                        <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5">
+                          <Package className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span className="truncate">
+                            Potong {Number(item.recipeEffects[0].quantityDelta)} {item.recipeEffects[0].inventoryItem.canonicalUom} {item.recipeEffects[0].inventoryItem.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

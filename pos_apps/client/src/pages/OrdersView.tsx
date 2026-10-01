@@ -23,6 +23,7 @@ import { normalizeSalesChannels } from '../types/outlet';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
 import { OrderSuccessModal } from '../components/OrderSuccessModal';
 import { VoidOrderModal } from '../components/VoidOrderModal';
+import { VoidOrderItemModal } from '../components/VoidOrderItemModal';
 import { OrderDetailModal } from '../components/OrderDetailModal';
 import { TablePagination } from '../components/TablePagination';
 import { generateSalesRecapPdf } from '../utils/salesRecapPdf';
@@ -61,6 +62,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const [modalOpen, setModalOpen] = useState(false);
   const [voidModalOpen, setVoidModalOpen] = useState(false);
   const [orderToVoid, setOrderToVoid] = useState<Order | null>(null);
+  const [voidItemModalOpen, setVoidItemModalOpen] = useState(false);
+  const [itemToVoid, setItemToVoid] = useState<any | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [orderForDetail, setOrderForDetail] = useState<Order | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -774,9 +777,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
           setOrderToVoid(ord);
           setVoidModalOpen(true);
         }}
+        onVoidItem={(ord, itm) => {
+          setDetailModalOpen(false);
+          setOrderToVoid(ord);
+          setItemToVoid(itm);
+          setVoidItemModalOpen(true);
+        }}
       />
 
-      {/* Modal Void Transaksi */}
+      {/* Modal Void Transaksi Penuh */}
       <VoidOrderModal
         isOpen={voidModalOpen}
         onClose={() => {
@@ -786,6 +795,23 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
         order={orderToVoid}
         onSuccess={(_orderId, invoiceNumber) => {
           setToastMsg(`Transaksi ${invoiceNumber} berhasil dibatalkan (VOID)`);
+          setTimeout(() => setToastMsg(null), 5000);
+          loadOrders();
+        }}
+      />
+
+      {/* Modal Void Parsial Item Pesanan */}
+      <VoidOrderItemModal
+        isOpen={voidItemModalOpen}
+        onClose={() => {
+          setVoidItemModalOpen(false);
+          setOrderToVoid(null);
+          setItemToVoid(null);
+        }}
+        order={orderToVoid}
+        orderItem={itemToVoid}
+        onSuccess={(_orderId, invoiceNumber, itemName) => {
+          setToastMsg(`Item "${itemName}" pada faktur ${invoiceNumber} berhasil dibatalkan (VOID)`);
           setTimeout(() => setToastMsg(null), 5000);
           loadOrders();
         }}

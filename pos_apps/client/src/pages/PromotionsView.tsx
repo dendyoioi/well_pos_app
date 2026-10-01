@@ -12,8 +12,9 @@ import {
   X,
   AlertCircle,
   Sparkles,
+  Eye,
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, promotionApi } from '../services/api';
 import type { Promotion, PromotionFormData } from '../types/promotion';
 import { formatRupiah } from '../utils/currency';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
@@ -32,6 +33,11 @@ export const PromotionsView: React.FC = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // Audit / Inspection Modal State
+  const [inspectModalOpen, setInspectModalOpen] = useState(false);
+  const [inspectingPromo, setInspectingPromo] = useState<any | null>(null);
+  const [inspectLoading, setInspectLoading] = useState(false);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,6 +92,48 @@ export const PromotionsView: React.FC = () => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const handleOpenInspectModal = async (promo: Promotion) => {
+    setInspectingPromo(promo);
+    setInspectModalOpen(true);
+    setInspectLoading(true);
+    try {
+      const res = await promotionApi.getPromotionById(promo.id);
+      if (res.status === 'success' && res.data) {
+        setInspectingPromo(res.data);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil audit pemakaian promo:', err);
+    } finally {
+      setInspectLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (promo: Promotion) => {
+    try {
+      const newStatus = !promo.isActive;
+      // Optimistic update
+      setPromotions((prev) =>
+        prev.map((p) => (p.id === promo.id ? { ...p, isActive: newStatus } : p))
+      );
+      const res = await api.updatePromotion(promo.id, { isActive: newStatus });
+      if (res.status === 'success') {
+        dialog.toast(
+          `Voucher ${promo.code} berhasil di-${newStatus ? 'aktifkan' : 'nonaktifkan'}`,
+          'success'
+        );
+      } else {
+        // Rollback
+        setPromotions((prev) =>
+          prev.map((p) => (p.id === promo.id ? { ...p, isActive: !newStatus } : p))
+        );
+        dialog.toast('Gagal memperbarui status voucher', 'error');
+      }
+    } catch (err: any) {
+      fetchPromotions();
+      dialog.toast('Gagal memperbarui status voucher', 'error');
+    }
   };
 
   const handleOpenCreateModal = () => {
@@ -445,19 +493,31 @@ export const PromotionsView: React.FC = () => {
                     </td>
 
                     <td className="px-4 py-3.5 text-center">
-                      {promo.isActive ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                          Aktif
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-bold">
-                          Nonaktif
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(promo)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black border transition-all cursor-pointer ${
+                          promo.isActive
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-slate-100 text-slate-500 border-slate-300 hover:bg-slate-200'
+                        }`}
+                        title={promo.isActive ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${promo.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                        <span>{promo.isActive ? 'Aktif' : 'Nonaktif'}</span>
+                      </button>
                     </td>
 
                     <td className="px-5 py-3.5 pr-6 text-right">
                       <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenInspectModal(promo)}
+                          className="p-1.5 rounded-lg border border-blue-200 text-blue-900 bg-blue-50/50 hover:bg-blue-100 transition-all cursor-pointer"
+                          title="Lihat Audit Pemakaian Voucher"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleOpenEditModal(promo)}
@@ -706,6 +766,153 @@ export const PromotionsView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Audit Pemakaian Voucher (Zero Stacked Modals) */}
+      {inspectModalOpen && inspectingPromo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Header Modal */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-blue-900 text-white flex items-center justify-center">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-slate-900">{inspectingPromo.name}</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 font-mono font-bold text-xs">
+                      {inspectingPromo.code}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Riwayat audit pemakaian voucher diskon</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setInspectModalOpen(false);
+                  setInspectingPromo(null);
+                }}
+                className="p-1 rounded-xl text-slate-400 hover:bg-slate-200/60 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Tipe Diskon</span>
+                <p className="text-xs font-black text-slate-900 mt-0.5">
+                  {inspectingPromo.discountType === 'PERCENTAGE'
+                    ? `${inspectingPromo.discountValue}%`
+                    : formatRupiah(inspectingPromo.discountValue)}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Total Terpakai</span>
+                <p className="text-xs font-black text-slate-900 mt-0.5">
+                  {inspectingPromo.usedCount || 0}
+                  {inspectingPromo.usageLimit ? ` / ${inspectingPromo.usageLimit}` : ' (Unlimited)'}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Min. Belanja</span>
+                <p className="text-xs font-black text-slate-900 mt-0.5">
+                  {inspectingPromo.minOrderAmount > 0 ? formatRupiah(inspectingPromo.minOrderAmount) : 'Rp 0'}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Status</span>
+                <p className="text-xs font-black mt-0.5">
+                  <span className={`inline-flex items-center gap-1 ${inspectingPromo.isActive ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${inspectingPromo.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    {inspectingPromo.isActive ? 'Aktif' : 'Nonaktif'}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Usages Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-3">
+                Log Transaksi Pelanggan
+              </h4>
+
+              {inspectLoading ? (
+                <div className="py-12 text-center text-slate-400">
+                  <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs font-medium">Memuat log pemakaian...</p>
+                </div>
+              ) : !inspectingPromo.usages || inspectingPromo.usages.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-slate-700">Belum Ada Pemakaian</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Voucher ini belum pernah digunakan pada transaksi kasir atau QR self-ordering.
+                  </p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th className="px-3 py-2.5">Waktu</th>
+                        <th className="px-3 py-2.5">No. Faktur</th>
+                        <th className="px-3 py-2.5">Pelanggan</th>
+                        <th className="px-3 py-2.5 text-right">Potongan Diskon</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {inspectingPromo.usages.map((u: any, idx: number) => (
+                        <tr key={u.id || idx} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="px-3 py-2 text-[11px] text-slate-500">
+                            {new Date(u.createdAt).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="px-3 py-2 font-mono font-bold text-blue-950 text-xs">
+                            #{u.order?.invoiceNumber || '-'}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="font-bold text-slate-900 block text-xs">
+                              {u.customer?.name || 'Pelanggan Umum'}
+                            </span>
+                            {u.customer?.phone && (
+                              <span className="text-[10px] text-slate-400">{u.customer.phone}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right font-black text-emerald-700 text-xs">
+                            - {formatRupiah(u.discountAmount || 0)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 flex justify-end bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => {
+                  setInspectModalOpen(false);
+                  setInspectingPromo(null);
+                }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

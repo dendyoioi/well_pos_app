@@ -112,6 +112,24 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Tangani pencabutan sesi perangkat secara instan (Force Logout oleh Owner/Admin)
+  useEffect(() => {
+    const handleSessionRevoked = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message?: string }>;
+      const msg =
+        customEvent.detail?.message ||
+        'Sesi login perangkat Anda telah dicabut oleh pemilik toko. Silakan login kembali.';
+      authStorage.clearSession();
+      setUser(null);
+      setViewMode('pos-login');
+      window.location.hash = 'pos';
+      alert(msg);
+    };
+
+    window.addEventListener('auth:session_revoked', handleSessionRevoked);
+    return () => window.removeEventListener('auth:session_revoked', handleSessionRevoked);
+  }, []);
+
   useEffect(() => {
     const savedUser = authStorage.getUser();
     const token = authStorage.getToken();

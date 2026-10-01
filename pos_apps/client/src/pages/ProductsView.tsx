@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -17,12 +17,16 @@ import {
   X,
   Infinity as InfinityIcon,
   ShoppingBag,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import { ProductModal } from '../components/ProductModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { AssignCatalogProductModal } from '../components/AssignCatalogProductModal';
+import { FullScreenProductImportModal } from '../components/FullScreenProductImportModal';
 import { TablePagination } from '../components/TablePagination';
+import { exportProductsToCsv } from '../utils/productExportCsv';
 import { api } from '../services/api';
 
 interface ProductsViewProps {
@@ -62,10 +66,15 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [bulkCategoryModalOpen, setBulkCategoryModalOpen] = useState(false);
   const [selectedTargetCategoryId, setSelectedTargetCategoryId] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  const existingSkusSet = useMemo(() => {
+    return new Set(products.map((p) => p.sku || p.variants?.[0]?.sku || '').filter(Boolean));
+  }, [products]);
 
   // Confirm Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -456,6 +465,42 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 <ShoppingBag className="w-4 h-4 text-blue-800 shrink-0" />
                 <span className="sm:hidden">Dari Master</span>
                 <span className="hidden sm:inline">Ambil dari Master Katalog</span>
+              </button>
+            )}
+
+            {/* Ekspor CSV / Excel */}
+            <button
+              type="button"
+              onClick={() => {
+                const ok = exportProductsToCsv(products, 'katalog_produk_wellpos', (err) => {
+                  setFeedback({ type: 'error', message: err });
+                });
+                if (ok) {
+                  setFeedback({
+                    type: 'success',
+                    message: `Berhasil mengunduh berkas CSV (${products.length} produk). Berkas siap dibuka di Microsoft Excel.`,
+                  });
+                }
+              }}
+              className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+              title="Ekspor daftar produk saat ini ke format CSV / Excel"
+            >
+              <Download className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span className="sm:hidden">Ekspor</span>
+              <span className="hidden sm:inline">Ekspor CSV</span>
+            </button>
+
+            {/* Impor Massal Produk */}
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(true)}
+                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                title="Impor ratusan produk sekaligus dari file spreadsheet CSV / Excel"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-blue-900 shrink-0" />
+                <span className="sm:hidden">Impor</span>
+                <span className="hidden sm:inline">Impor Massal</span>
               </button>
             )}
           </div>
@@ -1200,6 +1245,17 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         onClose={() => setAssignModalOpen(false)}
         outletId={outletId}
         onSuccess={fetchData}
+      />
+
+      {/* Modal Layar Penuh: Impor Massal Produk dari Spreadsheet CSV */}
+      <FullScreenProductImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        outletId={outletId}
+        existingSkus={existingSkusSet}
+        onSuccess={() => {
+          fetchData();
+        }}
       />
 
       {/* Reusable Confirm Modal (Hapus / Konfirmasi Tindakan Penting) */}

@@ -431,6 +431,21 @@ export const closeShift = async (req: Request, res: Response) => {
     );
     const totalOrders = countRows[0]?.count || 0;
 
+    // ─── Breakdown omset per channel penjualan ───────────────────────────────
+    const channelRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT o.order_channel as channel, COUNT(*)::int as count,
+              COALESCE(SUM(o.grand_total), 0) as revenue
+       FROM "orders" o
+       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+       GROUP BY o.order_channel
+       ORDER BY revenue DESC;`,
+      activeShift.id
+    );
+
+    // ─── Rata-rata nilai transaksi (Average Order Value) ─────────────────────
+    const totalRevenue = totalCashSales + totalQrisSales;
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+
     // Ambil mutasi kas pada shift ini
     const cashMovements = await prisma.cashMovement.findMany({
       where: {
@@ -499,8 +514,14 @@ export const closeShift = async (req: Request, res: Response) => {
         cashMovements,
         nonCashSummary: {
           totalQrisSales,
-          totalRevenue: totalCashSales + totalQrisSales,
+          totalRevenue,
+          avgOrderValue,
         },
+        channelBreakdown: channelRows.map((r) => ({
+          channel: r.channel,
+          count: Number(r.count),
+          revenue: Number(r.revenue),
+        })),
         totalTransactions: totalOrders,
         notes: closedShift.notes,
       },

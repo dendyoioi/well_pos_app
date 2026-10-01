@@ -97,7 +97,14 @@ export interface ZReportData {
   nonCashSummary: {
     totalQrisSales: number;
     totalRevenue: number;
+    avgOrderValue?: number;
   };
+  /** Breakdown omset per kanal penjualan (DINE_IN, TAKEAWAY, DELIVERY, dll) */
+  channelBreakdown?: Array<{
+    channel: string;
+    count: number;
+    revenue: number;
+  }>;
   totalTransactions: number;
   notes?: string | null;
 }

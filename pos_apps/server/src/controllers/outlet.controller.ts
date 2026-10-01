@@ -57,6 +57,12 @@ const updateOutletSchema = z.object({
     footerText: z.string().optional(),
     showQueueNumber: z.boolean().optional(),
   }).optional(),
+  loyaltyConfig: z.object({
+    isActive: z.boolean().default(false),
+    pointsPerSpend: z.number().int().min(1).default(10000),
+    pointValueIdr: z.number().int().min(1).default(100),
+    minPointsToRedeem: z.number().int().min(1).default(10),
+  }).optional(),
 });
 
 /**

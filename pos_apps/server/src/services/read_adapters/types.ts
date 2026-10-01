@@ -194,6 +194,9 @@ export interface FinancialReportDTO {
     grossProfitMargin: number;
     totalTransactions: number;
     averageOrderValue: number;
+    totalOperatingExpenses?: number;
+    netOperatingProfit?: number;
+    netOperatingProfitMargin?: number;
   };
   cashFlow: {
     cash: { amount: number; count: number; percentage: number };
@@ -245,4 +248,18 @@ export interface FinancialReportDTO {
     count: number;
     percentage: number;
   }>;
+  hourlyDistribution?: Array<{
+    hour: number;
+    label: string;
+    ordersCount: number;
+    revenue: number;
+  }>;
+  insights?: {
+    peakHour: string;
+    peakHourOrdersCount: number;
+    averageBasketSize: number;
+    highMarginChampion?: string;
+    marginKiller?: string;
+    profitHealthStatus: 'SEHAT' | 'WASPADA' | 'KRITIS';
+  };
 }

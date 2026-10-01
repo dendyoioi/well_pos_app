@@ -33,6 +33,35 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
     description: 'Mengizinkan nilai null pada expires_at untuk langganan tanpa masa hangus (pay-as-you-go)',
     sql: 'ALTER TABLE "tenant_subscriptions" ALTER COLUMN "expires_at" DROP NOT NULL;',
   },
+  {
+    id: '20261002_01_outlets_loyalty_config',
+    description: 'Menambahkan kolom loyalty_config pada tabel outlets untuk pengaturan program poin loyalitas per cabang (CRM)',
+    sql: 'ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "loyalty_config" JSONB;',
+  },
+  {
+    id: '20261002_02_modifier_recipe_effects_table',
+    description: 'Memastikan tabel modifier_recipe_effects dan indeks unik tersedia untuk menghubungkan pilihan modifier ke pemotongan stok bahan baku',
+    sql: `CREATE TABLE IF NOT EXISTS "modifier_recipe_effects" (
+      "id" TEXT PRIMARY KEY,
+      "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+      "modifier_item_id" TEXT NOT NULL REFERENCES "modifier_items"("id") ON DELETE CASCADE,
+      "inventory_item_id" TEXT NOT NULL REFERENCES "inventory_items"("id") ON DELETE RESTRICT,
+      "quantity_delta" DECIMAL(12, 3) NOT NULL,
+      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "modifier_recipe_effects_modifier_item_id_inventory_item_id_key" UNIQUE ("modifier_item_id", "inventory_item_id")
+    );
+    CREATE INDEX IF NOT EXISTS "modifier_recipe_effects_tenant_id_inventory_item_id_idx" ON "modifier_recipe_effects"("tenant_id", "inventory_item_id");`,
+  },
+  {
+    id: '20261002_03_users_token_version',
+    description: 'Menambahkan kolom token_version pada tabel users untuk pencabutan sesi perangkat instan (force logout / session revocation)',
+    sql: 'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "token_version" INTEGER NOT NULL DEFAULT 1;',
+  },
+  {
+    id: '20261002_04_outlets_channels_config',
+    description: 'Menambahkan kolom channels_config JSONB pada tabel outlets untuk kustomisasi kanal penjualan & mitra online (EPIC-20)',
+    sql: 'ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "channels_config" JSONB DEFAULT \'[]\'::jsonb;',
+  },
 ];
 
 /**
@@ -75,8 +104,14 @@ export async function runAutoSchemaPatcher(prisma: PrismaClient): Promise<{
 
       console.log(`[SchemaPatcher] ⏳ Menerapkan patch ${patch.id}: ${patch.description}`);
       try {
-        // Eksekusi DDL patch
-        await prisma.$executeRawUnsafe(patch.sql);
+        // Eksekusi DDL patch (dukung multi-statement dipisah titik koma)
+        const statements = patch.sql
+          .split(';')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        for (const stmt of statements) {
+          await prisma.$executeRawUnsafe(stmt);
+        }
 
         // Catat ke tabel pelacak
         await prisma.$executeRawUnsafe(

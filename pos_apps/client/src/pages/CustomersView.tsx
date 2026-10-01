@@ -17,9 +17,14 @@ import {
   Wallet,
   ShoppingBag,
   MessageCircle,
+  Coins,
+  Sparkles,
+  History,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { customerApi } from '../services/api';
-import type { Customer, CustomerFormData, CustomerSummaryStats } from '../types/customer';
+import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
 import { WhatsAppInput } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
@@ -40,9 +45,17 @@ export const CustomersView: React.FC = () => {
   // Modal State
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  // Detail Modal & Point History State
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<'orders' | 'points'>('orders');
+  const [pointLedgers, setPointLedgers] = useState<CustomerPointLedger[]>([]);
+  const [loadingPoints, setLoadingPoints] = useState<boolean>(false);
+  const [isAdjustingPoints, setIsAdjustingPoints] = useState<boolean>(false);
+  const [adjustDelta, setAdjustDelta] = useState<number>(0);
+  const [adjustNotes, setAdjustNotes] = useState<string>('');
+  const [savingAdjust, setSavingAdjust] = useState<boolean>(false);
 
   // Form State
   const [formData, setFormData] = useState<CustomerFormData>({
@@ -55,6 +68,34 @@ export const CustomersView: React.FC = () => {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const getTierBadgeClass = (tier?: string) => {
+    switch (tier) {
+      case 'PLATINUM':
+        return 'bg-purple-100 text-purple-900 border-purple-300';
+      case 'GOLD':
+        return 'bg-amber-100 text-amber-900 border-amber-300';
+      case 'SILVER':
+        return 'bg-slate-200 text-slate-800 border-slate-300';
+      case 'BRONZE':
+      default:
+        return 'bg-orange-50 text-orange-800 border-orange-200';
+    }
+  };
+
+  const getTierIcon = (tier?: string) => {
+    switch (tier) {
+      case 'PLATINUM':
+        return '💎';
+      case 'GOLD':
+        return '🥇';
+      case 'SILVER':
+        return '🥈';
+      case 'BRONZE':
+      default:
+        return '🥉';
+    }
+  };
 
   // Load Customers
   const fetchCustomers = async () => {
@@ -131,16 +172,92 @@ export const CustomersView: React.FC = () => {
   const handleOpenDetail = async (c: Customer) => {
     setSelectedCustomer(c);
     setIsDetailModalOpen(true);
+    setActiveDetailTab('orders');
+    setIsAdjustingPoints(false);
+    setAdjustDelta(0);
+    setAdjustNotes('');
     setLoadingDetail(true);
+    setLoadingPoints(true);
     try {
-      const res = await customerApi.getCustomerById(c.id);
-      if (res.status === 'success' && res.data) {
-        setSelectedCustomer(res.data);
+      const [resDetail, resPoints] = await Promise.all([
+        customerApi.getCustomerById(c.id),
+        customerApi.getPointsHistory(c.id),
+      ]);
+      if (resDetail.status === 'success' && resDetail.data) {
+        setSelectedCustomer(resDetail.data);
+      }
+      if (resPoints.status === 'success' && resPoints.data) {
+        setPointLedgers(resPoints.data);
       }
     } catch (err) {
       console.error('Gagal memuat detail pelanggan:', err);
     } finally {
       setLoadingDetail(false);
+      setLoadingPoints(false);
+    }
+  };
+
+  // Handle Save Manual Point Adjustment
+  const handleSaveAdjustPoints = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+    if (adjustDelta === 0) {
+      dialog.alert({
+        title: 'Perubahan Poin Kosong',
+        message: 'Jumlah penyesuaian poin tidak boleh 0.',
+        variant: 'warning',
+      });
+      return;
+    }
+    if (!adjustNotes.trim()) {
+      dialog.alert({
+        title: 'Catatan Wajib Diisi',
+        message: 'Harap cantumkan alasan penyesuaian poin (misal: Kompensasi Pelayanan, Hadiah Spesial).',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    setSavingAdjust(true);
+    try {
+      const res = await customerApi.adjustPoints(selectedCustomer.id, {
+        deltaPoints: Number(adjustDelta),
+        notes: adjustNotes.trim(),
+      });
+
+      if (res.status === 'success') {
+        dialog.toast(res.message || 'Poin berhasil disesuaikan', 'success');
+        setIsAdjustingPoints(false);
+        setAdjustDelta(0);
+        setAdjustNotes('');
+
+        // Refresh detail & points history
+        const [resDetail, resPoints] = await Promise.all([
+          customerApi.getCustomerById(selectedCustomer.id),
+          customerApi.getPointsHistory(selectedCustomer.id),
+        ]);
+        if (resDetail.status === 'success' && resDetail.data) {
+          setSelectedCustomer(resDetail.data);
+        }
+        if (resPoints.status === 'success' && resPoints.data) {
+          setPointLedgers(resPoints.data);
+        }
+        fetchCustomers();
+      } else {
+        dialog.alert({
+          title: 'Gagal Menyesuaikan Poin',
+          message: res.message || 'Gagal menyesuaikan saldo poin.',
+          variant: 'danger',
+        });
+      }
+    } catch (err: any) {
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: err.message || 'Terjadi kesalahan sistem saat penyesuaian poin.',
+        variant: 'danger',
+      });
+    } finally {
+      setSavingAdjust(false);
     }
   };
 
@@ -362,6 +479,7 @@ export const CustomersView: React.FC = () => {
               <tr className="bg-slate-50/80 text-[11px] uppercase font-black tracking-wider text-slate-500 border-b border-slate-200">
                 <th className="py-3.5 px-4">Member</th>
                 <th className="py-3.5 px-4">Kontak WhatsApp</th>
+                <th className="py-3.5 px-4 text-center">Tier &amp; Poin</th>
                 <th className="py-3.5 px-4 text-center">Kunjungan</th>
                 <th className="py-3.5 px-4 text-right">Total Belanja</th>
                 <th className="py-3.5 px-4">Terdaftar</th>
@@ -371,7 +489,7 @@ export const CustomersView: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-slate-400">
+                  <td colSpan={7} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-900" />
                       <span className="text-xs font-medium">Memuat data pelanggan...</span>
@@ -380,7 +498,7 @@ export const CustomersView: React.FC = () => {
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-slate-400">
+                  <td colSpan={7} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
                       <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
                         <Users className="w-6 h-6" />
@@ -460,6 +578,20 @@ export const CustomersView: React.FC = () => {
                         ) : (
                           <span className="text-slate-300 text-xs italic">Tanpa No. HP</span>
                         )}
+                      </td>
+
+                      {/* Tier & Poin Loyalitas */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getTierBadgeClass(c.tier)}`}>
+                            {getTierIcon(c.tier)}
+                            <span>{c.tier || 'BRONZE'}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                            <Coins className="w-3 h-3 text-amber-600" />
+                            <span>{Number(c.loyaltyPoints || 0).toLocaleString('id-ID')} pt</span>
+                          </span>
+                        </div>
                       </td>
 
                       {/* Kunjungan */}
@@ -573,8 +705,8 @@ export const CustomersView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Middle: Kontak & Kunjungan */}
-                  <div className="flex items-center justify-between gap-2 text-xs bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                  {/* Middle: Kontak & Tier/Poin & Kunjungan */}
+                  <div className="flex items-center justify-between gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-1.5 text-slate-600 truncate">
                       <span className="font-mono text-[11px] font-semibold text-slate-700">
                         {c.phone || 'Tanpa No. HP'}
@@ -590,9 +722,15 @@ export const CustomersView: React.FC = () => {
                         </a>
                       )}
                     </div>
-                    <span className="text-[11px] text-slate-500 font-semibold shrink-0">
-                      {c.visitCount || 0}x Kunjungan
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-bold border ${getTierBadgeClass(c.tier)}`}>
+                        {getTierIcon(c.tier)} {c.tier || 'BRONZE'}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                        <Coins className="w-3 h-3 text-amber-600" />
+                        {Number(c.loyaltyPoints || 0).toLocaleString('id-ID')} pt
+                      </span>
+                    </div>
                   </div>
 
                   {/* Bottom: Action buttons */}
@@ -803,27 +941,122 @@ export const CustomersView: React.FC = () => {
 
             {/* Content Body */}
             <div className="p-5 overflow-y-auto space-y-5">
-              {/* Kontak & Stats Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Kontak & Stats Row (4 Kolom Termasuk Poin) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
                   <span className="text-[11px] font-bold text-slate-400 block">Total Kunjungan</span>
-                  <span className="text-xl font-black text-slate-900 mt-1 block">
+                  <span className="text-lg sm:text-xl font-black text-slate-900 mt-1 block">
                     {selectedCustomer.visitCount} Kali
                   </span>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
                   <span className="text-[11px] font-bold text-slate-400 block">Akumulasi Belanja</span>
-                  <span className="text-xl font-black text-slate-900 mt-1 block">
+                  <span className="text-lg sm:text-xl font-black text-slate-900 mt-1 block">
                     Rp {Number(selectedCustomer.totalSpent).toLocaleString('id-ID')}
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                  <span className="text-[11px] font-bold text-slate-400 block">Status Pelanggan</span>
-                  <span className="text-sm font-black text-emerald-600 mt-1.5 block">
-                    {selectedCustomer.visitCount > 3 ? 'Pelanggan Setia (VIP)' : 'Pelanggan Reguler'}
+                <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200/70">
+                  <span className="text-[11px] font-bold text-amber-700 block flex items-center justify-between">
+                    <span>Saldo Poin Member</span>
+                    <Coins className="w-3.5 h-3.5 text-amber-600" />
+                  </span>
+                  <span className="text-lg sm:text-xl font-black text-amber-900 mt-1 block">
+                    {Number(selectedCustomer.loyaltyPoints || 0).toLocaleString('id-ID')} pt
                   </span>
                 </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                  <span className="text-[11px] font-bold text-slate-400 block">Tingkatan Member</span>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border ${getTierBadgeClass(selectedCustomer.tier)}`}>
+                      {getTierIcon(selectedCustomer.tier)} {selectedCustomer.tier || 'BRONZE'}
+                    </span>
+                  </div>
+                </div>
               </div>
+
+              {/* Tombol Aksi Sesuaikan Poin Manual */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs font-bold text-slate-800">
+                    Kelola Saldo Poin Loyalitas Pelanggan
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAdjustingPoints(!isAdjustingPoints)}
+                  className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-all shadow-xs"
+                >
+                  {isAdjustingPoints ? 'Tutup Form Poin' : '⚡ Sesuaikan Poin Manual'}
+                </button>
+              </div>
+
+              {/* Form Penyesuaian Poin Manual (Zero Stacked Modals) */}
+              {isAdjustingPoints && (
+                <form onSubmit={handleSaveAdjustPoints} className="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                    <h4 className="text-xs font-extrabold text-blue-950">
+                      Penyesuaian Saldo Poin Manual
+                    </h4>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Saldo Saat Ini: {Number(selectedCustomer.loyaltyPoints || 0)} pt
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Perubahan Poin (+ Tambah / - Kurang)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Contoh: 50 atau -20"
+                        value={adjustDelta || ''}
+                        onChange={(e) => setAdjustDelta(parseInt(e.target.value) || 0)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900"
+                        required
+                      />
+                      <span className="text-[10px] text-slate-500 block">
+                        Ketik angka positif untuk menambah bonus, atau negatif untuk memotong.
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Alasan / Catatan Penyesuaian
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Hadiah Ulang Tahun / Kompensasi"
+                        value={adjustNotes}
+                        onChange={(e) => setAdjustNotes(e.target.value)}
+                        className="w-full text-xs font-semibold rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900"
+                        required
+                      />
+                      <span className="text-[10px] text-slate-500 block">
+                        Catatan audit yang akan tersimpan permanen di buku besar mutasi poin.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsAdjustingPoints(false)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingAdjust}
+                      className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+                    >
+                      {savingAdjust ? 'Menyimpan...' : 'Simpan Mutasi Poin'}
+                    </button>
+                  </div>
+                </form>
+              )}
 
               {/* Detail Info Kontak */}
               <div className="space-y-2 p-4 rounded-xl bg-slate-50/50 border border-slate-200/60 text-xs">
@@ -883,65 +1116,159 @@ export const CustomersView: React.FC = () => {
                 )}
               </div>
 
-              {/* Riwayat Transaksi Belanja */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <ShoppingBag className="w-4 h-4 text-blue-900" />
-                    <span>Riwayat Transaksi Terakhir</span>
-                  </h4>
-                  <span className="text-[11px] text-slate-400">
-                    {selectedCustomer.orders?.length || 0} Transaksi tercatat
-                  </span>
-                </div>
-
-                {loadingDetail ? (
-                  <div className="py-8 text-center text-slate-400">
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-900 mb-1" />
-                    <span className="text-xs">Memuat histori order...</span>
-                  </div>
-                ) : !selectedCustomer.orders || selectedCustomer.orders.length === 0 ? (
-                  <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200/60 text-slate-400 text-xs">
-                    Belum ada riwayat transaksi penjualan yang tercatat atas nama pelanggan ini.
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-slate-200 overflow-hidden">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
-                          <th className="py-2.5 px-3">No. Invoice</th>
-                          <th className="py-2.5 px-3">Outlet</th>
-                          <th className="py-2.5 px-3">Waktu</th>
-                          <th className="py-2.5 px-3 text-right">Total Transaksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {selectedCustomer.orders.map((ord) => (
-                          <tr key={ord.id} className="hover:bg-slate-50/50">
-                            <td className="py-2.5 px-3 font-mono font-bold text-blue-900">
-                              {ord.invoiceNumber}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-600">
-                              {ord.outlet?.name || 'Toko Utama'}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-500">
-                              {new Date(ord.createdAt).toLocaleString('id-ID', {
-                                day: 'numeric',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-black text-slate-900">
-                              Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              {/* Tab Switcher: Riwayat Belanja vs Riwayat Mutasi Poin */}
+              <div className="border-b border-slate-200 flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('orders')}
+                  className={`pb-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all ${
+                    activeDetailTab === 'orders'
+                      ? 'border-blue-900 text-blue-900'
+                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>Riwayat Transaksi ({selectedCustomer.orders?.length || 0})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('points')}
+                  className={`pb-2 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all ${
+                    activeDetailTab === 'points'
+                      ? 'border-blue-900 text-blue-900'
+                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Buku Besar Mutasi Poin ({pointLedgers.length})</span>
+                </button>
               </div>
+
+              {/* Tab Content 1: Riwayat Transaksi Belanja */}
+              {activeDetailTab === 'orders' && (
+                <div>
+                  {loadingDetail ? (
+                    <div className="py-8 text-center text-slate-400">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-900 mb-1" />
+                      <span className="text-xs">Memuat histori order...</span>
+                    </div>
+                  ) : !selectedCustomer.orders || selectedCustomer.orders.length === 0 ? (
+                    <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200/60 text-slate-400 text-xs">
+                      Belum ada riwayat transaksi penjualan yang tercatat atas nama pelanggan ini.
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                            <th className="py-2.5 px-3">No. Invoice</th>
+                            <th className="py-2.5 px-3">Outlet</th>
+                            <th className="py-2.5 px-3">Waktu</th>
+                            <th className="py-2.5 px-3 text-right">Total Transaksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {selectedCustomer.orders.map((ord) => (
+                            <tr key={ord.id} className="hover:bg-slate-50/50">
+                              <td className="py-2.5 px-3 font-mono font-bold text-blue-900">
+                                {ord.invoiceNumber}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600">
+                                {ord.outlet?.name || 'Toko Utama'}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-500">
+                                {new Date(ord.createdAt).toLocaleString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                                Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab Content 2: Riwayat Buku Besar Mutasi Poin */}
+              {activeDetailTab === 'points' && (
+                <div>
+                  {loadingPoints ? (
+                    <div className="py-8 text-center text-slate-400">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-blue-900 mb-1" />
+                      <span className="text-xs">Memuat riwayat mutasi poin...</span>
+                    </div>
+                  ) : pointLedgers.length === 0 ? (
+                    <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200/60 text-slate-400 text-xs">
+                      Belum ada mutasi perolehan atau penukaran poin yang tercatat.
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                            <th className="py-2.5 px-3">Waktu</th>
+                            <th className="py-2.5 px-3">Tipe Mutasi</th>
+                            <th className="py-2.5 px-3 text-center">Perubahan</th>
+                            <th className="py-2.5 px-3 text-right">Saldo Akhir</th>
+                            <th className="py-2.5 px-3">Keterangan / Faktur</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {pointLedgers.map((l) => {
+                            const isPositive = l.deltaPoints > 0;
+                            return (
+                              <tr key={l.id} className="hover:bg-slate-50/50">
+                                <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
+                                  {new Date(l.createdAt).toLocaleString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    l.type === 'EARNED_PURCHASE'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : l.type === 'REDEEMED_ORDER'
+                                      ? 'bg-rose-50 text-rose-700'
+                                      : 'bg-blue-50 text-blue-700'
+                                  }`}>
+                                    {l.type === 'EARNED_PURCHASE' ? 'Reward Belanja' : l.type === 'REDEEMED_ORDER' ? 'Tukar Diskon' : 'Penyesuaian Manual'}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-center font-bold">
+                                  <span className={`inline-flex items-center gap-0.5 ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                    <span>{isPositive ? `+${l.deltaPoints}` : l.deltaPoints} pt</span>
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-black text-slate-800">
+                                  {l.balanceAfter} pt
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600">
+                                  {l.order?.invoiceNumber ? (
+                                    <span className="font-mono font-bold text-blue-900">{l.order.invoiceNumber}</span>
+                                  ) : (
+                                    <span>{l.notes || '-'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Footer */}

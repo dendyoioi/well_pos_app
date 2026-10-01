@@ -28,6 +28,8 @@ import {
   X,
   UtensilsCrossed,
   Ticket,
+  FileText,
+  ArrowLeftRight,
 } from 'lucide-react';
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
@@ -57,6 +59,9 @@ import { ReceiptSettingsView } from './ReceiptSettingsView';
 import { TaxesSettingsView } from './TaxesSettingsView';
 import { PaymentSettingsView } from './PaymentSettingsView';
 import { SalesChannelsSettingsView } from './SalesChannelsSettingsView';
+import { LoyaltySettingsView } from './LoyaltySettingsView';
+import { PurchaseOrdersView } from './PurchaseOrdersView';
+import { StockTransfersView } from './StockTransfersView';
 import { OnboardingWizardModal } from '../components/saas/OnboardingWizardModal';
 import { FullScreenStoreWizard } from '../components/saas/FullScreenStoreWizard';
 import { BackofficeLayout } from '../components/saas/BackofficeLayout';
@@ -87,6 +92,8 @@ type TabKey =
   // Bahan Baku & Stok
   | 'inventory'
   | 'stock_movements'
+  | 'purchase_orders'
+  | 'transfers'
   | 'suppliers'
   // Transaksi
   | 'orders'
@@ -106,11 +113,21 @@ type TabKey =
   | 'settings_taxes'
   | 'settings_payment'
   | 'settings_channels'
+  | 'settings_loyalty'
   | 'outlets';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
   CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders'],
-  WAREHOUSE: ['inventory', 'stock_movements', 'suppliers', 'recipes', 'products', 'overview'],
+  WAREHOUSE: [
+    'inventory',
+    'stock_movements',
+    'purchase_orders',
+    'transfers',
+    'suppliers',
+    'recipes',
+    'products',
+    'overview',
+  ],
   SUPERVISOR: [
     'overview',
     'pos',
@@ -127,6 +144,8 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'qr_guest_menu',
     'inventory',
     'stock_movements',
+    'purchase_orders',
+    'transfers',
     'suppliers',
     'reports',
     'product_analytics',
@@ -134,6 +153,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'staff_users',
     'settings_payment',
     'settings_channels',
+    'settings_loyalty',
     'outlets',
   ],
   ADMIN: [
@@ -150,6 +170,8 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'qr_guest_menu',
     'inventory',
     'stock_movements',
+    'purchase_orders',
+    'transfers',
     'suppliers',
     'orders',
     'customers',
@@ -164,6 +186,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_taxes',
     'settings_payment',
     'settings_channels',
+    'settings_loyalty',
     'outlets',
   ],
   OWNER: [
@@ -180,6 +203,8 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'qr_guest_menu',
     'inventory',
     'stock_movements',
+    'purchase_orders',
+    'transfers',
     'suppliers',
     'orders',
     'customers',
@@ -194,6 +219,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_taxes',
     'settings_payment',
     'settings_channels',
+    'settings_loyalty',
     'outlets',
   ],
 };
@@ -274,6 +300,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         const allowedWarehouseTabs: TabKey[] = [
           'inventory',
           'stock_movements',
+          'purchase_orders',
+          'transfers',
           'suppliers',
           'recipes',
           'products',
@@ -307,6 +335,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
       const allowedWarehouseTabs: TabKey[] = [
         'inventory',
         'stock_movements',
+        'purchase_orders',
+        'transfers',
         'suppliers',
         'recipes',
         'products',
@@ -560,6 +590,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             initialTab="PRODUCTS"
             initialSubView="MOVEMENTS"
           />
+        ) : activeTab === 'purchase_orders' ? (
+          <PurchaseOrdersView activeOutlet={activeOutlet} />
+        ) : activeTab === 'transfers' ? (
+          <StockTransfersView activeOutlet={activeOutlet} />
         ) : activeTab === 'suppliers' ? (
           <SuppliersView />
         ) : activeTab === 'orders' ? (
@@ -573,7 +607,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         ) : activeTab === 'customers' ? (
           <CustomersView />
         ) : activeTab === 'shifts' ? (
-          <ShiftsAuditView />
+          <ShiftsAuditView activeOutlet={activeOutlet} />
         ) : activeTab === 'reports' ? (
           <FinancialReportView activeOutlet={activeOutlet} />
         ) : activeTab === 'product_analytics' ? (
@@ -606,6 +640,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             activeOutlet={activeOutlet}
             onOutletUpdated={handleOutletUpdated}
             currentUserRole={user.role}
+          />
+        ) : activeTab === 'settings_loyalty' ? (
+          <LoyaltySettingsView
+            activeOutlet={activeOutlet}
+            onOutletUpdated={handleOutletUpdated}
           />
         ) : activeTab === 'outlets' ? (
           <OutletsView
@@ -790,6 +829,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                   >
                     <ClipboardList className="w-4 h-4" />
                     <span>Kartu Mutasi Stok</span>
+                  </button>
+                )}
+
+                {/* Tab Pengadaan (PO) */}
+                {allowedTabs.includes('purchase_orders') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('purchase_orders');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'purchase_orders'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Pengadaan (PO)</span>
+                  </button>
+                )}
+
+                {/* Tab Transfer Antar Cabang */}
+                {allowedTabs.includes('transfers') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('transfers');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'transfers'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <ArrowLeftRight className="w-4 h-4" />
+                    <span>Transfer Antar Cabang</span>
                   </button>
                 )}
 
@@ -1078,6 +1155,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             >
               <Boxes className="w-4 h-4" />
               <span>Stok & Kartu Mutasi</span>
+            </button>
+          )}
+
+          {/* Tab Pengadaan (PO) */}
+          {allowedTabs.includes('purchase_orders') && (
+            <button
+              onClick={() => setActiveTab('purchase_orders')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'purchase_orders'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Pengadaan (PO)</span>
+            </button>
+          )}
+
+          {/* Tab Transfer Cabang */}
+          {allowedTabs.includes('transfers') && (
+            <button
+              onClick={() => setActiveTab('transfers')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'transfers'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              <span>Transfer Cabang</span>
             </button>
           )}
 
@@ -1581,20 +1688,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
                 ) : user.role === 'WAREHOUSE' ? (
                   <>
                     <div
-                      onClick={() => setActiveTab('inventory')}
+                      onClick={() => setActiveTab('purchase_orders')}
                       className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
                     >
                       <div>
                         <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
                           1
                         </div>
-                        <h4 className="font-bold text-blue-950 text-base">Catat Stok Masuk (PO)</h4>
+                        <h4 className="font-bold text-blue-950 text-base">Pengadaan Barang (PO)</h4>
                         <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Terima pasokan barang dari supplier, catat jumlah qty masuk dan nomor referensi PO/Surat Jalan.
+                          Terima pasokan bahan baku dari supplier, cetak PO, dan verifikasi penerimaan fisik dengan update Moving Average Cost otomatis.
                         </p>
                       </div>
                       <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
-                        <span>Catat Stok Masuk</span>
+                        <span>Buka Pengadaan PO</span>
                         <ArrowRight className="w-4 h-4" />
                       </div>
                     </div>
@@ -1718,9 +1825,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         ) : activeTab === 'customers' ? (
           <CustomersView />
         ) : activeTab === 'shifts' ? (
-          <ShiftsAuditView />
+          <ShiftsAuditView activeOutlet={activeOutlet} />
         ) : activeTab === 'reports' ? (
-          <FinancialReportView />
+          <FinancialReportView activeOutlet={activeOutlet} />
         ) : activeTab === 'users' ? (
           <UsersView onNavigateToRoles={() => setActiveTab('staff_roles')} />
         ) : activeTab === 'outlets' ? (

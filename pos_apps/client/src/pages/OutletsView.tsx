@@ -418,6 +418,15 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                               <span>Sedang Digunakan</span>
                             </span>
                           )}
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              outlet.loyaltyConfig?.isActive
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-slate-50 text-slate-500 border-slate-200'
+                            }`}
+                          >
+                            {outlet.loyaltyConfig?.isActive ? '★ Poin Loyalitas ON' : '☆ Poin OFF'}
+                          </span>
                         </div>
                       </div>
                     </div>

@@ -1,3 +1,12 @@
+export type CustomerTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+
+export type PointTxType =
+  | 'EARNED_PURCHASE'
+  | 'REDEEMED_ORDER'
+  | 'MANUAL_ADJUSTMENT'
+  | 'REFUND_REVOCATION'
+  | 'EXPIRY';
+
 export interface CustomerOrderSummary {
   id: string;
   invoiceNumber: string;
@@ -9,6 +18,23 @@ export interface CustomerOrderSummary {
   };
 }
 
+export interface CustomerPointLedger {
+  id: string;
+  tenantId: string;
+  customerId: string;
+  orderId?: string | null;
+  type: PointTxType;
+  deltaPoints: number;
+  balanceAfter: number;
+  notes?: string | null;
+  createdAt: string;
+  order?: {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+  } | null;
+}
+
 export interface Customer {
   id: string;
   tenantId?: string | null;
@@ -18,11 +44,14 @@ export interface Customer {
   email?: string | null;
   address?: string | null;
   notes?: string | null;
+  tier?: CustomerTier;
+  loyaltyPoints?: number;
   totalSpent: number;
   visitCount: number;
   createdAt: string;
   updatedAt: string;
   orders?: CustomerOrderSummary[];
+  pointLedgers?: CustomerPointLedger[];
 }
 
 export interface CustomerSummaryStats {

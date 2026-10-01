@@ -30,6 +30,8 @@ import { UpgradeModal } from '../components/UpgradeModal';
 import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
 import { OnDemandFeesPickerModal } from '../components/OnDemandFeesPickerModal';
 import { ProductModifierModal } from '../components/ProductModifierModal';
+import { KitchenTicketModal, buildKitchenTicketData } from '../components/KitchenTicketModal';
+import type { KitchenTicketData } from '../components/KitchenTicketModal';
 import { usePlan } from '../hooks/usePlan';
 import { useDialog } from '../context/DialogContext';
 import { api, customerApi, authStorage } from '../services/api';
@@ -474,9 +476,30 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
   // Payment & Checkout State
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Kitchen Ticket (KDS) Modal State
+  const [kitchenTicketOpen, setKitchenTicketOpen] = useState(false);
+  const [kitchenTicketData, setKitchenTicketData] = useState<KitchenTicketData | null>(null);
+
+  /** Buka kitchen ticket preview/print dengan data dari cart aktif saat ini */
+  const handleOpenKitchenTicket = useCallback((opts?: { isAddOn?: boolean; invoiceNumber?: string }) => {
+    if (cart.length === 0) return;
+    const ticketData = buildKitchenTicketData({
+      cart,
+      tableNumber: tableNumber || undefined,
+      customerName: customerName || undefined,
+      invoiceNumber: opts?.invoiceNumber || activePulledOrder?.invoiceNumber || undefined,
+      outletName: activeOutlet?.name || undefined,
+      cashierName: activeUser?.name || undefined,
+      isAddOn: opts?.isAddOn || false,
+    });
+    setKitchenTicketData(ticketData);
+    setKitchenTicketOpen(true);
+  }, [cart, tableNumber, customerName, activePulledOrder, activeOutlet, activeUser]);
 
   // Initial Data Fetch
   const loadProducts = async (targetOutletId?: string) => {
@@ -548,6 +571,40 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const barcodeBuffer = useRef<string>('');
   const lastKeyTime = useRef<number>(0);
 
+  // Helper: play beep sound via Web Audio API
+  const playBeep = useCallback((success: boolean) => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      const now = ctx.currentTime;
+      if (success) {
+        // Beep naik = scan sukses (440 Hz → 880 Hz)
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.08);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } else {
+        // Beep turun = scan gagal (400 Hz → 200 Hz)
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.linearRampToValueAtTime(200, now + 0.12);
+        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+    } catch (_) {
+      // Silent fallback jika browser membatasi autoplay
+    }
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Hotkeys: F2 (Cari), F8 (X-Report), F9 (Close Shift), F4 (Bayar)
@@ -567,20 +624,33 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         return;
       }
 
-      // Barcode Scanner detection
+      // ─── Global Barcode Scanner (Keyboard Wedge Listener) ───────────────────
+      // SKIP jika fokus ada di elemen input/textarea/select agar tidak konflik
+      // dengan pengetikan kasir di form field manapun.
+      const activeEl = document.activeElement;
+      const isTypingField =
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        activeEl instanceof HTMLSelectElement;
+      if (isTypingField) return;
+
+      // Barcode Scanner detection: keystroke interval < 50ms = scanner hardware
       const now = Date.now();
       if (now - lastKeyTime.current > 100) {
+        // Reset buffer jika jeda antar keystroke > 100ms (ketikan manual manusia)
         barcodeBuffer.current = '';
       }
       lastKeyTime.current = now;
 
       if (e.key === 'Enter') {
-        if (barcodeBuffer.current.length >= 3) {
+        // Scanner hardware mengirimkan Enter sebagai terminator
+        // Min 4 karakter untuk mengurangi false-positive
+        if (barcodeBuffer.current.length >= 4) {
           const scanned = barcodeBuffer.current.trim();
           handleScanBarcode(scanned);
           barcodeBuffer.current = '';
         }
-      } else if (e.key.length === 1) {
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         barcodeBuffer.current += e.key;
       }
     };
@@ -592,16 +662,18 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const handleScanBarcode = (code: string) => {
     const found = products.find(
       (p) =>
-        p.barcode.toLowerCase() === code.toLowerCase() ||
-        p.sku.toLowerCase() === code.toLowerCase()
+        (p.barcode && p.barcode.toLowerCase() === code.toLowerCase()) ||
+        (p.sku && p.sku.toLowerCase() === code.toLowerCase())
     );
     if (found) {
       handleProductSelect(found);
-      setScanMessage(`Scan berhasil: ${found.name}`);
+      playBeep(true);
+      setScanMessage(`✅ Scan: ${found.name}`);
       setTimeout(() => setScanMessage(null), 2500);
     } else {
-      setScanMessage(`Produk barcode "${code}" tidak ditemukan`);
-      setTimeout(() => setScanMessage(null), 3000);
+      playBeep(false);
+      setScanMessage(`❌ Barcode "${code}" tidak ditemukan di katalog`);
+      setTimeout(() => setScanMessage(null), 3500);
     }
   };
 
@@ -735,6 +807,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     setCustomerName('');
     setCustomerPhone('');
     setSelectedCustomer(null);
+    setPointsToRedeem(0);
     setGlobalDiscount(0);
     setAppliedPromotion(null);
     setOnDemandQuantities({});
@@ -1272,6 +1345,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         taxAmount: checkoutTaxAmount,
         serviceCharge: checkoutServiceCharge,
         promotionId: appliedPromotion?.id || undefined,
+        pointsToRedeem: Boolean(activeOutlet?.loyaltyConfig?.isActive) && pointsToRedeem > 0 ? pointsToRedeem : undefined,
         outletId: activeOutlet?.id,
         existingOrderId: targetOrderId,
         payment,
@@ -1366,18 +1440,32 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       }
     });
 
-  const cartGrandTotal = cartAfterDiscount + onDemandFeesTotal + autoFeesTotal;
+  // Program Loyalitas & Poin Per-Outlet
+  const isLoyaltyActive = Boolean(activeOutlet?.loyaltyConfig?.isActive);
+  const pointValueIdr = activeOutlet?.loyaltyConfig?.pointValueIdr || 100;
+  const pointDiscountAmount =
+    isLoyaltyActive && pointsToRedeem > 0 ? pointsToRedeem * pointValueIdr : 0;
+
+  const cartGrandTotal = Math.max(
+    0,
+    cartAfterDiscount + onDemandFeesTotal + autoFeesTotal - pointDiscountAmount
+  );
 
   return (
     <div className={`flex flex-col ${isHandheld ? 'h-[100dvh] md:h-[calc(100vh-6.5rem)]' : 'h-[calc(100vh-6.5rem)]'} overflow-hidden bg-slate-100 font-sans`}>
       {isHandheld ? (
         <PosMobileView
           activeOutlet={activeOutlet}
+          pointsToRedeem={pointsToRedeem}
+          onChangePointsToRedeem={(pts) => setPointsToRedeem(pts)}
           currentShift={currentShift}
           currentUserRole={currentUserRole}
           canCashOut={canCashOut}
           orderChannel={orderChannel}
           onChangeOrderChannel={(ch) => setOrderChannel(ch)}
+          onlineOrderId={onlineOrderId}
+          onChangeOnlineOrderId={(id) => setOnlineOrderId(id)}
+          channelsConfig={activeOutlet?.channelsConfig || undefined}
           tableNumber={tableNumber}
           onChangeTableNumber={(t) => setTableNumber(t)}
           tables={tables}
@@ -1524,6 +1612,9 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
             {/* Right Column: Order Cart Sidebar */}
             <OrderCartSidebar
+              outlet={activeOutlet}
+              pointsToRedeem={pointsToRedeem}
+              onChangePointsToRedeem={(pts) => setPointsToRedeem(pts)}
               cart={cart}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
@@ -1576,6 +1667,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                 setAppliedPromotion(null);
                 setScanMessage('Kupon promo telah dilepas.');
               }}
+              onPrintKitchenTicket={handleOpenKitchenTicket}
             />
           </div>
         </>
@@ -1832,6 +1924,13 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         onProceedPayment={() => {
           setPaymentModalOpen(true);
         }}
+      />
+
+      {/* Kitchen Ticket (KDS) Modal */}
+      <KitchenTicketModal
+        isOpen={kitchenTicketOpen}
+        onClose={() => setKitchenTicketOpen(false)}
+        data={kitchenTicketData}
       />
 
       {/* Pro Upgrade Modal */}

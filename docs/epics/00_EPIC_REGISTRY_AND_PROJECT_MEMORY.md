@@ -24,10 +24,10 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-03** | **Zero-Downtime Data Migration (Expand, Backfill, Dual-Write)** | **COMPLETED ✅** | Fase 12, 13, 14, 15<br/>`docs/validation/10-27` | Eksekusi Expand DDL, Backfill historis (paritas 100%), Dual-Write Services, dan Dual-Run Soak Test. |
 | **EPIC-04** | **Production Traffic Cutover & Legacy Contract (Decommissioning)** | **COMPLETED ✅** | Fase 16 & 17<br/>`docs/validation/28-29` | Pengalihan 100% arus baca/tulis (`TARGET_ONLY`), Drop tabel legacy (`outlet_products`, `stock_movements`, `payments`) & kolom usang. |
 | **EPIC-05** | **Frontend Client Integration & Core POS Cashier Experience** | **COMPLETED ✅** | Sprint 5.1 s.d 5.6<br/>[`EPIC-05.md`](./EPIC-05_FRONTEND_CLIENT_INTEGRATION_AND_POS_EXPERIENCE.md) | Penyelarasan UI Kasir & Backoffice (`pos_apps/client`) dengan API target baru (Varian, Stok Multi-Outlet, Checkout Target, Struk Thermal, Shift X/Z). |
-| **EPIC-06** | **F&B Multi-Vertical Engine (Recipes / BOM, Modifiers & Kitchen Workflow)** | **COMPLETED ✅** | Sprint 6.1 s.d 6.5<br/>[`EPIC-06.md`](./EPIC-06_FNB_RECIPES_MODIFIERS_AND_KITCHEN_ENGINE.md) | Manajemen resep minuman/makanan, pemotongan bahan baku otomatis (*inventory items*), topping/modifiers, dan Kitchen Display System (KDS). |
-| **EPIC-07** | **Supply Chain Logistics, Central Warehouse & Purchasing (PO & Receiving)** | **COMPLETED ✅** | Sprint 7.1 s.d 7.7<br/>[`EPIC-07.md`](./EPIC-07_SUPPLY_CHAIN_LOGISTICS_AND_PURCHASING.md) | Purchase Order (PO) ke supplier, Goods Receiving dengan Moving Average Cost real-time, transfer stok multi-cabang (dispatch/receive), peringatan kedaluwarsa batch/lot, dan Unified Bulk Stock Workspace (Opname, Stok Masuk, Stok Keluar, Transfer Antar Cabang). |
+| **EPIC-06** | **F&B Multi-Vertical Engine (Recipes / BOM, Modifiers & Kitchen Workflow)** | **COMPLETED ✅** | Sprint 6.1 s.d 6.7<br/>[`EPIC-06.md`](./EPIC-06_FNB_RECIPES_MODIFIERS_AND_KITCHEN_ENGINE.md) | Manajemen resep minuman/makanan, pemotongan bahan baku otomatis (*inventory items*), topping/modifiers terhubung ke bahan baku (BOM modifier), Kitchen Display System (KDS), serta Ekspor & Impor Massal Katalog Produk (CSV/Excel). |
+| **EPIC-07** | **Supply Chain Logistics, Central Warehouse & Purchasing (PO & Receiving)** | **COMPLETED ✅** | Sprint 7.1 s.d 7.9<br/>[`EPIC-07.md`](./EPIC-07_SUPPLY_CHAIN_LOGISTICS_AND_PURCHASING.md) | Purchase Order (PO) ke supplier, Goods Receiving dengan Moving Average Cost real-time, transfer stok multi-cabang (dispatch/receive), peringatan kedaluwarsa batch/lot, antarmuka Backoffice PO & Transfer Cabang, widget peringatan kadaluarsa, dan Unified Bulk Stock Workspace (Opname, Stok Masuk, Stok Keluar, Transfer Antar Cabang). |
 | **EPIC-08** | **CRM, Customer Loyalty, Discounts & Promotion Engine** | **COMPLETED ✅** | Sprint 8.1 s.d 8.5<br/>[`EPIC-08.md`](./EPIC-08_CRM_LOYALTY_AND_PROMOTIONS_ENGINE.md) | Program poin reward pelanggan, tier membership, voucher promo (nominal/persen), buy-X-get-Y, dan kirim struk WhatsApp/Email. |
-| **EPIC-09** | **Financial Analytics, Real-Time COGS/HPP & Business Intelligence** | **COMPLETED ✅** | Sprint 9.1 s.d 9.4<br/>[`EPIC-09.md`](./EPIC-09_FINANCIAL_ANALYTICS_AND_COGS_HPP.md) | Laporan laba kotor real-time berbasis *moving average cost*, audit selisih kas kasir (*over/short*), top 10 best-seller, ekspor CSV/Excel. |
+| **EPIC-09** | **Financial Analytics, Real-Time COGS/HPP & Business Intelligence** | **COMPLETED ✅** | Sprint 9.1 s.d 9.10<br/>[`EPIC-09.md`](./EPIC-09_FINANCIAL_ANALYTICS_AND_COGS_HPP.md) | Laporan laba kotor & laba bersih operasional (Gross Profit - Kas OPEX Shift), kurva visual tren penjualan/HPP Native SVG, Smart BI Insights (Peak Hours & Margin Health), audit selisih kas kasir (*over/short*), top 10 best-seller, dan ekspor CSV UTF-8 BOM. |
 | **EPIC-10** | **SaaS Management Platform, SuperAdmin Portal & Automated Billing Lifecycle** | **COMPLETED ✅** | Sprint 10.1 s.d 10.4<br/>[`EPIC-10.md`](./EPIC-10_SAAS_SUPERADMIN_AND_BILLING_LIFECYCLE.md) | Portal SuperAdmin (`admin.wellpos.id`), self-service tenant onboarding, billing gateway (Midtrans/Xendit), auto-suspend tenant telat bayar. |
 | **EPIC-11** | **Production Hardening, PostgreSQL RLS Security, Redis & Cloudflare DevOps** | **COMPLETED ✅** | Sprint 11.1 s.d 11.4<br/>[`EPIC-11.md`](./EPIC-11_PRODUCTION_HARDENING_RLS_AND_DEVOPS.md) | Pertahanan berlapis PostgreSQL Row-Level Security (RLS), Docker production multi-stage, Redis catalog cache, rate limiting & SSL/WAF. |
 | **EPIC-12** | **Local Pre-Release Sandbox, Master Seeder & Interactive Simulators** | **COMPLETED ✅** | Sprint 12.1 s.d 12.4<br/>[`EPIC-12.md`](./EPIC-12_LOCAL_PRE_RELEASE_SANDBOX.md) | Lingkungan sandbox lokal mandiri, Master Seeder multi-role, simulator pembayaran QRIS, virtual printer thermal & cash drawer kick, runner terpadu. |
@@ -42,7 +42,7 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-21** | **Multi-Outlet Catalog Isolation, Warehouse Backflushing & Stock Allocation** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-21.md`](./EPIC-21_MULTI_OUTLET_CATALOG_AND_WAREHOUSE_BOM.md) | Isolasi menu/kategori & resep BOM per jenis toko, resolusi dinamis gudang pasokan (`warehouseId`), direct backflushing kasir otomatis ke gudang, dan dashboard visibilitas multi-gudang serta alokasi transfer stok terpadu. |
 | **EPIC-22** | **Smart Calling Queue Numbering & Flexible Store Toggle** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-22.md`](./EPIC-22_CALLING_QUEUE_NUMBERING.md) | Standardisasi nomor antrean panggilan cepat lisan kasir F&B (`#01`, `#02`), reset harian otomatis per outlet, cetak thermal/PDF, teks WA, dan sakelar on/off fleksibel di menu format struk Backoffice. |
 | **EPIC-23** | **Pakasir.com Payment Gateway Integration (Direct QRIS & Webhook)** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-23.md`](./EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md) | Integrasi gateway pembayaran Pakasir API v2, pembayaran aktivasi pendaftaran awal tenant Rp 99.000 + 100 bonus token, top-up kuota token pay-as-you-go, direct QRIS modal, polling status live, webhook secret guard, tarif dinamis Rp 69/token, batas minimal 250 token, sakelar QRIS Superadmin, dan eliminasi transfer manual. |
-| **EPIC-24** | **Transaction Void & Supervisor/Owner PIN Approval Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-24.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md) | Pembatalan resmi transaksi kasir (Void), otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok inventaris atomik (movement_type VOID), audit retur (refunds), isolasi omset kas shift, dan pemulihan kuota token SaaS. |
+| **EPIC-24** | **Transaction Void & Supervisor/Owner PIN Approval Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-24.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md) | Pembatalan resmi transaksi kasir (Full & Partial Item Void), otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok inventaris atomik (movement_type VOID), slip cetak bukti fisik void dengan signature block Kasir & Spv, audit retur (refunds), isolasi omset kas shift, dan pemulihan kuota token SaaS. |
 
 ---
 
@@ -189,10 +189,11 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
 #### 🎁 EPIC-08: CRM, Customer Loyalty, Discounts & Promotion Engine
 - **Tujuan**: Meningkatkan retensi pelanggan toko melalui program promosi dan keanggotaan modern.
 - **Fitur Utama**:
-  - Customer Database: Profil pelanggan, riwayat belanja, dan akumulasi poin.
-  - Tiers & Rewards: Penukaran poin menjadi diskon belanja.
-  - Promo Engine: Diskon persen, nominal, paket bundling (Buy 2 Get 1 Free), Happy Hour promo berbatas waktu.
-  - Struk Digital: Pengiriman otomatis invoice PDF struk via Email dan integrasi WhatsApp gateway.
+  - Konfigurasi Granular Per-Outlet: Saklar aktif/nonaktif program loyalitas diatur per cabang toko (`outlets.loyalty_config`). Default nonaktif agar netral untuk tenant yang tidak menginginkan program poin.
+  - Customer Database & Tiering: Profil pelanggan, riwayat belanja, akumulasi poin, badge tier keanggotaan (Bronze, Silver, Gold, Platinum), mutasi buku besar poin (`CustomerPointLedger`), dan form penyesuaian poin manual.
+  - Tiers & Rewards POS: Slider/input penukaran poin langsung di kasir (1 Poin = Rp 100), terkunci otomatis jika outlet mematikan fitur loyalitas.
+  - Promo Engine: Master voucher diskon persen/nominal, kuota pemakaian, batas minimal belanja, tombol saklar toggle cepat aktif/nonaktif, dan modal audit riwayat pemakaian voucher (`usages` log).
+  - Struk Digital: Pengiriman otomatis invoice PDF struk via Email dan integrasi WhatsApp gateway dengan rincian poin diperoleh dan poin ditukarkan.
 
 #### 📊 EPIC-09: Financial Analytics, Real-Time COGS/HPP & Business Intelligence
 - **Tujuan**: Memberikan visibilitas finansial dan profitabilitas bisnis pemilik toko secara mendalam.
@@ -328,7 +329,7 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
 - **Dokumentasi**: [`docs/epics/EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md`](./EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md)
 
 #### 🚫 EPIC-24: Transaction Void & Supervisor/Owner PIN Approval Engine
-- **Tujuan**: Pembatalan resmi transaksi kasir (Void) dengan otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok bahan & ritel atomik (movement_type VOID), pencatatan audit retur refunds, isolasi omset kas shift, dan pemulihan kuota token SaaS.
+- **Tujuan**: Pembatalan resmi transaksi kasir (Full & Partial Item Void) dengan otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok bahan & ritel atomik (movement_type VOID), slip fisik bukti void dengan signature block Kasir & Spv untuk laci kasir, pencatatan audit retur refunds, isolasi omset kas shift, dan pemulihan kuota token SaaS.
 - **Status**: **COMPLETED ✅**
 - **Dokumentasi**: [`docs/epics/EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md)
 
@@ -972,6 +973,72 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
   - Endpoint Superadmin: `GET /api/platform/notifications`, `POST /api/platform/notifications`, `DELETE /api/platform/notifications/:id`.
   - Endpoint Merchant: `GET /api/saas/notifications` (terproteksi context tenant).
   - Penyimpanan data pada `pos_apps/server/data/platform_notifications.json` menjamin zero DDL pooler lock, zero downtime, dan konsistensi antar-lingkungan dev/Render/Vercel.
+
+[FASE 7: PENCABUTAN SESI PERANGKAT INSTAN / FORCE LOGOUT KASIR (IAM & MULTI-TENANT)] - SELESAI ✅
+• Mekanisme Token Versioning Database (`token_version`):
+  - Kolom `token_version` (INTEGER NOT NULL DEFAULT 1) pada tabel `users`.
+  - Terdaftar di `SchemaPatcher` (`20261002_03_users_token_version`) untuk auto-migration idempotent di Render & Supabase.
+• Penerbitan Token & Enforcement di JWT Auth Middleware:
+  - Token JWT (`loginWithPassword`, `loginWithPin`, `pairCashierDevice`) menyematkan klaim `tokenVersion`.
+  - `auth.middleware.ts` memeriksa `decoded.tokenVersion < user.tokenVersion`. Jika terdeteksi stale, request langsung ditolak dengan HTTP 401 dan `code: 'SESSION_REVOKED'`.
+• Endpoint Backend Pencabutan Sesi (`user.controller.ts` & `user.routes.ts`):
+  - `POST /api/users/:id/revoke-session`: Memutus sesi tablet/perangkat staf tertentu secara instan.
+  - `POST /api/users/revoke-all-sessions`: Memutus sesi seluruh perangkat kasir & staf di toko (default `excludeCurrent: true` agar sesi pemanggil tetap aktif).
+  - Otomasi kenaikan `token_version` pada `userDualWriteService.updateUser` saat password/PIN diubah atau staf dinonaktifkan (`isActive: false`).
+• Antarmuka Pengguna & Intersepsi Klien (`UsersView.tsx`, `api.ts`, `App.tsx`):
+  - Tombol aksi per baris tabel desktop & kartu mobile kasir: "Cabut Sesi (Force Logout)" dengan dialog konfirmasi kanonikal (`useDialog().confirm`).
+  - Tombol aksi toolbar utama: "Cabut Semua Sesi Kasir" untuk evakuasi keamanan toko secara serentak.
+  - Interceptor respons global pada `api.ts` menangkap HTTP 401 `code === 'SESSION_REVOKED'`, membersihkan sesi lokal, dan memicu event `auth:session_revoked`.
+  - `App.tsx` merespons event dengan menampilkan pesan informatif dan mengarahkan pengguna kembali ke layar login kasir.
+
+[FASE 8: PENUTUPAN TUNTAS 100% KANAL PENJUALAN & MITRA ONLINE DELIVERY (EPIC-20)] - SELESAI ✅
+• Integrasi Penuh Kasir Smartphone Handheld (`PosMobileView.tsx` & `PosTerminalView.tsx`):
+  - Penggantian kanal hardcoded dengan resolusi saluran dinamis (`activeChannels`) dari outlet config.
+  - Penambahan input kontekstual `ID Driver / No. Pesanan Online` (`onlineOrderId`) pada mobile drawer cart kasir.
+  - Tombol toggle saluran di header bar mobile kini dapat beralih ke seluruh kanal aktif (Dine In, Take Away, GoFood, GrabFood, ShopeeFood, Maxim, Kurir Internal).
+• Penyempurnaan Struk Fisik Kasir (`receiptPdf.ts`):
+  - Pencetakan otomatis Nomor Meja untuk Dine In (`Meja: ...`).
+  - Pencetakan otomatis ID Pesanan Driver Mitra Online (`ID Driver/Order: #...`) untuk verifikasi driver ojek online.
+• Keamanan Skema & Migrasi Cloud (`schema_patcher.ts`):
+  - Pendaftaran patch `20261002_04_outlets_channels_config` untuk penjaminan kolom `channels_config JSONB` di Render dan Supabase.
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
+
+[FASE 9: PENUTUPAN TUNTAS 100% LAPORAN FINANSIAL, REAL-TIME COGS/HPP & AUDIT SHIFT (EPIC-09)] - SELESAI ✅
+• Integrasi Metrik HPP & Laba Kotor Terpadu (`FinancialReportView.tsx`):
+  - Penambahan 2 Kartu KPI baru sehingga menjadi 6 Executive Cards: Total Omset Bersih, Total HPP / Modal Pokok (`totalCOGS`), Laba Kotor / Gross Profit (`grossProfit`) beserta persentase margin laba kotor (`grossProfitMargin%`), Total Faktur Transaksi, Total Pajak & Service Charge, serta Total Diskon Promosi.
+  - Penambahan kolom "Total HPP" dan "Laba Kotor" pada rincian tren harian (*Daily Trends Breakdown*) di Desktop Table View maupun Mobile Card List View.
+  - Pembaruan ekspor CSV Finansial dengan header UTF-8 BOM (`\uFEFF`) yang menyertakan baris HPP, Laba Kotor, dan Gross Margin % untuk kompatibilitas mutlak Microsoft Excel.
+• Peningkatan Komprehensif Audit & Rekapitulasi Shift Kasir (`ShiftsAuditView.tsx`):
+  - Penambahan prop `activeOutlet?: Outlet | null` untuk isolasi audit per toko dan penanganan mode gudang.
+  - Integrasi API `GET /api/reports/shifts` (`getShiftDiscrepanciesReport`) dengan fallback anggun ke `getShiftHistory`.
+  - Filter rentang periode preset (Hari Ini, 7 Hari, 30 Hari, Bulan Ini, Kustom) yang sinkron dengan paging kanonikal `<TablePagination />` (10 / 25 / 50 / 100 baris).
+  - 4 Kartu KPI Ringkasan Audit Kasir: Total Sesi Diaudit, Sesi Seimbang / Sesuai (Rp 0), Sesi Selisih Kurang (Shortage) beserta akumulasi nominal minus, dan Net Selisih Kasir (Net Variance).
+  - Status selisih kas cerdas (`SEIMBANG`, `LEBIH`, `KURANG`, `AKTIF`) pada tabel desktop dan kartu smartphone handheld.
+  - Ekspor CSV audit shift kasir berformat UTF-8 BOM (`\uFEFF`) yang mencakup rincian kas diharapkan, kas fisik aktual, selisih kas, dan status per kasir.
+• Standarisasi Ekspor CSV Analisis Menu & Dead Stock (`ProductAnalyticsView.tsx`):
+  - Penerapan UTF-8 BOM (`\uFEFF`) dan Blob URL pada ekspor CSV leaderboard produk terlaris dan barang lambat laku (*dead-stock*).
+• Client-Side API Expansion (`services/api.ts`):
+  - Penambahan wrapper method `getShiftDiscrepanciesReport`, `getProductPerformanceReport`, `getDeadStockReport`, dan `exportAnalyticsReport`.
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
+
+[FASE 10: PENUNTASAN 100% INFRASTRUKTUR HYBRID, POOLER-SAFE RLS & DECOMMISSIONING SCAFFOLDING (EPIC-11 & ADR-008)] - SELESAI ✅
+• Perilisan Keputusan Arsitektur Strategis ADR-008 (`docs/decisions/ADR-008-free-tier-infrastructure-and-evolution-strategy.md`):
+  - Dokumentasi resmi kesepakatan pola infrastruktur adaptif: operasional 100% stabil, zero-cost, dan bebas crash di Render Free Tier & Supabase PgBouncer (Port 6543).
+  - Penyusunan Playbook panduan langkah-demi-langkah jika di masa depan berpindah ke Dedicated PostgreSQL / VPS / AWS RDS / GCP Cloud SQL (zero application rework).
+• Arsitektur Universal Hybrid Cache (`pos_apps/server/src/services/cache.service.ts`):
+  - Sistem dual-driver: Otomatis mendeteksi ketersediaan `REDIS_URL` untuk dedicated cluster atau fallback ke Node.js In-Memory `Map` teroptimasi dengan TTL dan prefix invalidation (`delByPrefix`).
+  - Metrik performa cache menyertakan label driver aktif (`driver: 'IN_MEMORY' | 'REDIS'`).
+• PgBouncer Pooler-Safe Context Manager (`pos_apps/server/src/services/rls.service.ts`):
+  - Penyempurnaan `withTenantContext`, `withSuperAdminContext`, dan `withBypassRLS` agar aman dari potensi *connection state leakage* PgBouncer Supabase saat transaction pooler aktif.
+  - Penambahan indikator runtime `getEnforcementMode()` (`APPLICATION_DEFENSE_IN_DEPTH` vs `KERNEL_HARDENED`).
+• Konsolidasi Target Domain Sales Engine (`pos_apps/server/src/services/dual_write/sales.dual_write.service.ts`):
+  - Penyelarasan dokumentasi dan arsitektur penulisan kasir murni ke skema target (`orders`, `order_items`, `payment_transactions`, `inventory_balances`, `inventory_ledgers`).
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
 ================================================================================
 ```
+
+
 

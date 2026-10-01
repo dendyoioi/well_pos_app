@@ -202,6 +202,17 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               Pengadaan &amp; Vendor
             </div>
             <button
+              onClick={() => handleSelectTab('purchase_orders')}
+              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
+                activeTab === 'purchase_orders'
+                  ? 'bg-indigo-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-indigo-50/60'
+              }`}
+            >
+              <Package className="w-4 h-4 shrink-0" />
+              <span>Pengadaan (PO)</span>
+            </button>
+            <button
               onClick={() => handleSelectTab('suppliers')}
               className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
                 activeTab === 'suppliers'
@@ -444,6 +455,22 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 Stok Bahan Baku
               </button>
               <button
+                onClick={() => handleSelectTab('purchase_orders')}
+                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
+                  activeTab === 'purchase_orders' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Pengadaan (PO)
+              </button>
+              <button
+                onClick={() => handleSelectTab('transfers')}
+                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
+                  activeTab === 'transfers' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Transfer Antar Cabang
+              </button>
+              <button
                 onClick={() => handleSelectTab('stock_movements')}
                 className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
                   activeTab === 'stock_movements' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
@@ -623,6 +650,14 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 }`}
               >
                 Kanal Penjualan &amp; Mitra
+              </button>
+              <button
+                onClick={() => handleSelectTab('settings_loyalty')}
+                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
+                  activeTab === 'settings_loyalty' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Program Loyalitas &amp; Poin
               </button>
               <button
                 onClick={() => handleSelectTab('outlets')}
@@ -1238,6 +1273,17 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 >
                   <Receipt className="w-5 h-5" />
                   <span className="text-[10px]">Mutasi</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onTabChange('purchase_orders')}
+                  className={`flex flex-col items-center justify-center gap-0.5 min-w-[54px] py-1 transition-colors active:scale-95 cursor-pointer ${
+                    activeTab === 'purchase_orders' ? 'text-indigo-900 font-black' : 'text-slate-500 hover:text-slate-800 font-medium'
+                  }`}
+                >
+                  <Package className="w-5 h-5" />
+                  <span className="text-[10px]">PO</span>
                 </button>
 
                 <button

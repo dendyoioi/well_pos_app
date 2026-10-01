@@ -12,6 +12,7 @@ export interface Category {
 export interface ProductVariant {
   id: string;
   sku?: string;
+  barcode?: string;
   name: string;
   price: number;
   costPrice?: number;

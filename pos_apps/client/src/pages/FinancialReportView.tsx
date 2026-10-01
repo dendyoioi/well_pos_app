@@ -15,6 +15,10 @@ import {
   Zap,
   Globe,
   Store,
+  Coins,
+  Boxes,
+  Clock,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { FinancialReportData } from '../types/report';
@@ -23,6 +27,7 @@ import { usePlan } from '../hooks/usePlan';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { computePresetDateRange } from '../utils/date';
 import { TablePagination } from '../components/TablePagination';
+import { SalesProfitTrendChart } from '../components/SalesProfitTrendChart';
 
 interface FinancialReportViewProps {
   activeOutlet?: Outlet | null;
@@ -99,7 +104,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
     }
   }, [periodPreset, activeOutlet?.id]);
 
-  // Ekspor Data Laporan Finansial ke CSV
+  // Ekspor Data Laporan Finansial ke CSV (Standar UTF-8 BOM untuk Excel)
   const handleExportCSV = () => {
     if (!data) return;
 
@@ -111,6 +116,9 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       [''],
       ['RINGKASAN FINANSIAL UTAMA'],
       ['Total Omset Bersih (Net Revenue)', `Rp ${data.financialSummary.totalNetRevenue}`],
+      ['Total Modal Barang Terjual (COGS / HPP)', `Rp ${data.financialSummary.totalCOGS}`],
+      ['Laba Kotor Penjualan (Gross Profit)', `Rp ${data.financialSummary.grossProfit}`],
+      ['Margin Laba Kotor (Gross Margin %)', `${data.financialSummary.grossProfitMargin}%`],
       ['Total Faktur Penjualan', `${data.financialSummary.totalTransactions}`],
       ['Rata-rata Nilai Belanja (AOV)', `Rp ${data.financialSummary.averageOrderValue}`],
       ['Total Diskon Promosi', `Rp ${data.financialSummary.totalDiscounts}`],
@@ -119,12 +127,14 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       ['Arus Kas Tunai (Cash)', `Rp ${data.cashFlow.cash.amount} (${data.cashFlow.cash.percentage}%)`],
       ['Arus Kas QRIS / Non-Tunai', `Rp ${data.cashFlow.qris.amount} (${data.cashFlow.qris.percentage}%)`],
       [''],
-      ['RINCIAN TREN PENJUALAN HARIAN'],
-      ['Tanggal', 'Jumlah Faktur', 'Total Omset Bersih', 'Tunai (Cash)', 'Non-Tunai (QRIS)'],
+      ['RINCIAN TREN PENJUALAN & HPP HARIAN'],
+      ['Tanggal', 'Jumlah Faktur', 'Total Omset Bersih', 'Total HPP', 'Laba Kotor', 'Tunai (Cash)', 'Non-Tunai (QRIS)'],
       ...(data.dailyTrends || []).map((d) => [
         d.date,
         d.ordersCount,
         d.revenue,
+        d.cogs || 0,
+        d.grossProfit || 0,
         d.cashRevenue,
         d.qrisRevenue,
       ]),
@@ -148,14 +158,16 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       ]),
     ];
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + summaryRows.map((e) => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + summaryRows.map((e) => e.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute('download', `Laporan_Finansial_Penjualan_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const fs = data?.financialSummary;
@@ -331,7 +343,86 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
         </div>
       ) : fs ? (
         <>
-          {/* Main Financial KPI Cards */}
+          {/* Smart Business Intelligence (BI) Insights & Executive Highlights */}
+          {data?.insights && (
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 p-5 sm:p-6 rounded-3xl text-white shadow-md border border-blue-800/40 relative overflow-hidden">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-black tracking-wider uppercase">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Executive BI Smart Insights</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+                    Ringkasan Kinerja &amp; Pola Transaksi Toko
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Analisis pintar otomatis berdasarkan seluruh arus transaksi dan marjin operasional aktif.
+                  </p>
+                </div>
+
+                {/* 4 Quick Stat Pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-300 uppercase block flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-300" /> Jam Tersibuk
+                    </span>
+                    <strong className="text-xs sm:text-sm font-black text-amber-300 font-mono block truncate">
+                      {data.insights.peakHour}
+                    </strong>
+                    <span className="text-[9px] text-slate-300 block">
+                      {data.insights.peakHourOrdersCount} transaksi puncak
+                    </span>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-300 uppercase block flex items-center gap-1">
+                      <DollarSign className="w-3 h-3 text-blue-300" /> Rata-Rata Nota
+                    </span>
+                    <strong className="text-xs sm:text-sm font-black text-white font-mono block truncate">
+                      Rp {fs.averageOrderValue.toLocaleString('id-ID')}
+                    </strong>
+                    <span className="text-[9px] text-slate-300 block">
+                      per keranjang belanja
+                    </span>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-300 uppercase block flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-300" /> Kesehatan Marjin
+                    </span>
+                    <div className="pt-0.5">
+                      <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        data.insights.profitHealthStatus === 'SEHAT'
+                          ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
+                          : data.insights.profitHealthStatus === 'WASPADA'
+                          ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                          : 'bg-rose-400/20 text-rose-300 border border-rose-400/30'
+                      }`}>
+                        MARJIN {data.insights.profitHealthStatus} ({fs.grossProfitMargin}%)
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-slate-300 block">
+                      Benchmark &gt;40% Prima
+                    </span>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-300 uppercase block truncate">
+                      🏆 Menu Unggulan
+                    </span>
+                    <strong className="text-xs sm:text-sm font-black text-white block truncate" title={data.insights.highMarginChampion || 'Belum Ada'}>
+                      {data.insights.highMarginChampion || 'Stabil'}
+                    </strong>
+                    <span className="text-[9px] text-emerald-300 block">
+                      Kontributor laba utama
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Main Financial KPI Cards (7 Cards: Net Revenue, COGS, Gross Profit, Net Operating Profit, Transactions, Tax/Service, Discounts) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Omset Penjualan Bersih */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
@@ -359,13 +450,100 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
             </div>
 
-            {/* Card 2: Total Transaksi Berhasil */}
+            {/* Card 2: Total HPP / Modal Bahan Baku (COGS) */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Total Modal / HPP (COGS)
+                </span>
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center">
+                  <Boxes className="w-5 h-5 stroke-[2.5]" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <h3 className="text-2xl font-black text-amber-900 tracking-tight">
+                  Rp {fs.totalCOGS.toLocaleString('id-ID')}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                  Beban modal pokok produk terjual
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Rasio Beban HPP:</span>
+                <strong className="text-amber-800 font-bold">
+                  {fs.totalNetRevenue > 0
+                    ? ((fs.totalCOGS / fs.totalNetRevenue) * 100).toFixed(1)
+                    : 0}
+                  % dari omset bersih
+                </strong>
+              </div>
+            </div>
+
+            {/* Card 3: Laba Kotor (Gross Profit & Margin %) */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Laba Kotor (Gross Profit)
+                </span>
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                  <Coins className="w-5 h-5 stroke-[2.5]" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <h3 className="text-2xl font-black text-emerald-800 tracking-tight">
+                  Rp {fs.grossProfit.toLocaleString('id-ID')}
+                </h3>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Margin: {fs.grossProfitMargin}%
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">(Net - Pajak - HPP)</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Status Profitabilitas:</span>
+                <strong className={fs.grossProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
+                  {fs.grossProfit >= 0 ? 'Surplus Laba Positif' : 'Defisit Margin'}
+                </strong>
+              </div>
+            </div>
+
+            {/* Card 3B: Laba Bersih Operasional (Net Operating Profit) */}
+            <div className="bg-white p-5 rounded-3xl border border-indigo-200 shadow-sm relative overflow-hidden bg-gradient-to-b from-indigo-50/30 to-white">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                  Laba Bersih Operasional
+                </span>
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-900 flex items-center justify-center shadow-xs">
+                  <TrendingUp className="w-5 h-5 stroke-[2.5]" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <h3 className="text-2xl font-black text-indigo-950 tracking-tight">
+                  Rp {((fs.netOperatingProfit !== undefined ? fs.netOperatingProfit : fs.grossProfit) || 0).toLocaleString('id-ID')}
+                </h3>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-200">
+                    Net Margin: {fs.netOperatingProfitMargin !== undefined ? fs.netOperatingProfitMargin : fs.grossProfitMargin}%
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">(Laba Kotor - Kas OPEX)</span>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-indigo-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Biaya Kasir Keluar:</span>
+                <strong className="text-rose-600 font-bold font-mono">
+                  -Rp {(fs.totalOperatingExpenses || 0).toLocaleString('id-ID')}
+                </strong>
+              </div>
+            </div>
+
+            {/* Card 4: Total Transaksi Berhasil */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Faktur Transaksi
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-slate-50 text-slate-800 flex items-center justify-center">
                   <Receipt className="w-5 h-5 stroke-[2.5]" />
                 </div>
               </div>
@@ -378,7 +556,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Penjualan Harian Rata-rata:</span>
+                <span>Rata-rata Harian:</span>
                 <strong className="text-slate-800">
                   {data?.dailyTrends && data.dailyTrends.length > 0
                     ? Math.round(fs.totalTransactions / data.dailyTrends.length)
@@ -388,7 +566,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
             </div>
 
-            {/* Card 3: PPN & Service Charge */}
+            {/* Card 5: PPN & Service Charge */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -403,7 +581,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                   Rp {(fs.totalTax + fs.totalService).toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                  PPN 11%: Rp {fs.totalTax.toLocaleString('id-ID')}
+                  PPN: Rp {fs.totalTax.toLocaleString('id-ID')}
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -414,7 +592,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
             </div>
 
-            {/* Card 4: Diskon & Promosi Terpakai */}
+            {/* Card 6: Diskon & Promosi Terpakai */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -601,6 +779,11 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
             </div>
           </div>
 
+          {/* Visual Trendline Chart: Omzet vs HPP vs Laba Kotor (Native SVG) */}
+          {data?.dailyTrends && data.dailyTrends.length > 0 && (
+            <SalesProfitTrendChart dailyTrends={data.dailyTrends} />
+          )}
+
           {/* Daily Trends Breakdown Table */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -626,17 +809,19 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <tr>
                     <th className="px-5 py-3">Tanggal</th>
-                    <th className="px-5 py-3 text-right">Faktur Berhasil</th>
+                    <th className="px-5 py-3 text-right">Faktur</th>
                     <th className="px-5 py-3 text-right">Omset Bersih</th>
+                    <th className="px-5 py-3 text-right text-amber-900">Total HPP</th>
+                    <th className="px-5 py-3 text-right text-emerald-800">Laba Kotor</th>
                     <th className="px-5 py-3 text-right">Tunai (Cash)</th>
                     <th className="px-5 py-3 text-right">Non-Tunai (QRIS)</th>
-                    <th className="px-5 py-3 text-right">Rata-rata Belanja</th>
+                    <th className="px-5 py-3 text-right">AOV Belanja</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {(!data?.dailyTrends || data.dailyTrends.length === 0) ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
+                      <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
                         Belum ada catatan penjualan harian pada periode ini
                       </td>
                     </tr>
@@ -664,6 +849,12 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                         </td>
                         <td className="px-5 py-3.5 text-right font-black text-blue-900">
                           Rp {d.revenue.toLocaleString('id-ID')}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-bold text-amber-800">
+                          Rp {(d.cogs || 0).toLocaleString('id-ID')}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-black text-emerald-700">
+                          Rp {(d.grossProfit || 0).toLocaleString('id-ID')}
                         </td>
                         <td className="px-5 py-3.5 text-right font-semibold text-emerald-700">
                           Rp {d.cashRevenue.toLocaleString('id-ID')}
@@ -720,6 +911,22 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                       <span className="text-base font-black text-blue-900">
                         Rp {d.revenue.toLocaleString('id-ID')}
                       </span>
+                    </div>
+
+                    {/* HPP & Laba Kotor Mobile Summary */}
+                    <div className="grid grid-cols-2 gap-2 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60 text-center">
+                      <div>
+                        <span className="text-[10px] text-amber-800 block font-medium">Modal / HPP</span>
+                        <span className="text-xs font-bold text-amber-900">
+                          Rp {(d.cogs || 0).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-emerald-800 block font-medium">Laba Kotor</span>
+                        <span className="text-xs font-bold text-emerald-800">
+                          Rp {(d.grossProfit || 0).toLocaleString('id-ID')}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Breakdown Kas Tunai vs QRIS */}

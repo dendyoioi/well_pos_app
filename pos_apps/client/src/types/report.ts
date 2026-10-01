@@ -10,6 +10,9 @@ export interface FinancialSummary {
   grossProfitMargin: number;
   totalTransactions: number;
   averageOrderValue: number;
+  totalOperatingExpenses?: number;
+  netOperatingProfit?: number;
+  netOperatingProfitMargin?: number;
 }
 
 export interface CashFlowDetail {
@@ -74,6 +77,22 @@ export interface ChannelSalesItem {
   percentage: number;
 }
 
+export interface HourlyDistributionItem {
+  hour: number;
+  label: string;
+  ordersCount: number;
+  revenue: number;
+}
+
+export interface SmartInsights {
+  peakHour: string;
+  peakHourOrdersCount: number;
+  averageBasketSize: number;
+  highMarginChampion?: string;
+  marginKiller?: string;
+  profitHealthStatus: 'SEHAT' | 'WASPADA' | 'KRITIS';
+}
+
 export interface FinancialReportData {
   filter: {
     startDate: string;
@@ -87,4 +106,6 @@ export interface FinancialReportData {
   salesByCategory: CategorySalesItem[];
   dailyTrends: DailyTrendItem[];
   channelSales?: ChannelSalesItem[];
+  hourlyDistribution?: HourlyDistributionItem[];
+  insights?: SmartInsights;
 }

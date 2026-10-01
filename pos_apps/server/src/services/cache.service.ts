@@ -1,3 +1,5 @@
+export type CacheDriverType = 'IN_MEMORY' | 'REDIS';
+
 export interface CacheItem<T> {
   value: T;
   expiresAt: number;
@@ -5,12 +7,31 @@ export interface CacheItem<T> {
 
 export class CacheService {
   private inMemoryStore: Map<string, CacheItem<any>> = new Map();
+  private driver: CacheDriverType = 'IN_MEMORY';
   private stats = {
     hits: 0,
     misses: 0,
     sets: 0,
     deletes: 0,
   };
+
+  constructor() {
+    // Deteksi lingkungan cache: jika REDIS_URL disediakan di masa depan, siap dihubungkan
+    if (process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '') {
+      this.driver = 'REDIS';
+      console.log(`[CacheService] ⚡ Configured for External REDIS cluster: ${process.env.REDIS_URL.split('@')[1] || 'configured'}`);
+    } else {
+      this.driver = 'IN_MEMORY';
+      console.log(`[CacheService] 🟢 Running in Optimized Free-Tier Mode (Node.js In-Memory Map, TTL-Aware)`);
+    }
+  }
+
+  /**
+   * Mengembalikan tipe driver cache aktif
+   */
+  getDriver(): CacheDriverType {
+    return this.driver;
+  }
 
   /**
    * Mengambil data dari cache
@@ -122,6 +143,7 @@ export class CacheService {
    */
   getMetrics() {
     return {
+      driver: this.driver,
       size: this.inMemoryStore.size,
       hits: this.stats.hits,
       misses: this.stats.misses,

@@ -324,8 +324,10 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       `--------------------------------\n` +
       `Subtotal   : Rp ${Number(order.subtotal).toLocaleString('id-ID')}\n` +
       (order.discountAmount > 0 ? `Diskon     : -Rp ${Number(order.discountAmount).toLocaleString('id-ID')}\n` : '') +
+      (Number(order.pointsRedeemed || 0) > 0 ? `Tukar Poin : -${order.pointsRedeemed} Poin (-Rp ${Number(order.pointDiscountAmount || (order.pointsRedeemed || 0) * 100).toLocaleString('id-ID')})\n` : '') +
       (order.taxAmount > 0 ? `PPN (11%)  : +Rp ${Number(order.taxAmount).toLocaleString('id-ID')}\n` : '') +
       `TOTAL      : Rp ${Number(order.grandTotal).toLocaleString('id-ID')}\n` +
+      (Number(order.pointsEarned || 0) > 0 ? `Poin Didapat: +${order.pointsEarned} Poin Loyalitas\n` : '') +
       `--------------------------------\n` +
       `PEMBAYARAN:\n${paymentsText}\n` +
       `--------------------------------\n` +
@@ -386,6 +388,12 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             </div>
           )}
           <p className="text-xs text-blue-200/80 mt-1">Faktur #{order.invoiceNumber}</p>
+          {Number(order.pointsEarned || 0) > 0 && (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-sm animate-in fade-in">
+              <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+              <span>+{order.pointsEarned} Poin Loyalitas Diperoleh!</span>
+            </div>
+          )}
         </div>
 
         {/* Virtual Cash Drawer Simulator Banner (No Print) */}
@@ -615,6 +623,12 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                 <span>- Rp {Number(order.discountAmount).toLocaleString('id-ID')}</span>
               </div>
             )}
+            {Number(order.pointsRedeemed || 0) > 0 && (
+              <div className="flex justify-between text-amber-800 font-bold">
+                <span>Tukar Poin ({order.pointsRedeemed} Poin):</span>
+                <span>- Rp {Number(order.pointDiscountAmount || (order.pointsRedeemed || 0) * 100).toLocaleString('id-ID')}</span>
+              </div>
+            )}
             {order.serviceCharge > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>Biaya Layanan:</span>
@@ -631,6 +645,13 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
               <span>TOTAL:</span>
               <span>Rp {Number(order.grandTotal).toLocaleString('id-ID')}</span>
             </div>
+            {Number(order.pointsEarned || 0) > 0 && (
+              <div className="border border-dashed border-amber-300 bg-amber-50/80 p-1.5 rounded text-center my-1">
+                <span className="text-[10px] font-bold text-amber-900">
+                  ★ Poin Loyalitas Diperoleh: +{order.pointsEarned} Poin
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="border-b border-dashed border-slate-300 my-2" />

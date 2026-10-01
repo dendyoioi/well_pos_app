@@ -20,6 +20,7 @@ import {
   Plus,
   AlertCircle,
   Hash,
+  LogOut,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
@@ -296,6 +297,75 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
       setFormError(err.message || 'Terjadi kesalahan sistem saat menghubungi server');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+  const [revokingAll, setRevokingAll] = useState(false);
+
+  const handleRevokeUserSession = async (u: StaffUser) => {
+    const ok = await dialog.confirm({
+      title: 'Cabut Sesi Perangkat (Force Logout)',
+      message: `Yakin ingin mencabut sesi login perangkat staf "${u.name}" (${u.role})? Perangkat atau tablet kasir yang sedang aktif akan langsung dikeluarkan (force logout) pada aksi berikutnya dan wajib memasukkan PIN ulang.`,
+      variant: 'warning',
+      confirmText: 'Ya, Cabut Sesi',
+      cancelText: 'Batal',
+    });
+    if (!ok) return;
+
+    setRevokingUserId(u.id);
+    try {
+      const res = await api.revokeUserSession(u.id);
+      if (res.status === 'success') {
+        dialog.toast(`Sesi login untuk staf ${u.name} berhasil dicabut`, 'success');
+      } else {
+        dialog.alert({
+          title: 'Gagal Mencabut Sesi',
+          message: res.message || 'Gagal mencabut sesi perangkat staf.',
+          variant: 'danger',
+        });
+      }
+    } catch (err: any) {
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: err.message || 'Gagal menghubungi server.',
+        variant: 'danger',
+      });
+    } finally {
+      setRevokingUserId(null);
+    }
+  };
+
+  const handleRevokeAllSessions = async () => {
+    const ok = await dialog.confirm({
+      title: 'Cabut Semua Sesi Kasir & Staf',
+      message: 'Yakin ingin mencabut sesi login SEMUA perangkat kasir dan staf toko ini? Seluruh perangkat yang sedang aktif di outlet akan langsung dikeluarkan (force logout) dan wajib memasukkan PIN ulang. Sesi login Anda saat ini akan tetap aktif.',
+      variant: 'danger',
+      confirmText: 'Ya, Cabut Semua Sesi',
+      cancelText: 'Batal',
+    });
+    if (!ok) return;
+
+    setRevokingAll(true);
+    try {
+      const res = await api.revokeAllSessions(true);
+      if (res.status === 'success') {
+        dialog.toast(res.message || 'Seluruh sesi perangkat kasir berhasil dicabut', 'success');
+      } else {
+        dialog.alert({
+          title: 'Gagal Mencabut Sesi',
+          message: res.message || 'Gagal mencabut sesi perangkat.',
+          variant: 'danger',
+        });
+      }
+    } catch (err: any) {
+      dialog.alert({
+        title: 'Kesalahan Sistem',
+        message: err.message || 'Gagal menghubungi server.',
+        variant: 'danger',
+      });
+    } finally {
+      setRevokingAll(false);
     }
   };
 
@@ -800,6 +870,17 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={handleRevokeAllSessions}
+            disabled={revokingAll || staffList.length === 0}
+            className="flex-1 sm:flex-initial justify-center px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            title="Keluarkan paksa seluruh kasir & staf di semua tablet toko"
+          >
+            <LogOut className="w-4 h-4 text-amber-600" />
+            <span>{revokingAll ? 'Mencabut...' : 'Cabut Semua Sesi Kasir'}</span>
+          </button>
+
           {onNavigateToRoles && (
             <button
               onClick={onNavigateToRoles}
@@ -1063,6 +1144,14 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                       <td className="py-3.5 px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            onClick={() => handleRevokeUserSession(u)}
+                            disabled={revokingUserId === u.id}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600 transition-colors cursor-pointer"
+                            title="Cabut Sesi Perangkat (Force Logout)"
+                          >
+                            <LogOut className="w-4 h-4 text-amber-600" />
+                          </button>
+                          <button
                             onClick={() => handleOpenEditForm(u)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 transition-colors"
                             title="Edit Data Staf & Peran"
@@ -1163,6 +1252,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeUserSession(u)}
+                      disabled={revokingUserId === u.id}
+                      className="py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      title="Cabut Sesi Perangkat"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-amber-600" />
+                      <span className="hidden xs:inline">Cabut Sesi</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleOpenEditForm(u)}

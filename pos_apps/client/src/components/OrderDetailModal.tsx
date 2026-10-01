@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Copy,
   AlertTriangle,
+  PackageX,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
@@ -21,6 +22,7 @@ interface OrderDetailModalProps {
   onViewReceipt: (order: Order) => void;
   onAppendOrder?: (order: Order) => void;
   onVoidOrder?: (order: Order) => void;
+  onVoidItem?: (order: Order, item: any) => void;
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -30,6 +32,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onViewReceipt,
   onAppendOrder,
   onVoidOrder,
+  onVoidItem,
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -222,6 +225,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       <th className="py-2.5 px-2 text-center">Qty</th>
                       <th className="py-2.5 px-2 text-right">Diskon</th>
                       <th className="py-2.5 px-3 text-right">Subtotal</th>
+                      {!isVoided && onVoidItem && (
+                        <th className="py-2.5 px-2 text-center">Aksi</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -263,6 +269,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           <td className="py-2.5 px-3 text-right font-black text-slate-900">
                             Rp {subtotal.toLocaleString('id-ID')}
                           </td>
+                          {!isVoided && onVoidItem && (
+                            <td className="py-2.5 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => onVoidItem(order, item)}
+                                title="Batalkan item ini (Otorisasi Supervisor)"
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                              >
+                                <PackageX className="w-3 h-3 text-amber-700" />
+                                <span>Batal</span>
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}

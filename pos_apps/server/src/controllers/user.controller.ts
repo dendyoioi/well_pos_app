@@ -604,3 +604,92 @@ export const deleteRole = async (req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: 'Gagal menghapus peran' });
   }
 };
+
+/**
+ * Mencabut sesi perangkat staf secara instan (force logout / session revocation)
+ * @route POST /api/users/:id/revoke-session
+ */
+export const revokeUserSession = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const { id } = req.params;
+
+    // Pastikan user ada di tenant ini
+    const targetUser = await prisma.user.findFirst({
+      where: { id, tenantId },
+      select: { id: true, name: true, role: true },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Pengguna tidak ditemukan dalam bisnis Anda',
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await userDualWriteService.revokeUserSession(tx, id, tenantId);
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Sesi login perangkat untuk staf "${targetUser.name}" berhasil dicabut. Perangkat staf akan langsung logout pada permintaan berikutnya.`,
+      data: {
+        userId: targetUser.id,
+        name: targetUser.name,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error saat mencabut sesi pengguna:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Gagal mencabut sesi perangkat staf',
+    });
+  }
+};
+
+/**
+ * Mencabut sesi seluruh perangkat staf/kasir di tenant secara massal (force logout massal)
+ * @route POST /api/users/revoke-all-sessions
+ */
+export const revokeAllSessions = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    // Default: kecualikan sesi pemanggil saat ini agar owner/admin tidak ikut ter-logout secara mendadak
+    const excludeCurrent = req.body?.excludeCurrent !== false;
+    const currentUserId = req.user?.id;
+
+    let affectedCount = 0;
+    await prisma.$transaction(async (tx) => {
+      affectedCount = await userDualWriteService.revokeAllSessions(
+        tx,
+        tenantId,
+        excludeCurrent ? currentUserId : undefined
+      );
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Berhasil mencabut seluruh sesi perangkat kasir & staf (${affectedCount} staf terdampak). Seluruh kasir wajib memasukkan PIN ulang.`,
+      data: {
+        affectedCount,
+        excludedCurrentUser: excludeCurrent ? currentUserId : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error saat mencabut seluruh sesi pengguna:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Gagal mencabut seluruh sesi perangkat kasir',
+    });
+  }
+};
+

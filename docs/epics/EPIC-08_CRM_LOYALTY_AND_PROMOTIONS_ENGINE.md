@@ -31,14 +31,22 @@ Membangun loyalitas pelanggan dengan mencatat riwayat transaksi konsumen, member
    - Master kupon/voucher (`tenant_id`, `code`, `name`, `discount_type`, `discount_value`, `min_spend`, `max_discount`, `quota_total`, `quota_used`, `start_date`, `end_date`, `is_active`).
 3. **`promotion_usages`**:
    - Riwayat audit pemakaian promo (`tenant_id`, `promotion_id`, `order_id`, `customer_id`, `discount_amount`, `used_at`).
-4. **Perluasan Tabel `customers`**:
+4. **Perluasan Tabel `outlets`**:
+   - `loyalty_config`: Kolom JSONB untuk konfigurasi loyalitas granular per-outlet (`isActive`, `pointsPerSpend`, `pointValueIdr`, `minPointsToRedeem`). Default `null`/`isActive: false` (nonaktif secara default agar netral antar cabang).
+5. **Perluasan Tabel `customers`**:
    - `tier`: Level membership (`CustomerTier`).
    - `notes`: Catatan CRM preferensi konsumen.
-5. **Perluasan Tabel `orders`**:
+6. **Perluasan Tabel `orders`**:
    - `promotion_id`: Relasi ke voucher yang digunakan.
    - `points_earned`: Jumlah poin yang diperoleh dari pesanan.
    - `points_redeemed`: Jumlah poin yang ditukarkan pada pesanan.
    - `point_discount_amount`: Nilai potongan rupiah dari penukaran poin.
+
+#### 2.3 Antarmuka Backoffice & POS
+1. **`LoyaltySettingsView.tsx`**: Pengaturan program poin per outlet (saklar aktif/nonaktif, rasio belanja per poin, nilai konversi rupiah, minimal penukaran, dan kalkulator simulasi).
+2. **`CustomersView.tsx`**: Kolom tier badge (🥉/🥈/🥇/💎) & saldo poin, modal detail riwayat transaksi vs mutasi buku besar poin (`CustomerPointLedger`), serta form penyesuaian manual poin instan (inline zero-stacked modal).
+3. **`PromotionsView.tsx`**: Saklar toggle aktif/nonaktif cepat pada baris tabel & modal audit pemakaian voucher (`usages` log pelanggan, transaksi, & nominal diskon).
+4. **`OrderCartSidebar.tsx` & `PosMobileView.tsx`**: Tampilan tier & poin member, slider/input penukaran poin langsung di kasir (hanya aktif jika outlet mengaktifkan program poin), dan integrasi struk termal/PDF.
 
 ---
 
