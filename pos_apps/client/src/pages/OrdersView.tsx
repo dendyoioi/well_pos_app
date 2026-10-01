@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Receipt,
   Search,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import type { Outlet } from '../types/outlet';
+import { normalizeSalesChannels } from '../types/outlet';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
 import { OrderSuccessModal } from '../components/OrderSuccessModal';
 import { VoidOrderModal } from '../components/VoidOrderModal';
@@ -67,6 +68,39 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const handleViewDetail = (order: Order) => {
     setOrderForDetail(order);
     setDetailModalOpen(true);
+  };
+
+  // Ambil hanya saluran penjualan yang aktif sesuai pengaturan outlet / kanal penjualan & mitra
+  const channelOptions = useMemo(() => {
+    const all = normalizeSalesChannels(activeOutlet?.channelsConfig);
+    return all.filter((c) => c.isActive);
+  }, [activeOutlet?.channelsConfig]);
+
+  // Jika saluran yang sedang dipilih tidak lagi aktif (misal dinonaktifkan di pengaturan), reset ke 'ALL'
+  useEffect(() => {
+    if (selectedChannel !== 'ALL' && !channelOptions.some((c) => c.code === selectedChannel)) {
+      setSelectedChannel('ALL');
+      loadOrders('ALL');
+    }
+  }, [channelOptions, selectedChannel]);
+
+  const getChannelEmoji = (code: string) => {
+    switch (code) {
+      case 'DINE_IN':
+        return '🍽️';
+      case 'TAKEAWAY':
+        return '🛍️';
+      case 'GOFOOD':
+        return '🛵';
+      case 'GRABFOOD':
+        return '🟢';
+      case 'SHOPEEFOOD':
+        return '🟠';
+      case 'DELIVERY':
+        return '📦';
+      default:
+        return '🏷️';
+    }
   };
 
   // Date Filter State
@@ -278,12 +312,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
             className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-1"
           >
             <option value="ALL">Semua Saluran</option>
-            <option value="DINE_IN">🍽️ Dine In (Makan di Tempat)</option>
-            <option value="TAKEAWAY">🛍️ Takeaway (Bawa Pulang)</option>
-            <option value="GOFOOD">🛵 GoFood Online</option>
-            <option value="GRABFOOD">🟢 GrabFood Online</option>
-            <option value="SHOPEEFOOD">🟠 ShopeeFood Online</option>
-            <option value="DELIVERY">📦 Kurir / Delivery</option>
+            {channelOptions.map((ch) => (
+              <option key={ch.code} value={ch.code}>
+                {getChannelEmoji(ch.code)} {ch.name}
+              </option>
+            ))}
           </select>
         </div>
 
