@@ -217,12 +217,13 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11), isolasi tenant ditega
 - **Main Shell**: `App.tsx` (Routing modal hash `#landing`, `#pos` / `#login`, `#superadmin`, `#qr-menu`, context validator).
 - **Core SaaS & Autentikasi**:
   - `pages/SaasLandingPage.tsx`: Halaman depan publik SaaS, tabel komparasi paket, modal pendaftaran mandiri 5-field (`#register`).
-  - `pages/SuperadminDashboardPage.tsx`: Control tower SuperAdmin platform modular 5-Tab:
-    1. **Tab 1: Manajemen Merchant & Saldo Token**: Triage status, pemantauan sirkulasi token Pay-As-You-Go, accordion toko fisik & gudang, serta modal top-up kuota dengan kalkulator diskon kupon promo.
-    2. **Tab 2: Master Paket Kuota Fleksibel**: Matriks komparasi fitur F&B, tarif per order, limit cabang/kasir.
-    3. **Tab 3: Riwayat Billing & Invoicing (Ledger)**: Audit mutasi kas masuk, pelacakan faktur setup fee & top-up token, serta pratinjau faktur digital sah elektronik (Tax Invoice Preview).
-    4. **Tab 4: Tim Staff Platform (RBAC)**: Tata kelola wewenang staf internal Well POS HQ (`SUPER_ADMIN`, `BILLING`, `SUPPORT`) dengan proteksi root SuperAdmin.
-    5. **Tab 5: Master Promo SaaS (B2B Voucher Engine)**: Penerbitan kupon diskon onboarding & bonus token transaksi level platform.
+  - `pages/SuperadminDashboardPage.tsx`: Control tower SuperAdmin platform bernuansa obsidian dark mode premium dengan **Sidebar Menu vertikal modular di Desktop** dan **Burger Bar Drawer di Handheld/Mobile**, mengelompokkan 6 modul navigasi:
+    1. **Modul 1: Manajemen Merchant & Saldo Token**: Triage status pendaftar, pemantauan sirkulasi token Pay-As-You-Go, accordion outlet fisik & gudang, serta modal top-up kuota dengan kalkulator promo.
+    2. **Modul 2: Master Paket Kuota Fleksibel**: Matriks komparasi fitur F&B, tarif per order, limit cabang/kasir.
+    3. **Modul 3: Riwayat Billing & Invoicing (Ledger)**: Audit mutasi kas masuk, pelacakan faktur setup fee & top-up token, serta pratinjau faktur digital sah elektronik (Tax Invoice Preview).
+    4. **Modul 4: Master Promo SaaS (B2B Voucher Engine)**: Penerbitan kupon diskon onboarding & bonus token transaksi level platform.
+    5. **Modul 5: Tim Staff Platform (RBAC)**: Tata kelola wewenang staf internal Well POS HQ (`SUPER_ADMIN`, `BILLING`, `SUPPORT`) dengan proteksi root SuperAdmin.
+    6. **Modul 6: Pusat Siaran & Notifikasi**: Penerbitan pesan pengumuman massal & status pemeliharaan sistem ke toko.
   - `pages/LoginPage.tsx`: Dual-login (Login kasir dengan ID Toko + PIN Kasir Bcrypt & Login Backoffice Owner via Email + Password Bcrypt).
   - `pages/DashboardPage.tsx`: Gatekeeper onboarding toko (jika `outlets.length === 0` tampilkan `FullScreenStoreWizard`, jika toko ada masuk ke `BackofficeLayout`), auto-redirect tab kasir ke tab inventori saat masuk mode gudang.
   - `components/saas/FullScreenStoreWizard.tsx`: Wizard layar penuh onboarding toko perdana dengan master 58 klasifikasi sub-industri (Ritel, F&B, Jasa).
@@ -568,6 +569,12 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
     - **Auto-Reveal Table Picker & Input Pelanggan**: Jika kasir menekan *Kirim Dapur* saat meja/nama masih kosong, sistem wajib mempertahankan drawer tetap terbuka, memicu `setTablePickerOpen(true)` dan `setShowCustomerInputs(true)` secara otomatis, serta menampilkan peringatan `dialog.alert` agar kasir dapat memilih meja dalam 1 sentuhan.
     - **Notifikasi Universal Kanonikal (`useDialog`)**: Seluruh feedback keberhasilan maupun kegagalan alur *Open Tab* dan *Hold Order* wajib menggunakan modal dialog `dialog.alert` dan toast `dialog.toast` kanonikal agar terbaca jelas di seluruh form factor (desktop, tablet, dan smartphone).
     - **Relaksasi Skema Validasi Backend (`openTabSchema`)**: Field relasional opsional seperti `customerId`, `shiftId`, dan `outletId` pada controller order backend wajib mentoleransi nilai string kosong atau `null` (`.optional().nullable()`) untuk mencegah penolakan HTTP 400 tak terduga.
+23. **Standar Kompresi Gambar Otomatis di Browser (Client-Side Canvas Image Compression)**:
+    - **Pencegahan Database Bloat & Egress Overrun**: Seluruh pengunggahan gambar oleh pengguna (foto produk di `ProductModal.tsx` dan foto barcode QRIS toko di `PaymentSettingsView.tsx`) wajib diproses melalui utilitas kanonikal `compressImage` (`utils/imageCompressor.ts`) sebelum diubah ke Base64 atau dikirim ke backend.
+    - **Spesifikasi Kompresi Otomatis**:
+      - *Foto Produk*: Maksimal dimensi $600\times 600\text{px}$, format WebP (fallback JPEG), kualitas $0.8$ ($80\%$). Menurunkan ukuran file foto dari $\sim 2\text{MB}$ ke $\sim 30\text{--}60\text{KB}$ (efisiensi ruang dan bandwidth $\ge 90\%$).
+      - *Barcode QRIS*: Maksimal dimensi $800\times 800\text{px}$, kualitas $0.85$ ($85\%$) untuk menjamin ketajaman pemindaian optik barcode kamera tanpa mengorbankan performa.
+    - **Toleransi File Kamera Ponsel**: Pengguna diizinkan mengunggah file foto beresolusi tinggi langsung dari kamera HP hingga $15\text{MB}$. Browser secara otomatis mengompresi dan menampilkan statistik penghematan ukuran data (`savingsPercent` dan perbandingan ukuran sebelum vs sesudah).
 
 ---
 

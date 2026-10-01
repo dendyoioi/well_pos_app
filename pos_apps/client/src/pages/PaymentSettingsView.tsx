@@ -11,10 +11,13 @@ import {
   Smartphone,
   Eye,
   RefreshCw,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import type { Outlet, PaymentConfig, QrisConfig } from '../types/outlet';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
+import { compressImage, formatBytes } from '../utils/imageCompressor';
 
 interface PaymentSettingsViewProps {
   activeOutlet: Outlet | null;
@@ -36,6 +39,8 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
 
   const [isActive, setIsActive] = useState<boolean>(currentQris.isActive ?? true);
   const [imageUrl, setImageUrl] = useState<string | null>(currentQris.imageUrl || null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionStats, setCompressionStats] = useState<string | null>(null);
 
   // Sinkronisasi saat activeOutlet berubah
   useEffect(() => {
@@ -43,11 +48,12 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       const q = activeOutlet.paymentConfig?.qris;
       setIsActive(q?.isActive ?? true);
       setImageUrl(q?.imageUrl || null);
+      setCompressionStats(null);
     }
   }, [activeOutlet?.id, activeOutlet?.paymentConfig]);
 
-  // Handler Upload Gambar (File to Base64 Data URL)
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler Upload Gambar dengan Kompresi Otomatis di Browser
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -60,36 +66,48 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
+    if (file.size > 15 * 1024 * 1024) {
       dialog.alert({
         title: 'Ukuran Terlalu Besar',
-        message: 'Ukuran gambar maksimal adalah 3 MB agar pemuatan di terminal kasir tetap cepat.',
+        message: 'Ukuran berkas gambar maksimal adalah 15 MB.',
         variant: 'warning',
       });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setImageUrl(result);
-        dialog.toast('Foto barcode QRIS berhasil dimuat!', 'success');
-      }
-    };
-    reader.onerror = () => {
+    setIsCompressing(true);
+    try {
+      // Untuk barcode QRIS, 800px dengan kualitas 0.85 memastikan barcode terbaca tajam oleh kamera
+      const result = await compressImage(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.85,
+        mimeType: 'image/webp',
+      });
+      setImageUrl(result.dataUrl);
+      setCompressionStats(
+        `${formatBytes(result.originalSizeBytes)} ➔ ${formatBytes(result.compressedSizeBytes)} (-${result.savingsPercent}%)`
+      );
+      dialog.toast(
+        `Foto barcode QRIS dioptimasi otomatis (-${result.savingsPercent}%): ${formatBytes(result.compressedSizeBytes)}`,
+        'success'
+      );
+    } catch (err: any) {
       dialog.alert({
-        title: 'Gagal Membaca Berkas',
-        message: 'Terjadi kendala saat membaca berkas gambar. Silakan coba lagi.',
+        title: 'Gagal Memproses Berkas',
+        message: err?.message || 'Terjadi kendala saat membaca dan mengompres berkas gambar. Silakan coba lagi.',
         variant: 'danger',
       });
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setIsCompressing(false);
+      e.target.value = '';
+    }
   };
 
   // Hapus Gambar
   const handleRemoveImage = () => {
     setImageUrl(null);
+    setCompressionStats(null);
     dialog.toast('Gambar QRIS telah dikosongkan.', 'info');
   };
 
@@ -261,14 +279,34 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                       />
                     </div>
                   </div>
+
+                  {compressionStats && (
+                    <div className="flex justify-center">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium rounded-lg shadow-2xs">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                        <span>Terkompresi otomatis: <strong>{compressionStats}</strong></span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-center gap-2">
                     <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer shadow-2xs transition-all">
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Ganti Gambar</span>
+                      {isCompressing ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-700" />
+                          <span>Mengompres...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Ganti Gambar</span>
+                        </>
+                      )}
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/jpg,image/webp"
                         onChange={handleFileChange}
+                        disabled={isCompressing}
                         className="hidden"
                       />
                     </label>
@@ -276,7 +314,8 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                     <button
                       type="button"
                       onClick={handleRemoveImage}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                      disabled={isCompressing}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Hapus</span>
@@ -286,22 +325,34 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
               ) : (
                 <div className="space-y-3">
                   <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
-                    <Upload className="w-7 h-7" />
+                    {isCompressing ? (
+                      <Loader2 className="w-7 h-7 animate-spin text-blue-700" />
+                    ) : (
+                      <Upload className="w-7 h-7" />
+                    )}
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-blue-700 hover:text-blue-800 cursor-pointer underline underline-offset-2">
-                      Pilih berkas dari komputer
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                    <span className="text-xs text-slate-500"> atau seret ke area ini</span>
-                    <p className="text-[11px] text-slate-400 mt-1.5">
-                      Mendukung PNG, JPG, JPEG, WebP — Maksimal 3 MB
-                    </p>
+                    {isCompressing ? (
+                      <p className="text-xs font-bold text-blue-800 animate-pulse">
+                        Sedang mengompresi dan mengoptimasi gambar barcode...
+                      </p>
+                    ) : (
+                      <>
+                        <label className="text-xs font-bold text-blue-700 hover:text-blue-800 cursor-pointer underline underline-offset-2">
+                          Pilih berkas dari komputer
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={handleFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="text-xs text-slate-500"> atau seret ke area ini</span>
+                        <p className="text-[11px] text-slate-400 mt-1.5">
+                          Mendukung PNG, JPG, JPEG, WebP — Kompresi otomatis hingga 15 MB
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -309,7 +360,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
 
             {/* INFO PANDUAN */}
             <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
-              <strong>Tips:</strong> Gunakan foto/scan barcode QRIS yang Anda terima langsung dari bank atau dompet digital penyedia QRIS Anda (BCA, Mandiri, GoPay, dll). Pastikan QR code terlihat jelas dan tidak buram agar dapat dipindai dengan lancar.
+              <strong>Tips:</strong> Gunakan foto/scan barcode QRIS yang Anda terima langsung dari bank atau dompet digital penyedia QRIS Anda (BCA, Mandiri, GoPay, dll). Gambar akan otomatis dioptimasi agar tetap tajam saat discan namun sangat ringan dimuat di terminal kasir.
             </div>
           </div>
         </div>

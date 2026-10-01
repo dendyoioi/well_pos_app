@@ -46,6 +46,7 @@ import {
   Wrench,
   Info,
   Radio,
+  Menu,
 } from 'lucide-react';
 import { api, platformStorage, authStorage, type PlatformNotification } from '../services/api';
 import { TablePagination } from '../components/TablePagination';
@@ -137,6 +138,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   // NAVIGATION TABS: MERCHANT CONTROL, PLANS, BILLING, STAFF, PROMOS, NOTIFICATIONS
   // ----------------------------------------------------
   const [activeMainTab, setActiveMainTab] = useState<'MERCHANTS' | 'PLANS' | 'BILLING' | 'STAFF' | 'PROMOS' | 'NOTIFICATIONS'>('MERCHANTS');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isBusinessInfoCollapsed, setIsBusinessInfoCollapsed] = useState(false);
 
   // ----------------------------------------------------
   // DATA BUKU BESAR BILLING, INVOICE & MUTASI TOKEN
@@ -1447,79 +1450,479 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     }
   );
 
+  const navMenuItems = [
+    {
+      id: 'MERCHANTS' as const,
+      label: 'Merchant & Kuota',
+      fullLabel: 'Manajemen Merchant & Kuota Token',
+      description: 'Onboarding akun pemilik gerai & sirkulasi kuota order F&B',
+      category: 'OPERASIONAL',
+      icon: Store,
+      badge: `${tenants.length}`,
+      pendingCount: tenants.filter((t) => t.status === 'PENDING').length,
+    },
+    {
+      id: 'PLANS' as const,
+      label: 'Master Paket Kuota',
+      fullLabel: 'Master Paket Kuota Fleksibel',
+      description: 'Konfigurasi tarif token transaksi, diskon & kuota perdana',
+      category: 'OPERASIONAL',
+      icon: Layers,
+      badge: `${plans.length || 4} Paket`,
+      pendingCount: 0,
+    },
+    {
+      id: 'BILLING' as const,
+      label: 'Riwayat Faktur Billing',
+      fullLabel: 'Riwayat Faktur & Billing B2B',
+      description: 'Verifikasi pelunasan invoice & mutasi deposit kuota',
+      category: 'FINANSIAL',
+      icon: Receipt,
+      badge: `${invoices.length}`,
+      pendingCount: invoices.filter((i) => i.status === 'UNPAID' || i.status === 'PENDING').length,
+    },
+    {
+      id: 'PROMOS' as const,
+      label: 'Voucher Promo SaaS',
+      fullLabel: 'Master Promo SaaS (B2B Engine)',
+      description: 'Manajemen kupon potongan harga & bonus kuota merchant',
+      category: 'FINANSIAL',
+      icon: Tag,
+      badge: `${promos.length}`,
+      pendingCount: 0,
+    },
+    {
+      id: 'STAFF' as const,
+      label: 'Tim Staf Platform',
+      fullLabel: 'Tim Staff Platform & RBAC',
+      description: 'Superadmin, Tim Finance, Tim Support & Audit Trail',
+      category: 'ADMINISTRASI',
+      icon: Users,
+      badge: `${platformUsers.length}`,
+      pendingCount: 0,
+    },
+    {
+      id: 'NOTIFICATIONS' as const,
+      label: 'Pusat Siaran & Notif',
+      fullLabel: 'Pusat Siaran & Notifikasi Platform',
+      description: 'Kirim pengumuman massal & broadcast status sistem ke toko',
+      category: 'ADMINISTRASI',
+      icon: Bell,
+      badge: `${notifications.length}`,
+      pendingCount: 0,
+    },
+  ];
+
+  const currentNav = navMenuItems.find((item) => item.id === activeMainTab) || navMenuItems[0];
+
+  const renderNavMenuSection = (items: typeof navMenuItems) => (
+    <div className="space-y-1">
+      {items.map((item) => {
+        const isActive = activeMainTab === item.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              setActiveMainTab(item.id);
+              setIsMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer group text-left ${
+              isActive
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30 ring-1 ring-indigo-400/40'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-800/80 text-slate-400 group-hover:text-indigo-300 group-hover:bg-indigo-950/40'
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+              </div>
+              <span className="truncate">{item.label}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {item.pendingCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                  {item.pendingCount} Review
+                </span>
+              )}
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700/60'
+                }`}
+              >
+                {item.badge}
+              </span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans selection:bg-indigo-600 selection:text-white antialiased">
+      {/* =========================================================================
+          DESKTOP SIDEBAR (FIXED w-72)
+      ========================================================================= */}
+      <aside className="hidden lg:flex w-72 flex-col fixed inset-y-0 left-0 z-40 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800/80 shadow-2xl">
+        {/* Brand & System Status */}
+        <div className="p-5 border-b border-slate-800/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-indigo-400 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-white text-base">Well POS Platform</span>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700">
-                  Level 1 Superadmin
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/60 hidden md:inline-flex items-center gap-1">
-                  <Coins className="w-3 h-3 text-amber-400" />
-                  Enterprise-Lite F&amp;B • Token System
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-white text-base tracking-tight truncate">Well POS</span>
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/80 shrink-0">
+                  HQ
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Pusat Kendali Ekosistem Multi-Tenant, Kuota Token &amp; Onboarding Toko</p>
+              <p className="text-[11px] font-medium text-slate-400 truncate">Superadmin Control Tower</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-xs text-emerald-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="font-semibold text-[11px]">Sistem Operasional Normal</span>
+          {/* System Live Pill */}
+          <div className="mt-3.5 px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-400">Sistem Normal</span>
             </div>
+            <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
+              {activeOutletsCount} Gerai
+            </span>
+          </div>
+        </div>
 
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-              <div className="w-2 h-2 rounded-full bg-indigo-400" />
-              <span className="text-slate-300 font-semibold">{currentUser?.name || 'Superadmin'}</span>
-              <span className="text-slate-500 font-mono">({currentUser?.email})</span>
+        {/* Navigation Menu (Scrollable) */}
+        <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-6 scrollbar-none">
+          {/* Section: Operasional */}
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Operasional &amp; Kuota
             </div>
+            {renderNavMenuSection(navMenuItems.filter((i) => i.category === 'OPERASIONAL'))}
+          </div>
 
+          {/* Section: Finansial */}
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Finansial &amp; Monetisasi
+            </div>
+            {renderNavMenuSection(navMenuItems.filter((i) => i.category === 'FINANSIAL'))}
+          </div>
+
+          {/* Section: Administrasi */}
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Platform &amp; Kontrol
+            </div>
+            {renderNavMenuSection(navMenuItems.filter((i) => i.category === 'ADMINISTRASI'))}
+          </div>
+
+          {/* Section: Pintasan Eksternal */}
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Pintasan Eksternal
+            </div>
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={onOpenPos}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Store className="w-4 h-4 text-slate-400 group-hover:text-indigo-300" />
+                  <span>Buka Kasir POS</span>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={onBackToLanding}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-slate-400 group-hover:text-amber-300" />
+                  <span>Landing Page SaaS</span>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: User Profile Card & Logout */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
+          <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
+                {currentUser?.name?.slice(0, 2).toUpperCase() || 'SA'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{currentUser?.name || 'Superadmin'}</p>
+                <p className="text-[10px] text-slate-400 truncate font-mono">{currentUser?.email || 'admin@wellpos.id'}</p>
+              </div>
+            </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer shrink-0"
               title="Keluar dari Superadmin"
             >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
-      </header>
+      </aside>
 
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
-        {/* Action Feedback Banner */}
-        {actionFeedback && (
-          <div className="p-4 bg-emerald-950/80 border border-emerald-800/80 rounded-2xl flex items-center justify-between text-xs text-emerald-300 animate-fade-in shadow-lg">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{actionFeedback}</span>
+      {/* =========================================================================
+          MOBILE BURGER BAR DRAWER (HANDHELD ONLY)
+      ========================================================================= */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden animate-fade-in">
+          {/* Backdrop with click-to-close */}
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Panel */}
+          <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-white text-base">Well POS</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/80">
+                      HQ
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Superadmin Control Tower</p>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title="Tutup Menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
+
+            {/* Drawer Nav Items */}
+            <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-6 scrollbar-none">
+              <div>
+                <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                  Operasional &amp; Kuota
+                </div>
+                {renderNavMenuSection(navMenuItems.filter((i) => i.category === 'OPERASIONAL'))}
+              </div>
+
+              <div>
+                <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                  Finansial &amp; Monetisasi
+                </div>
+                {renderNavMenuSection(navMenuItems.filter((i) => i.category === 'FINANSIAL'))}
+              </div>
+
+              <div>
+                <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                  Platform &amp; Kontrol
+                </div>
+                {renderNavMenuSection(navMenuItems.filter((i) => i.category === 'ADMINISTRASI'))}
+              </div>
+
+              <div>
+                <div className="px-3 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                  Pintasan Eksternal
+                </div>
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenPos();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Store className="w-4 h-4 text-slate-400" />
+                      <span>Buka Mesin Kasir POS</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onBackToLanding();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sparkles className="w-4 h-4 text-slate-400" />
+                      <span>Landing Page SaaS</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/60">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
+                    {currentUser?.name?.slice(0, 2).toUpperCase() || 'SA'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{currentUser?.name || 'Superadmin'}</p>
+                    <p className="text-[10px] text-slate-400 truncate font-mono">{currentUser?.email || 'admin@wellpos.id'}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer shrink-0"
+                  title="Keluar dari Superadmin"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MAIN CONTENT WRAPPER (OFFSET BY SIDEBAR ON DESKTOP)
+      ========================================================================= */}
+      <div className="flex-1 min-w-0 flex flex-col lg:pl-72 min-h-screen">
+        {/* Top Header Bar */}
+        <header className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          {/* Left: Burger button on Handheld + Section Title & Breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Burger Bar (Handheld only) */}
             <button
               type="button"
-              onClick={() => setActionFeedback(null)}
-              className="p-1 text-emerald-400 hover:text-emerald-200 cursor-pointer"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
+              title="Buka Menu Navigasi"
+              aria-label="Buka Menu"
             >
-              <X className="w-4 h-4" />
+              <Menu className="w-5 h-5" />
             </button>
-          </div>
-        )}
 
-        {/* Banner Ringkasan Paradigma Enterprise-Lite F&B (Pay-As-You-Go) */}
-        <section className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-900/60 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
-            <div className="space-y-1.5 max-w-2xl">
+            {/* Active Section Title & Breadcrumbs */}
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight truncate">
+                  {currentNav.fullLabel}
+                </h1>
+                <span className="hidden md:inline-flex text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
+                  {currentNav.category}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate hidden sm:block">
+                {currentNav.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Operational Status, Realtime Refresh & Quick Links */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Live Operational Status */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-xs text-emerald-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span className="font-semibold text-[11px]">Sistem Normal</span>
+            </div>
+
+            {/* Realtime Refresh Button */}
+            <button
+              type="button"
+              onClick={loadPlatformData}
+              disabled={loadingData}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-indigo-300 hover:text-indigo-200 border border-slate-700/60 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+              title="Segarkan data realtime"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">Refresh Realtime</span>
+            </button>
+
+            {/* Quick Link to POS Kasir */}
+            <button
+              type="button"
+              onClick={onOpenPos}
+              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 hover:text-white border border-indigo-800/60 text-xs font-bold transition-all cursor-pointer"
+              title="Buka Mesin Kasir POS"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Buka POS</span>
+            </button>
+
+            {/* User Initials Avatar (Handheld only) */}
+            <div className="lg:hidden flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title="Keluar dari Superadmin"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6 max-w-[1600px] mx-auto">
+          {/* Action Feedback Banner */}
+          {actionFeedback && (
+            <div className="p-4 bg-emerald-950/80 border border-emerald-800/80 rounded-2xl flex items-center justify-between text-xs text-emerald-300 animate-fade-in shadow-lg">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{actionFeedback}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActionFeedback(null)}
+                className="p-1 text-emerald-400 hover:text-emerald-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Banner Ringkasan Paradigma Enterprise-Lite F&B (Pay-As-You-Go) */}
+          <section className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-indigo-900/60 rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden transition-all duration-300">
+            <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Model Bisnis Enterprise-Lite
                 </span>
@@ -1527,229 +1930,130 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   <Infinity className="w-3 h-3 text-amber-400" /> Kuota Tanpa Hangus
                 </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                Control Tower Kuota Fleksibel &amp; Merchant F&amp;B
-              </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Skema Pay-As-You-Go khusus gerai F&amp;B: biaya registrasi awal Rp 99.000 (+100 Bonus Token) saat pendaftaran disetujui, dipadukan sistem token transaksi yang berlaku selamanya tanpa masa kedaluwarsa.
-              </p>
+
+              <button
+                type="button"
+                onClick={() => setIsBusinessInfoCollapsed(!isBusinessInfoCollapsed)}
+                className="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              >
+                <span>{isBusinessInfoCollapsed ? 'Lihat Detail Skema' : 'Sembunyikan'}</span>
+                {isBusinessInfoCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
-              <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <CreditCard className="w-4 h-4" />
+            {!isBusinessInfoCollapsed && (
+              <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10 animate-fade-in">
+                <div className="space-y-1 max-w-2xl">
+                  <h2 className="text-sm sm:text-base font-black text-white tracking-tight">
+                    Control Tower Kuota Fleksibel &amp; Merchant F&amp;B
+                  </h2>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Skema Pay-As-You-Go khusus gerai F&amp;B: biaya registrasi awal Rp 99.000 (+100 Bonus Token) saat pendaftaran disetujui, dipadukan sistem token transaksi yang berlaku selamanya tanpa masa kedaluwarsa.
+                  </p>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Setup Fee Awal</p>
-                  <p className="text-xs font-black text-emerald-300">Rp 99.000 / Tenant (+100 Token)</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 shrink-0">
+                  <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-2.5 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-slate-400">Setup Fee Awal</p>
+                      <p className="text-xs font-black text-emerald-300">Rp 99.000 (+100 Token)</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-2.5 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Coins className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-slate-400">Model Token</p>
+                      <p className="text-xs font-black text-amber-300">1 Token / Struk Order</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-2.5 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-slate-400">Masa Aktif</p>
+                      <p className="text-xs font-black text-indigo-300">Never Expires (Abadi)</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+          </section>
 
-              <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
-                  <Coins className="w-4 h-4" />
+          {/* Section 1: Top Platform KPIs */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Metrik Finansial &amp; Pertumbuhan Token</span>
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              {/* KPI 1: Setup Fee Onboarding */}
+              <div className="p-4 bg-slate-900/90 border border-emerald-900/40 rounded-2xl relative overflow-hidden backdrop-blur-sm hover:border-emerald-700/60 transition-all">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-emerald-400">Penerimaan Setup Fee</span>
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Model Token</p>
-                  <p className="text-xs font-black text-amber-300">1 Token / Struk Order</p>
+                <p className="text-lg sm:text-xl font-black text-emerald-300">{formatRupiah(totalSetupFee)}</p>
+                <p className="text-[10px] text-slate-400 mt-1">Rp 99.000 × {approvedTenants.length} Tenant</p>
+              </div>
+
+              {/* KPI 2: Sirkulasi Kuota Token */}
+              <div className="p-4 bg-slate-900/90 border border-amber-900/40 rounded-2xl relative overflow-hidden backdrop-blur-sm hover:border-amber-700/60 transition-all">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-amber-400">Sirkulasi Kuota Token</span>
+                  <Coins className="w-4 h-4 text-amber-400" />
                 </div>
+                <p className="text-lg sm:text-xl font-black text-amber-300">
+                  {quotaSummary.totalQuotaInCirculation.toLocaleString('id-ID')}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">Kapasitas order aktif</p>
               </div>
 
-              <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                  <Zap className="w-4 h-4" />
+              {/* KPI 3: Konsumsi Transaksi F&B (Burn Rate) */}
+              <div className="p-4 bg-slate-900/90 border border-rose-900/40 rounded-2xl relative overflow-hidden backdrop-blur-sm hover:border-rose-700/60 transition-all">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-rose-400">Konsumsi Transaksi</span>
+                  <Flame className="w-4 h-4 text-rose-400" />
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Durasi Masa Aktif</p>
-                  <p className="text-xs font-black text-indigo-300">Never Expires (Abadi)</p>
+                <p className="text-lg sm:text-xl font-black text-rose-300">
+                  {(metrics.totalOrders || quotaSummary.totalOrdersConsumed).toLocaleString('id-ID')} Struk
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">Total order diproses</p>
+              </div>
+
+              {/* KPI 4: Gerai F&B Beroperasi */}
+              <div className="p-4 bg-slate-900/90 border border-sky-900/40 rounded-2xl relative overflow-hidden backdrop-blur-sm hover:border-sky-700/60 transition-all">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-sky-400">Gerai F&amp;B Aktif</span>
+                  <Store className="w-4 h-4 text-sky-400" />
                 </div>
+                <p className="text-lg sm:text-xl font-black text-sky-300">{activeOutletsCount} Gerai</p>
+                <p className="text-[10px] text-slate-400 mt-1">Toko fisik beroperasi</p>
+              </div>
+
+              {/* KPI 5: Antrean Calon Owner */}
+              <div className="p-4 bg-slate-900/90 border border-purple-900/40 rounded-2xl relative overflow-hidden backdrop-blur-sm hover:border-purple-700/60 transition-all col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-purple-300">Antrean Approval</span>
+                  <Clock className="w-4 h-4 text-purple-400 animate-pulse" />
+                </div>
+                <p className="text-lg sm:text-xl font-black text-purple-200">
+                  {tenants.filter((t) => t.status === 'PENDING').length} Calon
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">Perlu diverifikasi</p>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Section 1: Top Platform KPIs */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-indigo-400" />
-              <span>Metrik Finansial &amp; Pertumbuhan Token</span>
-            </h3>
-            <button
-              type="button"
-              onClick={loadPlatformData}
-              disabled={loadingData}
-              className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-              <span>Refresh Realtime</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-            {/* KPI 1: Setup Fee Onboarding */}
-            <div className="p-4 sm:p-5 bg-slate-900 border border-emerald-900/40 rounded-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-emerald-400">Penerimaan Setup Fee</span>
-                <CreditCard className="w-4 h-4 text-emerald-400" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-emerald-300">{formatRupiah(totalSetupFee)}</p>
-              <p className="text-[11px] text-slate-400 mt-1">Rp 99.000 × {approvedTenants.length} Tenant</p>
-            </div>
-
-            {/* KPI 2: Sirkulasi Kuota Token */}
-            <div className="p-4 sm:p-5 bg-slate-900 border border-amber-900/40 rounded-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-amber-400">Sirkulasi Kuota Token</span>
-                <Coins className="w-4 h-4 text-amber-400" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-amber-300">
-                {quotaSummary.totalQuotaInCirculation.toLocaleString('id-ID')}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">Kapasitas order aktif</p>
-            </div>
-
-            {/* KPI 3: Konsumsi Transaksi F&B (Burn Rate) */}
-            <div className="p-4 sm:p-5 bg-slate-900 border border-rose-900/40 rounded-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-rose-400">Konsumsi Transaksi</span>
-                <Flame className="w-4 h-4 text-rose-400" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-rose-300">
-                {(metrics.totalOrders || quotaSummary.totalOrdersConsumed).toLocaleString('id-ID')} Struk
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">Total order diproses</p>
-            </div>
-
-            {/* KPI 4: Gerai F&B Beroperasi */}
-            <div className="p-4 sm:p-5 bg-slate-900 border border-sky-900/40 rounded-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-sky-400">Gerai F&amp;B Aktif</span>
-                <Store className="w-4 h-4 text-sky-400" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-sky-300">{activeOutletsCount} Gerai</p>
-              <p className="text-[11px] text-slate-400 mt-1">Toko fisik beroperasi</p>
-            </div>
-
-            {/* KPI 5: Antrean Calon Owner */}
-            <div className="p-4 sm:p-5 bg-slate-900 border border-purple-900/40 rounded-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-purple-300">Antrean Approval</span>
-                <Clock className="w-4 h-4 text-purple-400 animate-pulse" />
-              </div>
-              <p className="text-lg sm:text-xl font-black text-purple-200">
-                {tenants.filter((t) => t.status === 'PENDING').length} Calon
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">Perlu diverifikasi</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Navigation Tabs: Merchants, Master Paket, Billing & Mutasi Token, Staff Platform, Promos */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('MERCHANTS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
-              activeMainTab === 'MERCHANTS'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-400/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Store className="w-4 h-4 text-indigo-300" />
-            <span className="hidden sm:inline">Manajemen Merchant &amp; Kuota Token</span>
-            <span className="sm:hidden">Merchant &amp; Kuota</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/20 font-black">
-              {tenants.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('PLANS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
-              activeMainTab === 'PLANS'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30 ring-2 ring-amber-400/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-amber-300" />
-            <span className="hidden sm:inline">Master Paket Kuota Fleksibel</span>
-            <span className="sm:hidden">Paket Kuota</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/20 text-amber-300 font-black">
-              {plans.length || 4} Paket
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('BILLING')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
-              activeMainTab === 'BILLING'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Receipt className="w-4 h-4 text-emerald-300" />
-            <span className="hidden sm:inline">Riwayat Billing &amp; Invoicing</span>
-            <span className="sm:hidden">Billing &amp; Invoice</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-400/20 text-emerald-300 font-black">
-              {invoices.length} Faktur
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('STAFF')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
-              activeMainTab === 'STAFF'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Users className="w-4 h-4 text-purple-300" />
-            <span className="hidden sm:inline">Tim Staff Platform (RBAC)</span>
-            <span className="sm:hidden">Staff Platform</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-purple-400/20 text-purple-300 font-black">
-              {platformUsers.length} Staf
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('PROMOS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
-              activeMainTab === 'PROMOS'
-                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 ring-2 ring-rose-400/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Tag className="w-4 h-4 text-rose-300" />
-            <span className="hidden sm:inline">Master Promo SaaS (B2B)</span>
-            <span className="sm:hidden">Promo B2B</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-400/20 text-rose-300 font-black">
-              {promos.length} Kupon
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('NOTIFICATIONS')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
-              activeMainTab === 'NOTIFICATIONS'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 ring-2 ring-blue-400/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Bell className="w-4 h-4 text-blue-300" />
-            <span className="hidden sm:inline">Pusat Notifikasi &amp; Broadcast</span>
-            <span className="sm:hidden">Notifikasi</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-400/20 text-blue-300 font-black">
-              {notifications.length} Pesan
-            </span>
-          </button>
-        </div>
+          </section>
 
         {/* Section 2: Owner Account Approval & Store Monitoring Table */}
         {activeMainTab === 'MERCHANTS' && (() => {
@@ -4020,6 +4324,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           );
         })()}
       </main>
+      </div>
 
       {/* =========================================================================
           MODAL 1: DETAIL TENANT (TENANT DEEP DIVE)

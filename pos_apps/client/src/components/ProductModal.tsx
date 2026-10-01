@@ -15,12 +15,14 @@ import {
   CheckCircle2,
   Infinity as InfinityIcon,
   Package,
+  Loader2,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import type { ModifierGroup } from '../types/modifier';
 import { api } from '../services/api';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { useDialog } from '../context/DialogContext';
+import { compressImage, formatBytes } from '../utils/imageCompressor';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -87,6 +89,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [minStockAlert, setMinStockAlert] = useState<number>(5);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
+  const [compressionStats, setCompressionStats] = useState<string | null>(null);
 
   // Unit Search & Add State
   const [unitList, setUnitList] = useState<string[]>(DEFAULT_UNITS);
@@ -164,6 +168,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setUnit(productToEdit.unit);
       setMinStockAlert(productToEdit.minStockAlert);
       setImageUrl(productToEdit.imageUrl || '');
+      setCompressionStats(null);
 
       // Parse description and check for hasStock metadata
       let loadedHasStock = true;
@@ -209,6 +214,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setMinStockAlert(5);
       setDescription('');
       setImageUrl('');
+      setCompressionStats(null);
       setSelectedModifierGroupIds([]);
     }
     setError(null);
@@ -235,23 +241,48 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setSku(`${cat}-${rand}`);
   };
 
-  // Handle local image file upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle local image file upload dengan kompresi otomatis di browser
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Ukuran file foto maksimal 2MB');
+    if (!file.type.startsWith('image/')) {
+      setError('Format berkas harus berupa gambar (JPG, PNG, WebP).');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setImageUrl(reader.result);
+    // Mengizinkan file kamera resolusi tinggi hingga 15MB karena akan dikompresi otomatis
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Ukuran file foto maksimal 15MB');
+      return;
+    }
+
+    setIsCompressingImage(true);
+    setError(null);
+
+    try {
+      const result = await compressImage(file, {
+        maxWidth: 600,
+        maxHeight: 600,
+        quality: 0.8,
+        mimeType: 'image/webp',
+      });
+      setImageUrl(result.dataUrl);
+      setCompressionStats(
+        `${formatBytes(result.originalSizeBytes)} ➔ ${formatBytes(result.compressedSizeBytes)} (-${result.savingsPercent}%)`
+      );
+      dialog.toast(
+        `Foto berhasil dioptimasi otomatis (-${result.savingsPercent}%): ${formatBytes(result.compressedSizeBytes)}`,
+        'success'
+      );
+    } catch (err: any) {
+      setError(err?.message || 'Gagal memproses dan mengompres foto');
+    } finally {
+      setIsCompressingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   // Handle Quick Category Create
@@ -470,7 +501,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     />
                     <button
                       type="button"
-                      onClick={() => setImageUrl('')}
+                      onClick={() => {
+                        setImageUrl('');
+                        setCompressionStats(null);
+                      }}
                       className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1"
                     >
                       <Trash2 className="w-4 h-4 text-rose-300" /> Hapus
@@ -490,7 +524,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   <input
                     type="text"
                     value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
+                    onChange={(e) => {
+                      setImageUrl(e.target.value);
+                      setCompressionStats(null);
+                    }}
                     placeholder="Tempel URL gambar (https://...)"
                     className="flex-1 bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3 py-2 text-xs outline-none"
                   />
@@ -503,12 +540,30 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   />
                   <button
                     type="button"
+                    disabled={isCompressingImage}
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm whitespace-nowrap"
+                    className="px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm whitespace-nowrap disabled:opacity-50"
                   >
-                    <Upload className="w-3.5 h-3.5 text-blue-900" /> Upload File
+                    {isCompressingImage ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 text-blue-900 animate-spin" />
+                        <span>Mengompres...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-blue-900" />
+                        <span>Upload File</span>
+                      </>
+                    )}
                   </button>
                 </div>
+
+                {compressionStats && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium rounded-lg">
+                    <Sparkles className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                    <span>Terkompresi otomatis: <strong>{compressionStats}</strong></span>
+                  </div>
+                )}
 
                 {/* Preset Chips */}
                 <div>
