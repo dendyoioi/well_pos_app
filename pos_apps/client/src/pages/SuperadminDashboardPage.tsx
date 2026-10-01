@@ -42,8 +42,12 @@ import {
   Plus,
   Edit3,
   Settings,
+  Bell,
+  Wrench,
+  Info,
+  Radio,
 } from 'lucide-react';
-import { api, platformStorage, authStorage } from '../services/api';
+import { api, platformStorage, authStorage, type PlatformNotification } from '../services/api';
 import { TablePagination } from '../components/TablePagination';
 
 export interface TenantQuotaInfo {
@@ -130,9 +134,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   // ----------------------------------------------------
-  // NAVIGATION TABS: MERCHANT CONTROL, PLANS, BILLING, STAFF, PROMOS
+  // NAVIGATION TABS: MERCHANT CONTROL, PLANS, BILLING, STAFF, PROMOS, NOTIFICATIONS
   // ----------------------------------------------------
-  const [activeMainTab, setActiveMainTab] = useState<'MERCHANTS' | 'PLANS' | 'BILLING' | 'STAFF' | 'PROMOS'>('MERCHANTS');
+  const [activeMainTab, setActiveMainTab] = useState<'MERCHANTS' | 'PLANS' | 'BILLING' | 'STAFF' | 'PROMOS' | 'NOTIFICATIONS'>('MERCHANTS');
 
   // ----------------------------------------------------
   // DATA BUKU BESAR BILLING, INVOICE & MUTASI TOKEN
@@ -182,6 +186,26 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [promoPage, setPromoPage] = useState<number>(1);
   const [promoPageSize, setPromoPageSize] = useState<number>(10);
 
+  // ----------------------------------------------------
+  // DATA PENGELOLAAN NOTIFIKASI & BROADCAST SUPERADMIN
+  // ----------------------------------------------------
+  const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
+  const [isCreateNotifModalOpen, setIsCreateNotifModalOpen] = useState(false);
+  const [newNotifForm, setNewNotifForm] = useState({
+    title: '',
+    message: '',
+    type: 'MAINTENANCE' as 'MAINTENANCE' | 'INFO' | 'WARNING' | 'UPDATE',
+    target: 'ALL' as 'ALL' | 'SPECIFIC',
+    targetTenantId: '',
+    expiresAt: '',
+  });
+  const [submittingNotif, setSubmittingNotif] = useState(false);
+  const [notifSearchQuery, setNotifSearchQuery] = useState('');
+  const [notifTypeFilter, setNotifTypeFilter] = useState<'ALL' | 'MAINTENANCE' | 'INFO' | 'WARNING' | 'UPDATE'>('ALL');
+  const [notifTargetFilter, setNotifTargetFilter] = useState<'ALL' | 'BROADCAST' | 'SPECIFIC'>('ALL');
+  const [notifPage, setNotifPage] = useState<number>(1);
+  const [notifPageSize, setNotifPageSize] = useState<number>(10);
+
   // Auto-reset page 1 when filter/search changes
   useEffect(() => {
     setTenantPage(1);
@@ -198,6 +222,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   useEffect(() => {
     setPromoPage(1);
   }, [promos.length]);
+
+  useEffect(() => {
+    setNotifPage(1);
+  }, [notifSearchQuery, notifTypeFilter, notifTargetFilter, notifications.length]);
   // ----------------------------------------------------
   const [isPaymentConfigModalOpen, setIsPaymentConfigModalOpen] = useState(false);
   const isPaymentConfigModalOpenRef = useRef(false);
@@ -371,7 +399,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     setLoadingData(true);
     setActionFeedback(null);
     try {
-      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes] = await Promise.all([
+      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes, notifsRes] = await Promise.all([
         api.getPlatformDashboard(),
         api.getPlatformTenants({ search: searchQuery, status: statusFilter }),
         api.getPlatformPlans(),
@@ -379,6 +407,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         api.getPlatformUsers(),
         api.getPlatformPromos(),
         api.getPlatformPaymentSettings(),
+        api.getPlatformNotifications(),
       ]);
 
       if (dashRes.status === 'success') {
@@ -398,6 +427,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       }
       if (promosRes.status === 'success') {
         setPromos(promosRes.data || []);
+      }
+      if (notifsRes.status === 'success') {
+        setNotifications(notifsRes.data || []);
       }
       if (paymentRes.status === 'success' && paymentRes.data) {
         const d = paymentRes.data;
@@ -837,6 +869,80 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             await loadPlatformData();
           } else {
             showAlert('Gagal Menghapus', res.message || 'Gagal menghapus kode promo', 'error');
+          }
+        } catch (err: any) {
+          showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
+        }
+      },
+    });
+  };
+
+  // ----------------------------------------------------
+  // HANDLERS: PENGELOLAAN NOTIFIKASI & BROADCAST SUPERADMIN
+  // ----------------------------------------------------
+  const handleCreateNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNotifForm.title.trim() || !newNotifForm.message.trim()) {
+      showAlert('Input Belum Lengkap', 'Judul dan pesan notifikasi wajib diisi', 'error');
+      return;
+    }
+    if (newNotifForm.target === 'SPECIFIC' && !newNotifForm.targetTenantId) {
+      showAlert('Pilih Toko Target', 'Silakan pilih toko tenant yang akan menerima notifikasi ini', 'error');
+      return;
+    }
+
+    setSubmittingNotif(true);
+    try {
+      const selectedTenant = newNotifForm.target === 'SPECIFIC'
+        ? tenants.find((t) => t.id === newNotifForm.targetTenantId)
+        : null;
+
+      const res = await api.createPlatformNotification({
+        title: newNotifForm.title.trim(),
+        message: newNotifForm.message.trim(),
+        type: newNotifForm.type,
+        target: newNotifForm.target,
+        targetTenantId: newNotifForm.target === 'SPECIFIC' ? newNotifForm.targetTenantId : null,
+        targetTenantName: selectedTenant ? (selectedTenant.name || selectedTenant.businessName) : null,
+        expiresAt: newNotifForm.expiresAt ? new Date(newNotifForm.expiresAt).toISOString() : null,
+      });
+
+      if (res.status === 'success') {
+        setActionFeedback(res.message || 'Notifikasi berhasil diterbitkan ke merchant');
+        setIsCreateNotifModalOpen(false);
+        setNewNotifForm({
+          title: '',
+          message: '',
+          type: 'MAINTENANCE',
+          target: 'ALL',
+          targetTenantId: '',
+          expiresAt: '',
+        });
+        await loadPlatformData();
+      } else {
+        showAlert('Gagal Menerbitkan Notifikasi', res.message || 'Gagal membuat notifikasi', 'error');
+      }
+    } catch (err: any) {
+      showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
+    } finally {
+      setSubmittingNotif(false);
+    }
+  };
+
+  const handleDeleteNotification = (notif: PlatformNotification) => {
+    showConfirm({
+      title: 'Hapus Notifikasi',
+      message: `Hapus notifikasi "${notif.title}"? Notifikasi ini tidak akan tampil lagi di lonceng notifikasi toko merchant.`,
+      confirmText: 'Hapus Notifikasi',
+      variant: 'rose',
+      onConfirm: async () => {
+        try {
+          const res = await api.deletePlatformNotification(notif.id);
+          if (res.status === 'success') {
+            setActionFeedback(res.message || 'Notifikasi berhasil dihapus');
+            await loadPlatformData();
+          } else {
+            showAlert('Gagal Menghapus', res.message || 'Gagal menghapus notifikasi', 'error');
           }
         } catch (err: any) {
           showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
@@ -1624,6 +1730,23 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             <span className="sm:hidden">Promo B2B</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-400/20 text-rose-300 font-black">
               {promos.length} Kupon
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('NOTIFICATIONS')}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 snap-start cursor-pointer ${
+              activeMainTab === 'NOTIFICATIONS'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 ring-2 ring-blue-400/20'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <Bell className="w-4 h-4 text-blue-300" />
+            <span className="hidden sm:inline">Pusat Notifikasi &amp; Broadcast</span>
+            <span className="sm:hidden">Notifikasi</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-400/20 text-blue-300 font-black">
+              {notifications.length} Pesan
             </span>
           </button>
         </div>
@@ -3593,6 +3716,309 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           </section>
           );
         })()}
+
+        {/* Section 6: Pusat Pengelolaan Notifikasi & Broadcast Superadmin */}
+        {activeMainTab === 'NOTIFICATIONS' && (() => {
+          const filteredNotifications = notifications.filter((n) => {
+            const matchesSearch =
+              notifSearchQuery.trim() === '' ||
+              n.title.toLowerCase().includes(notifSearchQuery.toLowerCase()) ||
+              n.message.toLowerCase().includes(notifSearchQuery.toLowerCase()) ||
+              (n.targetTenantName && n.targetTenantName.toLowerCase().includes(notifSearchQuery.toLowerCase()));
+
+            const matchesType =
+              notifTypeFilter === 'ALL' || n.type === notifTypeFilter;
+
+            const matchesTarget =
+              notifTargetFilter === 'ALL' ||
+              (notifTargetFilter === 'BROADCAST' && n.target === 'ALL') ||
+              (notifTargetFilter === 'SPECIFIC' && n.target === 'SPECIFIC');
+
+            return matchesSearch && matchesType && matchesTarget;
+          });
+
+          const totalNotifPages = Math.ceil(filteredNotifications.length / notifPageSize) || 1;
+          const safeNotifPage = Math.min(notifPage, totalNotifPages);
+          const paginatedNotifications = filteredNotifications.slice(
+            (safeNotifPage - 1) * notifPageSize,
+            safeNotifPage * notifPageSize
+          );
+
+          const maintenanceCount = notifications.filter((n) => n.type === 'MAINTENANCE').length;
+          const broadcastCount = notifications.filter((n) => n.target === 'ALL').length;
+          const specificCount = notifications.filter((n) => n.target === 'SPECIFIC').length;
+
+          return (
+            <section className="space-y-6">
+              {/* Header Box */}
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/10">
+                      <Bell className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                        <span>Pusat Notifikasi &amp; Broadcast Superadmin</span>
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                        Kelola dan terbitkan pengumuman pemeliharaan server, informasi operasional, atau pesan khusus langsung ke pemilik toko (tenant). Pesan akan langsung muncul pada lonceng notifikasi Backoffice toko.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateNotifModalOpen(true)}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 ring-2 ring-blue-400/20 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Buat Notifikasi Baru</span>
+                  </button>
+                </div>
+
+                {/* 4 Metric Summary Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-800/80">
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Notifikasi</div>
+                    <div className="text-2xl font-black text-white mt-1">{notifications.length}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">Diterbitkan oleh Superadmin</div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                      <Wrench className="w-3 h-3" />
+                      <span>Info Pemeliharaan</span>
+                    </div>
+                    <div className="text-2xl font-black text-amber-300 mt-1">{maintenanceCount}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">Jadwal server &amp; sistem</div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1">
+                      <Radio className="w-3 h-3" />
+                      <span>Broadcast Seluruh Toko</span>
+                    </div>
+                    <div className="text-2xl font-black text-blue-300 mt-1">{broadcastCount}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">Menyeluruh ke semua mitra</div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
+                      <Store className="w-3 h-3" />
+                      <span>Khusus Tenant</span>
+                    </div>
+                    <div className="text-2xl font-black text-purple-300 mt-1">{specificCount}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">Tertuju ke toko terpilih</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Bar */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div className="flex-1 relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={notifSearchQuery}
+                    onChange={(e) => setNotifSearchQuery(e.target.value)}
+                    placeholder="Cari judul notifikasi, isi pesan, atau nama toko..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={notifTypeFilter}
+                    onChange={(e) => setNotifTypeFilter(e.target.value as any)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none focus:border-blue-500 font-semibold"
+                  >
+                    <option value="ALL">Semua Tipe Pesan</option>
+                    <option value="MAINTENANCE">🔧 Pemeliharaan (Maintenance)</option>
+                    <option value="INFO">ℹ️ Informasi Resmi</option>
+                    <option value="WARNING">⚠️ Peringatan Sistem</option>
+                    <option value="UPDATE">🚀 Pembaruan Fitur</option>
+                  </select>
+
+                  <select
+                    value={notifTargetFilter}
+                    onChange={(e) => setNotifTargetFilter(e.target.value as any)}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 outline-none focus:border-blue-500 font-semibold"
+                  >
+                    <option value="ALL">Semua Distribusi</option>
+                    <option value="BROADCAST">📢 Broadcast (Semua Toko)</option>
+                    <option value="SPECIFIC">🎯 Khusus Tenant Tertentu</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={loadPlatformData}
+                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors cursor-pointer"
+                    title="Muat Ulang Data"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingData ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* List Notifications Table / Cards */}
+              <div className="space-y-3">
+                {paginatedNotifications.length === 0 ? (
+                  <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-400">
+                    <Bell className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                    <h3 className="text-sm font-bold text-slate-300">Belum Ada Notifikasi</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      {notifSearchQuery || notifTypeFilter !== 'ALL' || notifTargetFilter !== 'ALL'
+                        ? 'Tidak ada notifikasi yang cocok dengan filter pencarian.'
+                        : 'Klik tombol "Buat Notifikasi Baru" untuk menerbitkan pesan ke mitra toko.'}
+                    </p>
+                    {!(notifSearchQuery || notifTypeFilter !== 'ALL' || notifTargetFilter !== 'ALL') && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateNotifModalOpen(true)}
+                        className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Terbitkan Notifikasi Pertama</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  paginatedNotifications.map((notif) => {
+                    const isMaintenance = notif.type === 'MAINTENANCE';
+                    const isWarning = notif.type === 'WARNING';
+                    const isUpdate = notif.type === 'UPDATE';
+
+                    return (
+                      <div
+                        key={notif.id}
+                        className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-md flex flex-col md:flex-row items-start justify-between gap-4"
+                      >
+                        <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                          {/* Type Icon */}
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm ${
+                              isMaintenance
+                                ? 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
+                                : isWarning
+                                ? 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
+                                : isUpdate
+                                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                                : 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
+                            }`}
+                          >
+                            {isMaintenance && <Wrench className="w-5 h-5" />}
+                            {isWarning && <AlertTriangle className="w-5 h-5" />}
+                            {isUpdate && <Sparkles className="w-5 h-5" />}
+                            {!isMaintenance && !isWarning && !isUpdate && <Info className="w-5 h-5" />}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            {/* Badges Header */}
+                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                              <span
+                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border ${
+                                  isMaintenance
+                                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                    : isWarning
+                                    ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                    : isUpdate
+                                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                    : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                                }`}
+                              >
+                                {isMaintenance
+                                  ? 'Pemeliharaan Server'
+                                  : isWarning
+                                  ? 'Peringatan Sistem'
+                                  : isUpdate
+                                  ? 'Pembaruan Fitur'
+                                  : 'Informasi Resmi'}
+                              </span>
+
+                              {notif.target === 'ALL' ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-500/15 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+                                  <Radio className="w-3 h-3" />
+                                  <span>Broadcast ke Semua Toko</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                                  <Store className="w-3 h-3" />
+                                  <span>Khusus: {notif.targetTenantName || 'Tenant Tertentu'}</span>
+                                </span>
+                              )}
+
+                              <span className="text-[10px] text-slate-500">
+                                {new Date(notif.createdAt).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+
+                            <h3 className="text-sm font-bold text-white leading-snug">
+                              {notif.title}
+                            </h3>
+
+                            <p className="text-xs text-slate-300 mt-1 leading-relaxed whitespace-pre-line max-w-3xl">
+                              {notif.message}
+                            </p>
+
+                            <div className="flex items-center gap-4 mt-3 text-[10px] text-slate-400 font-medium">
+                              <span>Oleh: <strong>{notif.createdBy || 'Superadmin'}</strong></span>
+                              {notif.expiresAt ? (
+                                <span>
+                                  Kadaluarsa:{' '}
+                                  <span className="text-amber-300">
+                                    {new Date(notif.expiresAt).toLocaleDateString('id-ID', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="text-emerald-400">Aktif Tanpa Batas Waktu</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNotification(notif)}
+                            className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+                            title="Hapus Notifikasi"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span className="md:hidden">Hapus</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {filteredNotifications.length > 0 && (
+                <TablePagination
+                  currentPage={safeNotifPage}
+                  pageSize={notifPageSize}
+                  totalItems={filteredNotifications.length}
+                  onPageChange={setNotifPage}
+                  onPageSizeChange={setNotifPageSize}
+                  pageSizeOptions={[10, 25, 50, 100]}
+                  itemLabel="notifikasi"
+                />
+              )}
+            </section>
+          );
+        })()}
       </main>
 
       {/* =========================================================================
@@ -5373,6 +5799,157 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             >
               Mengerti
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 7: BUAT NOTIFIKASI & BROADCAST BARU (SUPERADMIN)
+      ========================================================================= */}
+      {isCreateNotifModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 my-8">
+            <button
+              type="button"
+              onClick={() => setIsCreateNotifModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <Bell className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black text-white">Buat Notifikasi / Pengumuman Sistem</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Pesan ini akan disiarkan ke lonceng notifikasi Backoffice toko merchant.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateNotification} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Judul Pengumuman: <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Pemeliharaan Server Terjadwal Hari Minggu"
+                  value={newNotifForm.title}
+                  onChange={(e) => setNewNotifForm({ ...newNotifForm, title: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-blue-500 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Tipe Pesan:</label>
+                  <select
+                    value={newNotifForm.type}
+                    onChange={(e) => setNewNotifForm({ ...newNotifForm, type: e.target.value as any })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 font-semibold"
+                  >
+                    <option value="MAINTENANCE">🔧 Pemeliharaan (Maintenance)</option>
+                    <option value="INFO">ℹ️ Informasi Resmi</option>
+                    <option value="WARNING">⚠️ Peringatan Sistem</option>
+                    <option value="UPDATE">🚀 Pembaruan Aplikasi</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Target Distribusi:</label>
+                  <select
+                    value={newNotifForm.target}
+                    onChange={(e) => setNewNotifForm({ ...newNotifForm, target: e.target.value as any, targetTenantId: '' })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 font-semibold"
+                  >
+                    <option value="ALL">📢 Semua Toko (Broadcast)</option>
+                    <option value="SPECIFIC">🎯 Khusus Toko Tertentu</option>
+                  </select>
+                </div>
+              </div>
+
+              {newNotifForm.target === 'SPECIFIC' && (
+                <div className="p-3 bg-purple-950/40 border border-purple-800/60 rounded-xl space-y-1.5 animate-fade-in">
+                  <label className="block text-xs font-bold text-purple-200">
+                    Pilih Toko Tenant Sasaran: <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    required
+                    value={newNotifForm.targetTenantId}
+                    onChange={(e) => setNewNotifForm({ ...newNotifForm, targetTenantId: e.target.value })}
+                    className="w-full bg-slate-950 border border-purple-700/60 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-400 font-semibold"
+                  >
+                    <option value="">-- Pilih Toko Merchant --</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name || t.businessName} ({t.owner?.name || t.slug}) — {t.status}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-purple-300">
+                    Notifikasi ini hanya akan tampil pada akun pemilik dan staf toko yang dipilih.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Isi Pesan / Rincian Notifikasi: <span className="text-rose-400">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Tuliskan detail jadwal maintenance, estimasi durasi down time, atau instruksi operasional bagi merchant..."
+                  value={newNotifForm.message}
+                  onChange={(e) => setNewNotifForm({ ...newNotifForm, message: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-blue-500 leading-relaxed font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Batas Kedaluwarsa (Opsional):
+                </label>
+                <input
+                  type="date"
+                  value={newNotifForm.expiresAt}
+                  onChange={(e) => setNewNotifForm({ ...newNotifForm, expiresAt: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Biarkan kosong jika pengumuman ini berlaku permanen hingga dihapus manual.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateNotifModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingNotif}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {submittingNotif ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menerbitkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="w-3.5 h-3.5" />
+                      <span>Terbitkan Notifikasi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

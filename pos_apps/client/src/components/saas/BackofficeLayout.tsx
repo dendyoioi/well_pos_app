@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Store,
   ChevronDown,
   ChevronRight,
-  HelpCircle,
-  Globe,
   Bell,
   Lock,
   LogOut,
@@ -25,10 +23,16 @@ import {
   Coins,
   Menu,
   X,
+  CheckCheck,
+  Info,
+  AlertTriangle,
+  Wrench,
+  Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
-import { useDialog } from '../../context/DialogContext';
+import { api, type PlatformNotification } from '../../services/api';
 
 interface BackofficeLayoutProps {
   user: User;
@@ -51,7 +55,6 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   onLogout,
   children,
 }) => {
-  const dialog = useDialog();
   // Accordion state for sidebar groups (F&B Centric)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     menu_produk: true,
@@ -64,6 +67,61 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   });
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Notifikasi Terpusat dari Superadmin
+  const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('wellpos_read_notifs') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchTenantNotifications = async () => {
+    try {
+      setLoadingNotifs(true);
+      const res = await api.getTenantNotifications();
+      if (res.status === 'success' && Array.isArray(res.data)) {
+        setNotifications(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching tenant notifications:', err);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTenantNotifications();
+    const interval = setInterval(fetchTenantNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target as Node)) {
+        setNotifDropdownOpen(false);
+      }
+    };
+    if (notifDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [notifDropdownOpen]);
+
+  const markAllAsRead = () => {
+    const allIds = notifications.map((n) => n.id);
+    setReadNotifIds(allIds);
+    localStorage.setItem('wellpos_read_notifs', JSON.stringify(allIds));
+  };
+
+  const unreadCount = notifications.filter((n) => !readNotifIds.includes(n.id)).length;
 
   const toggleGroup = (group: string) => {
     setOpenGroups((prev) => ({ ...prev, [group]: !prev[group] }));
@@ -787,43 +845,197 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             </button>
           ) : null}
 
-          {/* Help Icon */}
-          <button
-            title="Bantuan & Dukungan"
-            onClick={() =>
-              dialog.alert({
-                title: 'Pusat Bantuan Well POS',
-                message: (
-                  <div className="space-y-2">
-                    <p>Butuh bantuan teknis atau operasional sistem?</p>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs font-semibold space-y-1">
-                      <div>📧 Email: support@wellpos.id</div>
-                      <div>💬 WhatsApp Hotline: 0812-3456-7890</div>
+          {/* Notifications Dropdown (Khusus Pengumuman Resmi Superadmin Platform) */}
+          <div className="relative" ref={notifDropdownRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setNotifDropdownOpen((prev) => !prev);
+                if (!notifDropdownOpen) {
+                  fetchTenantNotifications();
+                }
+              }}
+              title="Notifikasi & Pengumuman Superadmin"
+              className={`p-2 rounded-xl transition-all relative cursor-pointer ${
+                notifDropdownOpen
+                  ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-500/20'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5 ring-2 ring-white animate-pulse" />
+              )}
+            </button>
+
+            {notifDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-fade-in text-slate-800">
+                {/* Popover Header */}
+                <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-600/30 flex items-center justify-center text-blue-400">
+                      <Bell className="w-4 h-4 text-blue-300" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black flex items-center gap-1.5">
+                        <span>Notifikasi Sistem</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/30 text-blue-300 border border-blue-400/30 font-bold">
+                          Superadmin
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        {unreadCount > 0 ? `${unreadCount} pesan belum dibaca` : 'Semua pesan telah dibaca'}
+                      </p>
                     </div>
                   </div>
-                ),
-                variant: 'info',
-              })
-            }
-            className="hidden sm:flex p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
 
-          {/* Language Selector */}
-          <div className="hidden sm:flex items-center gap-1 text-xs text-slate-600 px-2 py-1 rounded-lg border border-slate-200">
-            <Globe className="w-3.5 h-3.5 text-slate-400" />
-            <span className="font-semibold">Indonesia</span>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllAsRead}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-300 hover:text-blue-200 text-[10px] font-bold transition-colors cursor-pointer"
+                      title="Tandai semua notifikasi sudah dibaca"
+                    >
+                      <CheckCheck className="w-3 h-3" />
+                      <span>Tandai Dibaca</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Banner Penjelasan Notifikasi */}
+                <div className="px-3.5 py-2 bg-blue-50/70 border-b border-blue-100 flex items-start gap-2 text-[11px] text-blue-900">
+                  <ShieldAlert className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                  <span>
+                    Saluran resmi pengumuman pemeliharaan server, pembaruan aplikasi, dan informasi penting langsung dari Superadmin Well POS.
+                  </span>
+                </div>
+
+                {/* List Notifikasi */}
+                <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100">
+                  {loadingNotifs && notifications.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      Memuat notifikasi sistem...
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="py-10 px-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2">
+                        <Bell className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700">Belum Ada Pengumuman</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Tidak ada jadwal pemeliharaan atau info terbaru dari Superadmin saat ini.
+                      </p>
+                    </div>
+                  ) : (
+                    notifications.map((item) => {
+                      const isUnread = !readNotifIds.includes(item.id);
+                      const isMaintenance = item.type === 'MAINTENANCE';
+                      const isWarning = item.type === 'WARNING';
+                      const isUpdate = item.type === 'UPDATE';
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`p-3.5 transition-colors relative hover:bg-slate-50/80 ${
+                            isUnread ? 'bg-blue-50/20' : ''
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {/* Type Icon Badge */}
+                            <div
+                              className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-xs ${
+                                isMaintenance
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : isWarning
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : isUpdate
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {isMaintenance && <Wrench className="w-3.5 h-3.5" />}
+                              {isWarning && <AlertTriangle className="w-3.5 h-3.5" />}
+                              {isUpdate && <Sparkles className="w-3.5 h-3.5" />}
+                              {!isMaintenance && !isWarning && !isUpdate && <Info className="w-3.5 h-3.5" />}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span
+                                    className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                                      isMaintenance
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : isWarning
+                                        ? 'bg-rose-100 text-rose-800'
+                                        : isUpdate
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}
+                                  >
+                                    {isMaintenance
+                                      ? 'Maintenance'
+                                      : isWarning
+                                      ? 'Peringatan'
+                                      : isUpdate
+                                      ? 'Update Fitur'
+                                      : 'Info Resmi'}
+                                  </span>
+
+                                  {item.target === 'SPECIFIC' && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-800">
+                                      🎯 Khusus Toko Anda
+                                    </span>
+                                  )}
+                                </div>
+
+                                <span className="text-[10px] text-slate-400 shrink-0 font-medium">
+                                  {new Date(item.createdAt).toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+
+                              <h4 className="text-xs font-bold text-slate-900 leading-snug">
+                                {item.title}
+                              </h4>
+                              <p className="text-[11px] text-slate-600 mt-1 leading-relaxed whitespace-pre-line">
+                                {item.message}
+                              </p>
+                              <div className="mt-2 text-[9px] text-slate-400 font-semibold">
+                                Diterbitkan oleh: {item.createdBy || 'Superadmin Platform'}
+                              </div>
+                            </div>
+
+                            {isUnread && (
+                              <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" title="Belum dibaca" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Popover Footer */}
+                <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 text-[10px]">
+                    Ada kendala? Hubungi <strong>support@wellpos.id</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNotifDropdownOpen(false)}
+                    className="text-xs font-bold text-slate-600 hover:text-slate-900 px-2 py-0.5 rounded hover:bg-slate-200 transition-colors"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Notifications */}
-          <button
-            title="Notifikasi Sistem"
-            className="hidden sm:flex p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors relative"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 absolute top-2 right-2" />
-          </button>
 
           {/* Plan & Token Quota Badge */}
           {(user.role === 'ADMIN' || user.role === 'OWNER') && (

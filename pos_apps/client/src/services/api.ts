@@ -70,6 +70,20 @@ export const platformStorage = {
   },
 };
 
+export interface PlatformNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'MAINTENANCE' | 'INFO' | 'WARNING' | 'UPDATE';
+  target: 'ALL' | 'SPECIFIC';
+  targetTenantId?: string | null;
+  targetTenantName?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+  createdBy?: string;
+  isActive: boolean;
+}
+
 const authHeader = (): Record<string, string> => {
   const token = authStorage.getToken();
   const headers: Record<string, string> = {};
@@ -1034,6 +1048,13 @@ export const api = {
     return res.json();
   },
 
+  getTenantNotifications: async (): Promise<{ status: string; data?: PlatformNotification[]; message?: string }> => {
+    const res = await fetch('/api/saas/notifications', {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
   checkPakasirInvoiceStatus: async (invoiceNumber: string): Promise<{ status: string; data?: any; message?: string }> => {
     const res = await fetch(`/api/saas/pakasir/status/${encodeURIComponent(invoiceNumber)}`);
     return res.json();
@@ -1280,6 +1301,44 @@ export const api = {
         ...platformAuthHeader(),
       },
       body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // PENGELOLAAN NOTIFIKASI & PENGUMUMAN SUPERADMIN
+  // ----------------------------------------------------
+  getPlatformNotifications: async (): Promise<{ status: string; data?: PlatformNotification[]; message?: string }> => {
+    const res = await fetch('/api/platform/notifications', {
+      headers: platformAuthHeader(),
+    });
+    return res.json();
+  },
+
+  createPlatformNotification: async (data: {
+    title: string;
+    message: string;
+    type: 'MAINTENANCE' | 'INFO' | 'WARNING' | 'UPDATE';
+    target: 'ALL' | 'SPECIFIC';
+    targetTenantId?: string | null;
+    targetTenantName?: string | null;
+    expiresAt?: string | null;
+  }): Promise<{ status: string; data?: PlatformNotification; message?: string }> => {
+    const res = await fetch('/api/platform/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...platformAuthHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deletePlatformNotification: async (id: string): Promise<{ status: string; message?: string }> => {
+    const res = await fetch(`/api/platform/notifications/${id}`, {
+      method: 'DELETE',
+      headers: platformAuthHeader(),
     });
     return res.json();
   },

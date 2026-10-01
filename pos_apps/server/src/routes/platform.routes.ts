@@ -24,6 +24,9 @@ import {
   deletePlatformPromo,
   getPlatformPaymentSettings,
   updatePlatformPaymentSettings,
+  getPlatformNotifications,
+  createPlatformNotification,
+  deletePlatformNotification,
 } from '../controllers/platform.controller';
 
 export const platformRouter = Router();
@@ -63,6 +66,11 @@ platformRouter.delete('/promos/:id', authenticatePlatform, deletePlatformPromo);
 // Rute Konfigurasi Pembayaran & QRIS Statis Platform
 platformRouter.get('/payment-config', authenticatePlatform, getPlatformPaymentSettings);
 platformRouter.put('/payment-config', authenticatePlatform, updatePlatformPaymentSettings);
+
+// Rute Pengelolaan Notifikasi & Pengumuman Superadmin
+platformRouter.get('/notifications', authenticatePlatform, getPlatformNotifications);
+platformRouter.post('/notifications', authenticatePlatform, createPlatformNotification);
+platformRouter.delete('/notifications/:id', authenticatePlatform, deletePlatformNotification);
 
 // Rute Lifecycle Worker & Auto-Suspension Trigger
 platformRouter.post('/subscriptions/evaluate-lifecycle', authenticatePlatform, triggerLicenseLifecycleEvaluation);

@@ -8,7 +8,7 @@ import { prisma } from '../config/prisma';
 import { catalogDualWriteService } from '../services/dual_write';
 import { billingService } from '../services/billing.service';
 import { pakasirService } from '../services/pakasir.service';
-import { readPlatformPaymentConfig } from './platform.controller';
+import { readPlatformPaymentConfig, readPlatformNotifications } from './platform.controller';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -1254,5 +1254,38 @@ export const getPublicPlatformPaymentConfig = async (_req: Request, res: Respons
     return res.status(500).json({ status: 'error', message: 'Gagal memuat konfigurasi pembayaran platform' });
   }
 };
+
+export const getTenantNotifications = async (req: Request, res: Response) => {
+  try {
+    const tenantId = (req as any).tenantId || (req as any).user?.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak valid' });
+    }
+
+    const allNotifs = readPlatformNotifications();
+    const now = new Date();
+
+    // Saring notifikasi aktif dan belum kadaluarsa, target ALL atau khusus tenant ini
+    const tenantNotifs = allNotifs.filter((n) => {
+      if (!n.isActive) return false;
+      if (n.expiresAt) {
+        const exp = new Date(n.expiresAt);
+        if (exp < now) return false;
+      }
+      if (n.target === 'ALL') return true;
+      if (n.target === 'SPECIFIC' && n.targetTenantId === tenantId) return true;
+      return false;
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: tenantNotifs,
+    });
+  } catch (error) {
+    console.error('Error fetching tenant notifications:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat notifikasi' });
+  }
+};
+
 
 

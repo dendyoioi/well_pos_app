@@ -9,6 +9,7 @@ import {
   topUpSubscriptionTokens,
   validateTenantPromoCode,
   getPublicPlatformPaymentConfig,
+  getTenantNotifications,
   handleBillingWebhook,
 } from '../controllers/saas.controller';
 import {
@@ -38,6 +39,7 @@ saasRouter.get('/my-subscription', authenticate, tenantContext, getSubscriptionS
 saasRouter.post('/subscription/top-up', authenticate, tenantContext, topUpSubscriptionTokens);
 saasRouter.get('/promos/validate', authenticate, tenantContext, validateTenantPromoCode);
 saasRouter.get('/payment-config', authenticate, tenantContext, getPublicPlatformPaymentConfig);
+saasRouter.get('/notifications', authenticate, tenantContext, getTenantNotifications);
 
 // Endpoint Tagihan & Invoice Langganan
 saasRouter.post('/invoices', authenticate, tenantContext, createSubscriptionInvoice);

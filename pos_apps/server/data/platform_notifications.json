@@ -1,0 +1,28 @@
+[
+  {
+    "id": "notif-superadmin-01",
+    "title": "Pemeliharaan Sistem Rutin Platform",
+    "message": "Halo Rekan Mitra Well POS, akan dilakukan pemeliharaan server rutin berkala pada hari Minggu pukul 01:00 - 03:00 WIB untuk peningkatan kestabilan dan kecepatan transaksi. Selama rentang waktu ini, backoffice mungkin mengalami jeda koneksi sesaat. Transaksi kasir offline tetap dapat berjalan lancar.",
+    "type": "MAINTENANCE",
+    "target": "ALL",
+    "targetTenantId": null,
+    "targetTenantName": null,
+    "expiresAt": null,
+    "createdAt": "2026-10-01T08:00:00.000Z",
+    "createdBy": "Superadmin Platform",
+    "isActive": true
+  },
+  {
+    "id": "notif-superadmin-02",
+    "title": "Pusat Informasi & Notifikasi Resmi Superadmin",
+    "message": "Fitur baru telah aktif: Mulai saat ini seluruh pengumuman resmi pemeliharaan server, pembaruan fitur, dan peringatan operasional disalurkan secara terpusat langsung dari Superadmin Platform.",
+    "type": "INFO",
+    "target": "ALL",
+    "targetTenantId": null,
+    "targetTenantName": null,
+    "expiresAt": null,
+    "createdAt": "2026-10-01T09:30:00.000Z",
+    "createdBy": "Superadmin Platform",
+    "isActive": true
+  }
+]

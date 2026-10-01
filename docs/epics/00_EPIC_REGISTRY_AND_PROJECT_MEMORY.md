@@ -954,6 +954,24 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
   - Tombol aksi pada tabel desktop dan kartu mobile beralih menjadi icon-only yang rapi dan seragam (Eye: Detail, Printer: Struk, UtensilsCrossed: Susulan, Ban: Void) dengan tooltip `title` informatif.
 • Default Filter Periode Tanggal Harian (`today`):
   - Seluruh modul laporan dan riwayat transaksi (`OrdersView`, `FinancialReportView`, `ProductAnalyticsView`, `BusinessSummaryView`) kini menggunakan default filter tanggal `today` (Hari Ini) alih-alih per bulan atau 30 hari.
+
+[FASE 6: NOTIFIKASI TERPUSAT DARI SUPERADMIN & PEMBERSIHAN HEADER BACKOFFICE] - SELESAI ✅
+• Pembersihan Header Backoffice Merchant (`BackofficeLayout.tsx`):
+  - Penghapusan icon bantuan (?) dan toggle bilingual (🌐 Indonesia) dari header merchant Backoffice untuk tampilan yang lebih bersih, fokus, dan rapi.
+• Arsitektur Notifikasi Terpusat Superadmin:
+  - Notifikasi sistem dialokasikan khusus dan resmi hanya bersumber dari Superadmin Platform (pengumuman pemeliharaan server, pembaruan aplikasi, peringatan sistem, atau info penting).
+• Pengelolaan Notifikasi di Superadmin Dashboard (`SuperadminDashboardPage.tsx`):
+  - Tab baru "Pusat Notifikasi & Broadcast" dengan ringkasan 4 metrik (Total Notifikasi, Info Pemeliharaan, Broadcast Semua Toko, Khusus Tenant).
+  - Form modal penerbitan notifikasi baru: judul, tipe pesan (`MAINTENANCE`, `INFO`, `WARNING`, `UPDATE`), target distribusi (Broadcast ke Seluruh Mitra vs Khusus Tenant Tertentu), pemilihan toko tenant via dropdown, isi pesan rincian, dan batas kedaluwarsa opsional.
+  - Tabel dan kartu daftar notifikasi dengan filter tipe, target, pencarian judul/pesan/toko, hapus notifikasi, serta paging kanonikal `<TablePagination />`.
+• Antarmuka Lonceng Notifikasi Toko Merchant (`BackofficeLayout.tsx`):
+  - Popover dropdown interaktif saat icon lonceng diklik, menampilkan daftar pengumuman resmi yang relevan bagi tenant aktif (`target === 'ALL'` atau `targetTenantId === tenantId`).
+  - Indikator dot merah (unread pulse) yang otomatis sinkron dengan local storage saat pesan ditandai telah dibaca ("Tandai Dibaca").
+  - Badge visual kategori bernuansa ramah WCAG AA (🔧 Maintenance, ⚠️ Peringatan, 🚀 Pembaruan Fitur, ℹ️ Info Resmi).
+• API & Penyimpanan ACID Non-Blocking:
+  - Endpoint Superadmin: `GET /api/platform/notifications`, `POST /api/platform/notifications`, `DELETE /api/platform/notifications/:id`.
+  - Endpoint Merchant: `GET /api/saas/notifications` (terproteksi context tenant).
+  - Penyimpanan data pada `pos_apps/server/data/platform_notifications.json` menjamin zero DDL pooler lock, zero downtime, dan konsistensi antar-lingkungan dev/Render/Vercel.
 ================================================================================
 ```
 

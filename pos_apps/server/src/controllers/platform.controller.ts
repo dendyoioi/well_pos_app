@@ -1644,5 +1644,122 @@ export const updatePlatformPaymentSettings = async (req: Request, res: Response)
   }
 };
 
+// =========================================================================
+// PENGELOLAAN NOTIFIKASI & PENGUMUMAN SUPERADMIN
+// =========================================================================
+export interface PlatformNotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  type: 'MAINTENANCE' | 'INFO' | 'WARNING' | 'UPDATE';
+  target: 'ALL' | 'SPECIFIC';
+  targetTenantId?: string | null;
+  targetTenantName?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+  createdBy?: string;
+  isActive: boolean;
+}
+
+const NOTIFICATIONS_FILE = path.join(__dirname, '../../data/platform_notifications.json');
+
+export const readPlatformNotifications = (): PlatformNotificationItem[] => {
+  try {
+    if (fs.existsSync(NOTIFICATIONS_FILE)) {
+      const raw = fs.readFileSync(NOTIFICATIONS_FILE, 'utf-8');
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        return list;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading platform notifications:', err);
+  }
+  return [];
+};
+
+export const writePlatformNotifications = (items: PlatformNotificationItem[]): boolean => {
+  try {
+    const dir = path.dirname(NOTIFICATIONS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(NOTIFICATIONS_FILE, JSON.stringify(items, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    console.error('Error writing platform notifications:', err);
+    return false;
+  }
+};
+
+export const getPlatformNotifications = async (_req: Request, res: Response) => {
+  try {
+    const list = readPlatformNotifications();
+    return res.status(200).json({
+      status: 'success',
+      data: list,
+    });
+  } catch (error) {
+    console.error('Error getting platform notifications:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat data notifikasi platform' });
+  }
+};
+
+export const createPlatformNotification = async (req: Request, res: Response) => {
+  try {
+    const { title, message, type, target, targetTenantId, targetTenantName, expiresAt } = req.body;
+    if (!title || !message) {
+      return res.status(400).json({ status: 'error', message: 'Judul dan isi notifikasi wajib diisi' });
+    }
+
+    const currentList = readPlatformNotifications();
+    const newNotif: PlatformNotificationItem = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      title: String(title).trim(),
+      message: String(message).trim(),
+      type: ['MAINTENANCE', 'INFO', 'WARNING', 'UPDATE'].includes(type) ? type : 'INFO',
+      target: target === 'SPECIFIC' ? 'SPECIFIC' : 'ALL',
+      targetTenantId: target === 'SPECIFIC' ? (targetTenantId || null) : null,
+      targetTenantName: target === 'SPECIFIC' ? (targetTenantName || null) : null,
+      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      createdAt: new Date().toISOString(),
+      createdBy: (req as any).user?.name || (req as any).user?.email || 'Superadmin Platform',
+      isActive: true,
+    };
+
+    const updated = [newNotif, ...currentList];
+    writePlatformNotifications(updated);
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Notifikasi berhasil diterbitkan ke merchant',
+      data: newNotif,
+    });
+  } catch (error) {
+    console.error('Error creating platform notification:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal membuat notifikasi platform' });
+  }
+};
+
+export const deletePlatformNotification = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const currentList = readPlatformNotifications();
+    const filtered = currentList.filter((item) => item.id !== id);
+
+    if (filtered.length === currentList.length) {
+      return res.status(404).json({ status: 'error', message: 'Notifikasi tidak ditemukan' });
+    }
+
+    writePlatformNotifications(filtered);
+    return res.status(200).json({
+      status: 'success',
+      message: 'Notifikasi berhasil dihapus',
+    });
+  } catch (error) {
+    console.error('Error deleting platform notification:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menghapus notifikasi platform' });
+  }
+};
+
+
 
 
