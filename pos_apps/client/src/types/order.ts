@@ -113,7 +113,9 @@ export interface Order {
   totalAmount?: number;
   channel?: OrderChannel | string;
   orderType?: string;
+  orderStatus?: string;
   paymentStatus: string;
+  notes?: string | null;
   createdAt: string;
   orderItems: OrderItem[];
   payments: Payment[];

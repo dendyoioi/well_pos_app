@@ -149,7 +149,7 @@ export const getCurrentShift = async (req: Request, res: Response) => {
       `SELECT pt.payment_method as "paymentMethod", pt.amount
        FROM "payment_transactions" pt
        JOIN "orders" o ON o.id = pt.order_id
-       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED';`,
+       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
       activeShift.id
     );
 
@@ -261,7 +261,7 @@ export const getXReport = async (req: Request, res: Response) => {
               o.created_at as "createdAt", pt.payment_method as "paymentMethod", pt.amount
        FROM "orders" o
        LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
-       WHERE o.shift_id = $1
+       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
        ORDER BY o.created_at DESC;`,
       activeShift.id
     );
@@ -409,7 +409,7 @@ export const closeShift = async (req: Request, res: Response) => {
       `SELECT pt.payment_method as "paymentMethod", pt.amount
        FROM "payment_transactions" pt
        JOIN "orders" o ON o.id = pt.order_id
-       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED';`,
+       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
       activeShift.id
     );
 

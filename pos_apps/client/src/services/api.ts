@@ -600,6 +600,21 @@ export const api = {
     return res.json();
   },
 
+  voidOrder: async (
+    orderId: string,
+    payload: { pin?: string; reason: string; notes?: string }
+  ): Promise<{ status: string; message: string; data?: any }> => {
+    const res = await fetch(`/api/orders/${orderId}/void`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
   // Fitur Tahan Pesanan Kasir (Hold Orders)
   holdOrder: async (data: {
     outletId?: string;

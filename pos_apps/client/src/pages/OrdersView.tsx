@@ -12,11 +12,14 @@ import {
   Filter,
   Calendar,
   ChevronDown,
+  Ban,
+  CheckCircle2,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import type { Outlet } from '../types/outlet';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
 import { OrderSuccessModal } from '../components/OrderSuccessModal';
+import { VoidOrderModal } from '../components/VoidOrderModal';
 import { TablePagination } from '../components/TablePagination';
 import { generateSalesRecapPdf } from '../utils/salesRecapPdf';
 import { exportOrdersToCsv } from '../utils/salesExportCsv';
@@ -52,6 +55,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const [selectedChannel, setSelectedChannel] = useState<string>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [voidModalOpen, setVoidModalOpen] = useState(false);
+  const [orderToVoid, setOrderToVoid] = useState<Order | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Date Filter State
   const [datePreset, setDatePreset] = useState<DatePreset>('thismonth');
@@ -390,8 +396,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
 
                     return (
                       <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-blue-950">
-                          {order.invoiceNumber}
+                        <td className="py-3.5 px-4 font-mono font-bold">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={order.orderStatus === 'VOIDED' ? 'text-slate-400 line-through' : 'text-blue-950'}>
+                              {order.invoiceNumber}
+                            </span>
+                            {order.orderStatus === 'VOIDED' && (
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                                VOID
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 text-xs">
                           {new Date(order.createdAt).toLocaleString('id-ID', {
@@ -435,25 +450,58 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                         <td className="py-3.5 px-4 text-right text-slate-600">
                           Rp {Number(order.subtotal).toLocaleString('id-ID')}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-black text-blue-950">
-                          Rp {Number(order.grandTotal).toLocaleString('id-ID')}
+                        <td className="py-3.5 px-4 text-right">
+                          {order.orderStatus === 'VOIDED' ? (
+                            <div>
+                              <span className="font-bold text-slate-400 line-through text-xs">
+                                Rp {Number(order.grandTotal).toLocaleString('id-ID')}
+                              </span>
+                              <div className="text-[10px] text-rose-600 font-extrabold uppercase">
+                                Dibatalkan
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="font-black text-blue-950">
+                              Rp {Number(order.grandTotal).toLocaleString('id-ID')}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex items-center justify-center gap-1.5">
-                            {onAppendOrder && (
-                              <button
-                                type="button"
-                                onClick={() => onAppendOrder(order)}
-                                className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 active:scale-95"
-                                title="Buat Transaksi Tambahan / Susulan untuk Pesanan Ini"
-                              >
-                                <span>+ Susulan</span>
-                              </button>
+                            {order.orderStatus === 'VOIDED' ? (
+                              <span className="px-2 py-1 text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
+                                VOIDED
+                              </span>
+                            ) : (
+                              <>
+                                {onAppendOrder && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onAppendOrder(order)}
+                                    className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                                    title="Buat Transaksi Tambahan / Susulan untuk Pesanan Ini"
+                                  >
+                                    <span>+ Susulan</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOrderToVoid(order);
+                                    setVoidModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                                  title="Batalkan Transaksi (Approval Supervisor/Owner)"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                  <span>Void</span>
+                                </button>
+                              </>
                             )}
                             <button
                               type="button"
                               onClick={() => handleViewReceipt(order)}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 active:scale-95"
+                              className="px-3 py-1.5 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 active:scale-95 cursor-pointer"
                             >
                               <Printer className="w-3.5 h-3.5" />
                               <span>Lihat Struk</span>
@@ -483,9 +531,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                     {/* Top Row: Invoice + Time + Channel Badge */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-mono font-black text-blue-950 text-xs truncate">
+                        <span className={`font-mono font-black text-xs truncate ${order.orderStatus === 'VOIDED' ? 'text-slate-400 line-through' : 'text-blue-950'}`}>
                           {order.invoiceNumber}
                         </span>
+                        {order.orderStatus === 'VOIDED' && (
+                          <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-black bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
+                            VOID
+                          </span>
+                        )}
                         <span className="text-[10px] text-slate-400 font-medium shrink-0">
                           {new Date(order.createdAt).toLocaleTimeString('id-ID', {
                             hour: '2-digit',
@@ -523,22 +576,52 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="font-black text-sm text-blue-950">
-                          Rp {Number(order.grandTotal).toLocaleString('id-ID')}
-                        </span>
+                        {order.orderStatus === 'VOIDED' ? (
+                          <div>
+                            <span className="font-bold text-xs text-slate-400 line-through">
+                              Rp {Number(order.grandTotal).toLocaleString('id-ID')}
+                            </span>
+                            <div className="text-[9px] text-rose-600 font-bold uppercase">
+                              Dibatalkan
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="font-black text-sm text-blue-950">
+                            Rp {Number(order.grandTotal).toLocaleString('id-ID')}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Bottom Actions Row */}
                     <div className="flex items-center justify-end gap-2 pt-1">
-                      {onAppendOrder && (
-                        <button
-                          type="button"
-                          onClick={() => onAppendOrder(order)}
-                          className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
-                        >
-                          <span>+ Susulan</span>
-                        </button>
+                      {order.orderStatus === 'VOIDED' ? (
+                        <span className="px-2.5 py-1 text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
+                          VOIDED
+                        </span>
+                      ) : (
+                        <>
+                          {onAppendOrder && (
+                            <button
+                              type="button"
+                              onClick={() => onAppendOrder(order)}
+                              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                            >
+                              <span>+ Susulan</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOrderToVoid(order);
+                              setVoidModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                            <span>Void</span>
+                          </button>
+                        </>
                       )}
                       <button
                         type="button"
@@ -570,12 +653,42 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
         )}
       </div>
 
+      {/* Toast Alert Sukses */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 bg-emerald-900 text-white rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-xs font-bold">{toastMsg}</span>
+          <button
+            type="button"
+            onClick={() => setToastMsg(null)}
+            className="p-1 hover:bg-white/20 rounded-lg text-emerald-200 hover:text-white transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Modal Preview Struk */}
       <OrderSuccessModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         order={selectedOrder}
         onAppendOrder={onAppendOrder}
+      />
+
+      {/* Modal Void Transaksi */}
+      <VoidOrderModal
+        isOpen={voidModalOpen}
+        onClose={() => {
+          setVoidModalOpen(false);
+          setOrderToVoid(null);
+        }}
+        order={orderToVoid}
+        onSuccess={(_orderId, invoiceNumber) => {
+          setToastMsg(`Transaksi ${invoiceNumber} berhasil dibatalkan (VOID)`);
+          setTimeout(() => setToastMsg(null), 5000);
+          loadOrders();
+        }}
       />
     </div>
   );

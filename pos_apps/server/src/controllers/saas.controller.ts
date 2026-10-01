@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import * as crypto from 'crypto';
-import { Role, TenantStatus, BusinessVertical, StorageLocationType, InvoiceStatus, Prisma } from '@prisma/client';
+import { Role, TenantStatus, BusinessVertical, StorageLocationType, InvoiceStatus, Prisma, OrderStatus } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { catalogDualWriteService } from '../services/dual_write';
 import { billingService } from '../services/billing.service';
@@ -550,15 +550,24 @@ export const getSubscriptionStatus = async (req: Request, res: Response) => {
       (currentSub?.plan?.code === 'ENTERPRISE' ? 5000 : currentSub?.plan?.code === 'PRO' ? 2000 : currentSub?.plan?.code === 'STARTER' ? 1000 : 500);
 
     const totalTokenQuota = sumTokensFromInvoices > 0 ? sumTokensFromInvoices : planTokenQuota;
-    const usedOrders = tenant._count.orders;
+    const activeOrdersCount = await prisma.order.count({
+      where: {
+        tenantId,
+        orderStatus: { notIn: [OrderStatus.CANCELLED, OrderStatus.VOIDED] },
+      },
+    });
+    const usedOrders = activeOrdersCount;
     const remainingQuota = Math.max(0, totalTokenQuota - usedOrders);
     const percentUsed = totalTokenQuota > 0 ? Math.min(100, Math.round((usedOrders / totalTokenQuota) * 100)) : 0;
     const quotaStatus: 'SAFE' | 'LOW' | 'EMPTY' = remainingQuota === 0 ? 'EMPTY' : remainingQuota <= 100 ? 'LOW' : 'SAFE';
 
-    // Penggunaan per outlet
+    // Penggunaan per outlet (hanya transaksi aktif yang tidak di-void)
     const ordersGrouped = await prisma.order.groupBy({
       by: ['outletId'],
-      where: { tenantId },
+      where: {
+        tenantId,
+        orderStatus: { notIn: [OrderStatus.CANCELLED, OrderStatus.VOIDED] },
+      },
       _count: { id: true },
     });
 

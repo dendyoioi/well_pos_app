@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { PaymentMethod, PaymentStatus, PaymentTxStatus, StockMovementType, ShiftStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, PaymentTxStatus, StockMovementType, ShiftStatus, Role, OrderStatus, RefundReason, PointTxType } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { sendOrderReceiptEmail } from '../services/mail.service';
 import { salesDualWriteService } from '../services/dual_write';
@@ -1885,6 +1886,329 @@ export const cancelOpenTab = async (req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: 'Gagal membatalkan tagihan meja' });
   }
 };
+
+/**
+ * Void transaksi yang sudah dibuat / selesai
+ * Memerlukan approval PIN dari Owner atau Supervisor.
+ */
+export const voidOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { pin, reason, notes } = req.body;
+    const tenantId = (req as any).tenantId;
+    const currentUser = (req as any).user;
+
+    if (!id) {
+      return res.status(400).json({ status: 'error', message: 'ID transaksi wajib disertakan' });
+    }
+
+    if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+      return res.status(400).json({ status: 'error', message: 'Alasan pembatalan (void) wajib diisi' });
+    }
+
+    // 1. Validasi Otorisasi / Approval PIN dari Supervisor atau Owner
+    const isPrivilegedUser = currentUser && [Role.SUPERVISOR, Role.ADMIN, Role.OWNER].includes(currentUser.role);
+    let approvedByUser: { id: string; name: string; role: Role } | null = null;
+
+    if (pin && typeof pin === 'string' && pin.trim().length > 0) {
+      // Cari supervisor / admin / owner aktif pada tenant ini yang memiliki PIN cocok
+      const spvCandidates = await prisma.user.findMany({
+        where: {
+          tenantId: tenantId || undefined,
+          role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
+          isActive: true,
+          pinHash: { not: null },
+        },
+        select: { id: true, name: true, role: true, pinHash: true },
+      });
+
+      for (const spv of spvCandidates) {
+        if (spv.pinHash && (await bcrypt.compare(pin.trim(), spv.pinHash))) {
+          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
+          break;
+        }
+      }
+
+      if (!approvedByUser) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'PIN Supervisor atau Owner tidak valid',
+        });
+      }
+    } else if (isPrivilegedUser) {
+      // Pengguna saat ini sudah berstatus Supervisor/Admin/Owner dan melakukan void langsung
+      approvedByUser = { id: currentUser.id, name: currentUser.name || currentUser.email, role: currentUser.role };
+    } else {
+      return res.status(403).json({
+        status: 'error',
+        message: 'PIN persetujuan dari Supervisor atau Owner wajib dimasukkan',
+      });
+    }
+
+    // 2. Cari order yang akan di-void
+    const order = await prisma.order.findFirst({
+      where: {
+        id,
+        tenantId: tenantId || undefined,
+      },
+      include: {
+        items: true,
+        payments: true,
+        customer: true,
+        promotion: true,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ status: 'error', message: 'Transaksi tidak ditemukan' });
+    }
+
+    if (order.orderStatus === OrderStatus.VOIDED) {
+      return res.status(400).json({ status: 'error', message: 'Transaksi ini sudah dibatalkan (VOIDED) sebelumnya' });
+    }
+
+    const approverLabel = `${approvedByUser.name} (${approvedByUser.role})`;
+    const voidAuditTag = `[VOID: ${reason.trim()}${notes ? ` - ${notes.trim()}` : ''} | Disetujui: ${approverLabel}]`;
+
+    // 3. Eksekusi Pembatalan dan Pemulihan Stok dalam Database Transaction
+    await prisma.$transaction(async (tx) => {
+      // A. Ambil semua ledger stok keluar (quantity_delta < 0) yang terkait dengan order ini
+      const deductedLedgers = await tx.inventoryLedger.findMany({
+        where: {
+          tenantId: order.tenantId,
+          referenceType: 'ORDER',
+          referenceId: order.id,
+          quantityDelta: { lt: 0 },
+        },
+      });
+
+      // B. Kembalikan stok ke inventory_balances dan catat compensating ledger dengan movementType VOID
+      for (const ledger of deductedLedgers) {
+        const returnQty = Math.abs(Number(ledger.quantityDelta));
+
+        // Cari balance terkini
+        const currentBalance = await tx.inventoryBalance.findFirst({
+          where: {
+            tenantId: order.tenantId,
+            inventoryItemId: ledger.inventoryItemId,
+            storageLocationId: ledger.storageLocationId,
+            inventoryBatchId: ledger.inventoryBatchId,
+          },
+        });
+
+        const balBefore = currentBalance ? Number(currentBalance.quantityOnHand) : 0;
+        const balAfter = balBefore + returnQty;
+
+        if (currentBalance) {
+          await tx.inventoryBalance.update({
+            where: { id: currentBalance.id },
+            data: {
+              quantityOnHand: balAfter,
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          await tx.inventoryBalance.create({
+            data: {
+              tenantId: order.tenantId,
+              inventoryItemId: ledger.inventoryItemId,
+              storageLocationId: ledger.storageLocationId,
+              inventoryBatchId: ledger.inventoryBatchId,
+              quantityOnHand: returnQty,
+              quantityReserved: 0,
+            },
+          });
+        }
+
+        // Catat InventoryLedger pembalik dengan movement_type 'VOID'
+        await tx.inventoryLedger.create({
+          data: {
+            tenantId: order.tenantId,
+            inventoryItemId: ledger.inventoryItemId,
+            storageLocationId: ledger.storageLocationId,
+            inventoryBatchId: ledger.inventoryBatchId,
+            quantityDelta: returnQty,
+            balanceBefore: balBefore,
+            balanceAfter: balAfter,
+            unitCost: ledger.unitCost,
+            movementType: StockMovementType.VOID,
+            referenceType: 'ORDER',
+            referenceId: order.id,
+            actorType: 'USER',
+            actorUserId: approvedByUser?.id || currentUser?.id || null,
+            isNegativeBalance: balAfter < 0,
+            notes: `Pemulihan stok transaksi void faktur ${order.invoiceNumber}: ${reason.trim()}`,
+          },
+        });
+      }
+
+      // C. Update status Order ke VOIDED dan Payment ke REFUNDED
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          orderStatus: OrderStatus.VOIDED,
+          paymentStatus: PaymentStatus.REFUNDED,
+          notes: order.notes ? `${order.notes} ${voidAuditTag}` : voidAuditTag,
+          updatedAt: new Date(),
+        },
+      });
+
+      // D. Update payment_transactions ke REFUNDED
+      await tx.paymentTransaction.updateMany({
+        where: { orderId: order.id, tenantId: order.tenantId },
+        data: {
+          status: PaymentTxStatus.REFUNDED,
+        },
+      });
+
+      // E. Buat entri audit di tabel refunds
+      const upperReason = reason.toUpperCase();
+      let refundReasonEnum: RefundReason = RefundReason.CUSTOMER_RETURN;
+      if (upperReason.includes('ITEM') || upperReason.includes('SALAH') || upperReason.includes('PRODUK')) {
+        refundReasonEnum = RefundReason.WRONG_ITEM;
+      } else if (upperReason.includes('BAYAR') || upperReason.includes('HARGA') || upperReason.includes('KASIR')) {
+        refundReasonEnum = RefundReason.BILLING_ERROR;
+      }
+
+      const refundNumber = `REF-${order.invoiceNumber}-${Date.now().toString().slice(-4)}`;
+      const createdRefund = await tx.refund.create({
+        data: {
+          tenantId: order.tenantId,
+          orderId: order.id,
+          refundNumber,
+          amount: order.totalAmount,
+          reason: refundReasonEnum,
+          notes: `Void disetujui: ${approverLabel}. Alasan: ${reason.trim()}${notes ? ` | Catatan: ${notes.trim()}` : ''}`,
+        },
+      });
+
+      // Catat refund items jika ada item
+      if (order.items && order.items.length > 0) {
+        for (const item of order.items) {
+          await tx.refundItem.create({
+            data: {
+              tenantId: order.tenantId,
+              refundId: createdRefund.id,
+              orderItemId: item.id,
+              quantity: item.quantity,
+              amount: item.subtotal,
+              restockItem: true,
+            },
+          });
+        }
+      }
+
+      // F. Kembalikan / sesuaikan loyalty points jika transaksi terikat dengan customer
+      if (order.customerId) {
+        const cust = await tx.customer.findUnique({ where: { id: order.customerId } });
+        if (cust) {
+          let currentCustPts = Number(cust.loyaltyPoints || 0);
+
+          // 1) Kembalikan poin yang ditukar untuk diskon
+          if (Number(order.pointDiscountAmount || 0) > 0) {
+            const redeemedPts = Math.round(Number(order.pointDiscountAmount) / LoyaltyService.POINT_VALUE_IDR);
+            if (redeemedPts > 0) {
+              const before = currentCustPts;
+              currentCustPts += redeemedPts;
+              await tx.customer.update({
+                where: { id: cust.id },
+                data: { loyaltyPoints: currentCustPts },
+              });
+              await tx.customerPointLedger.create({
+                data: {
+                  tenantId: order.tenantId,
+                  customerId: cust.id,
+                  orderId: order.id,
+                  deltaPoints: redeemedPts,
+                  balanceBefore: before,
+                  balanceAfter: currentCustPts,
+                  type: PointTxType.MANUAL_ADJUSTMENT,
+                  notes: `Pengembalian ${redeemedPts} poin dari void transaksi ${order.invoiceNumber}`,
+                },
+              });
+            }
+          }
+
+          // 2) Batalkan poin yang didapat saat pembelian
+          const earnedLedgers = await tx.customerPointLedger.findMany({
+            where: {
+              tenantId: order.tenantId,
+              customerId: cust.id,
+              orderId: order.id,
+              type: PointTxType.EARNED_PURCHASE,
+            },
+          });
+
+          for (const el of earnedLedgers) {
+            const ptsToDeduct = Math.abs(Number(el.deltaPoints));
+            if (ptsToDeduct > 0) {
+              const before = currentCustPts;
+              currentCustPts = Math.max(0, currentCustPts - ptsToDeduct);
+              await tx.customer.update({
+                where: { id: cust.id },
+                data: { loyaltyPoints: currentCustPts },
+              });
+              await tx.customerPointLedger.create({
+                data: {
+                  tenantId: order.tenantId,
+                  customerId: cust.id,
+                  orderId: order.id,
+                  deltaPoints: -ptsToDeduct,
+                  balanceBefore: before,
+                  balanceAfter: currentCustPts,
+                  type: PointTxType.REFUND_DEDUCT,
+                  notes: `Penarikan poin pembelian karena transaksi void ${order.invoiceNumber}`,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // G. Pulihkan kuota penggunaan promo jika transaksi menggunakan promo
+      if (order.promotionId) {
+        await tx.promotion.updateMany({
+          where: { tenantId: order.tenantId, id: order.promotionId, usageCount: { gt: 0 } },
+          data: { usageCount: { decrement: 1 } },
+        });
+        await tx.promotionUsage.deleteMany({
+          where: { tenantId: order.tenantId, orderId: order.id },
+        });
+      }
+    });
+
+    // 4. Meja: Lepaskan meja jika sebelumnya terikat pada pesanan ini
+    if (order.tableNumber && order.outletId) {
+      try {
+        await qrMenuService.releaseTableIfNoActiveOrders(
+          order.tenantId,
+          order.outletId,
+          order.tableNumber
+        );
+      } catch (tblErr) {
+        console.warn('Gagal mereset status meja pasca void order:', tblErr);
+      }
+    }
+
+    return res.json({
+      status: 'success',
+      message: `Transaksi ${order.invoiceNumber} berhasil dibatalkan (VOID)`,
+      data: {
+        orderId: order.id,
+        invoiceNumber: order.invoiceNumber,
+        status: OrderStatus.VOIDED,
+        approvedBy: approverLabel,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error in voidOrder:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Gagal memproses pembatalan (void) transaksi',
+    });
+  }
+};
+
 
 
 

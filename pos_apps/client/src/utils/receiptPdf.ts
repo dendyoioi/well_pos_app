@@ -76,6 +76,19 @@ export const generateReceiptPdf = (
     y += 4;
   }
 
+  // Watermark / Label jika Transaksi VOIDED
+  if (order.orderStatus === 'VOIDED') {
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(paperSize === '58mm' ? 8 : 10);
+    doc.setTextColor(220, 38, 38);
+    doc.text('*** VOID / DIBATALKAN ***', widthMm / 2, y, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('courier', 'normal');
+    y += 4;
+    drawDashedLine(y);
+    y += 4;
+  }
+
   // Info Faktur & Saluran
   doc.setFontSize(paperSize === '58mm' ? 7 : 8);
   doc.text(`No: ${order.invoiceNumber}`, margin, y);

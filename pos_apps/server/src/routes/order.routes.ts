@@ -13,6 +13,7 @@ import {
   getKitchenTicket,
   getDigitalReceipt,
   sendDigitalReceipt,
+  voidOrder,
 } from '../controllers/order.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { tenantContext, verifyTenantLicense } from '../middlewares/saas.middleware';
@@ -46,6 +47,9 @@ orderRouter.post('/checkout', checkoutOrder);
 orderRouter.get('/', getOrders);
 orderRouter.get('/:id', getOrderById);
 orderRouter.post('/:id/send-email', sendOrderEmail);
+
+// Fitur Pembatalan Transaksi (Void Order) dengan Approval Supervisor/Owner
+orderRouter.post('/:id/void', voidOrder);
 
 export default orderRouter;
 

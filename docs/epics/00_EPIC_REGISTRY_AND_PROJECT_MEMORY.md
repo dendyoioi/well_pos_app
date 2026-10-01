@@ -3,8 +3,8 @@
 
 **Dokumen Rujukan Utama**: `docs/00_PROJECT_CONTEXT.md`  
 **Basis Data**: PostgreSQL `pos_db` (40 Model Prisma Aktif Ternormalisasi Penuh)  
-**Terakhir Diperbarui**: 30 September 2026  
-**Status Keseluruhan**: **EPIC-01 s.d EPIC-23 SELESAI 100% (COMPLETED ✅)**  
+**Terakhir Diperbarui**: 01 Oktober 2026  
+**Status Keseluruhan**: **EPIC-01 s.d EPIC-24 SELESAI 100% (COMPLETED ✅)**  
 
 ---
 
@@ -15,7 +15,7 @@ Dokumen ini berfungsi sebagai **memori kerja permanen (*persistent cognitive mem
 
 ### 2. MASTER EPIC REGISTRY (END-TO-END PRODUCT ROADMAP)
 
-Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, dan alokasi katalog multi-outlet serta gudang pasokan:
+Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet serta pembatalan transaksi dengan approval PIN supervisor:
 
 | Epic ID | Judul Epic | Status | Tahapan / Milestone | Fokus & Nilai Bisnis Utama |
 | :--- | :--- | :---: | :--- | :--- |
@@ -42,6 +42,7 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-21** | **Multi-Outlet Catalog Isolation, Warehouse Backflushing & Stock Allocation** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-21.md`](./EPIC-21_MULTI_OUTLET_CATALOG_AND_WAREHOUSE_BOM.md) | Isolasi menu/kategori & resep BOM per jenis toko, resolusi dinamis gudang pasokan (`warehouseId`), direct backflushing kasir otomatis ke gudang, dan dashboard visibilitas multi-gudang serta alokasi transfer stok terpadu. |
 | **EPIC-22** | **Smart Calling Queue Numbering & Flexible Store Toggle** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-22.md`](./EPIC-22_CALLING_QUEUE_NUMBERING.md) | Standardisasi nomor antrean panggilan cepat lisan kasir F&B (`#01`, `#02`), reset harian otomatis per outlet, cetak thermal/PDF, teks WA, dan sakelar on/off fleksibel di menu format struk Backoffice. |
 | **EPIC-23** | **Pakasir.com Payment Gateway Integration (Direct QRIS & Webhook)** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-23.md`](./EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md) | Integrasi gateway pembayaran Pakasir API v2, pembayaran aktivasi pendaftaran awal tenant Rp 99.000 + 100 bonus token, top-up kuota token pay-as-you-go, direct QRIS modal, polling status live, webhook secret guard, tarif dinamis Rp 69/token, batas minimal 250 token, sakelar QRIS Superadmin, dan eliminasi transfer manual. |
+| **EPIC-24** | **Transaction Void & Supervisor/Owner PIN Approval Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-24.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md) | Pembatalan resmi transaksi kasir (Void), otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok inventaris atomik (movement_type VOID), audit retur (refunds), isolasi omset kas shift, dan pemulihan kuota token SaaS. |
 
 ---
 
@@ -316,6 +317,21 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
   - **Pemisahan Fungsional Laporan Penjualan vs Analisis Menu & HPP - SELESAI ✅**:
     - Pemisahan tegas antara Laporan Penjualan Finansial (`FinancialReportView.tsx` - omset, tunai/QRIS, PB1, fee kanal) dan Analisis Performa Menu/HPP (`ProductAnalyticsView.tsx` - Pareto top 10, margin resep BOM, COGS modal bahan, slow-moving).
 
+#### 🔢 EPIC-22: Calling Queue Numbering & Flexible Store Toggle
+- **Tujuan**: Menghadirkan nomor antrean panggilan cepat lisan (`#01`, `#02`) untuk pesanan kasir F&B dengan reset harian otomatis per outlet dan sakelar fleksibel di Backoffice.
+- **Status**: **COMPLETED ✅**
+- **Dokumentasi**: [`docs/epics/EPIC-22_CALLING_QUEUE_NUMBERING.md`](./EPIC-22_CALLING_QUEUE_NUMBERING.md)
+
+#### 💳 EPIC-23: Pakasir.com Payment Gateway Integration (Direct QRIS & Webhook)
+- **Tujuan**: Integrasi gateway pembayaran Pakasir API v2 untuk aktivasi pendaftaran awal tenant Rp 99.000 + 100 token gratis, top-up kuota token pay-as-you-go dinamis Rp 69/token, minimal 250 token, modal QRIS dinamis, webhook verification, dan sakelar QRIS Superadmin.
+- **Status**: **COMPLETED ✅**
+- **Dokumentasi**: [`docs/epics/EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md`](./EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md)
+
+#### 🚫 EPIC-24: Transaction Void & Supervisor/Owner PIN Approval Engine
+- **Tujuan**: Pembatalan resmi transaksi kasir (Void) dengan otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok bahan & ritel atomik (movement_type VOID), pencatatan audit retur refunds, isolasi omset kas shift, dan pemulihan kuota token SaaS.
+- **Status**: **COMPLETED ✅**
+- **Dokumentasi**: [`docs/epics/EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md)
+
 ---
 
 ### 5. STRATEGI PENYELESAIAN PRODUK (EXECUTION PHASING)
@@ -325,9 +341,12 @@ Produk Well POS memiliki total **21 Epic** yang mencakup seluruh siklus hidup pe
 3. **SaaS Platform & Hardening DevOps**: **EPIC-10** s.d **EPIC-12** (SuperAdmin, Hardening RLS, Local Sandbox & Simulators) ✅
 4. **Fase Pengalaman Pengguna Berkelas Dunia**: **EPIC-13** (Total Frontend Re-Architecture & Modern UI/UX Overhaul) ✅
 5. **Arsitektur Multi-Toko & Onboarding Enterprise**: **EPIC-14** s.d **EPIC-18** (Decoupled Owner, Full-Screen Industry Wizard, Enterprise Backoffice, Per-Store Subscriptions, Superadmin Governance & Triage) ✅
-6. **Buku Menu QR Digital & Self-Ordering Meja**: **EPIC-19** (COMPLETED & HARDENED ✅ - Schema Parity & Outlet Isolation)
+6. **Buku Menu QR Digital & Self-Ordering Meja**: **EPIC-19** (COMPLETED & HARDENED ✅)
 7. **Sales Channels & Online Delivery Platforms**: **EPIC-20** (COMPLETED ✅)
-8. **Multi-Outlet Menu Allocation, Warehouse Routing & SaaS Token Billing**: **EPIC-21** (Fase 1 s.d 5 & Full Sandbox Walkthrough: Selesai 100% ✅)
+8. **Multi-Outlet Menu Allocation, Warehouse Routing & SaaS Token Billing**: **EPIC-21** (COMPLETED ✅)
+9. **Calling Queue Numbering & Format Struk**: **EPIC-22** (COMPLETED ✅)
+10. **Pakasir Payment Gateway & SaaS Pay-As-You-Go Billing**: **EPIC-23** (COMPLETED ✅)
+11. **Transaction Void & Supervisor/Owner PIN Approval Engine**: **EPIC-24** (COMPLETED ✅)
 
 ---
 

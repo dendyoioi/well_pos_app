@@ -518,6 +518,18 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             </div>
           )}
 
+          {/* VOID Banner jika transaksi dibatalkan */}
+          {order.orderStatus === 'VOIDED' && (
+            <div className="border-2 border-rose-600 bg-rose-50 text-rose-800 p-2 my-2 rounded text-center">
+              <div className="text-[10px] font-black tracking-widest uppercase">
+                *** VOID / DIBATALKAN ***
+              </div>
+              <div className="text-[9px] text-rose-700 font-semibold mt-0.5">
+                Transaksi ini telah dibatalkan
+              </div>
+            </div>
+          )}
+
           {/* Info Invoice */}
           <div className="space-y-1 text-[11px] text-slate-600">
             <div className="flex justify-between">
