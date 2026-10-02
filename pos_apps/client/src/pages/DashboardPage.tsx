@@ -67,6 +67,7 @@ import { FullScreenStoreWizard } from '../components/saas/FullScreenStoreWizard'
 import { BackofficeLayout } from '../components/saas/BackofficeLayout';
 import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
 import { BillingTokensView } from './BillingTokensView';
+import { UserGuideView } from './UserGuideView';
 import { api } from '../services/api';
 
 interface DashboardPageProps {
@@ -114,10 +115,11 @@ type TabKey =
   | 'settings_payment'
   | 'settings_channels'
   | 'settings_loyalty'
-  | 'outlets';
+  | 'outlets'
+  | 'guide';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
-  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders'],
+  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders', 'guide'],
   WAREHOUSE: [
     'inventory',
     'stock_movements',
@@ -127,6 +129,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'recipes',
     'products',
     'overview',
+    'guide',
   ],
   SUPERVISOR: [
     'overview',
@@ -155,6 +158,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_channels',
     'settings_loyalty',
     'outlets',
+    'guide',
   ],
   ADMIN: [
     'overview',
@@ -188,6 +192,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_channels',
     'settings_loyalty',
     'outlets',
+    'guide',
   ],
   OWNER: [
     'overview',
@@ -221,6 +226,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_channels',
     'settings_loyalty',
     'outlets',
+    'guide',
   ],
 };
 
@@ -232,8 +238,26 @@ const DEFAULT_TAB: Record<UserRole, TabKey> = {
   OWNER: 'overview',
 };
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<TabKey>(DEFAULT_TAB[user.role] || 'pos');
+export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, onUserChange: _onUserChange }) => {
+  // Dukungan URL query param ?tab=xxx untuk deep linking dan navigasi instan
+  const [activeTab, setActiveTab] = useState<TabKey>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) return tabParam as TabKey;
+    }
+    return DEFAULT_TAB[user.role] || 'pos';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeTab) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('tab') !== activeTab) {
+        url.searchParams.set('tab', activeTab);
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [activeTab]);
   const [healthStatus, setHealthStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [productCount, setProductCount] = useState<number>(8);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
@@ -245,6 +269,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
   const [appendOrderData, setAppendOrderData] = useState<Order | null>(null);
   const [selectedQrOrderForPos, setSelectedQrOrderForPos] = useState<QrLiveOrder | null>(null);
   const [loadingOutlets, setLoadingOutlets] = useState(true);
+  const [guideSection, setGuideSection] = useState<string>('onboarding');
+
+  const handleOpenGuide = (sectionId?: string) => {
+    if (sectionId) setGuideSection(sectionId);
+    setActiveTab('guide');
+  };
 
   // Fetch all outlets belonging to this store's tenant
   const fetchOutlets = async () => {
@@ -309,6 +339,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
           'staff_roles',
           'users',
           'outlets',
+          'guide',
         ];
         if (!allowedWarehouseTabs.includes(activeTab)) {
           setActiveTab('inventory');
@@ -344,6 +375,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         'staff_roles',
         'users',
         'outlets',
+        'guide',
       ];
       if (!allowedWarehouseTabs.includes(activeTab)) {
         setActiveTab('inventory');
@@ -457,6 +489,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
         onSelectOutlet={handleOutletSelect}
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
+        onOpenGuide={handleOpenGuide}
         onLogout={onLogout}
       >
         {activeTab === 'pos' ? (
@@ -653,6 +686,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
               handleOutletSelect(id);
             }}
             onOutletsUpdated={fetchOutlets}
+          />
+        ) : activeTab === 'guide' ? (
+          <UserGuideView
+            initialSection={guideSection}
+            onNavigateTab={(tab) => {
+              setActiveTab(tab as TabKey);
+            }}
+            currentUserRole={user.role}
           />
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
@@ -1838,6 +1879,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             }}
             onOutletsUpdated={fetchOutlets}
           />
+        ) : activeTab === 'guide' ? (
+          <div className="max-w-6xl mx-auto p-4 sm:p-6">
+            <UserGuideView
+              initialSection={guideSection}
+              onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+              currentUserRole={user.role}
+            />
+          </div>
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}

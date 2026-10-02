@@ -245,6 +245,9 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `pages/QrTablesView.tsx`: Tata letak meja resto, generator kartu meja cetak QR, dan tombol cepat pratinjau menu tamu.
   - `pages/QrLiveOrdersView.tsx`: Live feed pesanan dapur masuk dari self-ordering QR meja secara real-time.
   - `pages/QrMenuSettingsView.tsx`: Pengaturan nama kafe, logo, banner, dan instruksi bayar di kasir.
+- **Pusat Panduan & SOP Operasional (Knowledge Base & Interactive Guide)**:
+  - `pages/UserGuideView.tsx`: Halaman mandiri dokumentasi panduan visual berstruktur 12 bab SOP lengkap dengan screenshot antarmuka resolusi tinggi, filter multi-peran, search live, dan tombol pintas aksi langsung ke menu konfigurasi.
+  - `components/ui/FloatingGuideWidget.tsx`: Widget bantuan melayang di sudut kanan bawah backoffice yang interaktif mendeteksi tab konfigurasi aktif dan menyediakan akses cepat ke bab SOP terkait serta pembukaan Pusat Panduan Lengkap. Akses panduan juga tersedia di kartu bantuan footer sidebar Backoffice.
 
 ## 7. ARSITEKTUR AUTENTIKASI, ONBOARDING & TATA KELOLA MULTI-TOKO
 

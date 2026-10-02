@@ -29,10 +29,12 @@ import {
   Wrench,
   Sparkles,
   ShieldAlert,
+  BookOpen,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
 import { api, type PlatformNotification } from '../../services/api';
+import { FloatingGuideWidget } from '../ui/FloatingGuideWidget';
 
 interface BackofficeLayoutProps {
   user: User;
@@ -41,6 +43,7 @@ interface BackofficeLayoutProps {
   onSelectOutlet: (outletId: string) => void;
   activeTab: any;
   onTabChange: (tab: any) => void;
+  onOpenGuide?: (sectionId?: string) => void;
   onLogout: () => void;
   children: React.ReactNode;
 }
@@ -52,6 +55,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   onSelectOutlet,
   activeTab,
   onTabChange,
+  onOpenGuide,
   onLogout,
   children,
 }) => {
@@ -1139,6 +1143,13 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 ? 'Terhubung langsung dengan alokasi pasokan seluruh toko cabang.'
                 : 'Customer Support 24/7 aktif mendampingi operasional toko Anda.'}
             </p>
+            <button
+              onClick={() => onTabChange('guide')}
+              className="w-full mt-1.5 py-1 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            >
+              <BookOpen className="w-3 h-3 text-blue-800" />
+              <span>Buka Panduan Lengkap</span>
+            </button>
           </div>
         </aside>
 
@@ -1380,6 +1391,14 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             )}
           </nav>
         )}
+        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) */}
+        <FloatingGuideWidget
+          activeTab={activeTab}
+          onOpenGuide={(sec) => {
+            if (onOpenGuide) onOpenGuide(sec);
+            else onTabChange('guide');
+          }}
+        />
       </div>
     </div>
   );

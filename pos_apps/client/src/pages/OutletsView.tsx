@@ -222,14 +222,16 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenAdd}
-          className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Outlet Toko</span>
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Outlet Toko</span>
+          </button>
+        </div>
       </div>
 
       {/* Kartu Informasi ID Toko untuk Mesin Kasir POS (Device Pairing) */}
