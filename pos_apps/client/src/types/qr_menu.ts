@@ -57,6 +57,8 @@ export interface QrLiveOrder {
   items: QrOrderItem[];
 }
 
+import type { ProductModifierGroup } from './product';
+
 export interface PublicMenuProduct {
   id: string;
   name: string;
@@ -70,6 +72,7 @@ export interface PublicMenuProduct {
     price: number;
     sku?: string;
   }>;
+  modifiers?: ProductModifierGroup[];
 }
 
 export interface PublicMenuResponse {

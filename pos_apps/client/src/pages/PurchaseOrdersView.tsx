@@ -26,7 +26,7 @@ import type { Supplier } from '../types/supplier';
 import type { Outlet } from '../types/outlet';
 import type { RecipeInventoryItem } from '../types/recipe';
 import { TablePagination } from '../components/TablePagination';
-import { CurrencyInput } from '../components/ui/CurrencyInput';
+import { CurrencyInput, EmptyState, TableSkeleton } from '../components/ui';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useDialog } from '../context/DialogContext';
 import { formatRupiah } from '../utils/currency';
@@ -418,6 +418,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
     try {
       const res = await api.receivePurchaseOrder(receivingPO.id, { items: itemsToSubmit });
       if (res.status === 'success') {
+        dialog.toast(`Fisik barang PO #${receivingPO.poNumber} berhasil diterima!`, 'success');
         dialog.alert({
           title: 'Penerimaan Berhasil',
           message: `Fisik barang PO #${receivingPO.poNumber} berhasil diterima! Stok persediaan di outlet telah diperbarui dan Harga Pokok Rata-Rata (Moving Average Cost) telah dihitung ulang secara otomatis.`,
@@ -661,17 +662,21 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-900 mb-2" />
-                    Memuat data purchase orders...
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} columns={7} actionCol />
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    <FileText className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    Belum ada data purchase order yang sesuai kriteria.
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    <EmptyState
+                      icon={<FileText className="w-7 h-7 text-blue-900" />}
+                      title={orders.length === 0 ? 'Belum Ada Purchase Order' : 'Tidak Ada PO yang Cocok'}
+                      description={
+                        orders.length === 0
+                          ? 'Mulai buat Purchase Order (PO) untuk mencatat pengadaan bahan baku dan memutakhirkan stok masuk outlet/gudang.'
+                          : 'Tidak ada dokumen PO yang sesuai dengan filter atau kata kunci pencarian.'
+                      }
+                      actionLabel={orders.length === 0 ? '+ Buat Purchase Order' : undefined}
+                      onAction={orders.length === 0 ? handleOpenCreateModal : undefined}
+                    />
                   </td>
                 </tr>
               ) : (

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
+import { useDialog } from '../context/DialogContext';
+import { ThermalReceiptPreview } from '../components/ThermalReceiptPreview';
 
 interface ReceiptSettingsViewProps {
   activeOutlet: Outlet | null;
@@ -21,6 +23,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   activeOutlet,
   onOutletUpdated,
 }) => {
+  const dialog = useDialog();
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
   const [footerText, setFooterText] = useState('Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @wellpos.id');
   const [showQueueNumber, setShowQueueNumber] = useState(true);
@@ -64,15 +67,18 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 
       if (res.status === 'success' && res.data) {
         setSuccessMessage('Format struk thermal kasir berhasil diperbarui!');
+        dialog.toast('Format struk thermal kasir berhasil diperbarui!', 'success');
         if (onOutletUpdated) {
           onOutletUpdated(res.data);
         }
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
         setErrorMessage(res.message || 'Gagal menyimpan pengaturan struk.');
+        dialog.toast(res.message || 'Gagal menyimpan pengaturan struk.', 'error');
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Terjadi kesalahan saat menyimpan pengaturan struk.');
+      dialog.toast(err.message || 'Terjadi kesalahan saat menyimpan pengaturan struk.', 'error');
     } finally {
       setSaving(false);
     }
@@ -257,125 +263,17 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 
         {/* Live Thermal Receipt Simulator (Kanan - 5 Kolom) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Printer className="w-4 h-4 text-blue-900" />
-              <span>Simulasi Struk ({paperSize})</span>
-            </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-              Live Preview
-            </span>
-          </div>
-
-          {/* Paper Receipt Container */}
-          <div className="flex justify-center p-2">
-            <div
-              className={`bg-amber-50/40 border border-slate-300 rounded-xl p-5 shadow-inner text-slate-900 font-mono text-[11px] leading-tight space-y-3 transition-all ${
-                paperSize === '58mm' ? 'w-64 max-w-full text-[10px]' : 'w-80 max-w-full text-[11px]'
-              }`}
-            >
-              {/* Header */}
-              <div className="text-center space-y-1">
-                <div className="font-black text-sm uppercase tracking-wide">
-                  {(activeOutlet as any)?.tenant?.name || 'WELL POS CAFE'}
-                </div>
-                <div className="font-bold text-[10px] text-slate-700">
-                  {activeOutlet?.name || 'Toko Utama'}
-                </div>
-                <div className="text-[9px] text-slate-600 leading-snug">
-                  {activeOutlet?.address || 'Jl. Kemang Raya No. 10, Jakarta Selatan'}
-                </div>
-                <div className="text-[9px] text-slate-600">
-                  Telp: {activeOutlet?.phone || '0812-3456-7890'}
-                </div>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-b border-dashed border-slate-400 my-2" />
-
-              {/* Nomor Antrean Panggilan Box (Jika Aktif) */}
-              {showQueueNumber && (
-                <div className="border-2 border-dashed border-slate-800 p-2 my-1.5 rounded-sm text-center bg-white/70">
-                  <div className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-600">
-                    NOMOR ANTRIAN
-                  </div>
-                  <div className="text-base sm:text-lg font-black text-slate-900 tracking-wider">
-                    #05
-                  </div>
-                </div>
-              )}
-
-              {/* Order Meta */}
-              <div className="space-y-0.5 text-[9px] text-slate-600">
-                <div className="flex justify-between">
-                  <span>No: INV-20260923-001</span>
-                  <span>14:32</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Kasir: Rian Kasir</span>
-                  <span>Meja: 05</span>
-                </div>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-b border-dashed border-slate-400 my-2" />
-
-              {/* Items List */}
-              <div className="space-y-1.5">
-                <div>
-                  <div className="font-bold">Kopi Susu Aren Ura</div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>2 x 22.000</span>
-                    <span className="font-bold text-slate-900">44.000</span>
-                  </div>
-                  <div className="text-[9px] text-slate-500 pl-2">+ Extra Shot (2 x 5.000)</div>
-                </div>
-
-                <div>
-                  <div className="font-bold">Croissant Butter Almond</div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>1 x 28.000</span>
-                    <span className="font-bold text-slate-900">28.000</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-b border-dashed border-slate-400 my-2" />
-
-              {/* Totals */}
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>82.000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Pajak Resto (PB1 10%):</span>
-                  <span>8.200</span>
-                </div>
-                <div className="flex justify-between font-black text-xs pt-1 border-t border-slate-300">
-                  <span>TOTAL:</span>
-                  <span>Rp 90.200</span>
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-600 pt-0.5">
-                  <span>QRIS LUNAS:</span>
-                  <span>90.200</span>
-                </div>
-              </div>
-
-              {/* Dotted Divider */}
-              <div className="border-b border-dashed border-slate-400 my-2" />
-
-              {/* Footer Note */}
-              <div className="text-center text-[9px] text-slate-600 whitespace-pre-line leading-relaxed">
-                {footerText || 'Terima kasih atas kunjungan Anda!'}
-              </div>
-
-              <div className="text-center text-[8px] text-slate-400 pt-1">
-                Powered by Well POS
-              </div>
-            </div>
-          </div>
+          <ThermalReceiptPreview
+            paperSize={paperSize}
+            onPaperSizeChange={setPaperSize}
+            brandName={(activeOutlet as any)?.tenant?.name || 'WELL POS CAFE'}
+            storeName={activeOutlet?.name || 'Outlet Kemang'}
+            address={activeOutlet?.address || 'Jl. Kemang Raya No. 10, Jakarta Selatan'}
+            phone={activeOutlet?.phone || '0812-3456-7890'}
+            showQueueNumber={showQueueNumber}
+            footerText={footerText}
+            showControls={false}
+          />
         </div>
       </div>
     </div>

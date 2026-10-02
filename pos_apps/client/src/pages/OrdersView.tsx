@@ -28,6 +28,7 @@ import { OrderDetailModal } from '../components/OrderDetailModal';
 import { TablePagination } from '../components/TablePagination';
 import { generateSalesRecapPdf } from '../utils/salesRecapPdf';
 import { exportOrdersToCsv } from '../utils/salesExportCsv';
+import { EmptyState, TableSkeleton } from '../components/ui';
 import { api } from '../services/api';
 
 interface OrdersViewProps {
@@ -401,18 +402,42 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
       {/* Orders Table */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-slate-400">
-            <div className="w-8 h-8 border-3 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs font-semibold">Memuat riwayat transaksi...</p>
+          <div>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="py-3 px-4">No. Faktur</th>
+                    <th className="py-3 px-4">Waktu</th>
+                    <th className="py-3 px-4">Saluran</th>
+                    <th className="py-3 px-4">Pelanggan</th>
+                    <th className="py-3 px-4">Metode Bayar</th>
+                    <th className="py-3 px-4 text-right">Subtotal</th>
+                    <th className="py-3 px-4 text-right">Total Bayar</th>
+                    <th className="py-3 px-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  <TableSkeleton rows={5} columns={8} actionCol />
+                </tbody>
+              </table>
+            </div>
+            <div className="md:hidden divide-y divide-slate-100 p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse space-y-2 p-3 bg-slate-50 rounded-xl">
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
+                  <div className="h-3 bg-slate-200 rounded w-1/2" />
+                  <div className="h-4 bg-slate-200 rounded w-1/4" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : orders.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
-            <Receipt className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-            <p className="font-bold text-sm text-slate-700">Belum ada data transaksi</p>
-            <p className="text-xs text-slate-400">
-              Transaksi yang diselesaikan di Mesin Kasir akan muncul di sini.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Receipt className="w-7 h-7 text-blue-900" />}
+            title="Belum Ada Riwayat Transaksi"
+            description="Seluruh transaksi penjualan yang diproses melalui Mesin Kasir POS akan otomatis tercatat dan muncul di sini."
+          />
         ) : (
           <>
             {/* Desktop Table View (Hidden on Mobile) */}

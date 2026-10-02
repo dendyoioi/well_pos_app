@@ -33,6 +33,7 @@ import { StockTransferModal } from '../components/StockTransferModal';
 import { CreateIngredientModal } from '../components/modals/CreateIngredientModal';
 import { FullScreenBulkOpnameModal, type BulkOperationType } from '../components/FullScreenBulkOpnameModal';
 import { TablePagination } from '../components/TablePagination';
+import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
 import { formatRupiah } from '../utils/currency';
 import { api } from '../services/api';
 
@@ -843,12 +844,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {loadingIngredients ? (
-                    <tr>
-                      <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
-                        <RefreshCw className="w-7 h-7 animate-spin mx-auto text-blue-900 mb-2" />
-                        <span className="font-semibold text-slate-600">Memuat data inventori bahan baku...</span>
-                      </td>
-                    </tr>
+                    <TableSkeleton rows={5} columns={7} actionCol />
                   ) : filteredIngredients.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-5 py-14 text-center text-slate-400">
@@ -1417,14 +1413,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
                       {loading ? (
-                        <tr>
-                          <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                              <RefreshCw className="w-7 h-7 animate-spin mx-auto text-blue-900 mb-1" />
-                              <span className="font-semibold text-slate-600">Memuat stok produk jadi...</span>
-                            </div>
-                          </td>
-                        </tr>
+                        <TableSkeleton rows={5} columns={7} actionCol />
                       ) : filteredProducts.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="px-5 py-14 text-center text-slate-400">
@@ -1722,20 +1711,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
                       {loading ? (
-                        <tr>
-                          <td colSpan={6} className="py-12 text-center text-slate-400">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                              <RefreshCw className="w-7 h-7 animate-spin mx-auto text-blue-900 mb-1" />
-                              <span className="font-semibold text-slate-600">Memuat riwayat kartu stok...</span>
-                            </div>
-                          </td>
-                        </tr>
+                        <TableSkeleton rows={5} columns={6} />
                       ) : movements.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-14 text-center text-slate-400">
-                            <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                            <p className="text-sm font-bold text-slate-700">Belum ada riwayat mutasi stok</p>
-                            <p className="text-xs text-slate-400 mt-1">Transaksi masuk, keluar, atau transfer stok akan otomatis tercatat di sini.</p>
+                          <td colSpan={6} className="py-8 text-center text-slate-400">
+                            <EmptyState
+                              icon={<FileSpreadsheet className="w-7 h-7 text-blue-900" />}
+                              title="Belum Ada Riwayat Mutasi Stok"
+                              description="Transaksi bahan baku masuk, penjualan di kasir, atau penyesuaian opname stok akan otomatis tercatat di sini."
+                            />
                           </td>
                         </tr>
                       ) : (
@@ -2118,15 +2102,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Nomor Telepon / Kontak PIC
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 0812-3456-7890"
+                <WhatsAppInput
+                  label="Nomor Telepon / Kontak PIC"
+                  placeholder="81234567890"
                   value={warehouseForm.phone}
-                  onChange={(e) => setWarehouseForm({ ...warehouseForm, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-900 focus:bg-white transition-all"
+                  onChange={(val) => setWarehouseForm({ ...warehouseForm, phone: val })}
                 />
               </div>
 

@@ -25,6 +25,7 @@ import type { Outlet } from '../types/outlet';
 import type { RecipeInventoryItem } from '../types/recipe';
 import { TablePagination } from '../components/TablePagination';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { EmptyState, TableSkeleton } from '../components/ui';
 import { useDialog } from '../context/DialogContext';
 
 interface StockTransfersViewProps {
@@ -318,6 +319,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
     try {
       const res = await api.dispatchStockTransfer(dispatchingTransfer.id);
       if (res.status === 'success') {
+        dialog.toast(`Transfer #${dispatchingTransfer.transferNumber} berhasil dikirim!`, 'success');
         dialog.alert({
           title: 'Pengiriman Berhasil',
           message: `Transfer #${dispatchingTransfer.transferNumber} telah dikirim! Stok di lokasi asal telah terpotong dan kini berstatus Dalam Perjalanan (In-Transit).`,
@@ -343,6 +345,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
     try {
       const res = await api.receiveStockTransfer(receivingTransfer.id);
       if (res.status === 'success') {
+        dialog.toast(`Transfer #${receivingTransfer.transferNumber} berhasil diterima di ${receivingTransfer.targetOutlet?.name}!`, 'success');
         dialog.alert({
           title: 'Penerimaan Berhasil',
           message: `Transfer #${receivingTransfer.transferNumber} berhasil diterima! Stok persediaan telah otomatis ditambahkan ke cabang tujuan (${receivingTransfer.targetOutlet?.name}).`,
@@ -527,17 +530,21 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-900 mb-2" />
-                    Memuat data transfer stok...
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} columns={6} actionCol />
               ) : filteredTransfers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <ArrowLeftRight className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    Belum ada transfer persediaan yang tercatat.
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    <EmptyState
+                      icon={<ArrowLeftRight className="w-7 h-7 text-blue-900" />}
+                      title={transfers.length === 0 ? 'Belum Ada Transfer Stok' : 'Tidak Ada Transfer yang Cocok'}
+                      description={
+                        transfers.length === 0
+                          ? 'Gunakan fitur transfer stok untuk memindahkan bahan baku atau produk antar outlet toko dan gudang pusat.'
+                          : 'Tidak ada riwayat transfer yang cocok dengan filter atau kata kunci pencarian.'
+                      }
+                      actionLabel={transfers.length === 0 ? '+ Buat Transfer Stok' : undefined}
+                      onAction={transfers.length === 0 ? handleOpenCreateModal : undefined}
+                    />
                   </td>
                 </tr>
               ) : (

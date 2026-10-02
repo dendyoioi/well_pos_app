@@ -1719,6 +1719,14 @@ export const api = {
       quantity: number;
       unitPrice: number;
       notes?: string;
+      modifiers?: Array<{
+        groupName: string;
+        option: {
+          id: string;
+          name: string;
+          priceDelta: number;
+        };
+      }>;
     }>;
   }): Promise<{ status: string; data?: any; message?: string }> => {
     const res = await fetch('/api/qr-menu/public/order', {

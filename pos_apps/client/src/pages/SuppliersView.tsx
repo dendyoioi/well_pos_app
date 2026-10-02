@@ -19,6 +19,7 @@ import { api } from '../services/api';
 import type { Supplier, SupplierFormData } from '../types/supplier';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { TablePagination } from '../components/TablePagination';
+import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
 import { useDialog } from '../context/DialogContext';
 
 export const SuppliersView: React.FC = () => {
@@ -128,6 +129,7 @@ export const SuppliersView: React.FC = () => {
         const res = await api.updateSupplier(editingSupplier.id, formData);
         if (res.status === 'success') {
           setModalOpen(false);
+          dialog.toast('Data pemasok berhasil diperbarui!', 'success');
           fetchSuppliers();
         } else {
           setFormError(res.message || 'Gagal memperbarui pemasok.');
@@ -136,6 +138,7 @@ export const SuppliersView: React.FC = () => {
         const res = await api.createSupplier(formData);
         if (res.status === 'success') {
           setModalOpen(false);
+          dialog.toast('Pemasok baru berhasil didaftarkan!', 'success');
           fetchSuppliers();
         } else {
           setFormError(res.message || 'Gagal menambahkan pemasok.');
@@ -329,24 +332,21 @@ export const SuppliersView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin" />
-                      <span>Memuat data pemasok...</span>
-                    </div>
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} columns={8} actionCol />
               ) : filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
-                    <Truck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm font-bold text-slate-700">Tidak ada pemasok ditemukan</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {suppliers.length === 0
-                        ? 'Daftarkan pemasok pertama untuk mempermudah pencatatan stok masuk (PO).'
-                        : 'Sesuaikan filter atau kata kunci pencarian.'}
-                    </p>
+                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
+                    <EmptyState
+                      icon={<Truck className="w-7 h-7 text-blue-900" />}
+                      title={suppliers.length === 0 ? 'Belum Ada Data Pemasok' : 'Tidak Ada Pemasok Ditemukan'}
+                      description={
+                        suppliers.length === 0
+                          ? 'Daftarkan pemasok/vendor bahan baku pertama untuk mempermudah pencatatan Purchase Order dan mutasi stok.'
+                          : 'Tidak ada data vendor yang cocok dengan filter atau kata kunci pencarian aktif.'
+                      }
+                      actionLabel={suppliers.length === 0 ? '+ Daftarkan Pemasok Pertama' : undefined}
+                      onAction={suppliers.length === 0 ? handleOpenCreateModal : undefined}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -530,15 +530,11 @@ export const SuppliersView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    No. Telepon / WhatsApp
-                  </label>
-                  <input
-                    type="tel"
+                  <WhatsAppInput
+                    label="No. Telepon / WhatsApp"
                     value={formData.phone || ''}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Contoh: 08123456789"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
+                    onChange={(val) => setFormData({ ...formData, phone: val })}
+                    placeholder="8123456789"
                   />
                 </div>
               </div>

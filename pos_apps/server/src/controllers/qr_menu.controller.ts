@@ -48,6 +48,18 @@ const submitOrderSchema = z.object({
         quantity: z.number().int().min(1),
         unitPrice: z.number().min(0),
         notes: z.string().max(100).optional(),
+        modifiers: z
+          .array(
+            z.object({
+              groupName: z.string(),
+              option: z.object({
+                id: z.string(),
+                name: z.string(),
+                priceDelta: z.number(),
+              }),
+            })
+          )
+          .optional(),
       })
     )
     .min(1, 'Keranjang belanja tidak boleh kosong'),

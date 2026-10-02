@@ -20,7 +20,17 @@ import { formatRupiah } from '../utils/currency';
 import { useDialog } from '../context/DialogContext';
 import { normalizeOutletFees } from '../types/outlet';
 import type { OutletFee } from '../types/outlet';
+import { WhatsAppInput } from '../components/ui';
+import type { ProductModifierGroup } from '../types/product';
 
+export interface SelectedModifier {
+  groupName: string;
+  option: {
+    id: string;
+    name: string;
+    priceDelta: number;
+  };
+}
 
 interface CartItem {
   productId: string;
@@ -30,6 +40,7 @@ interface CartItem {
   quantity: number;
   unitPrice: number;
   notes?: string;
+  modifiers?: SelectedModifier[];
 }
 
 interface CustomerQrMenuViewProps {
@@ -62,6 +73,8 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
   // Variant / Customization Modal
   const [selectedProduct, setSelectedProduct] = useState<PublicMenuProduct | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
+  const [modifierSelections, setModifierSelections] = useState<Record<string, string[]>>({});
+  const [modifierError, setModifierError] = useState<string | null>(null);
   const [itemQuantity, setItemQuantity] = useState<number>(1);
   const [itemNotes, setItemNotes] = useState<string>('');
 
@@ -123,18 +136,88 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
     setSelectedVariantId(p.variants.length > 0 ? p.variants[0].id : '');
     setItemQuantity(1);
     setItemNotes('');
+    setModifierError(null);
+
+    // Pre-select defaults
+    const initialMods: Record<string, string[]> = {};
+    if (p.modifiers && p.modifiers.length > 0) {
+      p.modifiers.forEach((g) => {
+        const def = g.options.find((o) => o.isDefault) || (g.required ? g.options[0] : null);
+        if (def) {
+          initialMods[g.id] = [def.id];
+        } else {
+          initialMods[g.id] = [];
+        }
+      });
+    }
+    setModifierSelections(initialMods);
+  };
+
+  const handleSelectModifier = (group: ProductModifierGroup, optId: string) => {
+    setModifierError(null);
+    setModifierSelections((prev) => {
+      if (group.type === 'SINGLE') {
+        return { ...prev, [group.id]: [optId] };
+      } else {
+        const current = prev[group.id] || [];
+        if (current.includes(optId)) {
+          return { ...prev, [group.id]: current.filter((id) => id !== optId) };
+        } else {
+          return { ...prev, [group.id]: [...current, optId] };
+        }
+      }
+    });
   };
 
   const handleAddToCart = () => {
     if (!selectedProduct) return;
+
+    // Validasi pilihan grup modifier yang wajib
+    if (selectedProduct.modifiers && selectedProduct.modifiers.length > 0) {
+      for (const g of selectedProduct.modifiers) {
+        if (g.required) {
+          const picked = modifierSelections[g.id] || [];
+          if (picked.length === 0) {
+            setModifierError(`Pilihan "${g.name}" wajib ditentukan!`);
+            return;
+          }
+        }
+      }
+    }
 
     let variant = selectedProduct.variants.find((v) => v.id === selectedVariantId);
     if (!variant && selectedProduct.variants.length > 0) {
       variant = selectedProduct.variants[0];
     }
 
-    const price = variant ? variant.price : selectedProduct.minPrice;
+    const basePrice = variant ? variant.price : selectedProduct.minPrice;
     const variantName = variant ? variant.name : undefined;
+
+    // Hitung penyesuaian harga modifier/topping
+    let totalDelta = 0;
+    const flatSelectedModifiers: SelectedModifier[] = [];
+
+    if (selectedProduct.modifiers) {
+      selectedProduct.modifiers.forEach((g) => {
+        const pickedIds = modifierSelections[g.id] || [];
+        pickedIds.forEach((optId) => {
+          const opt = g.options.find((o) => o.id === optId);
+          if (opt) {
+            totalDelta += opt.priceDelta || 0;
+            flatSelectedModifiers.push({
+              groupName: g.name,
+              option: {
+                id: opt.id,
+                name: opt.name,
+                priceDelta: opt.priceDelta || 0,
+              },
+            });
+          }
+        });
+      });
+    }
+
+    const finalUnitPrice = basePrice + totalDelta;
 
     const newItem: CartItem = {
       productId: selectedProduct.id,
@@ -142,18 +225,23 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
       productName: selectedProduct.name,
       variantName,
       quantity: itemQuantity,
-      unitPrice: price,
+      unitPrice: finalUnitPrice,
       notes: itemNotes.trim() || undefined,
+      modifiers: flatSelectedModifiers.length > 0 ? flatSelectedModifiers : undefined,
     };
 
     setCart((prev) => {
-      // Cek apakah item dengan varian dan notes yang sama sudah ada di keranjang
-      const existingIdx = prev.findIndex(
-        (i) =>
+      // Cek apakah item dengan varian, modifiers, dan notes yang sama sudah ada di keranjang
+      const modKeyOfNew = (newItem.modifiers || []).map((m) => m.option.id).sort().join('|');
+      const existingIdx = prev.findIndex((i) => {
+        const modKeyOfItem = (i.modifiers || []).map((m) => m.option.id).sort().join('|');
+        return (
           i.productId === newItem.productId &&
           i.variantId === newItem.variantId &&
-          (i.notes || '') === (newItem.notes || '')
-      );
+          (i.notes || '') === (newItem.notes || '') &&
+          modKeyOfItem === modKeyOfNew
+        );
+      });
 
       if (existingIdx !== -1) {
         const updated = [...prev];
@@ -177,6 +265,23 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
       return updated;
     });
   };
+
+  // Kalkulasi harga aktif untuk produk yang sedang dikustomisasi di modal
+  const activeModalBasePrice = selectedProduct
+    ? (selectedProduct.variants.find((v) => v.id === selectedVariantId)?.price || selectedProduct.minPrice)
+    : 0;
+
+  let activeModalModifiersDelta = 0;
+  if (selectedProduct?.modifiers) {
+    selectedProduct.modifiers.forEach((g) => {
+      const picked = modifierSelections[g.id] || [];
+      picked.forEach((optId) => {
+        const opt = g.options.find((o) => o.id === optId);
+        if (opt) activeModalModifiersDelta += opt.priceDelta || 0;
+      });
+    });
+  }
+  const activeModalUnitPrice = activeModalBasePrice + activeModalModifiersDelta;
 
   // Kalkulasi Biaya — identik dengan logika POS kasir (DINE_IN context)
   const subtotal = cart.reduce((acc, curr) => acc + curr.quantity * curr.unitPrice, 0);
@@ -660,9 +765,12 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                   {selectedProduct.categoryName}
                 </span>
                 <h3 className="text-base font-black text-blue-950">{selectedProduct.name}</h3>
-                <div className="text-sm font-black text-blue-900 mt-1">
-                  {formatRupiah(
-                    selectedProduct.variants.find((v) => v.id === selectedVariantId)?.price || selectedProduct.minPrice
+                <div className="text-sm font-black text-blue-900 mt-1 flex items-baseline gap-2">
+                  <span>{formatRupiah(activeModalUnitPrice)}</span>
+                  {activeModalModifiersDelta > 0 && (
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      (Menu {formatRupiah(activeModalBasePrice)} + Topping {formatRupiah(activeModalModifiersDelta)})
+                    </span>
                   )}
                 </div>
               </div>
@@ -673,6 +781,14 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Alert Validasi Modifier */}
+            {modifierError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-xs text-rose-700 font-bold animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{modifierError}</span>
+              </div>
+            )}
 
             {/* Pilihan Varian jika ada */}
             {selectedProduct.variants.length > 1 && (
@@ -697,6 +813,74 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Pilihan Modifiers / Topping F&B jika tersedia */}
+            {selectedProduct.modifiers && selectedProduct.modifiers.length > 0 && (
+              <div className="space-y-4 pt-1 border-t border-slate-100">
+                {selectedProduct.modifiers.map((group) => {
+                  const picked = modifierSelections[group.id] || [];
+                  return (
+                    <div key={group.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-xs font-black text-blue-950">{group.name}</label>
+                          {group.required ? (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                              Wajib
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                              Opsional
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-semibold text-slate-400">
+                          {group.type === 'SINGLE' ? 'Pilih 1' : 'Pilih Bebas'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {group.options.map((opt) => {
+                          const isSelected = picked.includes(opt.id);
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => handleSelectModifier(group, opt.id)}
+                              className={`p-2.5 rounded-2xl border text-left transition-all flex items-center justify-between gap-2 ${
+                                isSelected
+                                  ? 'border-blue-900 bg-blue-50/70 text-blue-950 font-bold shadow-2xs ring-2 ring-blue-900/10'
+                                  : 'border-slate-200 bg-slate-50/80 text-slate-700 hover:bg-slate-100 font-medium'
+                              }`}
+                            >
+                              <div className="min-w-0 flex items-center gap-2">
+                                <div
+                                  className={`w-4 h-4 rounded-${
+                                    group.type === 'SINGLE' ? 'full' : 'md'
+                                  } border flex items-center justify-center shrink-0 ${
+                                    isSelected ? 'border-blue-900 bg-blue-900 text-white' : 'border-slate-300 bg-white'
+                                  }`}
+                                >
+                                  {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                                </div>
+                                <span className="text-xs truncate">{opt.name}</span>
+                              </div>
+                              <span
+                                className={`text-[11px] shrink-0 font-bold ${
+                                  opt.priceDelta > 0 ? 'text-blue-900' : 'text-slate-400'
+                                }`}
+                              >
+                                {opt.priceDelta > 0 ? `+${formatRupiah(opt.priceDelta)}` : 'Gratis'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -741,12 +925,7 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
               >
                 <span>Tambahkan</span>
                 <span>&bull;</span>
-                <span>
-                  {formatRupiah(
-                    (selectedProduct.variants.find((v) => v.id === selectedVariantId)?.price || selectedProduct.minPrice) *
-                      itemQuantity
-                  )}
-                </span>
+                <span>{formatRupiah(activeModalUnitPrice * itemQuantity)}</span>
               </button>
             </div>
           </div>
@@ -793,15 +972,11 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                    No. WhatsApp (Opsional, untuk e-struk)
-                  </label>
-                  <input
-                    type="tel"
+                  <WhatsAppInput
+                    label="No. WhatsApp (Opsional, untuk e-struk)"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Contoh: 08123456789"
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                    onChange={(val) => setCustomerPhone(val)}
+                    placeholder="8123456789"
                   />
                 </div>
 
@@ -829,6 +1004,19 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                         <div className="text-xs font-bold text-blue-950">{item.productName}</div>
                         {item.variantName && item.variantName !== 'Standar' && (
                           <div className="text-[11px] text-slate-500 font-medium">Varian: {item.variantName}</div>
+                        )}
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.modifiers.map((m, mIdx) => (
+                              <span
+                                key={mIdx}
+                                className="inline-flex items-center text-[10px] bg-blue-50 text-blue-900 border border-blue-100 px-2 py-0.5 rounded-md font-medium"
+                              >
+                                {m.groupName}: {m.option.name}
+                                {m.option.priceDelta > 0 && ` (+${formatRupiah(m.option.priceDelta)})`}
+                              </span>
+                            ))}
+                          </div>
                         )}
                         {item.notes && (
                           <div className="text-[10px] text-amber-700 italic mt-0.5">&ldquo;{item.notes}&rdquo;</div>

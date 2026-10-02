@@ -25,6 +25,7 @@ import type { Outlet, OutletFee } from '../types/outlet';
 import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
 import { api, authStorage } from '../services/api';
 import { WhatsAppInput } from '../components/ui';
+import { useDialog } from '../context/DialogContext';
 
 interface OutletsViewProps {
   activeOutletId?: string;
@@ -42,12 +43,15 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedStoreId, setCopiedStoreId] = useState(false);
 
+  const dialog = useDialog();
   const currentUser = authStorage.getUser();
-  const storeId = currentUser?.tenant?.slug || 'ura-coffee';
+  const storeId = currentUser?.tenant?.slug || '';
 
   const handleCopyStoreId = () => {
+    if (!storeId) return;
     navigator.clipboard.writeText(storeId);
     setCopiedStoreId(true);
+    dialog.toast('Store ID berhasil disalin ke clipboard!', 'success');
     setTimeout(() => setCopiedStoreId(false), 2000);
   };
 
@@ -138,6 +142,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         setIsAddModalOpen(false);
         fetchOutlets();
         if (onOutletsUpdated) onOutletsUpdated();
+        dialog.toast('Toko baru berhasil dibuat!', 'success');
       } else {
         setFormError(res.message || 'Gagal membuat toko baru');
       }
@@ -173,6 +178,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         setEditingOutlet(null);
         fetchOutlets();
         if (onOutletsUpdated) onOutletsUpdated();
+        dialog.toast('Data toko berhasil diperbarui!', 'success');
       } else {
         setFormError(res.message || 'Gagal memperbarui data toko');
       }
@@ -237,26 +243,28 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           </div>
           <div className="flex items-center gap-3 pt-0.5">
             <h2 className="text-2xl sm:text-3xl font-mono font-black tracking-wider text-amber-300">
-              {storeId}
+              {storeId || 'BELUM DIATUR'}
             </h2>
-            <button
-              type="button"
-              onClick={handleCopyStoreId}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer text-white"
-              title="Salin ID Toko"
-            >
-              {copiedStoreId ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-300">Tersalin!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Salin ID Toko</span>
-                </>
-              )}
-            </button>
+            {storeId && (
+              <button
+                type="button"
+                onClick={handleCopyStoreId}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer text-white"
+                title="Salin ID Toko"
+              >
+                {copiedStoreId ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-300">Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin ID Toko</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
           <p className="text-xs text-blue-100/90 leading-relaxed pt-0.5">
             Gunakan <strong>ID Toko</strong> ini bersama <strong>PIN Pemilik / Supervisor (123456)</strong> saat pertama kali menghubungkan mesin kasir tablet atau laptop ke toko ini.

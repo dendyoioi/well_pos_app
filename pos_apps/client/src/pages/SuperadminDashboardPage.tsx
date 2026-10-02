@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { api, platformStorage, authStorage, type PlatformNotification } from '../services/api';
 import { TablePagination } from '../components/TablePagination';
+import { CurrencyInput } from '../components/ui/CurrencyInput';
 
 export interface TenantQuotaInfo {
   totalQuota: number;
@@ -5481,27 +5482,40 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                       ? 'Nominal Potongan (Rp):'
                       : 'Jumlah Bonus Token:'}
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={newPromoForm.value}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, value: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-emerald-400 outline-none focus:border-indigo-500"
-                  />
+                  {newPromoForm.type === 'DISCOUNT_FIXED' ? (
+                    <CurrencyInput
+                      value={newPromoForm.value}
+                      onChange={(val) => setNewPromoForm({ ...newPromoForm, value: val })}
+                      placeholder="0"
+                      inputClassName="bg-slate-950 border-slate-800 text-emerald-400 focus:border-indigo-500 text-xs py-2 font-bold"
+                      prefixClassName="bg-slate-900 border-slate-800 text-slate-400 text-xs"
+                    />
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={newPromoForm.value}
+                        onChange={(e) => setNewPromoForm({ ...newPromoForm, value: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-emerald-400 outline-none focus:border-indigo-500"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                        {newPromoForm.type === 'DISCOUNT_PERCENT' ? '%' : 'Token'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {newPromoForm.type === 'DISCOUNT_PERCENT' && (
                   <div>
                     <label className="block text-xs font-bold text-slate-300 mb-1">Maksimal Diskon (Rp):</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      placeholder="0 = Tanpa batas"
+                    <CurrencyInput
                       value={newPromoForm.maxDiscount}
-                      onChange={(e) => setNewPromoForm({ ...newPromoForm, maxDiscount: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                      onChange={(val) => setNewPromoForm({ ...newPromoForm, maxDiscount: val })}
+                      placeholder="0 = Tanpa batas"
+                      inputClassName="bg-slate-950 border-slate-800 text-white focus:border-indigo-500 text-xs py-2"
+                      prefixClassName="bg-slate-900 border-slate-800 text-slate-400 text-xs"
                     />
                   </div>
                 )}
@@ -5510,13 +5524,12 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1">Min. Belanja (Rp):</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
+                  <CurrencyInput
                     value={newPromoForm.minSpend}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, minSpend: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                    onChange={(val) => setNewPromoForm({ ...newPromoForm, minSpend: val })}
+                    placeholder="0 = Tanpa batas"
+                    inputClassName="bg-slate-950 border-slate-800 text-white focus:border-indigo-500 text-xs py-2"
+                    prefixClassName="bg-slate-900 border-slate-800 text-slate-400 text-xs"
                   />
                 </div>
 

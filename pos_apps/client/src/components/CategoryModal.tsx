@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, Layers, Plus, Edit2, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Category } from '../types/product';
 import { api } from '../services/api';
-import { ConfirmModal } from './ConfirmModal';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -231,14 +230,35 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setCategoryToDelete(cat)}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                              title="Hapus Kategori"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {categoryToDelete?.id === cat.id ? (
+                              <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded-lg p-1 animate-fadeIn">
+                                <span className="text-[10px] font-bold text-rose-700 px-1">Hapus?</span>
+                                <button
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={executeDeleteCategory}
+                                  className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold shadow-2xs cursor-pointer"
+                                >
+                                  Ya
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setCategoryToDelete(null)}
+                                  className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[11px] font-bold cursor-pointer"
+                                >
+                                  Batal
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setCategoryToDelete(cat)}
+                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Kategori"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </>
                       )}
@@ -261,35 +281,6 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Modal Konfirmasi Hapus Kategori */}
-      <ConfirmModal
-        isOpen={categoryToDelete !== null}
-        onClose={() => setCategoryToDelete(null)}
-        onConfirm={executeDeleteCategory}
-        title="Hapus Kategori Produk?"
-        message={
-          <div className="space-y-2">
-            <p>
-              Apakah Anda yakin ingin menghapus kategori{' '}
-              <strong className="text-blue-950">"{categoryToDelete?.name}"</strong>?
-            </p>
-            {categoryToDelete?.productCount !== undefined && categoryToDelete.productCount > 0 ? (
-              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold">
-                ⚠️ Peringatan: Kategori ini masih terhubung dengan{' '}
-                <strong>{categoryToDelete.productCount} produk aktif</strong>. Kategori tidak dapat dihapus sebelum produk dipindahkan ke kategori lain menggunakan fitur <strong>Ubah Kategori</strong>.
-              </div>
-            ) : (
-              <p className="text-[11px] text-slate-500">
-                Kategori ini tidak memiliki produk aktif dan aman untuk dihapus.
-              </p>
-            )}
-          </div>
-        }
-        confirmText="Hapus Kategori"
-        variant="danger"
-        loading={loading}
-      />
     </div>
   );
 };

@@ -399,6 +399,7 @@ export const qrMenuService = {
           categoryName: catName,
           minPrice: Number(r.price) || 0,
           variants: [],
+          modifiers: [],
         });
       }
 
@@ -415,6 +416,49 @@ export const qrMenuService = {
           price: priceNum,
           sku: r.sku,
         });
+      }
+    }
+
+    // Ambil relational modifiers untuk seluruh produk dalam menu QR
+    const productIds = Array.from(productMap.keys());
+    if (productIds.length > 0) {
+      try {
+        const pmgRows = await prisma.productModifierGroup.findMany({
+          where: {
+            productId: { in: productIds },
+            tenantId,
+          },
+          include: {
+            modifierGroup: {
+              include: {
+                items: {
+                  orderBy: { createdAt: 'asc' },
+                },
+              },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        });
+
+        for (const pmg of pmgRows) {
+          const prod = productMap.get(pmg.productId);
+          if (prod && pmg.modifierGroup) {
+            prod.modifiers.push({
+              id: pmg.modifierGroup.id,
+              name: pmg.modifierGroup.name,
+              type: pmg.modifierGroup.selectionType,
+              required: pmg.modifierGroup.isRequired,
+              options: pmg.modifierGroup.items.map((it: any) => ({
+                id: it.id,
+                name: it.name,
+                priceDelta: Number(it.priceAdjustment) || 0,
+                isDefault: it.isDefault,
+              })),
+            });
+          }
+        }
+      } catch (modErr) {
+        console.warn('Gagal memuat relational modifiers produk untuk QR Menu:', modErr);
       }
     }
 
@@ -457,6 +501,14 @@ export const qrMenuService = {
       quantity: number;
       unitPrice: number;
       notes?: string;
+      modifiers?: Array<{
+        groupName: string;
+        option: {
+          id: string;
+          name: string;
+          priceDelta: number;
+        };
+      }>;
     }>;
   }) {
     if (!data.items || data.items.length === 0) {
@@ -624,13 +676,25 @@ export const qrMenuService = {
           }
         }
 
+        // Resolusi snapshot modifiers jika dipilih oleh tamu
+        let modifiersSnapshotJson: string | null = null;
+        if (item.modifiers && item.modifiers.length > 0) {
+          const snapshot = item.modifiers.map((m) => ({
+            id: m.option.id,
+            name: m.option.name,
+            price_adjustment: m.option.priceDelta,
+            group_name: m.groupName,
+          }));
+          modifiersSnapshotJson = JSON.stringify(snapshot);
+        }
+
         await tx.$executeRawUnsafe(
           `INSERT INTO "order_items" (
             "id", "tenant_id", "order_id", "product_variant_id",
-            "product_name", "variant_name", "quantity", "unit_price", "cost_price", "discount_amount", "subtotal", "notes"
+            "product_name", "variant_name", "quantity", "unit_price", "cost_price", "discount_amount", "subtotal", "notes", "modifiers_snapshot"
           ) VALUES (
             $1, $2, $3, $4,
-            $5, $6, $7, $8, 0, 0, $9, $10
+            $5, $6, $7, $8, 0, 0, $9, $10, $11::jsonb
           );`,
           orderItemId,
           tenantId,
@@ -641,7 +705,8 @@ export const qrMenuService = {
           qty,
           price,
           qty * price,
-          item.notes || null
+          item.notes || null,
+          modifiersSnapshotJson
         );
       }
     });

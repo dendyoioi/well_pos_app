@@ -22,10 +22,11 @@ import {
   History,
   ArrowUpRight,
   ArrowDownRight,
+  Receipt,
 } from 'lucide-react';
 import { customerApi } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
-import { WhatsAppInput } from '../components/ui';
+import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
 
@@ -276,6 +277,7 @@ export const CustomersView: React.FC = () => {
         const res = await customerApi.updateCustomer(editingCustomer.id, formData);
         if (res.status === 'success') {
           setIsFormModalOpen(false);
+          dialog.toast('Data pelanggan berhasil diperbarui!', 'success');
           fetchCustomers();
         } else {
           setFormError(res.message || 'Gagal memperbarui pelanggan');
@@ -284,6 +286,7 @@ export const CustomersView: React.FC = () => {
         const res = await customerApi.createCustomer(formData);
         if (res.status === 'success') {
           setIsFormModalOpen(false);
+          dialog.toast('Pelanggan baru berhasil ditambahkan!', 'success');
           fetchCustomers();
         } else {
           setFormError(res.message || 'Gagal menambah pelanggan');
@@ -488,38 +491,21 @@ export const CustomersView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-900" />
-                      <span className="text-xs font-medium">Memuat data pelanggan...</span>
-                    </div>
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} columns={7} avatarCol actionCol />
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
-                        <Users className="w-6 h-6" />
-                      </div>
-                      <p className="font-bold text-slate-700 text-sm">
-                        {search ? 'Tidak ada pelanggan yang cocok' : 'Belum ada data pelanggan'}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {search
-                          ? 'Coba gunakan kata kunci pencarian nomor HP atau nama lain.'
-                          : 'Tambahkan pelanggan baru atau layani transaksi di kasir POS.'}
-                      </p>
-                      {!search && (
-                        <button
-                          onClick={handleOpenAdd}
-                          className="mt-2 px-4 py-2 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950"
-                        >
-                          + Tambah Pelanggan Pertama
-                        </button>
-                      )}
-                    </div>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    <EmptyState
+                      icon={<Users className="w-7 h-7 text-blue-900" />}
+                      title={search ? 'Tidak Ada Pelanggan yang Cocok' : 'Belum Ada Data Pelanggan'}
+                      description={
+                        search
+                          ? `Tidak ditemukan pelanggan yang cocok dengan kata kunci "${search}".`
+                          : 'Daftarkan pelanggan setia untuk mengumpulkan loyalty points dan diskon khusus member.'
+                      }
+                      actionLabel={!search ? '+ Tambah Pelanggan Pertama' : undefined}
+                      onAction={!search ? handleOpenAdd : undefined}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -660,9 +646,18 @@ export const CustomersView: React.FC = () => {
         {/* Mobile Customer Card List (Visible on Smartphone 6.8") */}
         <div className="block md:hidden divide-y divide-slate-100">
           {loading ? (
-            <div className="py-12 text-center text-slate-400">
-              <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <span className="text-xs">Memuat data pelanggan...</span>
+            <div className="divide-y divide-slate-100 p-3 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse space-y-2 p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-slate-200" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-slate-200 rounded w-1/3" />
+                      <div className="h-3 bg-slate-200 rounded w-1/2" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : customers.length === 0 ? (
             <div className="py-12 text-center text-slate-400 px-4">
@@ -1153,9 +1148,12 @@ export const CustomersView: React.FC = () => {
                       <span className="text-xs">Memuat histori order...</span>
                     </div>
                   ) : !selectedCustomer.orders || selectedCustomer.orders.length === 0 ? (
-                    <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200/60 text-slate-400 text-xs">
-                      Belum ada riwayat transaksi penjualan yang tercatat atas nama pelanggan ini.
-                    </div>
+                    <EmptyState
+                      compact
+                      icon={<Receipt className="w-5 h-5 text-blue-900" />}
+                      title="Belum Ada Riwayat Transaksi"
+                      description="Belum ada transaksi penjualan yang tercatat atas nama pelanggan ini."
+                    />
                   ) : (
                     <div className="rounded-xl border border-slate-200 overflow-hidden">
                       <table className="w-full text-left text-xs border-collapse">
@@ -1205,9 +1203,12 @@ export const CustomersView: React.FC = () => {
                       <span className="text-xs">Memuat riwayat mutasi poin...</span>
                     </div>
                   ) : pointLedgers.length === 0 ? (
-                    <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200/60 text-slate-400 text-xs">
-                      Belum ada mutasi perolehan atau penukaran poin yang tercatat.
-                    </div>
+                    <EmptyState
+                      compact
+                      icon={<Award className="w-5 h-5 text-blue-900" />}
+                      title="Belum Ada Mutasi Poin"
+                      description="Belum ada riwayat perolehan atau penukaran poin loyalty yang tercatat."
+                    />
                   ) : (
                     <div className="rounded-xl border border-slate-200 overflow-hidden">
                       <table className="w-full text-left text-xs border-collapse">

@@ -28,6 +28,7 @@ import { UpgradeModal } from '../components/UpgradeModal';
 import { computePresetDateRange } from '../utils/date';
 import { TablePagination } from '../components/TablePagination';
 import { SalesProfitTrendChart } from '../components/SalesProfitTrendChart';
+import { TableSkeleton } from '../components/ui';
 
 interface FinancialReportViewProps {
   activeOutlet?: Outlet | null;
@@ -337,9 +338,22 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
           </div>
         </div>
       ) : loading && !data ? (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-900" />
-          <span className="text-xs font-semibold">Mengkalkulasi metrik finansial &amp; penjualan...</span>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white p-5 rounded-3xl border border-slate-200 animate-pulse h-28 space-y-3">
+                <div className="h-4 bg-slate-200 rounded w-1/2" />
+                <div className="h-6 bg-slate-200 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+            <table className="w-full">
+              <tbody>
+                <TableSkeleton rows={5} columns={8} />
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : fs ? (
         <>
@@ -819,7 +833,9 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(!data?.dailyTrends || data.dailyTrends.length === 0) ? (
+                  {loading ? (
+                    <TableSkeleton rows={5} columns={8} />
+                  ) : (!data?.dailyTrends || data.dailyTrends.length === 0) ? (
                     <tr>
                       <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
                         Belum ada catatan penjualan harian pada periode ini

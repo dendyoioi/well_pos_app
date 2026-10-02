@@ -4,7 +4,6 @@ import type { PaymentPayload, PaymentMethodType } from '../types/order';
 import type { Customer } from '../types/customer';
 import type { Outlet } from '../types/outlet';
 import { usePlan } from '../hooks/usePlan';
-import { UpgradeModal } from './UpgradeModal';
 import { CurrencyInput } from './ui/CurrencyInput';
 
 interface PaymentModalProps {
@@ -31,7 +30,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   outlet,
 }) => {
   const { isFree } = usePlan();
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [method, setMethod] = useState<PaymentMethodType>('CASH');
   const [amountPaid, setAmountPaid] = useState<number>(grandTotal);
   const [qrisRef, setQrisRef] = useState('');
@@ -245,10 +243,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (isFree) {
-                  setUpgradeModalOpen(true);
-                  return;
-                }
                 setMethod('SPLIT');
                 const half = Math.round(grandTotal / 2);
                 setSplitCashPortion(half);
@@ -258,14 +252,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 method === 'SPLIT'
                   ? 'bg-blue-900 text-white shadow-sm'
                   : isFree
-                  ? 'text-slate-400 bg-slate-50 border border-dashed border-slate-300 hover:bg-amber-50 hover:text-amber-800'
+                  ? 'text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100'
                   : 'text-slate-600 hover:text-blue-950'
               }`}
             >
               <Split className="w-4 h-4" />
               <span>Split (Campuran)</span>
               {isFree && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 text-[10px] font-black">
                   <Lock className="w-2.5 h-2.5" />
                   <span>PRO</span>
                 </span>
@@ -443,6 +437,35 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           {/* KONTEN TAB SPLIT PAYMENT */}
           {method === 'SPLIT' && (
+            isFree ? (
+              <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl space-y-3 animate-fadeIn">
+                <div className="flex items-center gap-2 text-amber-950 font-extrabold text-sm">
+                  <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+                  <span>Fitur Split Payment Khusus Paket PRO</span>
+                </div>
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  Fitur pembayaran gabungan <strong>Tunai + QRIS</strong> hanya tersedia pada toko berstatus <strong>Paket PRO</strong>.
+                </p>
+                <div className="p-3.5 bg-white/90 border border-amber-200/70 rounded-xl text-xs space-y-1.5 text-slate-700">
+                  <div className="font-extrabold text-slate-900">Keunggulan Paket PRO (Rp 129.000 / bln):</div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Split payment (campuran Tunai & Non-Tunai dalam 1 nota)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Fitur Tahan Antrean Kasir (Hold / Resume Orders)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>Multi-outlet & multi-gudang tanpa batas transaksi</span>
+                  </div>
+                </div>
+                <div className="text-[11px] text-amber-800 font-medium">
+                  💡 <em>Pilih metode <strong>Tunai</strong> atau <strong>QRIS</strong> di atas untuk menyelesaikan pesanan ini.</em>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
                 Kombinasikan pembayaran sebagian <strong>Tunai</strong> dan sisanya <strong>QRIS Non-Tunai</strong>.
@@ -552,6 +575,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 )}
               </div>
             </div>
+            )
           )}
         </div>
 
@@ -569,6 +593,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             type="button"
             disabled={
               loading ||
+              (method === 'SPLIT' && isFree) ||
               (method === 'CASH' && isCashInsufficient) ||
               (method === 'QRIS' && !qrisPaid) ||
               (method === 'SPLIT' && (isSplitCashInsufficient || !splitQrisPaid))
@@ -578,6 +603,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           >
             {loading ? (
               'Memproses Transaksi...'
+            ) : method === 'SPLIT' && isFree ? (
+              <span>Pilih Tunai / QRIS untuk Lanjut</span>
             ) : (
               <>
                 <span>Selesaikan & Cetak (Enter)</span>
@@ -587,15 +614,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Modal Edukasi Upgrade PRO */}
-      <UpgradeModal
-        isOpen={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        title="Fitur Split Payment Khusus Paket PRO"
-        message="Fitur Split Bill (pembayaran gabungan Tunai + QRIS) hanya tersedia pada Paket PRO. Upgrade sekarang untuk mengaktifkan!"
-        featureHighlight="Split Payment (Campuran)"
-      />
     </div>
   );
 };

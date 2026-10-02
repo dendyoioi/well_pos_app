@@ -142,34 +142,44 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAlert={modalConfig.isAlert}
       />
 
-      {/* Global Toasts */}
+      {/* Global Floating Non-Blocking Toasts */}
       {toasts.length > 0 && (
-        <div className="fixed top-5 right-5 z-[99999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        <div className="fixed bottom-6 right-6 z-[99999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0">
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`p-3.5 rounded-2xl shadow-xl border flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold pointer-events-auto animate-scaleUp ${
+              className={`p-3.5 sm:p-4 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 text-xs sm:text-sm font-bold pointer-events-auto backdrop-blur-md transition-all duration-300 animate-in slide-in-from-bottom-4 fade-in ${
                 t.type === 'success'
-                  ? 'bg-emerald-900 text-white border-emerald-700/80'
+                  ? 'bg-slate-900/95 text-white border-emerald-500/40 shadow-emerald-950/20'
                   : t.type === 'error'
-                  ? 'bg-rose-900 text-white border-rose-700/80'
-                  : 'bg-slate-900 text-white border-slate-700/80'
+                  ? 'bg-slate-900/95 text-white border-rose-500/40 shadow-rose-950/20'
+                  : 'bg-slate-900/95 text-white border-blue-500/40 shadow-blue-950/20'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                {t.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
-                ) : t.type === 'error' ? (
-                  <AlertCircle className="w-4 h-4 text-rose-300 shrink-0" />
-                ) : (
-                  <Info className="w-4 h-4 text-blue-300 shrink-0" />
-                )}
-                <span>{t.message}</span>
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                    t.type === 'success'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : t.type === 'error'
+                      ? 'bg-rose-500/20 text-rose-400'
+                      : 'bg-blue-500/20 text-blue-400'
+                  }`}
+                >
+                  {t.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : t.type === 'error' ? (
+                    <AlertCircle className="w-4 h-4" />
+                  ) : (
+                    <Info className="w-4 h-4" />
+                  )}
+                </div>
+                <span className="leading-snug truncate">{t.message}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
-                className="p-1 text-slate-300 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0"
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

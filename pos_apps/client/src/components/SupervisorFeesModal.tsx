@@ -18,7 +18,6 @@ import {
 import type { Outlet, OutletFee, FeeType, FeeChannelScope, FeeCategory } from '../types/outlet';
 import { normalizeOutletFees } from '../types/outlet';
 import { api } from '../services/api';
-import { ConfirmModal } from './ConfirmModal';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { useDialog } from '../context/DialogContext';
 
@@ -610,14 +609,34 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
 
                         {/* Delete button (bisa hapus semua biaya kecuali pajak utama) */}
                         {fee.id !== 'fee_tax' && (
-                          <button
-                            type="button"
-                            onClick={() => setFeeToDelete(fee)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                            title="Hapus Biaya"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          feeToDelete?.id === fee.id ? (
+                            <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded-lg p-1 animate-fadeIn">
+                              <span className="text-[10px] font-bold text-rose-700 px-1">Hapus?</span>
+                              <button
+                                type="button"
+                                onClick={executeDeleteFee}
+                                className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold shadow-2xs cursor-pointer"
+                              >
+                                Ya
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFeeToDelete(null)}
+                                className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[11px] font-bold cursor-pointer"
+                              >
+                                Batal
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setFeeToDelete(fee)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              title="Hapus Biaya"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
@@ -822,22 +841,6 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
           </div>
         )}
       </div>
-
-      {/* Modal Konfirmasi Hapus Biaya */}
-      <ConfirmModal
-        isOpen={feeToDelete !== null}
-        onClose={() => setFeeToDelete(null)}
-        onConfirm={executeDeleteFee}
-        title="Hapus Pengaturan Biaya?"
-        message={
-          <p>
-            Apakah Anda yakin ingin menghapus konfigurasi biaya{' '}
-            <strong className="text-blue-950">"{feeToDelete?.name}"</strong>?
-          </p>
-        }
-        confirmText="Hapus Biaya"
-        variant="danger"
-      />
     </div>
   );
 };

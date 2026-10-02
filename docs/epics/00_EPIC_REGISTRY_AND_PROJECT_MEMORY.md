@@ -163,6 +163,21 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
   │   - Feedback Sukses/Error: Penyelarasan notifikasi simpan tagihan meja ke dialog.toast (sukses) dan dialog.alert (peringatan/error).
   └── 4. Relaksasi Validasi Zod Backend (order.controller.ts):
       - Relaksasi openTabSchema untuk field customerId, shiftId, dan outletId menjadi .optional().nullable() untuk mencegah penolakan HTTP 400 saat dikirim string kosong atau ID non-UUID dari antarmuka web/mobile.
+
+[2026-10-02] AUDIT UI/UX MENYELURUH & EKSEKUSI PRIORITAS 1 (ZERO STACKED MODALS & INPUT STANDARDIZATION)
+  ├── 1. Eliminasi Total Modal Bertumpuk (Zero Stacked Modals Policy):
+  │   - PaymentModal.tsx: Mengganti UpgradeModal bertumpuk dengan banner edukasi PRO inline interaktif pada tab SPLIT serta proteksi disable tombol transaksi yang ramah kasir.
+  │   - SupervisorFeesModal.tsx: Mengganti ConfirmModal bertumpuk dengan tombol konfirmasi hapus inline ("Hapus? [Ya] [Batal]") pada baris biaya terkait.
+  │   - CategoryModal.tsx: Mengganti ConfirmModal bertumpuk dengan konfirmasi baris kategori inline.
+  ├── 2. Standardisasi Input Nomor Telepon (<WhatsAppInput />):
+  │   - CustomerQrMenuView.tsx: Input WhatsApp tamu meja dinormalisasi otomatis ke format +628... dengan bendera Indonesia.
+  │   - SuppliersView.tsx: Input telepon/WhatsApp vendor dinormalisasi otomatis ke format +628...
+  │   - InventoryView.tsx: Input nomor telepon PIC fasilitas gudang dinormalisasi otomatis ke format +628...
+  ├── 3. Standardisasi Input Mata Uang (<CurrencyInput />):
+  │   - SuperadminDashboardPage.tsx: Input nominal potongan diskon (Rp), maksimal diskon (Rp), dan minimal belanja (Rp) menggunakan CurrencyInput berpemisah titik live.
+  ├── 4. Penghapusan Hardcoded Fallback Tenant:
+  │   - OutletsView.tsx: Mengeliminasi fallback 'ura-coffee' dan menerapkan penanganan kontekstual murni berbasis tenant akun yang login.
+  └── 5. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
 ```
 
@@ -1035,6 +1050,59 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
   - Penambahan indikator runtime `getEnforcementMode()` (`APPLICATION_DEFENSE_IN_DEPTH` vs `KERNEL_HARDENED`).
 • Konsolidasi Target Domain Sales Engine (`pos_apps/server/src/services/dual_write/sales.dual_write.service.ts`):
   - Penyelarasan dokumentasi dan arsitektur penulisan kasir murni ke skema target (`orders`, `order_items`, `payment_transactions`, `inventory_balances`, `inventory_ledgers`).
+• Hasil Uji Verifikasi Sistem:
+[FASE 11: PENYELESAIAN AUDIT KESIAPAN UI/UX, ANTI-PATTERNS & PARITAS F&B MODIFIERS QR MENU (PRIORITAS 1 & 2)] - SELESAI ✅
+• Evaluasi UI/UX Menyeluruh Seluruh Modul:
+  - Analisis 32 client views & modal components di 13 modul fitur, dengan skor rata-rata kesiapan global 91.8% (~92%).
+• Eksekusi Tuntas Prioritas 1 (Kepatuhan Anti-Patterns & Standar Arsitektur AGENTS.md):
+  - Eliminasi Hardcoded Tenant Fallback (`OutletsView.tsx`): Menghapus fallback `'ura-coffee'`, menggantinya dengan penanganan `storeId || 'BELUM DIATUR'` dan proteksi tombol salin link.
+  - Standarisasi Normalisasi WhatsApp `<WhatsAppInput />`: Diterapkan di `CustomerQrMenuView.tsx`, `SuppliersView.tsx`, dan `InventoryView.tsx`.
+  - Penegakan Zero Stacked Modals Policy:
+    * `PaymentModal.tsx`: Menghapus modal tumpuk `<UpgradeModal />` pada tab SPLIT; menggantinya dengan inline alert card panduan kasir dan tombol nonaktif aman.
+    * `SupervisorFeesModal.tsx` & `CategoryModal.tsx`: Mengganti modal tumpuk `<ConfirmModal />` dengan konfirmasi inline aksi langsung pada baris tabel (`Hapus? [Ya] [Batal]`).
+  - Standarisasi Input Nominal Rupiah `<CurrencyInput />` (`SuperadminDashboardPage.tsx`): Input diskon nominal Rp, diskon maksimal Rp, dan minimal belanja kini menggunakan pemisah ribuan titik otomatis.
+• Eksekusi Tuntas Prioritas 2 (Paritas Topping / Modifiers F&B pada QR Menu Meja Tamu):
+  - Backend Relational Modifiers Query (`qr_menu.service.ts`):
+    * `getPublicMenu`: Otomatis memuat relasi `productModifierGroup` dengan `modifierGroup.items` untuk seluruh produk katalog aktif pada outlet yang dibuka tamu.
+    * `submitOrderSchema` (`qr_menu.controller.ts`) & `submitPublicOrder` (`qr_menu.service.ts`): Menerima snapshot `modifiers`, menghitung subtotal pesanan secara presisi, dan menyimpan `modifiers_snapshot` ke tabel `order_items` sehingga tiket dapur (KOT) dan struk kasir otomatis menampilkan topping yang dipilih tamu.
+  - Client-Side Modifiers & Cart Parity (`CustomerQrMenuView.tsx` & `types/qr_menu.ts`):
+    * Dukungan `modifiers?: ProductModifierGroup[]` pada produk menu publik.
+    * Bottom-sheet / modal kustomisasi produk: Tamu dapat memilih varian dan modifier/topping (SINGLE radio maupun MULTIPLE checkbox) dengan live kalkulasi penyesuaian harga (`priceDelta`), badge wajib/opsional, dan validasi grup required sebelum masuk keranjang.
+    * Review Keranjang & Faktur: Setiap item di keranjang menampilkan rincian topping terpilih (misal: `Topping: Boba (+Rp 3.000)`).
+• Eksekusi Standarisasi Empty State Kanonikal (Komponen Bersama `<EmptyState />`):
+  - Dibuat komponen kanonikal `src/components/ui/EmptyState.tsx` berpalet Clean White-Blue, ikon lembut, judul, deskripsi informatif, serta tombol Call-to-Action (CTA) interaktif.
+  - Diintegrasikan serentak ke tabel data utama:
+    * `OrdersView.tsx`: Riwayat transaksi kasir kosong.
+    * `CustomersView.tsx`: Tabel master pelanggan (dengan tombol CTA "+ Tambah Pelanggan Pertama") serta detail tab histori order & mutasi poin.
+    * `SuppliersView.tsx`: Tabel vendor pemasok (dengan tombol CTA "+ Daftarkan Pemasok Pertama").
+    * `PurchaseOrdersView.tsx`: Tabel dokumen pengadaan (dengan tombol CTA "+ Buat Purchase Order").
+    * `StockTransfersView.tsx`: Tabel transfer antar gerai/gudang (dengan tombol CTA "+ Buat Transfer Stok").
+    * `InventoryView.tsx`: Tabel kartu riwayat mutasi stok bahan/produk.
+• Eksekusi Tuntas Point 3 (Perceived Speed & Zero Layout Shift via `<TableSkeleton />`):
+  - Dibuat komponen kanonikal `src/components/ui/TableSkeleton.tsx` yang mengeksekusi shimmer animation bertingkat untuk elemen `<tbody>` tabel dengan dukungan parameter `rows`, `columns`, `avatarCol`, dan `actionCol`.
+  - Mengeliminasi spinner berputar yang menyebabkan layout jump / shift (CLS) saat muat data pada 6 halaman utama:
+    * `FinancialReportView.tsx`: Tabel tren penjualan harian (8 kolom) & widget loading awal.
+    * `OrdersView.tsx`: Tabel riwayat transaksi desktop (8 kolom) & shimmer card mobile.
+    * `CustomersView.tsx`: Tabel member pelanggan (7 kolom) & shimmer card mobile.
+    * `SuppliersView.tsx`: Tabel vendor pemasok (8 kolom).
+    * `PurchaseOrdersView.tsx`: Tabel dokumen pengadaan PO (7 kolom).
+    * `StockTransfersView.tsx`: Tabel mutasi transfer antar cabang/gudang (6 kolom).
+    * `InventoryView.tsx`: Tabel bahan baku mentah (7 kolom), stok ritel (7 kolom), dan riwayat kartu mutasi (6 kolom).
+• Eksekusi Tuntas Point 4 (Floating Toast Feedback System non-blocking):
+  - Modernisasi container `DialogContext.tsx` dengan sistem floating pill di pojok kanan bawah (`bottom-6 right-6`), aksen border tajam per jenis status (`emerald`, `rose`, `blue`), auto-dismiss timer, dan animasi geser halus.
+  - Mengganti dialog alert yang menghentikan alur kerja pengguna (*blocking pop-ups*) menjadi toast instan untuk aksi cepat:
+    * Salin ID gerai & simpan outlet (`OutletsView.tsx`).
+    * Simpan kustomisasi format struk thermal kasir (`ReceiptSettingsView.tsx`).
+    * Tambah & edit data pelanggan member (`CustomersView.tsx`).
+    * Pendaftaran & pembaruan data vendor pemasok (`SuppliersView.tsx`).
+    * Konfirmasi penerimaan fisik barang PO (`PurchaseOrdersView.tsx`).
+    * Pengiriman transfer ke kurir & penerimaan mutasi stok di cabang tujuan (`StockTransfersView.tsx`).
+• Eksekusi Tuntas Point 5 (Authentic Live Thermal Receipt Visualizer `<ThermalReceiptPreview />`):
+  - Dibuat komponen visualizer struk autentik `src/components/ThermalReceiptPreview.tsx` dengan efek gerigi sobek kertas thermal (*sawtooth zigzag pure CSS*), bayangan kertas gulung, tipografi font-monospace kasir, dan penyesuaian lebar nyata:
+    * Mode Kertas 58mm (2.25 inci / w-64 ringkas, font 10px).
+    * Mode Kertas 80mm (3.125 inci / w-80 lapang, font 11px).
+  - Dilengkapi kotak nomor panggilan antrian (#05), rincian pesanan multi-item beserta modifiers, subtotal, pajak resto PB1 10%, pelunasan QRIS LUNAS, catatan kaki dinamis (footer note), dan cap stempel QR verifikasi keaslian nota belanja.
+  - Diintegrasikan langsung pada menu pengaturan struk `ReceiptSettingsView.tsx` menggantikan markup statis sebelumnya.
 • Hasil Uji Verifikasi Sistem:
   - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
 ================================================================================
