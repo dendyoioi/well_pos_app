@@ -198,8 +198,46 @@ export const BluetoothSettingsModal: React.FC<BluetoothSettingsModalProps> = ({
               )}
             </div>
 
-            {/* Error Message if any */}
-            {btPrinter.lastError && (
+            {/* Notice jika browser belum mendukung Web Bluetooth (Khususnya iOS Safari/PWA) */}
+            {!btPrinter.isSupported && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-amber-950">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Dukungan Web Bluetooth pada Perangkat Ini</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-900/90">
+                  {typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent)
+                    ? 'Apple secara bawaan membatasi Web Bluetooth pada Safari & PWA iPhone demi kebijakan privasi. Jika Anda ingin menghubungkan printer Bluetooth kasir langsung dari iPhone:'
+                    : 'Browser ini belum mendukung Web Bluetooth API. Gunakan Google Chrome atau Microsoft Edge.'}
+                </p>
+                {typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent) && (
+                  <div className="pt-1.5 border-t border-amber-200/80 space-y-1.5 text-[11px]">
+                    <div className="font-bold text-amber-950">💡 Opsi Solusi untuk Kasir iPhone:</div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="font-bold text-amber-900">1.</span>
+                      <span>
+                        <strong>Browser Khusus BLE (Bluefy):</strong> Unduh gratis aplikasi <em>Bluefy – Web BLE Browser</em> di App Store, lalu buka alamat Well POS di dalamnya untuk koneksi Bluetooth langsung.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="font-bold text-amber-900">2.</span>
+                      <span>
+                        <strong>Cetak Dialog Standar (AirPrint / PDF):</strong> Kasir tetap dapat mencetak struk secara normal menggunakan tombol Cetak saat transaksi selesai.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="font-bold text-amber-900">3.</span>
+                      <span>
+                        <strong>Struk Digital WhatsApp:</strong> Kirimkan struk digital langsung ke nomor WhatsApp pelanggan dalam 1-klik tanpa perlu printer.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error Message if any (selain not supported yang sudah dihandle di atas) */}
+            {btPrinter.lastError && btPrinter.isSupported && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
                 <span className="flex-1">{btPrinter.lastError}</span>

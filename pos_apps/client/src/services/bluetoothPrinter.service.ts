@@ -73,7 +73,12 @@ class BluetoothPrinterService {
   async connect(): Promise<boolean> {
     if (!this.isSupported()) {
       this.status = 'error';
-      this.lastError = 'Browser Anda belum mendukung Web Bluetooth API. Gunakan Google Chrome, Microsoft Edge, atau Opera.';
+      const isIos = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIos) {
+        this.lastError = 'Apple (Safari iOS) membatasi Web Bluetooth langsung. Di iPhone, silakan buka aplikasi via browser BLE (seperti aplikasi Bluefy di App Store) atau gunakan perangkat kasir Android/Laptop.';
+      } else {
+        this.lastError = 'Browser Anda belum mendukung Web Bluetooth API. Gunakan Google Chrome, Microsoft Edge, atau Opera.';
+      }
       this.notify();
       throw new Error(this.lastError);
     }
