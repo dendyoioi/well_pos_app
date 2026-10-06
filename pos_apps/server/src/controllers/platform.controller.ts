@@ -1400,6 +1400,7 @@ export const getPlatformPromos = async (_req: Request, res: Response) => {
         id: p.id,
         code: p.code,
         name: p.name,
+        description: (p as any).description || '',
         scope: (p as any).scope || 'ALL',
         type: p.type,
         value: Number(p.value),
@@ -1410,6 +1411,7 @@ export const getPlatformPromos = async (_req: Request, res: Response) => {
         validFrom: p.validFrom,
         validUntil: p.validUntil,
         isActive: p.isActive,
+        isPublished: (p as any).isPublished ?? true,
         createdAt: p.createdAt,
       })),
     });
@@ -1422,6 +1424,7 @@ export const getPlatformPromos = async (_req: Request, res: Response) => {
 const createPlatformPromoSchema = z.object({
   code: z.string().min(3, 'Kode promo minimal 3 karakter').toUpperCase(),
   name: z.string().min(3, 'Nama promo minimal 3 karakter'),
+  description: z.string().optional().nullable(),
   scope: z.enum(['ALL', 'REGISTRATION', 'TOPUP']).optional().default('ALL'),
   type: z.enum(['DISCOUNT_PERCENT', 'DISCOUNT_FIXED', 'BONUS_TOKENS']),
   value: z.number().positive('Nilai promo harus lebih dari 0'),
@@ -1429,6 +1432,7 @@ const createPlatformPromoSchema = z.object({
   maxDiscount: z.number().optional().nullable(),
   usageLimit: z.number().int().positive().optional().nullable(),
   validUntil: z.string().optional().nullable(),
+  isPublished: z.boolean().optional().default(true),
 });
 
 export const createPlatformPromo = async (req: Request, res: Response) => {
@@ -1442,7 +1446,7 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
       });
     }
 
-    const { code, name, scope = 'ALL', type, value, minSpend, maxDiscount, usageLimit, validUntil } = parse.data;
+    const { code, name, description, scope = 'ALL', type, value, minSpend, maxDiscount, usageLimit, validUntil, isPublished = true } = parse.data;
 
     const existing = await prisma.saaSPromo.findUnique({ where: { code } });
     if (existing) {
@@ -1454,6 +1458,7 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
         id: `promo-${code.toLowerCase()}-${Date.now().toString(36)}`,
         code,
         name,
+        description: description || null,
         scope: scope || 'ALL',
         type,
         value: new Prisma.Decimal(value),
@@ -1462,6 +1467,7 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
         usageLimit: usageLimit || null,
         validUntil: validUntil ? new Date(validUntil) : null,
         isActive: true,
+        isPublished: Boolean(isPublished),
       },
     });
 
@@ -1497,6 +1503,30 @@ export const togglePlatformPromo = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error toggle platform promo:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mengubah status promo' });
+  }
+};
+
+export const togglePublishPlatformPromo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const promo = await prisma.saaSPromo.findUnique({ where: { id } });
+    if (!promo) {
+      return res.status(404).json({ status: 'error', message: 'Promo tidak ditemukan' });
+    }
+
+    const updated = await prisma.saaSPromo.update({
+      where: { id },
+      data: { isPublished: !promo.isPublished },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Promo "${updated.code}" sekarang ${updated.isPublished ? 'DITAMPILKAN DI WEBSITE' : 'DISEMBUNYIKAN DARI WEBSITE'}`,
+      data: updated,
+    });
+  } catch (error) {
+    console.error('Error toggle publish platform promo:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengubah status publikasi promo' });
   }
 };
 

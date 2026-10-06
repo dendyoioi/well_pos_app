@@ -21,6 +21,7 @@ import {
   getPlatformPromos,
   createPlatformPromo,
   togglePlatformPromo,
+  togglePublishPlatformPromo,
   deletePlatformPromo,
   getPlatformPaymentSettings,
   updatePlatformPaymentSettings,
@@ -64,6 +65,7 @@ platformRouter.delete('/users/:id', authenticatePlatform, deletePlatformUser);
 platformRouter.get('/promos', authenticatePlatform, getPlatformPromos);
 platformRouter.post('/promos', authenticatePlatform, createPlatformPromo);
 platformRouter.patch('/promos/:id/toggle', authenticatePlatform, togglePlatformPromo);
+platformRouter.patch('/promos/:id/toggle-publish', authenticatePlatform, togglePublishPlatformPromo);
 platformRouter.delete('/promos/:id', authenticatePlatform, deletePlatformPromo);
 
 // Rute Konfigurasi Pembayaran & QRIS Statis Platform

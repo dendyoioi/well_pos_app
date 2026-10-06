@@ -1506,7 +1506,36 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
      - Masalah: Kasir biasa dapat melihat ringkasan audit selisih kas fisik seluruh kasir lain.
      - Solusi: `getShiftHistory` otomatis men-scope query ke `userId: req.user.id` jika pemanggil bukan Owner/Admin/Supervisor.
 • Verifikasi Build:
+===============================================================================
+[07 OKTOBER 2026] LANDING PAGE OVERHAUL: RESPONSIVE NAV, SCROLL-TO-TOP, DEDICATED PROMO CATALOG & SUPERADMIN PROMO PUBLISHING ENGINE
+===============================================================================
+• Konteks & Driver:
+  - Permintaan perombakan navigasi atas landing page publik Well POS agar pengunjung mudah berpindah antar-section (#tampilan, #fitur, #biaya, #promo, #faq), menu mobile drawer responsif, tombol floating scroll-up, penambahan katalog kode promo publik dari Superadmin, serta penyempurnaan copywriting 6 kartu manfaat yang lebih membumi, to the point, dan profesional.
+• Rincian Implementasi:
+  1. Skema Database & DDL (schema.prisma & schema_patcher.ts):
+     - Menambahkan kolom `isPublished Boolean @default(true) @map("is_published")` dan `description String? @map("description")` pada model `SaaSPromo`.
+     - Didaftarkan ke migration patch `20261007_01_saas_promos_is_published` dan dieksekusi idempotent ke PostgreSQL.
+  2. Backend Controller & API Routes:
+     - Endpoint publik `GET /api/saas/promos/public` (`getPublicPublishedPromos`): mengembalikan voucher aktif yang berstatus `isPublished: true` dan belum kadaluwarsa.
+     - Endpoint Superadmin `PATCH /api/platform/promos/:id/toggle-publish` (`togglePublishPlatformPromo`): mengaktifkan/menyembunyikan voucher dari katalog web publik.
+     - Pembaruan `createPlatformPromo` untuk menerima `description` dan opsi `isPublished`.
+  3. Superadmin Dashboard (`SuperadminDashboardPage.tsx`):
+     - Tab `PROMOS`: Ditambahkan badge visual ("PUBLIK WEB" / "TERSEMBUNYI"), preview deskripsi voucher, dan tombol aksi "Web: On / Web: Off".
+     - Modal Create Promo: Ditambahkan field input deskripsi/syarat voucher dan checkbox publikasi ke landing page.
+  4. Landing Page (`SaasLandingPage.tsx`):
+     - Top Navigation Bar: Sticky header dengan link desktop ("Tampilan Kasir", "Fitur Toko", "Biaya & Token", "Promo Spesial", "Tanya Jawab"), tombol aksi CTA, serta mobile hamburger drawer yang responsif dan rapi.
+     - Floating Scroll-to-Top: Tombol melayang di sudut kanan bawah (`ChevronUp`) dengan transisi halus saat halaman di-scroll > 300px.
+     - Dedicated Promo Catalog Section (`#promo`): Tampilan katalog voucher bergaya tiket kupon modern, filter pill (Semua, Khusus Pendaftaran, Khusus Top-Up), kode voucher box dengan tombol Salin (Copy 1-klik), dan tombol "Gunakan Voucher Ini" yang otomatis membuka modal pendaftaran dengan kupon terisi dan tervalidasi secara instan.
+     - Penyempurnaan Copywriting 6 Kartu Manfaat:
+       1. "Fleksibel di Tablet Maupun Smartphone" (elegan, tanpa merendahkan perangkat kasir lain)
+       2. "Laporan Penjualan & Keuntungan Real-Time" (menggantikan kata kasbon/tagih santun yang tidak membumi)
+       3. "Manajemen Stok Otomatis & Resep Bahan Baku" (profesional, menggantikan istilah anti-bocor)
+       4. "Mendukung Struk Digital via WhatsApp" (to the point)
+       5. "Fitur Absensi & Hak Akses Karyawan" (to the point)
+       6. "Buka Cabang Baru & Manajemen Multi-Outlet"
+• Verifikasi QA & Browser:
   - Exit code 0 pada `npm run build` di `pos_apps/server` dan `pos_apps/client`.
+  - Uji otomatisasi Playwright lokal: Desktop nav, mobile drawer, floating back-to-top, dan auto-fill promo modal pendaftaran berhasil diverifikasi 100%.
 ===============================================================================
 ```
 

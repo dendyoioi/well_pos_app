@@ -11,6 +11,7 @@ import {
   getPublicPlatformPaymentConfig,
   getPublicPlatformConfig,
   validateRegistrationPromoCode,
+  getPublicPublishedPromos,
   getTenantNotifications,
   handleBillingWebhook,
 } from '../controllers/saas.controller';
@@ -29,6 +30,7 @@ export const saasRouter = Router();
 saasRouter.post('/register', registerClient);
 saasRouter.get('/public-config', getPublicPlatformConfig);
 saasRouter.get('/promos/validate-registration', validateRegistrationPromoCode);
+saasRouter.get('/promos/public', getPublicPublishedPromos);
 
 // Endpoint Pembuatan Toko Perdana dari Full-Screen Wizard (Memerlukan Login Owner)
 saasRouter.post('/stores/create-initial', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), createInitialStore);

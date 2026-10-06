@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   AlertCircle,
   LogIn,
-  Receipt,
   Boxes,
   ChevronRight,
   ChevronDown,
@@ -24,6 +23,11 @@ import {
   UserCheck,
   Printer,
   Check,
+  Menu,
+  X,
+  Copy,
+  Tag,
+  TrendingUp,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -55,6 +59,16 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     registrationFee: 99000,
     registrationBonusTokens: 100,
   });
+
+  // State Navigasi & Tampilan
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // State Katalog Promo Publik
+  const [publicPromos, setPublicPromos] = useState<any[]>([]);
+  const [loadingPromos, setLoadingPromos] = useState(false);
+  const [promoFilter, setPromoFilter] = useState<'ALL' | 'REGISTRATION' | 'TOPUP'>('ALL');
+  const [copiedPromoCode, setCopiedPromoCode] = useState<string | null>(null);
 
   // State Voucher Promo Pendaftaran
   const [showPromoField, setShowPromoField] = useState(false);
@@ -89,6 +103,65 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Scroll listener untuk tombol Back-to-Top
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fetch katalog promo publik
+  useEffect(() => {
+    const loadPromos = async () => {
+      setLoadingPromos(true);
+      try {
+        const res = await api.getPublicPromos();
+        if (res.status === 'success' && res.data) {
+          setPublicPromos(res.data);
+        }
+      } catch (e) {
+        console.error('Gagal mengambil promo publik:', e);
+      } finally {
+        setLoadingPromos(false);
+      }
+    };
+    loadPromos();
+  }, []);
+
+  const copyPromoCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedPromoCode(code);
+    setTimeout(() => {
+      setCopiedPromoCode(null);
+    }, 2500);
+  };
+
+  const handleUsePromoFromCatalog = async (code: string) => {
+    setRegisterSuccessData(null);
+    setShowPromoField(true);
+    setPromoInput(code);
+    setRegisterModalOpen(true);
+    setPromoError(null);
+    setValidatingPromo(true);
+    try {
+      const res = await api.validateRegistrationPromo(code.trim());
+      if (res.status === 'success' && res.data) {
+        setAppliedPromo(res.data);
+      } else {
+        setPromoError(res.message || 'Kupon promo tidak dapat digunakan');
+        setAppliedPromo(null);
+      }
+    } catch (err: any) {
+      setPromoError(err.message || 'Gagal memeriksa kupon promo');
+      setAppliedPromo(null);
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
 
   // Polling status pembayaran Pakasir jika transaksi UNPAID
   useEffect(() => {
@@ -262,10 +335,10 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       {/* =========================================================================
           TOP NAVIGATION BAR
       ========================================================================= */}
-      <nav className="sticky top-0 z-40 w-full bg-[#090d16]/85 backdrop-blur-md border-b border-white/10 text-white">
-        <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
+      <nav className="sticky top-0 z-40 w-full bg-[#090d16]/90 backdrop-blur-md border-b border-white/10 text-white">
+        <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3">
           {/* Logo & Brand Identity */}
-          <a href="#" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
+          <a href="#" className="flex items-center gap-2.5 sm:gap-3 group min-w-0 shrink-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform shrink-0">
               <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
             </div>
@@ -274,12 +347,49 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 Well POS
               </span>
               <span className="text-[10px] sm:text-[11px] text-slate-300 font-medium hidden sm:block truncate">
-                Aplikasi Kasir &amp; Manajemen Toko
+                Aplikasi Kasir &amp; Toko
               </span>
             </div>
           </a>
 
-          {/* Action CTAs (Uniform Buttons) */}
+          {/* Desktop Navigation Links */}
+          <div className="hidden md:flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-semibold text-slate-300">
+            <a
+              href="#tampilan"
+              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+            >
+              Tampilan Kasir
+            </a>
+            <a
+              href="#fitur"
+              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+            >
+              Fitur Toko
+            </a>
+            <a
+              href="#biaya"
+              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+            >
+              Biaya &amp; Token
+            </a>
+            <a
+              href="#promo"
+              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors flex items-center gap-1.5"
+            >
+              <span>Promo Spesial</span>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-amber-400 text-slate-950 uppercase tracking-wider">
+                Voucher
+              </span>
+            </a>
+            <a
+              href="#faq"
+              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+            >
+              Tanya Jawab
+            </a>
+          </div>
+
+          {/* Action CTAs & Mobile Burger Toggle */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={onOpenPos}
@@ -297,8 +407,63 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
             >
               <span>Daftar Sekarang</span>
             </button>
+
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl bg-white/10 hover:bg-white/15 text-white transition-colors cursor-pointer"
+              title={mobileMenuOpen ? 'Tutup Menu' : 'Buka Menu Navigasi'}
+              aria-label="Toggle Navigation Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer / Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-[#0c121e] border-b border-white/10 px-4 py-3 space-y-2 animate-fade-in text-xs font-semibold">
+            <a
+              href="#tampilan"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+            >
+              Tampilan Kasir Tablet &amp; Smartphone
+            </a>
+            <a
+              href="#fitur"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+            >
+              6 Manfaat &amp; Fitur Operasional Toko
+            </a>
+            <a
+              href="#biaya"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+            >
+              Skema Biaya &amp; Edukasi Token Transaksi
+            </a>
+            <a
+              href="#promo"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-xl text-amber-300 hover:bg-white/5 flex items-center justify-between"
+            >
+              <span>Katalog Promo &amp; Voucher Diskon</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400 text-slate-950 uppercase">
+                Aktif
+              </span>
+            </a>
+            <a
+              href="#faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+            >
+              Tanya Jawab (FAQ)
+            </a>
+          </div>
+        )}
       </nav>
 
       {/* =========================================================================
@@ -366,7 +531,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               SHOWCASE VISUAL: TABLET LANDSCAPE & SMARTPHONE HANDHELD
               (Terinspirasi dari layout kasir modern tablet + handheld overlay)
           ========================================================================= */}
-          <div className="mt-12 sm:mt-18 max-w-6xl mx-auto w-full">
+          <div id="tampilan" className="mt-12 sm:mt-18 max-w-6xl mx-auto w-full scroll-mt-24">
             <div className="text-center mb-6 sm:mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold">
                 <Tablet className="w-3.5 h-3.5 text-blue-300" />
@@ -632,9 +797,9 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
         </div>
 
         {/* =========================================================================
-            6 MANFAAT NYATA UNTUK TENANT / PEDAGANG (BAHASA MEMBUMI)
+            6 MANFAAT NYATA UNTUK TENANT / PEDAGANG (BAHASA MEMBUMI & PROFESIONAL)
         ========================================================================= */}
-        <section className="mt-16 sm:mt-24 pt-12 sm:pt-16 pb-16 bg-white text-slate-900">
+        <section id="fitur" className="mt-16 sm:mt-24 pt-12 sm:pt-16 pb-16 bg-white text-slate-900 scroll-mt-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
               <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider block mb-1">
@@ -644,117 +809,117 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 6 Manfaat Nyata untuk Usaha &amp; Toko Anda
               </h2>
               <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Dirancang khusus menjawab kendala sehari-hari pemilik usaha UMKM: dari hemat modal awal, mencegah kebocoran kas, hingga kontrol stok yang jelas.
+                Dirancang khusus menjawab kebutuhan operasional toko sehari-hari: fleksibilitas perangkat, laporan keuangan instan, presensi karyawan, hingga kontrol stok yang jelas.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 text-left">
-              {/* Manfaat 1 */}
+              {/* Manfaat 1: Fleksibel Tablet & HP */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <Smartphone className="w-5 h-5" />
+                    <Tablet className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Hemat Modal, Bebas Beli Mesin Kasir Mahal
+                    Fleksibel di Tablet Maupun Smartphone
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Tidak perlu mengeluarkan uang jutaan rupiah untuk komputer POS besar. Cukup gunakan HP atau tablet yang sudah ada. Kamera HP otomatis menjadi scanner barcode barang, dan Anda bisa cetak barcode label rak sendiri.
+                    Perangkat kasir menyesuaikan kebutuhan usaha Anda. Gunakan tablet untuk meja kasir depan dengan tampilan menu dan keranjang berdampingan yang lega, atau gunakan smartphone staf toko untuk mencatat pesanan pelanggan secara cepat dan mobile.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Nol Biaya Sewa Perangkat</span>
+                  <span>Kompatibel di Multi-Perangkat</span>
                 </div>
               </div>
 
-              {/* Manfaat 2 */}
+              {/* Manfaat 2: Laporan Penjualan & Keuntungan Real-Time */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <Receipt className="w-5 h-5" />
+                    <TrendingUp className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Catat Kasbon Rapi &amp; Tagih Santun via WA
+                    Laporan Penjualan &amp; Keuntungan Real-Time
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Pelanggan sering bayar nanti? Catat utang pelanggan dengan tertib, atur batas maksimal kasbon agar tidak kebablasan, dan kirim rincian nota tagihan ke WhatsApp pelanggan secara santun dalam 1-klik tanpa rasa canggung.
+                    Rekap omzet harian, laba kotor, dan produk terlaris otomatis terhitung rapi setiap pergantian shift kasir. Pantau performa toko kapan saja dari mana saja tanpa perlu hitung nota fisik secara manual.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Uang Kas &amp; Piutang Selalu Klop</span>
+                  <span>Laporan Keuangan Otomatis</span>
                 </div>
               </div>
 
-              {/* Manfaat 3 */}
+              {/* Manfaat 3: Manajemen Stok Otomatis & Resep Bahan Baku */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
                     <Boxes className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Bahan Baku Otomatis Terpotong (Anti-Bocor)
+                    Manajemen Stok Otomatis &amp; Resep Bahan Baku
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Saat segelas kopi atau seporsi makanan terjual, stok bahan baku (biji kopi, susu, gula, cup) otomatis berkurang sesuai takaran resep. Ada peringatan dini saat bahan mulai menipis sebelum kehabisan di jam ramai.
+                    Setiap produk atau menu olahan yang terjual otomatis memotong persediaan bahan baku secara akurat berdasarkan komposisi resep. Dapatkan notifikasi pengingat stok menipis sebelum bahan habis di jam sibuk.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Cocok untuk Kafe &amp; Kuliner</span>
+                  <span>Kontrol Bahan Baku &amp; HPP Presisi</span>
                 </div>
               </div>
 
-              {/* Manfaat 4 */}
+              {/* Manfaat 4: Mendukung Struk Digital via WhatsApp */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
                     <MessageCircle className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Struk Digital Hemat Kertas ke WhatsApp
+                    Mendukung Struk Digital via WhatsApp
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Selain mencetak struk lewat printer thermal biasa, bukti pembayaran bisa langsung otomatis dikirimkan ke nomor WhatsApp pelanggan. Hemat anggaran roll kertas struk kasir, ramah lingkungan, dan nomor WA pelanggan tersimpan aman.
+                    Kirim bukti pembayaran langsung ke nomor WhatsApp pelanggan dalam hitungan detik. Praktis, hemat biaya roll kertas thermal kasir, dan tetap mendukung cetak nota printer fisik jika pelanggan menginginkannya.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Kirim Nota Otomatis 1-Klik</span>
+                  <span>Struk Digital &amp; Cetak Thermal</span>
                 </div>
               </div>
 
-              {/* Manfaat 5 */}
+              {/* Manfaat 5: Fitur Absensi & Hak Akses Karyawan */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Karyawan Disiplin &amp; Kas Laci Bebas Bocor
+                    Fitur Absensi &amp; Hak Akses Karyawan
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Absensi mandiri staf toko dengan verifikasi PIN dan jam kerja terdata rapi. Setiap pembatalan nota (void) atau hapus pesanan wajib persetujuan PIN supervisor sehingga terhindar dari kecurangan nota liar kasir.
+                    Catat kehadiran staf toko dengan PIN masing-masing dan atur hak akses peran kasir secara ketat. Pembatalan transaksi (void) terlindungi otorisasi supervisor agar pencatatan uang laci kasir selalu akurat.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Kunci Pembatalan Nota (Anti-Void)</span>
+                  <span>Presensi PIN &amp; Kontrol Kasir</span>
                 </div>
               </div>
 
-              {/* Manfaat 6 */}
+              {/* Manfaat 6: Buka Cabang Baru & Manajemen Multi-Outlet */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
                     <Store className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Buka Cabang Baru &amp; Gudang Tanpa Repot
+                    Buka Cabang Baru &amp; Manajemen Multi-Outlet
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Ingin buka cabang ke-2 atau gudang pasokan? Anda bisa menyalin ratusan master produk tanpa perlu mengetik ulang dari awal. Mutasi pengiriman stok barang dari gudang ke cabang tercatat rapi secara real-time.
+                    Ingin ekspansi ke cabang ke-2 atau gudang pasokan? Anda bisa menyalin ratusan master produk tanpa perlu mengetik ulang dari awal. Mutasi pengiriman stok barang antar cabang terpantau rapi dan real-time.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
@@ -769,7 +934,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
         {/* =========================================================================
             SKEMA PRICING & EDUKASI TOKEN MEMBUMI (+ PROMO BULANAN)
         ========================================================================= */}
-        <section className="pt-12 sm:pt-16 pb-16 bg-slate-50 border-t border-slate-200 text-slate-900">
+        <section id="biaya" className="pt-12 sm:pt-16 pb-16 bg-slate-50 border-t border-slate-200 text-slate-900 scroll-mt-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
               <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider block mb-1">
@@ -969,23 +1134,224 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setRegisterSuccessData(null);
-                  setRegisterModalOpen(true);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white text-orange-700 hover:bg-amber-50 font-black text-xs shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer"
+              <a
+                href="#promo"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white text-orange-700 hover:bg-amber-50 font-black text-xs shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer inline-flex items-center justify-center"
               >
-                Cek Promo Pendaftaran &rarr;
-              </button>
+                Cek Katalog Promo &rarr;
+              </a>
             </div>
+          </div>
+        </section>
+
+        {/* =========================================================================
+            HALAMAN / KATALOG PROMO TERSENDIRI PUBLIK (DIPUBLISH OLEH SUPERADMIN)
+        ========================================================================= */}
+        <section id="promo" className="pt-16 sm:pt-24 pb-16 bg-gradient-to-b from-slate-50 via-blue-50/30 to-white border-t border-slate-200 text-slate-900 scroll-mt-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold mb-3">
+                <Tag className="w-3.5 h-3.5 text-amber-600" />
+                <span>KODE VOUCHER &amp; DISKON RESMI</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                Katalog Promo Spesial Well POS
+              </h2>
+              <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Nikmati potongan biaya pendaftaran toko baru dan bonus kuota token transaksi ekstra. Gunakan kode promo resmi di bawah ini saat mendaftar atau bertransaksi!
+              </p>
+
+              {/* Filter Scope Promo */}
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPromoFilter('ALL')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border ${
+                    promoFilter === 'ALL'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  Semua Promo ({publicPromos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPromoFilter('REGISTRATION')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border ${
+                    promoFilter === 'REGISTRATION'
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  🎯 Khusus Pendaftaran ({publicPromos.filter(p => p.scope === 'REGISTRATION' || p.scope === 'ALL').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPromoFilter('TOPUP')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer border ${
+                    promoFilter === 'TOPUP'
+                      ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  ⚡ Khusus Top-Up Token ({publicPromos.filter(p => p.scope === 'TOPUP' || p.scope === 'ALL').length})
+                </button>
+              </div>
+            </div>
+
+            {/* List Promo Cards */}
+            {loadingPromos ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                <span className="text-xs font-medium">Memuat katalog promo...</span>
+              </div>
+            ) : (() => {
+              const displayedPromos = publicPromos.filter((p) => {
+                if (promoFilter === 'ALL') return true;
+                return p.scope === promoFilter || p.scope === 'ALL';
+              });
+
+              if (displayedPromos.length === 0) {
+                return (
+                  <div className="bg-white border border-dashed border-slate-300 rounded-3xl p-8 sm:p-12 text-center max-w-md mx-auto shadow-xs">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto mb-3">
+                      <Gift className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-black text-slate-900 text-sm sm:text-base">Belum Ada Promo di Kategori Ini</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Nantikan promo dan diskon spesial berikutnya yang akan dipublikasikan oleh tim Well POS di awal bulan!
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 text-left">
+                  {displayedPromos.map((promo) => {
+                    const isCopied = copiedPromoCode === promo.code;
+                    return (
+                      <div
+                        key={promo.id}
+                        className="bg-white border-2 border-slate-200 hover:border-blue-400 rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between relative overflow-hidden group"
+                      >
+                        {/* Aksen Label Kupon */}
+                        <div className="absolute -top-12 -right-12 w-24 h-24 bg-blue-500/5 rounded-full pointer-events-none group-hover:scale-150 transition-transform" />
+
+                        <div>
+                          {/* Top Badges */}
+                          <div className="flex items-center justify-between gap-2 mb-3.5">
+                            <span
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black border uppercase tracking-wider ${
+                                promo.scope === 'REGISTRATION'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : promo.scope === 'TOPUP'
+                                  ? 'bg-sky-50 text-sky-700 border-sky-200'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}
+                            >
+                              {promo.scope === 'REGISTRATION'
+                                ? '🎯 Pendaftaran Toko'
+                                : promo.scope === 'TOPUP'
+                                ? '⚡ Top-Up Token'
+                                : '🌐 Semua Transaksi'}
+                            </span>
+
+                            {promo.validUntil && (
+                              <span className="text-[10px] font-semibold text-slate-400">
+                                S/d {new Date(promo.validUntil).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Benefit Nominal Besar */}
+                          <div className="mb-2">
+                            <span className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight block">
+                              {promo.type === 'DISCOUNT_PERCENT'
+                                ? `Diskon ${promo.value}%`
+                                : promo.type === 'DISCOUNT_FIXED'
+                                ? `Potongan Rp ${Number(promo.value).toLocaleString('id-ID')}`
+                                : `+${Number(promo.value).toLocaleString('id-ID')} Token`}
+                            </span>
+                            <h4 className="text-sm font-bold text-slate-800 mt-1">{promo.name}</h4>
+                          </div>
+
+                          {/* Deskripsi & Syarat */}
+                          <p className="text-xs text-slate-600 leading-relaxed min-h-[32px]">
+                            {promo.description || (
+                              promo.scope === 'REGISTRATION'
+                                ? 'Berlaku untuk pembuatan akun pemilik toko baru di Well POS.'
+                                : promo.scope === 'TOPUP'
+                                ? 'Berlaku saat melakukan isi ulang kuota token kasir di backoffice.'
+                                : 'Dapat digunakan untuk pendaftaran maupun pembelian kuota token.'
+                            )}
+                          </p>
+
+                          {/* Syarat Khusus (Min Belanja / Max Diskon) */}
+                          {(promo.minSpend > 0 || promo.maxDiscount > 0) && (
+                            <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500 font-medium">
+                              {promo.minSpend > 0 && (
+                                <span>Min. transaksi Rp {Number(promo.minSpend).toLocaleString('id-ID')}</span>
+                              )}
+                              {promo.maxDiscount > 0 && (
+                                <span>Maks. diskon Rp {Number(promo.maxDiscount).toLocaleString('id-ID')}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bagian Bawah: Box Kode Voucher & Tombol Gunakan */}
+                        <div className="mt-5 pt-4 border-t-2 border-dashed border-slate-100 space-y-2.5">
+                          {/* Kode Box dengan Salin */}
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="font-mono font-black text-xs sm:text-sm text-indigo-700 tracking-wider truncate">
+                                {promo.code}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => copyPromoCode(promo.code)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                                isCopied
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                              <span>{isCopied ? 'Tersalin!' : 'Salin'}</span>
+                            </button>
+                          </div>
+
+                          {/* Tombol Gunakan Voucher */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (promo.scope === 'TOPUP') {
+                                onOpenPos();
+                              } else {
+                                handleUsePromoFromCatalog(promo.code);
+                              }
+                            }}
+                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <span>{promo.scope === 'TOPUP' ? 'Gunakan di Kasir' : 'Gunakan Voucher Ini'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </section>
 
         {/* =========================================================================
             F&Q (FREQUENTLY ASKED QUESTIONS / TANYA JAWAB PEDAGANG)
         ========================================================================= */}
-        <section className="pt-14 sm:pt-20 pb-16 bg-white text-slate-900 border-t border-slate-200">
+        <section id="faq" className="pt-14 sm:pt-20 pb-16 bg-white text-slate-900 border-t border-slate-200 scroll-mt-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
               <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider block mb-1">
@@ -1487,6 +1853,21 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
           </form>
         )}
       </Modal>
+
+      {/* =========================================================================
+          FLOATING SCROLL TO TOP BUTTON (KEMBALI KE ATAS)
+      ========================================================================= */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-40 p-3 sm:p-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/35 border border-blue-400/30 transition-all transform hover:-translate-y-1 active:scale-95 cursor-pointer flex items-center justify-center animate-fade-in group"
+          title="Kembali ke atas"
+          aria-label="Kembali ke atas"
+        >
+          <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
+        </button>
+      )}
     </div>
   );
 };

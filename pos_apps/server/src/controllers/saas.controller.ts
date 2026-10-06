@@ -1502,6 +1502,44 @@ export const getTenantNotifications = async (req: Request, res: Response) => {
   }
 };
 
+export const getPublicPublishedPromos = async (_req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const promos = await prisma.saaSPromo.findMany({
+      where: {
+        isActive: true,
+        isPublished: true,
+        OR: [
+          { validUntil: null },
+          { validUntil: { gte: now } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: promos.map((p) => ({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        description: p.description || '',
+        scope: (p as any).scope || 'ALL',
+        type: p.type,
+        value: Number(p.value),
+        minSpend: p.minSpend ? Number(p.minSpend) : 0,
+        maxDiscount: p.maxDiscount ? Number(p.maxDiscount) : null,
+        usageLimit: p.usageLimit,
+        usedCount: p.usedCount,
+        validUntil: p.validUntil,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching public published promos:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat katalog promo publik' });
+  }
+};
+
 
 
 

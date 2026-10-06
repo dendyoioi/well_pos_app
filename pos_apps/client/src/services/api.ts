@@ -1238,6 +1238,28 @@ export const api = {
     return res.json();
   },
 
+  getPublicPromos: async (): Promise<{
+    status: string;
+    data?: Array<{
+      id: string;
+      code: string;
+      name: string;
+      description?: string | null;
+      type: 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'BONUS_TOKENS';
+      value: number;
+      minSpend: number;
+      maxDiscount?: number | null;
+      scope: 'ALL' | 'REGISTRATION' | 'TOPUP';
+      validUntil?: string | null;
+      isPublished: boolean;
+      isActive: boolean;
+    }>;
+    message?: string;
+  }> => {
+    const res = await fetch('/api/saas/promos/public');
+    return res.json();
+  },
+
   createInitialStore: async (data: {
     merchantName: string;
     storeName: string;
@@ -1560,12 +1582,15 @@ export const api = {
   createPlatformPromo: async (data: {
     code: string;
     name: string;
+    description?: string;
     type: 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'BONUS_TOKENS';
     value: number;
+    scope?: 'ALL' | 'REGISTRATION' | 'TOPUP';
     minSpend?: number;
     maxDiscount?: number | null;
     usageLimit?: number | null;
     validUntil?: string | null;
+    isPublished?: boolean;
   }): Promise<{ status: string; data?: any; message?: string }> => {
     const res = await fetch('/api/platform/promos', {
       method: 'POST',
@@ -1577,6 +1602,14 @@ export const api = {
 
   togglePlatformPromo: async (id: string): Promise<{ status: string; data?: any; message?: string }> => {
     const res = await fetch(`/api/platform/promos/${id}/toggle`, {
+      method: 'PATCH',
+      headers: platformAuthHeader(),
+    });
+    return res.json();
+  },
+
+  togglePublishPlatformPromo: async (id: string): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch(`/api/platform/promos/${id}/toggle-publish`, {
       method: 'PATCH',
       headers: platformAuthHeader(),
     });

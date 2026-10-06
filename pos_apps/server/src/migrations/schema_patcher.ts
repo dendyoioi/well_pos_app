@@ -145,6 +145,14 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
       CREATE INDEX IF NOT EXISTS "attendances_tenant_id_user_id_work_date_idx" ON "attendances"("tenant_id", "user_id", "work_date");
     `,
   },
+  {
+    id: '20261007_01_saas_promos_is_published',
+    description: 'Menambahkan kolom is_published dan description pada tabel saas_promos untuk halaman promo publik website dan manajemen superadmin',
+    sql: `
+      ALTER TABLE "saas_promos" ADD COLUMN IF NOT EXISTS "is_published" BOOLEAN NOT NULL DEFAULT true;
+      ALTER TABLE "saas_promos" ADD COLUMN IF NOT EXISTS "description" TEXT;
+    `,
+  },
 ];
 
 /**
