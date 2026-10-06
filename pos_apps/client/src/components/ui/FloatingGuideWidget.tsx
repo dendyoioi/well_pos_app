@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BookOpen, ArrowRight, X, Sparkles } from 'lucide-react';
+import { BookOpen, ArrowRight, X, Sparkles, Printer, MessageCircle, Smartphone, Utensils } from 'lucide-react';
 
 interface FloatingGuideWidgetProps {
   activeTab: string;
@@ -217,6 +217,59 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
               </div>
             ) : null}
 
+            {/* Topik Populer / Fitur Terbaru Enhancement */}
+            <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
+                Pintasan Fitur Baru &amp; Hardware:
+              </span>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('bluetooth_printer');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                  <span className="truncate">Printer Bluetooth</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('whatsapp_receipt');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span className="truncate">Resi WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('pwa_install');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                  <span className="truncate">App Kasir PWA</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('open_tab_rules');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Utensils className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span className="truncate">Pesanan Susulan</span>
+                </button>
+              </div>
+            </div>
+
             {/* Tombol ke Pusat Panduan Lengkap */}
             <button
               type="button"
@@ -228,7 +281,7 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
             >
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-900" />
-                <span>Buka Seluruh Panduan (12 Modul)</span>
+                <span>Buka Seluruh Panduan (18 Modul)</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
