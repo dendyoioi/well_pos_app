@@ -54,7 +54,7 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Dialog */}
       <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4 text-center">
         <div
-          className={`w-full ${sizeStyles[size]} transform overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white text-left align-middle shadow-2xl transition-all border border-slate-200/80 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 flex flex-col max-h-[92vh] overscroll-contain`}
+          className={`w-full ${sizeStyles[size]} transform overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white text-left align-middle shadow-2xl transition-all border border-slate-200/80 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 flex flex-col max-h-[92dvh] sm:max-h-[90vh] overscroll-contain`}
         >
           {/* Modal Header */}
           {(title || subtitle) && (
@@ -70,7 +70,7 @@ export const Modal: React.FC<ModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors shrink-0"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors shrink-0 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -78,11 +78,11 @@ export const Modal: React.FC<ModalProps> = ({
           )}
 
           {/* Modal Body */}
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+          <div className={`p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain ${!footer ? 'pb-[max(1.5rem,env(safe-area-inset-bottom))]' : ''}`}>{children}</div>
 
           {/* Modal Footer */}
           {footer && (
-            <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5 sm:gap-3 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
               {footer}
             </div>
           )}

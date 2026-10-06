@@ -77,77 +77,79 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto overscroll-contain">
-          {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-semibold">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto overscroll-contain flex-1">
+            {errorMsg && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-semibold">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <div>
+              <CurrencyInput
+                label="Modal Awal di Laci Kasir (Cash Float)"
+                value={startingCash}
+                onChange={(val) => setStartingCash(val)}
+                inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
+                prefixClassName="text-sm font-extrabold"
+                placeholder="0"
+                required
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Uang tunai fisik pecahan kecil untuk uang kembalian pembeli.
+              </p>
             </div>
-          )}
 
-          <div>
-            <CurrencyInput
-              label="Modal Awal di Laci Kasir (Cash Float)"
-              value={startingCash}
-              onChange={(val) => setStartingCash(val)}
-              inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
-              prefixClassName="text-sm font-extrabold"
-              placeholder="0"
-              required
-            />
-            <p className="text-[11px] text-slate-500 mt-1">
-              Uang tunai fisik pecahan kecil untuk uang kembalian pembeli.
-            </p>
-          </div>
+            {/* Tombol Pecahan Cepat */}
+            <div>
+              <span className="text-[11px] font-bold text-slate-500 block mb-2">Pilihan Cepat:</span>
+              <div className="grid grid-cols-3 gap-2">
+                {quickAmounts.map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setStartingCash(amt)}
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      startingCash === amt
+                        ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    Rp {(amt / 1000).toLocaleString('id-ID')}k
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Tombol Pecahan Cepat */}
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 block mb-2">Pilihan Cepat:</span>
-            <div className="grid grid-cols-3 gap-2">
-              {quickAmounts.map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setStartingCash(amt)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                    startingCash === amt
-                      ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-                  }`}
-                >
-                  Rp {(amt / 1000).toLocaleString('id-ID')}k
-                </button>
-              ))}
+            {/* Catatan / Keterangan */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Catatan Pembukaan Shift (Opsional)
+              </label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Contoh: Buka shift pagi, uang laci pas"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
+              />
             </div>
           </div>
 
-          {/* Catatan / Keterangan */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Catatan Pembukaan Shift (Opsional)
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Contoh: Buka shift pagi, uang laci pas"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="pt-2 flex items-center justify-end gap-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {/* Sticky Actions Footer */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <Check className="w-4 h-4 stroke-[2.5]" />
               <span>{loading ? 'Membuka...' : 'Mulai Sesi Shift'}</span>

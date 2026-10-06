@@ -254,7 +254,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-xl bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+      <div className="w-full max-w-xl bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header Modal */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-950 to-indigo-950 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">

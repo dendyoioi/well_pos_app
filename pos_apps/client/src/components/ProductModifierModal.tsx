@@ -110,8 +110,8 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header Modal */}
         <div className="p-3.5 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-3">
@@ -234,7 +234,7 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
         </div>
 
         {/* Footer Modal: Ringkasan Harga & Tombol Tambah */}
-        <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-3 sm:gap-4 shrink-0">
+        <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-3 sm:gap-4 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
           <div>
             <div className="text-[11px] text-slate-500 font-medium">Total Harga Unit</div>
             <div className="text-base sm:text-lg font-black text-blue-950">

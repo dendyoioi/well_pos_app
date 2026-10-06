@@ -90,10 +90,10 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-rose-100 flex flex-col max-h-[92vh]">
-        {/* Modal Header */}
-        <div className="bg-rose-50/80 px-6 py-4 border-b border-rose-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-rose-100 flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+        {/* Modal Header - Sticky */}
+        <div className="bg-rose-50/80 px-6 py-4 border-b border-rose-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shadow-xs">
               <AlertTriangle className="w-5 h-5 text-rose-600" />
@@ -117,8 +117,10 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <form onSubmit={handleConfirmVoid} className="p-6 space-y-4 overflow-y-auto">
+        {/* Modal Form */}
+        <form onSubmit={handleConfirmVoid} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {/* Order Summary Card */}
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
             <div className="flex items-center justify-between text-xs">
@@ -266,8 +268,10 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
             </div>
           )}
 
-          {/* Modal Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          </div>
+
+          {/* Modal Actions - Sticky Bottom with Safe Area */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}

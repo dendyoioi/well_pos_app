@@ -67,10 +67,10 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+        {/* Header - Sticky */}
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shadow-xs">
               <Package className="w-5 h-5" />
@@ -88,8 +88,10 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {errorMsg && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-semibold text-rose-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -187,8 +189,10 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
             <p className="text-[11px] text-slate-400 mt-1">Stok fisik yang sudah tersedia saat ini</p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          </div>
+
+          {/* Action Buttons - Sticky Bottom with Safe Area */}
+          <div className="p-4 sm:px-6 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}

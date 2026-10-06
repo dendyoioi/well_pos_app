@@ -77,9 +77,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white w-full max-w-2xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white w-full max-w-2xl max-h-[92dvh] sm:max-h-[88vh] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
@@ -136,7 +136,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         </div>
 
         {/* Scrollable Body Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs sm:text-sm">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 text-xs sm:text-sm">
           {/* VOID Banner Alert */}
           {isVoided && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-900">
@@ -392,7 +392,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         </div>
 
         {/* Footer Quick Actions */}
-        <div className="px-5 py-3.5 border-t border-slate-200 bg-white flex items-center justify-between gap-2 flex-wrap shrink-0">
+        <div className="px-5 py-3.5 border-t border-slate-200 bg-white flex items-center justify-between gap-2 flex-wrap shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Cetak Struk */}
             <button

@@ -221,8 +221,8 @@ export const ProductBarcodeLabelsModal: React.FC<ProductBarcodeLabelsModalProps>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-xs animate-fadeIn select-none">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-scaleUp">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-slate-950/70 backdrop-blur-xs animate-fadeIn select-none">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92dvh] sm:max-h-[92vh] flex flex-col overflow-hidden animate-scaleUp">
         {/* Header Modal */}
         <div className="px-6 py-4 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
@@ -254,7 +254,7 @@ export const ProductBarcodeLabelsModal: React.FC<ProductBarcodeLabelsModalProps>
         {/* Modal Body (2 Kolom: Kiri Pengaturan & Checklist, Kanan Preview Live) */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-200">
           {/* Kolom Kiri: Pengaturan & Daftar Produk */}
-          <div className="w-full md:w-1/2 flex flex-col p-5 overflow-y-auto bg-slate-50/50 space-y-5">
+          <div className="w-full md:w-1/2 flex flex-col p-5 overflow-y-auto overscroll-contain bg-slate-50/50 space-y-5">
             {/* 1. Pengaturan Template Label */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
               <div className="flex items-center gap-2 text-xs font-extrabold text-blue-950 uppercase tracking-wider">
@@ -531,7 +531,7 @@ export const ProductBarcodeLabelsModal: React.FC<ProductBarcodeLabelsModalProps>
         </div>
 
         {/* Footer Modal: Ringkasan & Tombol Cetak */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="text-xs font-bold text-slate-600">
             Total Target Cetak:{' '}
             <strong className="text-blue-950 text-sm font-extrabold">{totalLabels}</strong> Lembar Label

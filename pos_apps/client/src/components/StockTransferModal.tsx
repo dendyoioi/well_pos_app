@@ -265,10 +265,10 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in">
+      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+        {/* Header - Sticky */}
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100">
               <ArrowLeftRight className="w-5 h-5 text-blue-900" />
@@ -288,8 +288,10 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 overscroll-contain">
           {error && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 text-xs animate-shake">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -517,8 +519,10 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+          </div>
+
+          {/* Action Buttons - Sticky Bottom with Safe Area */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}

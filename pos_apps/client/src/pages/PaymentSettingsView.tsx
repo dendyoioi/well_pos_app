@@ -11,13 +11,12 @@ import {
   Smartphone,
   Eye,
   RefreshCw,
-  Sparkles,
   Loader2,
 } from 'lucide-react';
 import type { Outlet, PaymentConfig, QrisConfig } from '../types/outlet';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
-import { compressImage, formatBytes } from '../utils/imageCompressor';
+import { compressImage } from '../utils/imageCompressor';
 
 interface PaymentSettingsViewProps {
   activeOutlet: Outlet | null;
@@ -40,7 +39,6 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
   const [isActive, setIsActive] = useState<boolean>(currentQris.isActive ?? true);
   const [imageUrl, setImageUrl] = useState<string | null>(currentQris.imageUrl || null);
   const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionStats, setCompressionStats] = useState<string | null>(null);
 
   // Sinkronisasi saat activeOutlet berubah
   useEffect(() => {
@@ -48,7 +46,6 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       const q = activeOutlet.paymentConfig?.qris;
       setIsActive(q?.isActive ?? true);
       setImageUrl(q?.imageUrl || null);
-      setCompressionStats(null);
     }
   }, [activeOutlet?.id, activeOutlet?.paymentConfig]);
 
@@ -85,17 +82,11 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
         mimeType: 'image/webp',
       });
       setImageUrl(result.dataUrl);
-      setCompressionStats(
-        `${formatBytes(result.originalSizeBytes)} ➔ ${formatBytes(result.compressedSizeBytes)} (-${result.savingsPercent}%)`
-      );
-      dialog.toast(
-        `Foto barcode QRIS dioptimasi otomatis (-${result.savingsPercent}%): ${formatBytes(result.compressedSizeBytes)}`,
-        'success'
-      );
+      dialog.toast('Foto barcode QRIS berhasil diunggah', 'success');
     } catch (err: any) {
       dialog.alert({
         title: 'Gagal Memproses Berkas',
-        message: err?.message || 'Terjadi kendala saat membaca dan mengompres berkas gambar. Silakan coba lagi.',
+        message: err?.message || 'Terjadi kendala saat membaca berkas gambar. Silakan coba lagi.',
         variant: 'danger',
       });
     } finally {
@@ -107,7 +98,6 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
   // Hapus Gambar
   const handleRemoveImage = () => {
     setImageUrl(null);
-    setCompressionStats(null);
     dialog.toast('Gambar QRIS telah dikosongkan.', 'info');
   };
 
@@ -280,21 +270,12 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                     </div>
                   </div>
 
-                  {compressionStats && (
-                    <div className="flex justify-center">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium rounded-lg shadow-2xs">
-                        <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                        <span>Terkompresi otomatis: <strong>{compressionStats}</strong></span>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex items-center justify-center gap-2">
                     <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer shadow-2xs transition-all">
                       {isCompressing ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-700" />
-                          <span>Mengompres...</span>
+                          <span>Memproses...</span>
                         </>
                       ) : (
                         <>
@@ -334,7 +315,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                   <div>
                     {isCompressing ? (
                       <p className="text-xs font-bold text-blue-800 animate-pulse">
-                        Sedang mengompresi dan mengoptimasi gambar barcode...
+                        Sedang memproses gambar barcode...
                       </p>
                     ) : (
                       <>
@@ -349,7 +330,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                         </label>
                         <span className="text-xs text-slate-500"> atau seret ke area ini</span>
                         <p className="text-[11px] text-slate-400 mt-1.5">
-                          Mendukung PNG, JPG, JPEG, WebP — Kompresi otomatis hingga 15 MB
+                          Mendukung PNG, JPG, JPEG, WebP (Maksimal 15 MB)
                         </p>
                       </>
                     )}

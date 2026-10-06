@@ -29,7 +29,7 @@ export const OpenTabsModal: React.FC<OpenTabsModalProps> = ({
       subtitle="Kelola pesanan pelanggan meja yang bayar belakangan. Anda dapat menambah menu atau melakukan pelunasan tagihan."
       size="lg"
     >
-      <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
+      <div className="space-y-3">
         {openTabs.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 text-slate-300 stroke-1" />

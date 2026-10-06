@@ -127,8 +127,8 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header - Bersih, bebas tabrakan icon & badge */}
         <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -158,7 +158,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
         </div>
 
         {/* Content Body: Scrollable */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-5 flex-1 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {/* Status Message Alerts */}
           {errorMsg && (
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-700 text-xs">

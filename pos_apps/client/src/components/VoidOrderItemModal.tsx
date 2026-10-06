@@ -106,12 +106,12 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-amber-200 flex flex-col max-h-[92vh]">
-        {/* Modal Header */}
-        <div className="bg-amber-50/80 px-6 py-4 border-b border-amber-200/70 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-amber-200 flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+        {/* Modal Header (Sticky Top) */}
+        <div className="bg-amber-50/80 px-5 sm:px-6 py-4 border-b border-amber-200/70 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs shrink-0">
               <PackageX className="w-5 h-5 text-amber-700" />
             </div>
             <div>
@@ -129,14 +129,16 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <form onSubmit={handleConfirmVoidItem} className="p-6 space-y-4 overflow-y-auto">
-          {errorMsg && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 font-medium animate-in fade-in duration-150">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+        {/* Modal Form Container */}
+        <form onSubmit={handleConfirmVoidItem} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Body */}
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
+            {errorMsg && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 font-medium animate-in fade-in duration-150">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
           {/* Item Info Card */}
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
@@ -287,35 +289,36 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
                 : 'Kasir wajib memanggil Supervisor/Owner untuk memasukkan PIN persetujuan sebelum item dapat dibatalkan.'}
             </p>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Kembali
-            </button>
-            <button
-              type="submit"
-              disabled={!isFormValid || loading}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
-            >
-              {loading ? (
-                <span>Memproses...</span>
-              ) : (
-                <>
-                  <PackageX className="w-4 h-4" />
-                  <span>Sahkan Batal Item</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>,
+        {/* Sticky Footer Action Buttons */}
+        <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+          >
+            Kembali
+          </button>
+          <button
+            type="submit"
+            disabled={!isFormValid || loading}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            {loading ? (
+              <span>Memproses...</span>
+            ) : (
+              <>
+                <PackageX className="w-4 h-4" />
+                <span>Sahkan Batal Item</span>
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>,
     document.body
   );
 };

@@ -182,7 +182,7 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-150 p-0 sm:p-4">
-      <div className="bg-slate-900 border border-slate-800 text-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+      <div className="bg-slate-900 border border-slate-800 text-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         {/* Header Modal */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 shrink-0">
           <div className="flex items-center gap-2.5">

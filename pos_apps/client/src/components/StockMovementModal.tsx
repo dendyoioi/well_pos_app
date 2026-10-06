@@ -204,10 +204,10 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Header Modal */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+        {/* Header Modal - Sticky */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
           <div>
             <h3 className="font-extrabold text-blue-950 text-base sm:text-lg">
               Mutasi Inventori Stok
@@ -224,9 +224,9 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Jenis Mutasi */}
-        <div className="p-6 pb-0">
-          <div className="grid grid-cols-3 p-1 bg-slate-100 border border-slate-200 rounded-2xl mb-4">
+        {/* Tab Jenis Mutasi - Sticky */}
+        <div className="px-6 pt-4 pb-0 shrink-0 bg-white">
+          <div className="grid grid-cols-3 p-1 bg-slate-100 border border-slate-200 rounded-2xl mb-2">
             <button
               type="button"
               onClick={() => setType('IN')}
@@ -266,8 +266,10 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 pt-2 space-y-4">
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-6 pt-2 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-medium">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -470,19 +472,21 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             />
           </div>
 
-          {/* Footer Buttons */}
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+          </div>
+
+          {/* Footer Buttons - Sticky Bottom with Safe Area */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-100 transition-colors"
+              className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5"
+              className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               {loading ? 'Menyimpan Mutasi...' : 'Eksekusi Mutasi'}

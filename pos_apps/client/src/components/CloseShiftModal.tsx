@@ -88,8 +88,8 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white p-4 sm:p-5 flex items-center justify-between no-print shrink-0">
           <div className="flex items-center gap-3">
@@ -121,13 +121,14 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
         {/* Modal Content */}
         {!zReportData ? (
           /* Step 1: Input Uang Fisik Kasir */
-          <form onSubmit={handleSubmitClose} className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1 overscroll-contain">
-            {errorMsg && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-semibold">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+          <form onSubmit={handleSubmitClose} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1 overscroll-contain">
+              {errorMsg && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
             {/* Info Box Perhitungan Sistem */}
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
@@ -228,29 +229,31 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
               />
             </div>
+          </div>
 
-            {/* Actions */}
-            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50"
-              >
-                <Lock className="w-4 h-4 stroke-[2.5]" />
-                <span>{loading ? 'Menutup Shift...' : 'Kunci & Tutup Shift (Z-Report)'}</span>
-              </button>
-            </div>
-          </form>
-        ) : (
-          /* Step 2: Tampilan Resmi Z-Report Thermal */
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 flex flex-col items-center">
+          {/* Sticky Actions Footer */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Lock className="w-4 h-4 stroke-[2.5]" />
+              <span>{loading ? 'Menutup Shift...' : 'Kunci & Tutup Shift (Z-Report)'}</span>
+            </button>
+          </div>
+        </form>
+      ) : (
+        /* Step 2: Tampilan Resmi Z-Report Thermal */
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 bg-slate-100 flex flex-col items-center">
             {/* Paper Selector */}
             <div className="flex items-center gap-2 mb-4 no-print">
               <span className="text-xs font-bold text-slate-500">Lebar Cetak:</span>
@@ -445,19 +448,20 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 <p>Shift Resmi Ditutup. Terima Kasih.</p>
               </div>
             </div>
+          </div>
 
-            {/* Actions for Step 2 */}
-            <div className="w-full max-w-[360px] pt-4 flex items-center justify-between gap-3 no-print pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {/* Sticky Actions for Step 2 */}
+            <div className="p-4 sm:px-6 bg-white border-t border-slate-200 flex items-center justify-center gap-3 no-print shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] w-full">
               <button
                 onClick={handlePrint}
-                className="flex-1 py-2.5 rounded-xl border-2 border-blue-900 text-blue-950 font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 max-w-[180px] py-2.5 rounded-xl border-2 border-blue-900 text-blue-950 font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Z-Report</span>
               </button>
               <button
                 onClick={handleFinish}
-                className="flex-1 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 max-w-[180px] py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Selesai</span>
                 <ArrowRight className="w-4 h-4" />

@@ -22,7 +22,7 @@ import type { ModifierGroup } from '../types/modifier';
 import { api } from '../services/api';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { useDialog } from '../context/DialogContext';
-import { compressImage, formatBytes } from '../utils/imageCompressor';
+import { compressImage } from '../utils/imageCompressor';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -90,7 +90,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isCompressingImage, setIsCompressingImage] = useState(false);
-  const [compressionStats, setCompressionStats] = useState<string | null>(null);
 
   // Unit Search & Add State
   const [unitList, setUnitList] = useState<string[]>(DEFAULT_UNITS);
@@ -168,7 +167,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setUnit(productToEdit.unit);
       setMinStockAlert(productToEdit.minStockAlert);
       setImageUrl(productToEdit.imageUrl || '');
-      setCompressionStats(null);
 
       // Parse description and check for hasStock metadata
       let loadedHasStock = true;
@@ -214,7 +212,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setMinStockAlert(5);
       setDescription('');
       setImageUrl('');
-      setCompressionStats(null);
       setSelectedModifierGroupIds([]);
     }
     setError(null);
@@ -251,7 +248,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       return;
     }
 
-    // Mengizinkan file kamera resolusi tinggi hingga 15MB karena akan dikompresi otomatis
+    // Mengizinkan file kamera resolusi tinggi hingga 15MB karena akan diproses otomatis
     if (file.size > 15 * 1024 * 1024) {
       setError('Ukuran file foto maksimal 15MB');
       return;
@@ -268,15 +265,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         mimeType: 'image/webp',
       });
       setImageUrl(result.dataUrl);
-      setCompressionStats(
-        `${formatBytes(result.originalSizeBytes)} ➔ ${formatBytes(result.compressedSizeBytes)} (-${result.savingsPercent}%)`
-      );
-      dialog.toast(
-        `Foto berhasil dioptimasi otomatis (-${result.savingsPercent}%): ${formatBytes(result.compressedSizeBytes)}`,
-        'success'
-      );
+      dialog.toast('Foto produk berhasil diunggah', 'success');
     } catch (err: any) {
-      setError(err?.message || 'Gagal memproses dan mengompres foto');
+      setError(err?.message || 'Gagal memproses foto produk');
     } finally {
       setIsCompressingImage(false);
       if (fileInputRef.current) {
@@ -441,8 +432,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header Modal */}
         <div className="px-5 py-4 sm:px-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -470,7 +461,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
         {/* Form Isi */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-800">
+          <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-6 flex-1 text-slate-800">
             {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-medium">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -501,10 +492,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setImageUrl('');
-                        setCompressionStats(null);
-                      }}
+                      onClick={() => setImageUrl('')}
                       className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1"
                     >
                       <Trash2 className="w-4 h-4 text-rose-300" /> Hapus
@@ -524,10 +512,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   <input
                     type="text"
                     value={imageUrl}
-                    onChange={(e) => {
-                      setImageUrl(e.target.value);
-                      setCompressionStats(null);
-                    }}
+                    onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="Tempel URL gambar (https://...)"
                     className="flex-1 bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3 py-2 text-xs outline-none"
                   />
@@ -547,7 +532,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     {isCompressingImage ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 text-blue-900 animate-spin" />
-                        <span>Mengompres...</span>
+                        <span>Memproses...</span>
                       </>
                     ) : (
                       <>
@@ -557,13 +542,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     )}
                   </button>
                 </div>
-
-                {compressionStats && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium rounded-lg">
-                    <Sparkles className="w-3 h-3 text-emerald-600 flex-shrink-0" />
-                    <span>Terkompresi otomatis: <strong>{compressionStats}</strong></span>
-                  </div>
-                )}
 
                 {/* Preset Chips */}
                 <div>

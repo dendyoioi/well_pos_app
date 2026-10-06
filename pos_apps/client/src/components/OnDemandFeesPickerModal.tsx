@@ -112,8 +112,8 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-950 to-indigo-950 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -298,7 +298,7 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+        <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-3">
             <button
               type="button"

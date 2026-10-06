@@ -65,10 +65,10 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs">
               <Split className="w-4 h-4" />
@@ -88,7 +88,7 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
         </div>
 
         {/* Tab Switcher: Bagi Rata vs Pisah Item */}
-        <div className="p-3 bg-slate-100 border-b border-slate-200 flex gap-2">
+        <div className="p-3 bg-slate-100 border-b border-slate-200 flex gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setSplitMode('EQUAL')}
@@ -117,7 +117,7 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-5 flex-1 overflow-y-auto overscroll-contain space-y-4">
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
             <span className="text-xs font-bold text-slate-600">Total Tagihan Meja:</span>
             <span className="text-base font-black text-blue-900">
@@ -267,12 +267,12 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+        <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <span className="text-[11px] text-slate-400">Pembayaran split bill tercatat pada struk</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors shadow-2xs"
+            className="px-4 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors shadow-2xs cursor-pointer"
           >
             Tutup
           </button>

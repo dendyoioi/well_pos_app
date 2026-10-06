@@ -105,12 +105,12 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header Modal */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
@@ -120,14 +120,14 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto overscroll-contain flex-1 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-medium">
               <AlertCircle className="w-4 h-4 shrink-0" />
