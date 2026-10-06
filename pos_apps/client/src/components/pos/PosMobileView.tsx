@@ -221,9 +221,9 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
   return (
     <div className="flex flex-col flex-1 h-full bg-slate-100 select-none font-sans overflow-hidden relative">
-      {/* 1. Mobile Sticky Top Header with Safe Area Inset Support */}
+      {/* 1. Mobile Sticky Top Header with Realistic Safe Area Inset Support */}
       <header
-        style={{ paddingTop: 'max(10px, env(safe-area-inset-top, 0px))' }}
+        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 48px) + 8px)' }}
         className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3.5 pb-2.5 shrink-0 shadow-md z-20 flex items-center justify-between gap-2"
       >
         {/* Left: Mobile Hamburger & Outlet & Shift Status */}
@@ -268,21 +268,6 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
         {/* Right: Quick Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Quick Bluetooth Settings Button */}
-          <button
-            type="button"
-            onClick={() => setBluetoothModalOpen(true)}
-            className={`p-1.5 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
-              btPrinter.isConnected
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30'
-                : 'bg-blue-800/80 text-blue-300 border-blue-700/70 hover:bg-blue-700'
-            }`}
-            title={btPrinter.isConnected ? `Printer Bluetooth: ${btPrinter.deviceName || 'Terhubung'}` : 'Hubungkan Printer Bluetooth'}
-            aria-label="Pengaturan Printer Bluetooth"
-          >
-            <Bluetooth className="w-3.5 h-3.5" />
-          </button>
-
           {/* Channel selector badge */}
           <button
             type="button"
