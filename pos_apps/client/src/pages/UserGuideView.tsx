@@ -11,6 +11,7 @@ import {
   Lightbulb,
   ArrowRight,
   Sliders,
+  Lock,
 } from 'lucide-react';
 import type { UserRole } from '../types/auth';
 
@@ -804,7 +805,228 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     tips: 'Blind Drop Policy adalah standar baku restoran & retail modern agar kasir tidak dapat memanipulasi penghitungan fisik untuk menyamakan dengan angka sistem.',
     warning: 'Jangan pernah mengizinkan kasir menutup shift sendiri tanpa verifikasi fisik langsung dari Supervisor atau Store Manager.',
   },
+  {
+    id: 'barcode_shelf_labels',
+    title: '20. Barcode Scanner Kamera & Cetak Label Stiker Rak',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Hardware & Katalog',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'WAREHOUSE', 'CASHIER'],
+    shortDesc: 'Pemindaian barcode instan menggunakan kamera smartphone/laptop (tanpa alat scanner fisik) dan generator cetak stiker label rak harga (shelf tag) dengan barcode Code128 standar industri.',
+    actionTab: 'products',
+    actionLabel: 'Buka Katalog & Label Barcode',
+    image: '/guide/katalog-kategori-menu.png',
+    imageCaption: 'Antarmuka Pemindai Barcode Kamera & Panel Cetak Label Stiker Rak Otomatis.',
+    steps: [
+      {
+        number: 1,
+        title: 'Aktivasi Barcode Scanner Kamera di Layar Kasir (POS)',
+        description:
+          'Di layar kasir POS, kasir dapat mengetuk ikon Kamera di samping kolom pencarian item. Jendela bidik kamera akan aktif seketika. Arahkan kamera ke barcode kemasan produk; sistem akan berbunyi beep konfirmasi dan item langsung otomatis ditambahkan ke keranjang belanja.',
+        highlight: 'Zero-Hardware: Tidak perlu membeli alat scanner barcode USB eksternal, cukup gunakan kamera bawaan tablet/HP.',
+      },
+      {
+        number: 2,
+        title: 'Input Cepat Barcode di Form Master Produk',
+        description:
+          'Saat mendaftarkan produk baru di Backoffice, tekan tombol "Pindai Kamera" pada kolom Barcode/SKU. Sorot barcode fisik produk, dan angka kode (EAN-13, UPC, Code128) akan terisi otomatis tanpa risiko salah ketik.',
+      },
+      {
+        number: 3,
+        title: 'Pilih Produk untuk Cetak Stiker Rak Toko',
+        description:
+          'Buka menu Produk, centang produk yang ingin dicetak label raknya (atau pilih semua produk dalam satu kategori), lalu klik tombol "Cetak Label Rak" di bagian atas tabel.',
+      },
+      {
+        number: 4,
+        title: 'Konfigurasi Format Kertas (Thermal Roll vs Kertas A4)',
+        description:
+          'Modal pratinjau cetak menyediakan 2 opsi tata letak: (1) Format Kertas Thermal Label Gulung (58mm / 80mm) untuk printer label stiker portable, dan (2) Format Lembar Stiker A4 (kisi stiker baris x kolom) untuk printer laser/inkjet standar kantor.',
+        highlight: 'Tata letak otomatis menyesuaikan ukuran kertas dan siap dicetak langsung via dialog print browser (Ctrl/Cmd + P).',
+      },
+      {
+        number: 5,
+        title: 'Kelengkapan Informasi Stiker Label Rak',
+        description:
+          'Setiap label rak memuat informasi krusial belanja: Nama Toko, Nama Produk, Varian, Tanggal Cetak, Harga Jual Kasir tercetak tebal kontras tinggi, serta gambar barcode Code128 presisi tinggi yang mudah dibaca ulang oleh scanner.',
+      },
+    ],
+    tips: 'Pastikan pencahayaan ruangan memadai saat menggunakan scanner kamera HP. Untuk produk kecil tanpa kemasan pabrik, cetak stiker rak dan tempelkan di etalase toko untuk mempercepat proses scan kasir.',
+    warning: 'Hindari menduplikasi nomor barcode pada produk yang berbeda agar scanner kamera tidak memasukkan menu yang keliru ke keranjang transaksi.',
+  },
+  {
+    id: 'customer_debt_cashflow',
+    title: '21. Manajemen Kasbon Piutang Pelanggan & Laporan Arus Kas Riil',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Keuangan & CRM',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER'],
+    shortDesc: 'Pencatatan transaksi bayar nanti (kasbon/bon) pelanggan langganan di kasir, manajemen batas piutang (debt limit), rekonsiliasi pelunasan bon, dan pemisahan laporan omzet akrual vs arus kas riil (Cash Flow).',
+    actionTab: 'customers',
+    actionLabel: 'Buka Buku Kasbon & CRM',
+    image: '/guide/pos-terminal-transaksi.png',
+    imageCaption: 'Buku Piutang Kasbon Pelanggan: Saldo limit, riwayat tagihan belum lunas, dan modul pelunasan kasbon.',
+    steps: [
+      {
+        number: 1,
+        title: 'Pendaftaran Member CRM & Pengaturan Limit Kasbon',
+        description:
+          'Buka menu Pelanggan > Tambah Pelanggan. Masukkan nama, nomor WhatsApp aktif (+628...), dan tentukan "Batas Maksimal Kasbon" (misal Rp 500.000). Batas ini melindungi toko dari risiko piutang macet yang tak terkendali.',
+        highlight: 'Limit kasbon memblokir transaksi baru secara otomatis jika piutang pelanggan sudah melampaui batas aman.',
+      },
+      {
+        number: 2,
+        title: 'Mencatat Transaksi Kasbon di Mesin Kasir (POS)',
+        description:
+          'Saat melayani pelanggan langganan yang ingin bayar nanti, pilih nama pelanggan tersebut di kasir, lalu pilih metode pembayaran "Kasbon / Bayar Nanti". Sistem akan memvalidasi sisa limit piutang. Jika valid, transaksi tersimpan dengan status BELUM LUNAS (UNPAID).',
+      },
+      {
+        number: 3,
+        title: 'Pemeriksaan Buku Kasbon (Accounts Receivable Ledger)',
+        description:
+          'Buka menu Pelanggan > Tab Buku Kasbon. Supervisor dan Owner dapat melihat daftar saldo piutang seluruh pelanggan, total bon yang belum tertagih, tanggal jatuh tempo, dan rincian transaksi nota kasbon.',
+      },
+      {
+        number: 4,
+        title: 'Penerimaan Pelunasan Kasbon (Parsial atau Lunas Penuh)',
+        description:
+          'Saat pelanggan datang untuk membayar hutang bon, klik tombol "Catat Pelunasan" pada baris pelanggan. Masukkan jumlah uang yang dibayarkan (bisa mencicil atau bayar lunas), pilih metode bayar (Tunai, QRIS, atau Transfer), dan simpan. Sistem mencetak tanda terima pelunasan kasbon.',
+        highlight: 'Pelunasan kasbon otomatis mengurangi saldo piutang pelanggan dan menambah uang kas toko seketika.',
+      },
+      {
+        number: 5,
+        title: 'Laporan Arus Kas Riil (Real Cash Flow Engine)',
+        description:
+          'Di menu Laporan > Arus Kas Riil, sistem memisahkan secara matematis antara: (A) Omzet Penjualan Akrual, (B) Kas Masuk Riil dari transaksi tunai/digital hari ini, (C) Kas Masuk Riil dari pelunasan kasbon lama, serta (D) Pengeluaran Kas Toko (Petty Cash).',
+        highlight: 'Laporan ini mencegah kebingungan pemilik toko di mana omzet tercatat tinggi di pembukuan tetapi uang fisik kas di rekening atau laci tidak tersedia.',
+      },
+    ],
+    tips: 'Kirimkan rekap tagihan nota kasbon secara berkala ke WhatsApp pelanggan langsung dari menu Pelanggan untuk menjaga hubungan baik dan mempercepat perputaran arus kas toko.',
+    warning: 'Dilarang memberikan fasilitas kasbon kepada pelanggan tamu umum (Walk-in Customer) tanpa data nomor HP dan identitas yang terverifikasi di sistem CRM.',
+  },
+  {
+    id: 'staff_attendance',
+    title: '22. Absensi Staf Mandiri, Toleransi Kehadiran & Multi-Timezone',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'SDM & Operasional',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER', 'WAREHOUSE'],
+    shortDesc: 'Sistem absensi mandiri karyawan (Clock In & Clock Out) via PIN kasir, pengaturan batas jam kerja & toleransi keterlambatan dinamis per outlet, deteksi otomatis zona waktu WIB/WITA/WIT, serta rekap jam kerja.',
+    actionTab: 'staff_users',
+    actionLabel: 'Buka Rekap Absensi Staf',
+    image: '/guide/kelola-staf-hak-akses.png',
+    imageCaption: 'Panel Absensi Karyawan & Rekapitulasi Jam Kerja Harian: Status hadir tepat waktu, toleransi menit, dan total jam kerja.',
+    steps: [
+      {
+        number: 1,
+        title: 'Konfigurasi Jadwal Jam Kerja & Toleransi Menit Outlet',
+        description:
+          'Owner atau Admin dapat menentukan jam operasional masuk toko (misal 08:00) dan "Toleransi Keterlambatan" (misal 15 menit) di pengaturan cabang. Karyawan yang absen hingga 08:15 tetap berstatus Tepat Waktu (PRESENT), sedangkan absen lewat dari 08:15 otomatis tercatat Terlambat (LATE).',
+        highlight: 'Toleransi dinamis memberikan fleksibilitas operasional tanpa mengorbankan ketertiban kerja.',
+      },
+      {
+        number: 2,
+        title: 'Dukungan Otomatis Tiga Zona Waktu Indonesia (WIB, WITA, WIT)',
+        description:
+          'Sistem Well POS secara otomatis mendeteksi zona waktu toko (Asia/Jakarta, Asia/Makassar, Asia/Jayapura). Waktu pencatatan kehadiran dikonversi secara real-time sesuai jam lokal toko tanpa terdistorsi jam server cloud.',
+      },
+      {
+        number: 3,
+        title: 'Absen Masuk (Clock In) Mandiri oleh Staf',
+        description:
+          'Saat tiba di outlet, staf membuka terminal kasir atau menu Staf, menekan tombol "Catat Kehadiran", memilih nama pribadinya, dan memasukkan 6-digit PIN rahasia. Sistem langsung merekam waktu masuk dan status ketepatan jam kerja.',
+      },
+      {
+        number: 4,
+        title: 'Absen Pulang (Clock Out) Selesai Jam Kerja',
+        description:
+          'Saat shift berakhir, staf kembali memasukkan PIN untuk melakukan Clock Out. Sistem secara otomatis menghitung total durasi jam kerja aktif (Working Hours) dan mencatat jika staf pulang sebelum jam shift selesai (Early Departure).',
+      },
+      {
+        number: 5,
+        title: 'Rekapitulasi Kehadiran & Laporan Disiplin Staf',
+        description:
+          'Supervisor dan Owner dapat memantau log kehadiran harian dan bulanan pada menu Staf & Pengguna > Tab Absensi. Tersedia filter per tanggal, filter per outlet, dan ringkasan persentase kehadiran tepat waktu untuk evaluasi kinerja & insentif bulanan.',
+      },
+    ],
+    tips: 'Integrasikan kebiasaan absensi mandiri saat staf membuka shift kasir di pagi hari agar rekonsiliasi jam kerja dan buku kas harian tercatat selaras.',
+    warning: 'Setiap karyawan wajib menjaga kerahasiaan 6-digit PIN masing-masing. Praktik titip absen menggunakan PIN rekan lain adalah pelanggaran SOP yang tercatat di audit trail sistem.',
+  },
+  {
+    id: 'granular_rbac_roles',
+    title: '23. Matriks Hak Akses Granular & Keamanan Wewenang Staf (RBAC)',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Keamanan & Otorisasi',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR'],
+    shortDesc: 'Hierarki wewenang Role-Based Access Control (RBAC) Well POS: Matriks izin menu per peran (Owner, Admin, Supervisor, Kasir, Gudang), otorisasi PIN supervisor, perlindungan data laba kotor, dan audit kepatuhan.',
+    actionTab: 'staff_roles',
+    actionLabel: 'Buka Konfigurasi Peran',
+    image: '/guide/kelola-staf-hak-akses.png',
+    imageCaption: 'Matriks Konfigurasi Hak Akses Granular: Penguncian wewenang per modul dan proteksi operasional kasir.',
+    steps: [
+      {
+        number: 1,
+        title: 'Memahami 5 Tingkatan Peran Baku (Standard RBAC)',
+        description:
+          'Well POS menerapkan pembagian wewenang ketat: (1) OWNER memiliki akses penuh 100% termasuk langganan & hapus cabang, (2) ADMIN mengelola operasional katalog, promo, dan staf, (3) SUPERVISOR mengawasi kasir dan otorisasi PIN void/diskon, (4) CASHIER terisolasi pada penjualan dan pembayaran, dan (5) WAREHOUSE terisolasi pada persediaan barang, PO, dan transfer.',
+        highlight: 'Isolasi wewenang mencegah kebocoran informasi margin laba dan membatasi manipulasi data operasional.',
+      },
+      {
+        number: 2,
+        title: 'Pendaftaran Akun Karyawan & Penugasan Peran',
+        description:
+          'Buka menu Staf & Pengguna > Tambah Staf. Masukkan nama, email/username, tentukan peran yang sesuai tanggung jawab kerja, pilih cabang outlet tugas, dan buat 6-digit PIN login untuk kasir/supervisor.',
+      },
+      {
+        number: 3,
+        title: 'Proteksi Ganda: UI Masking & Server-Side JWT Enforcement',
+        description:
+          'Selain menyembunyikan tombol/menu di aplikasi frontend, setiap endpoint API di server backend (pos_apps/server) mewajibkan verifikasi token JWT dan peran yang berwenang. Permintaan tanpa wewenang akan ditolak secara mutlak dengan kode HTTP 403 Forbidden.',
+      },
+      {
+        number: 4,
+        title: 'Prinsip Hak Akses Terkecil (Least Privilege Policy)',
+        description:
+          'Staf kasir tidak dapat melihat menu Pengaturan Pajak PB1, Rekening Bank Merchant, maupun Laporan Laba Rugi Toko. Staf gudang tidak dapat membuka mesin kasir POS. Hal ini memastikan setiap orang fokus pada tugasnya tanpa celah kecurangan (fraud).',
+      },
+      {
+        number: 5,
+        title: 'Pencabutan Akses Instan (Immediate Account Revocation)',
+        description:
+          'Jika seorang staf berhenti bekerja atau dimutasi, Owner atau Admin dapat menonaktifkan akun karyawan seketika dalam 1-klik di menu Staf. Seluruh sesi login dan otorisasi PIN karyawan tersebut langsung ditolak oleh sistem tanpa perlu merestart server.',
+        highlight: 'Keamanan terjamin: Akun non-aktif langsung diblokir di seluruh terminal toko secara instan.',
+      },
+    ],
+    tips: 'Jangan pernah membagikan akun Owner kepada kasir atau pihak ketiga. Buatlah akun dengan peran Supervisor jika Anda menunjuk penanggung jawab harian di outlet.',
+    warning: 'PIN Supervisor tidak boleh diinformasikan kepada Kasir. Jika terjadi pembatalan nota (void), Supervisor wajib datang langsung dan memasukkan PIN sendiri di depan mesin kasir.',
+  },
 ];
+
+// Helper untuk memeriksa apakah tab aksi diizinkan untuk peran yang sedang aktif
+const isTabAllowedForRole = (tab?: string, role?: string): boolean => {
+  if (!tab) return false;
+  const userRole = (role || 'OWNER').toUpperCase();
+  if (userRole === 'OWNER' || userRole === 'ADMIN') return true;
+  if (userRole === 'SUPERVISOR') {
+    const supervisorTabs = [
+      'overview', 'pos', 'orders', 'customers', 'shifts', 'products', 'categories',
+      'modifiers', 'recipes', 'qr_tables', 'qr_settings', 'qr_orders', 'qr_guest_menu',
+      'inventory', 'stock_movements', 'purchase_orders', 'transfers', 'suppliers',
+      'reports', 'product_analytics', 'promotions', 'staff_users', 'settings_payment',
+      'settings_channels', 'settings_loyalty', 'outlets', 'guide',
+    ];
+    return supervisorTabs.includes(tab);
+  }
+  if (userRole === 'CASHIER') {
+    const cashierTabs = ['pos', 'orders', 'customers', 'shifts', 'qr_orders', 'guide'];
+    return cashierTabs.includes(tab);
+  }
+  if (userRole === 'WAREHOUSE') {
+    const warehouseTabs = [
+      'inventory', 'stock_movements', 'purchase_orders', 'transfers',
+      'suppliers', 'recipes', 'products', 'overview', 'guide',
+    ];
+    return warehouseTabs.includes(tab);
+  }
+  return false;
+};
 
 interface UserGuideViewProps {
   initialSection?: string;
@@ -828,12 +1050,22 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
   useEffect(() => {
     if (initialSection) {
       setActiveSectionId(initialSection);
-      const el = sectionRefs.current[initialSection];
-      if (el) {
-        setTimeout(() => {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
+      const targetSec = GUIDE_SECTIONS.find((s) => s.id === initialSection);
+      const isCurrentlyVisible = filteredSections.some((s) => s.id === initialSection);
+
+      if (!isCurrentlyVisible && targetSec) {
+        setSelectedCategory('ALL');
+        if (searchQuery) {
+          setSearchQuery('');
+        }
       }
+
+      setTimeout(() => {
+        const el = sectionRefs.current[initialSection];
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, isCurrentlyVisible ? 100 : 250);
     }
   }, [initialSection]);
 
@@ -1117,20 +1349,36 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
                   </p>
                 </div>
 
-                {/* Direct Shortcut to Action Tab */}
-                {sec.actionTab && (
-                  <div className="shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab(sec.actionTab)}
-                      className="w-full sm:w-auto px-4 py-2.5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      title={`Buka menu ${sec.actionLabel}`}
-                    >
-                      <span>{sec.actionLabel || 'Buka Menu Konfigurasi'}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                {/* Direct Shortcut to Action Tab (Dilindungi Hak Akses RBAC agar tidak kehilangan konteks) */}
+                {sec.actionTab && (() => {
+                  const isAllowed = isTabAllowedForRole(sec.actionTab, currentUserRole);
+                  if (isAllowed) {
+                    return (
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab(sec.actionTab)}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                          title={`Buka menu ${sec.actionLabel}`}
+                        >
+                          <span>{sec.actionLabel || 'Buka Menu Konfigurasi'}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="shrink-0">
+                      <div
+                        className="w-full sm:w-auto px-3.5 py-2 bg-slate-100 border border-slate-200 text-slate-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed select-none"
+                        title={`Menu ${sec.actionLabel || sec.actionTab} membutuhkan wewenang peran ${sec.targetRoles.join('/')}`}
+                      >
+                        <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>Khusus {sec.targetRoles.filter((r) => r !== 'CASHIER' && r !== 'WAREHOUSE').join('/') || 'Owner'}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Section Body: Two Column (Steps + Screenshot Frame) */}

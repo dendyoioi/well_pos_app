@@ -284,7 +284,20 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   ├── 4. Antarmuka Kasir & Backoffice Owner:
   │   - StaffAttendanceModal.tsx: Pola modal responsif PWA kanonikal (Rule #10) dengan jam digital live, indikator status, form PIN, dan riwayat hari ini.
   │   - AttendanceReportView.tsx di UsersView.tsx: Sub-tab rekapitulasi absensi dengan 5 KPI, filter tanggal & outlet, form pengaturan jadwal, paging kanonikal TablePagination, dan ekspor CSV UTF-8 BOM.
-  └── 5. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+[2026-10-06] PUSAT PANDUAN PENGGUNA (USER GUIDE) BAB 20 S/D BAB 23 & PERLINDUNGAN KONTEKS TOMBOL CEPAT
+  ├── 1. Penambahan 4 Bab Panduan Resmi Baru (UserGuideView.tsx):
+  │   - Bab 20: Barcode Scanner Kamera & Cetak Label Stiker Rak (Zero-Hardware scanner & generator stiker shelf tag Code128).
+  │   - Bab 21: Manajemen Kasbon Piutang Pelanggan & Laporan Arus Kas Riil (Limit kasbon, buku kasbon CRM, pelunasan bon, dan pemisahan arus kas akrual vs riil).
+  │   - Bab 22: Absensi Staf Mandiri, Toleransi Kehadiran & Multi-Timezone (Clock In/Out mandiri via PIN, toleransi telat dinamis, dan zona waktu WIB/WITA/WIT).
+  │   - Bab 23: Matriks Hak Akses Granular & Keamanan Wewenang Staf (Hierarki wewenang Owner, Admin, Supervisor, Kasir, Gudang, dan otorisasi JWT).
+  ├── 2. Solusi Anti-Kehilangan Konteks Navigasi & Tombol Cepat:
+  │   - Perlindungan Akses Peran (RBAC Context Guard): Tombol pintas aksi (actionTab) divalidasi via helper isTabAllowedForRole. Jika peran staf aktif (misal Kasir/Gudang) tidak memiliki akses ke tab target, tombol otomatis menampilkan status terkunci (Lock) dan tidak mengeksekusi navigasi terlarang yang memicu auto-redirect paksa ke POS.
+  │   - Sinkronisasi Auto-Scroll & Filter Kategori: Jika user melompat ke suatu bab melalui tautan cepat saat filter kategori atau kata kunci pencarian sedang menyembunyikan bab tersebut, sistem otomatis mereset selectedCategory ke 'ALL' dan mengosongkan searchQuery sehingga elemen ter-render sempurna di DOM sebelum scroll dieksekusi.
+  ├── 3. Sinkronisasi Widget Panduan Melayang (FloatingGuideWidget.tsx):
+  │   - TAB_CONTEXT_MAP terintegrasi penuh untuk tab: customers (Bab 21), reports (Bab 21), staff_users (Bab 22), staff_roles (Bab 23), dan product_analytics.
+  │   - Grid Pintasan Cepat 8 Tombol: Label Barcode, Kasbon & CRM, Absensi Staf, Hak Akses RBAC, Printer Bluetooth, Resi WA, App Kasir PWA, dan Pesanan Susulan.
+  │   - Indikator total modul terupdate presisi: "Buka Seluruh Panduan (23 Bab Lengkap)".
+  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
 ```
 

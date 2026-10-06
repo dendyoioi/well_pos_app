@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BookOpen, ArrowRight, X, Sparkles, Printer, MessageCircle, Smartphone, Utensils } from 'lucide-react';
+import {
+  BookOpen,
+  ArrowRight,
+  X,
+  Sparkles,
+  Printer,
+  MessageCircle,
+  Smartphone,
+  Utensils,
+  Tag,
+  CreditCard,
+  Clock,
+  ShieldCheck,
+} from 'lucide-react';
 
 interface FloatingGuideWidgetProps {
   activeTab: string;
@@ -34,6 +47,21 @@ const TAB_CONTEXT_MAP: Record<
     sectionId: 'pos',
     title: 'Panduan Loyalitas & Poin',
     subtitle: 'Konfigurasi member CRM dan diskon pelanggan.',
+  },
+  customers: {
+    sectionId: 'customer_debt_cashflow',
+    title: 'Panduan Kasbon CRM & Piutang',
+    subtitle: 'Catat bayar nanti, batas limit piutang, dan arus kas riil.',
+  },
+  reports: {
+    sectionId: 'customer_debt_cashflow',
+    title: 'Panduan Laporan & Arus Kas',
+    subtitle: 'Laba rugi, audit penjualan, dan laporan arus kas riil.',
+  },
+  product_analytics: {
+    sectionId: 'reports',
+    title: 'Panduan Analisis Produk & Menu',
+    subtitle: 'Klasifikasi menu terlaris dan analisis margin laba.',
   },
   outlets: {
     sectionId: 'onboarding',
@@ -116,17 +144,17 @@ const TAB_CONTEXT_MAP: Record<
     subtitle: 'Menerima dan memproses order digital meja ke dapur.',
   },
   staff_users: {
-    sectionId: 'staff_roles',
-    title: 'Panduan Kelola Staf & PIN',
-    subtitle: 'Pemberian hak akses kasir/gudang dan reset PIN.',
+    sectionId: 'staff_attendance',
+    title: 'Panduan Absensi Staf Mandiri',
+    subtitle: 'Pencatatan Clock In/Out, toleransi telat, dan rekap jam kerja.',
   },
   staff_roles: {
-    sectionId: 'staff_roles',
-    title: 'Panduan Hierarki Peran',
-    subtitle: 'Perbedaan wewenang Owner, Admin, SPV, Kasir, Gudang.',
+    sectionId: 'granular_rbac_roles',
+    title: 'Panduan Hak Akses RBAC',
+    subtitle: 'Hierarki wewenang Owner, Admin, Supervisor, Kasir, Gudang.',
   },
   users: {
-    sectionId: 'staff_roles',
+    sectionId: 'granular_rbac_roles',
     title: 'Panduan Akses Pengguna',
     subtitle: 'Keamanan akun dan pemutusan sesi perangkat.',
   },
@@ -227,6 +255,50 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
                   type="button"
                   onClick={() => {
                     setIsOpen(false);
+                    onOpenGuide('barcode_shelf_labels');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Tag className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                  <span className="truncate">Label Barcode Rak</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('customer_debt_cashflow');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span className="truncate">Kasbon &amp; CRM</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('staff_attendance');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                  <span className="truncate">Absensi Staf</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenGuide('granular_rbac_roles');
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span className="truncate">Hak Akses RBAC</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
                     onOpenGuide('bluetooth_printer');
                   }}
                   className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -281,7 +353,7 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
             >
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-900" />
-                <span>Buka Seluruh Panduan (18 Modul)</span>
+                <span>Buka Seluruh Panduan (23 Bab Lengkap)</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
