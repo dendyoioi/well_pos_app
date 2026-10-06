@@ -295,7 +295,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               }}
               className="inline-flex items-center justify-center gap-1 px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all active:scale-[0.98] cursor-pointer"
             >
-              <span>Daftar Gratis</span>
+              <span>Daftar Sekarang</span>
             </button>
           </div>
         </div>
@@ -816,7 +816,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 <div className="bg-white/10 border border-white/15 rounded-2xl p-5 text-center shrink-0 w-full md:w-auto">
                   <span className="text-[11px] font-bold text-blue-200 block">Daftar Sekarang Dapat</span>
                   <span className="text-3xl font-black text-amber-300 block my-1">100 Token</span>
-                  <span className="text-[10px] text-slate-300 block">Gratis Kuota Transaksi Awal</span>
+                  <span className="text-[10px] text-slate-300 block">Bonus Kuota Transaksi Awal</span>
                   <button
                     onClick={() => {
                       setRegisterSuccessData(null);
@@ -856,7 +856,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                     <Percent className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                     <div className="text-[11px] text-amber-900 leading-relaxed">
                       <strong className="block font-bold">Banyak Promo Potongan Biaya Pendaftaran!</strong>
-                      Gunakan kode voucher promo pendaftaran dari program promo bulanan kami untuk potongan harga spesial hingga pendaftaran gratis Rp 0.
+                      Gunakan kode voucher promo pendaftaran dari program promo bulanan kami untuk mendapatkan potongan harga spesial biaya aktivasi.
                     </div>
                   </div>
 
@@ -875,7 +875,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Gratis seluruh pembaruan sistem berkala</span>
+                      <span>Termasuk seluruh pembaruan sistem berkala</span>
                     </li>
                   </ul>
                 </div>
@@ -1063,7 +1063,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               Siap Merapikan Pencatatan Usaha Anda?
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed mb-8">
-              Daftar akun toko hanya dalam 2 menit, nikmati bonus 100 token perdana gratis, dan rasakan kemudahan mengelola kasir serta stok langsung dari HP maupun tablet Anda.
+              Daftar akun toko hanya dalam 2 menit, nikmati bonus 100 token transaksi perdana, dan rasakan kemudahan mengelola kasir serta stok langsung dari HP maupun tablet Anda.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
               <button
@@ -1138,7 +1138,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
         {registerSuccessData ? (
           paymentPaid || registerSuccessData.finalAmount === 0 ? (
             /* =========================================================
-               TAMPILAN 1: SUKSES AKTIVASI (LUNAS / GRATIS)
+               TAMPILAN 1: SUKSES AKTIVASI (LUNAS / BEBAS BIAYA PROMO)
                ========================================================= */
             <div className="text-center py-4 space-y-4">
               <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
@@ -1150,7 +1150,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 </h4>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                   {registerSuccessData.finalAmount === 0
-                    ? 'Pendaftaran akun gratis Anda telah aktif dan siap digunakan.'
+                    ? 'Pendaftaran akun toko Anda telah berhasil aktif dan siap digunakan.'
                     : 'Pembayaran berhasil dikonfirmasi via QRIS Pakasir. Akun pemilik dan kuota token Anda telah aktif.'}
                 </p>
               </div>
@@ -1166,7 +1166,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 <div className="flex justify-between items-center text-slate-500">
                   <span>Biaya Aktivasi:</span>
                   <strong className={registerSuccessData.finalAmount === 0 ? 'text-emerald-600 font-bold' : 'text-slate-900'}>
-                    {registerSuccessData.finalAmount === 0 ? 'GRATIS (Rp 0)' : `Rp ${registerSuccessData.finalAmount?.toLocaleString('id-ID')}`}
+                    {registerSuccessData.finalAmount === 0 ? 'Rp 0 (Voucher 100%)' : `Rp ${registerSuccessData.finalAmount?.toLocaleString('id-ID')}`}
                   </strong>
                 </div>
                 <div className="flex justify-between items-center text-slate-500">
@@ -1391,14 +1391,14 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   {appliedPromo ? (
                     <span className="flex items-center gap-1.5">
                       <span className="line-through text-slate-400">
-                        {platformConfig.registrationFee === 0 ? 'Gratis' : `Rp ${platformConfig.registrationFee.toLocaleString('id-ID')}`}
+                        {platformConfig.registrationFee === 0 ? 'Rp 0' : `Rp ${platformConfig.registrationFee.toLocaleString('id-ID')}`}
                       </span>
                       <span className="text-emerald-600 font-black">
-                        {appliedPromo.finalAmount === 0 ? 'GRATIS (Rp 0)' : `Rp ${appliedPromo.finalAmount.toLocaleString('id-ID')}`}
+                        {appliedPromo.finalAmount === 0 ? 'Rp 0 (Voucher 100%)' : `Rp ${appliedPromo.finalAmount.toLocaleString('id-ID')}`}
                       </span>
                     </span>
                   ) : platformConfig.registrationFee === 0 ? (
-                    <span className="text-emerald-600 font-black">GRATIS (Rp 0)</span>
+                    <span className="text-emerald-600 font-black">Rp 0 (Bebas Biaya)</span>
                   ) : (
                     `Rp ${platformConfig.registrationFee.toLocaleString('id-ID')}`
                   )}
