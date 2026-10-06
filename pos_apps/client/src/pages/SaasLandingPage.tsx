@@ -333,69 +333,69 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col font-sans bg-gradient-to-b from-[#090d16] via-[#10244c] via-45% to-white text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* =========================================================================
-          TOP NAVIGATION BAR
+          TOP NAVIGATION BAR (ELEGAN, MODERN & ZERO-WRAPPING)
       ========================================================================= */}
       <nav className="sticky top-0 z-40 w-full bg-[#090d16]/90 backdrop-blur-md border-b border-white/10 text-white">
-        <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
           {/* Logo & Brand Identity */}
-          <a href="#" className="flex items-center gap-2.5 sm:gap-3 group min-w-0 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform shrink-0">
-              <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+          <a href="#" className="flex items-center gap-3 group shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform shrink-0">
+              <Store className="w-5 h-5 stroke-[2.5]" />
             </div>
-            <div className="min-w-0">
-              <span className="text-base sm:text-xl font-black tracking-tight text-white block leading-tight truncate">
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
                 Well POS
               </span>
-              <span className="text-[10px] sm:text-[11px] text-slate-300 font-medium hidden sm:block truncate">
+              <span className="text-[10px] text-slate-400 font-medium hidden sm:block leading-tight">
                 Aplikasi Kasir &amp; Toko
               </span>
             </div>
           </a>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-semibold text-slate-300">
+          {/* Desktop Navigation Links (Linear, Clean & Zero Wrapping) */}
+          <div className="hidden lg:flex items-center gap-1 xl:gap-2 text-sm font-medium text-slate-300 whitespace-nowrap">
             <a
               href="#tampilan"
-              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+              className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/10 transition-all"
             >
-              Tampilan Kasir
+              Tampilan
             </a>
             <a
               href="#fitur"
-              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+              className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/10 transition-all"
             >
-              Fitur Toko
+              Fitur
             </a>
             <a
               href="#biaya"
-              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+              className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/10 transition-all"
             >
-              Biaya &amp; Token
+              Harga &amp; Token
             </a>
             <a
               href="#promo"
-              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/10 transition-all flex items-center gap-1.5 group"
             >
-              <span>Promo Spesial</span>
-              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-amber-400 text-slate-950 uppercase tracking-wider">
-                Voucher
+              <span>Promo</span>
+              <span className="text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 px-1.5 py-0.5 rounded-full leading-none group-hover:bg-amber-400/25 transition-colors">
+                Kupon
               </span>
             </a>
             <a
               href="#faq"
-              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+              className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/10 transition-all"
             >
-              Tanya Jawab
+              FAQ
             </a>
           </div>
 
           {/* Action CTAs & Mobile Burger Toggle */}
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 whitespace-nowrap">
             <button
               onClick={onOpenPos}
-              className="inline-flex items-center justify-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm bg-white/10 hover:bg-white/15 text-white border border-white/20 transition-all active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm text-slate-200 hover:text-white hover:bg-white/10 border border-white/15 transition-all active:scale-[0.98] cursor-pointer"
             >
-              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-200" />
+              <LogIn className="w-4 h-4 text-slate-300" />
               <span>Masuk</span>
             </button>
             <button
@@ -403,16 +403,16 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 setRegisterSuccessData(null);
                 setRegisterModalOpen(true);
               }}
-              className="inline-flex items-center justify-center gap-1 px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all active:scale-[0.98] cursor-pointer"
             >
               <span>Daftar Sekarang</span>
             </button>
 
-            {/* Mobile Hamburger Button */}
+            {/* Mobile / Tablet Hamburger Button */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl bg-white/10 hover:bg-white/15 text-white transition-colors cursor-pointer"
+              className="lg:hidden p-2 rounded-xl bg-white/10 hover:bg-white/15 text-white transition-colors cursor-pointer"
               title={mobileMenuOpen ? 'Tutup Menu' : 'Buka Menu Navigasi'}
               aria-label="Toggle Navigation Menu"
             >
@@ -423,42 +423,42 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
         {/* Mobile Navigation Drawer / Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0c121e] border-b border-white/10 px-4 py-3 space-y-2 animate-fade-in text-xs font-semibold">
+          <div className="lg:hidden bg-[#0c121e]/98 backdrop-blur-xl border-b border-white/10 px-4 py-3.5 space-y-1.5 animate-fade-in text-xs font-semibold">
             <a
               href="#tampilan"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+              className="block px-3.5 py-2.5 rounded-xl text-slate-200 hover:text-white hover:bg-white/5 transition-colors"
             >
               Tampilan Kasir Tablet &amp; Smartphone
             </a>
             <a
               href="#fitur"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+              className="block px-3.5 py-2.5 rounded-xl text-slate-200 hover:text-white hover:bg-white/5 transition-colors"
             >
               6 Manfaat &amp; Fitur Operasional Toko
             </a>
             <a
               href="#biaya"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+              className="block px-3.5 py-2.5 rounded-xl text-slate-200 hover:text-white hover:bg-white/5 transition-colors"
             >
               Skema Biaya &amp; Edukasi Token Transaksi
             </a>
             <a
               href="#promo"
               onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-xl text-amber-300 hover:bg-white/5 flex items-center justify-between"
+              className="px-3.5 py-2.5 rounded-xl text-amber-300 hover:bg-white/5 transition-colors flex items-center justify-between"
             >
-              <span>Katalog Promo &amp; Voucher Diskon</span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400 text-slate-950 uppercase">
-                Aktif
+              <span>Katalog Promo &amp; Kode Voucher</span>
+              <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full">
+                Kupon Aktif
               </span>
             </a>
             <a
               href="#faq"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/5"
+              className="block px-3.5 py-2.5 rounded-xl text-slate-200 hover:text-white hover:bg-white/5 transition-colors"
             >
               Tanya Jawab (FAQ)
             </a>
