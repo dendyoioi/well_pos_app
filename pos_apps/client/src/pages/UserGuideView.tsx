@@ -748,6 +748,62 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     tips: 'Pemisahan omzet non-tunai dan tunai memudahkan kasir saat rekonsiliasi laci kasir (Blind Drop) dan mempermudah pencocokan mutasi rekening koran toko.',
   },
+  {
+    id: 'supervisor_playbook',
+    title: '19. SOP Supervisor: Audit Kas Harian, Blind Drop, & Otorisasi PIN Bertingkat',
+    category: 'SUPERVISOR',
+    categoryLabel: 'Audit & Pengawasan',
+    targetRoles: ['SUPERVISOR', 'OWNER', 'ADMIN'],
+    shortDesc: 'Prosedur operasional standar (SOP) harian Supervisor toko: Pemeriksaan modal awal kasir, otorisasi PIN pembatalan/void, audit rekonsiliasi kas (Blind Drop), investigasi selisih fisik (+Over / -Short), dan pengesahan Z-Report.',
+    actionTab: 'shifts',
+    actionLabel: 'Buka Audit Shift & Kas',
+    image: '/guide/dashboard-ringkasan-bisnis.png',
+    imageCaption: 'Dashboard Monitoring & Audit Penjualan Shift Kasir: Rekonsiliasi fisik vs sistem dan riwayat audit trail.',
+    steps: [
+      {
+        number: 1,
+        title: 'Verifikasi Modal Awal Kasir (Opening Cash Audit)',
+        description:
+          'Di awal hari sebelum kasir mulai melayani pelanggan, Supervisor wajib menghitung uang fisik modal laci kasir (pecahan uang kembalian) dan memastikan nominal yang diinput kasir pada sistem tepat sesuai fisik (misal Rp 200.000).',
+        highlight: 'Audit modal awal penting untuk menghindari defisit semu kas pada saat tutup toko.',
+      },
+      {
+        number: 2,
+        title: 'Otorisasi PIN Supervisor Bertingkat (Zero Sharing PIN)',
+        description:
+          'Setiap pembatalan pesanan (Void), pembatalan parsial menu (Void Item), atau perubahan sensitif mewajibkan otorisasi PIN Supervisor. Supervisor wajib hadir secara fisik di depan mesin kasir untuk memverifikasi nota transaksi dan memasukkan PIN sendiri.',
+        highlight: 'SOP Anti-Fraud: Dilarang keras membagikan atau meminjamkan 6-digit PIN Supervisor kepada kasir.',
+      },
+      {
+        number: 3,
+        title: 'Pengawasan Open Tab Meja & Pesanan Susulan',
+        description:
+          'Supervisor memantau seluruh meja berstatus UNPAID (open tab) agar tidak ada tamu meninggalkan lokasi tanpa pelunasan. Pastikan aturan ditegakkan: Pesanan yang sudah lunas (PAID) terkunci total dan tidak boleh ditambah pesanan susulan (wajib buat nota transaksi baru).',
+      },
+      {
+        number: 4,
+        title: 'Proses Rekonsiliasi Blind Drop Tutup Shift',
+        description:
+          'Saat shift berakhir, kasir menghitung dan menginput seluruh uang fisik di laci kasir tanpa melihat angka kalkulasi sistem (Blind Drop). Supervisor mendampingi proses penghitungan dan memverifikasi hasil rekonsiliasi sistem:',
+        highlight: 'Impas (0): Lulus sempurna. Selisih Kurang (-Short): Kasir mengisi berita acara selisih. Selisih Lebih (+Over): Diperiksa apakah ada uang tip atau kesalahan kembalian.',
+      },
+      {
+        number: 5,
+        title: 'Pemeriksaan Slip EDC Non-Tunai & Mutasi QRIS',
+        description:
+          'Supervisor mencocokkan total slip transaksi pada mesin EDC bank dan mutasi QRIS dengan angka laporan non-tunai di Well POS sebelum menutup kasir.',
+      },
+      {
+        number: 6,
+        title: 'Pengesahan X-Report & Penandatanganan Z-Report Final',
+        description:
+          'Cetak X-Report untuk audit tengah hari tanpa menutup sesi. Cetak Z-Report untuk penutupan resmi akhir hari, tanda tangani struk Z-Report bersama kasir, dan serahkan setoran kas fisik ke brankas/Owner.',
+        highlight: 'Z-Report adalah dokumen audit fiskal permanen yang mengunci pembukuan hari tersebut.',
+      },
+    ],
+    tips: 'Blind Drop Policy adalah standar baku restoran & retail modern agar kasir tidak dapat memanipulasi penghitungan fisik untuk menyamakan dengan angka sistem.',
+    warning: 'Jangan pernah mengizinkan kasir menutup shift sendiri tanpa verifikasi fisik langsung dari Supervisor atau Store Manager.',
+  },
 ];
 
 interface UserGuideViewProps {
@@ -803,17 +859,35 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
 
   const scrollToSection = (id: string) => {
     setActiveSectionId(id);
-    const el = sectionRefs.current[id];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const targetSec = GUIDE_SECTIONS.find((s) => s.id === id);
+    const isCurrentlyVisible = filteredSections.some((s) => s.id === id);
+
+    // Jika section yang dituju sedang tersembunyi karena filter kategori/pencarian,
+    // otomatis reset filter agar section tersebut ter-render di DOM!
+    if (!isCurrentlyVisible && targetSec) {
+      setSelectedCategory('ALL');
+      if (searchQuery) {
+        setSearchQuery('');
+      }
     }
+
+    setTimeout(() => {
+      const el = sectionRefs.current[id];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, isCurrentlyVisible ? 10 : 120);
   };
 
   // Filter sections berdasarkan query pencarian dan kategori
   const filteredSections = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return GUIDE_SECTIONS.filter((sec) => {
-      const matchCategory = selectedCategory === 'ALL' || sec.category === selectedCategory;
+      const matchCategory =
+        selectedCategory === 'ALL' ||
+        sec.category === selectedCategory ||
+        (selectedCategory === 'SUPERVISOR' &&
+          (sec.category === 'SUPERVISOR' || sec.targetRoles.includes('SUPERVISOR')));
       if (!matchCategory) return false;
       if (!q) return true;
 
@@ -961,8 +1035,10 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
 
         {/* Quick Jump Links Bar */}
         <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto text-[11px] scrollbar-thin">
-          <span className="font-bold text-slate-400 shrink-0">Lompat Cepat:</span>
-          {GUIDE_SECTIONS.map((sec) => (
+          <span className="font-bold text-slate-400 shrink-0">
+            Lompat Cepat ({filteredSections.length}):
+          </span>
+          {filteredSections.map((sec) => (
             <button
               key={sec.id}
               onClick={() => scrollToSection(sec.id)}
@@ -975,6 +1051,15 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
               {sec.title.split('. ')[1] || sec.title}
             </button>
           ))}
+          {selectedCategory !== 'ALL' && (
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('ALL')}
+              className="px-2.5 py-1 rounded-lg font-bold shrink-0 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-colors cursor-pointer ml-1"
+            >
+              Tampilkan Semua ({GUIDE_SECTIONS.length} Bab)
+            </button>
+          )}
         </div>
       </div>
 
