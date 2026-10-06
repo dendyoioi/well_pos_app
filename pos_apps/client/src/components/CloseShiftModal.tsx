@@ -8,10 +8,15 @@ import {
   AlertCircle,
   FileCheck,
   ArrowRight,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+  Wallet,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Shift, ZReportData } from '../types/shift';
 import { CurrencyInput } from './ui/CurrencyInput';
+import { printElementViaThermalIframe } from '../utils/thermalPrinter';
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -32,16 +37,26 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zReportData, setZReportData] = useState<ZReportData | null>(null);
   const [paperWidth, setPaperWidth] = useState<'58mm' | '80mm'>('80mm');
+  const [showOrdersList, setShowOrdersList] = useState<boolean>(false);
 
   // Kalkulasi data kasir saat ini
   const startingCash = currentShift ? Number(currentShift.startingCash) : 0;
   const cashSales = currentShift?.stats?.cashSalesTotal || 0;
   const totalCashOut = currentShift?.stats?.totalCashOut || 0;
   const totalCashIn = currentShift?.stats?.totalCashIn || 0;
-  const expectedCash = currentShift?.stats?.expectedCash !== undefined
-    ? currentShift.stats.expectedCash
-    : (startingCash + cashSales + totalCashIn - totalCashOut);
+  const totalDebtCashIn =
+    currentShift?.totalDebtCashIn ||
+    currentShift?.stats?.totalDebtCashIn ||
+    0;
+
+  const expectedCash =
+    currentShift?.stats?.expectedCash !== undefined
+      ? currentShift.stats.expectedCash
+      : (startingCash + cashSales + totalCashIn + totalDebtCashIn - totalCashOut);
+
   const difference = actualCash - expectedCash;
+  const shiftOrders = currentShift?.orders || [];
+  const shiftDebtPayments = currentShift?.debtPayments || [];
 
   useEffect(() => {
     if (isOpen) {
@@ -49,6 +64,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
       setNotes('');
       setErrorMsg(null);
       setZReportData(null);
+      setShowOrdersList(false);
     }
   }, [isOpen, expectedCash]);
 
@@ -79,7 +95,10 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    printElementViaThermalIframe('z-report-printable', {
+      paperWidth,
+      title: `Z-Report Tutup Shift - ${currentShift?.outlet?.name || 'Well POS'}`,
+    });
   };
 
   const handleFinish = () => {
@@ -120,7 +139,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
 
         {/* Modal Content */}
         {!zReportData ? (
-          /* Step 1: Input Uang Fisik Kasir */
+          /* Step 1: Input Uang Fisik Kasir & Review Transaksi */
           <form onSubmit={handleSubmitClose} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1 overscroll-contain">
               {errorMsg && (
@@ -130,327 +149,474 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 </div>
               )}
 
-            {/* Info Box Perhitungan Sistem */}
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
-              <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
-                Rekap Sistem Saat Ini
-              </span>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-600">Modal Awal Kas:</span>
-                <span className="font-bold text-slate-900">
-                  Rp {startingCash.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-600">(+) Penjualan Tunai:</span>
-                <span className="font-bold text-emerald-700">
-                  Rp {cashSales.toLocaleString('id-ID')}
-                </span>
-              </div>
-              {totalCashIn > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
-                  <span className="font-bold text-emerald-600">
-                    Rp {totalCashIn.toLocaleString('id-ID')}
+              {/* Info Box Perhitungan Sistem */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                    Rekap Sistem Saat Ini
+                  </span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                    {shiftOrders.length} Transaksi
                   </span>
                 </div>
-              )}
-              {totalCashOut > 0 && (
+
                 <div className="flex justify-between text-xs">
-                  <span className="text-rose-600 font-semibold">(-) Pengeluaran Kasir (Kas Keluar):</span>
-                  <span className="font-bold text-rose-600">
-                    - Rp {totalCashOut.toLocaleString('id-ID')}
+                  <span className="text-slate-600">Modal Awal Kas:</span>
+                  <span className="font-bold text-slate-900">
+                    Rp {startingCash.toLocaleString('id-ID')}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between text-xs pt-2 border-t border-slate-200 font-extrabold">
-                <span className="text-slate-900">Total Seharusnya Ada di Laci:</span>
-                <span className="text-sm text-blue-900">
-                  Rp {expectedCash.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-
-            {/* Input Fisik Uang di Laci */}
-            <div>
-              <CurrencyInput
-                label="Hitungan Fisik Uang Tunai di Laci (Actual Cash)"
-                value={actualCash}
-                onChange={(val) => setActualCash(val)}
-                inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
-                prefixClassName="text-sm font-extrabold"
-                placeholder="0"
-                required
-              />
-              <p className="text-[11px] text-slate-500 mt-1">
-                Keluarkan semua uang di laci kasir dan hitung secara manual.
-              </p>
-            </div>
-
-            {/* Realtime Difference Badge */}
-            <div
-              className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
-                difference === 0
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : difference > 0
-                  ? 'bg-blue-50 border-blue-200 text-blue-800'
-                  : 'bg-rose-50 border-rose-200 text-rose-800'
-              }`}
-            >
-              <div className="flex items-center gap-2 text-xs font-bold">
-                {difference === 0 ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                )}
-                <span>
-                  {difference === 0
-                    ? 'Status Kas: COCOK (PAS)'
-                    : difference > 0
-                    ? 'Status Kas: LEBIH (SURPLUS)'
-                    : 'Status Kas: KURANG (DEFISIT)'}
-                </span>
-              </div>
-              <span className="text-sm font-black">
-                {difference > 0 ? '+' : ''}Rp {difference.toLocaleString('id-ID')}
-              </span>
-            </div>
-
-            {/* Catatan Tutup Shift */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Catatan Serah Terima Kasir (Opsional)
-              </label>
-              <input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Contoh: Ada uang kembalian receh belum ditukar"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Sticky Actions Footer */}
-          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-            >
-              <Lock className="w-4 h-4 stroke-[2.5]" />
-              <span>{loading ? 'Menutup Shift...' : 'Kunci & Tutup Shift (Z-Report)'}</span>
-            </button>
-          </div>
-        </form>
-      ) : (
-        /* Step 2: Tampilan Resmi Z-Report Thermal */
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 bg-slate-100 flex flex-col items-center">
-            {/* Paper Selector */}
-            <div className="flex items-center gap-2 mb-4 no-print">
-              <span className="text-xs font-bold text-slate-500">Lebar Cetak:</span>
-              <div className="flex items-center bg-white rounded-xl p-0.5 border border-slate-300 text-[11px] font-bold">
-                <button
-                  onClick={() => setPaperWidth('58mm')}
-                  className={`px-2 py-1 rounded-lg transition-all ${
-                    paperWidth === '58mm'
-                      ? 'bg-blue-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  58mm
-                </button>
-                <button
-                  onClick={() => setPaperWidth('80mm')}
-                  className={`px-2 py-1 rounded-lg transition-all ${
-                    paperWidth === '80mm'
-                      ? 'bg-blue-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  80mm
-                </button>
-              </div>
-            </div>
-
-            {/* Slip Printable */}
-            <div
-              id="z-report-printable"
-              className={`bg-white p-5 sm:p-6 shadow-md rounded-2xl border border-slate-200 font-mono text-slate-900 space-y-4 ${
-                paperWidth === '58mm' ? 'w-[280px] text-[11px]' : 'w-[360px] text-xs'
-              }`}
-            >
-              <div className="text-center border-b border-dashed border-slate-300 pb-3">
-                <h4 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">
-                  {zReportData.outlet}
-                </h4>
-                <div className="mt-2 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-bold tracking-wider">
-                  *** LAPORAN TUTUP SHIFT (Z-REPORT) ***
-                </div>
-              </div>
-
-              {/* Meta */}
-              <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Kasir:</span>
-                  <span className="font-bold">{zReportData.cashier}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Buka Shift:</span>
-                  <span>{new Date(zReportData.startTime).toLocaleTimeString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Tutup Shift:</span>
-                  <span>{new Date(zReportData.endTime).toLocaleTimeString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Total Transaksi:</span>
-                  <span className="font-bold">{zReportData.totalTransactions} Transaksi</span>
-                </div>
-              </div>
-
-              {/* Cash Drawer Reconciliation */}
-              <div className="space-y-1.5 border-b border-dashed border-slate-300 pb-3">
-                <div className="font-bold text-slate-800 uppercase text-[10px] tracking-wider mb-1">
-                  REKONSILIASI KAS LACI
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Modal Awal:</span>
-                  <span>Rp {zReportData.cashDrawer.startingCash.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-xs">
                   <span className="text-slate-600">(+) Penjualan Tunai:</span>
-                  <span>Rp {zReportData.cashDrawer.totalCashSales.toLocaleString('id-ID')}</span>
-                </div>
-                {zReportData.cashDrawer.totalCashIn && zReportData.cashDrawer.totalCashIn > 0 ? (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
-                    <span>Rp {zReportData.cashDrawer.totalCashIn.toLocaleString('id-ID')}</span>
-                  </div>
-                ) : null}
-                {zReportData.cashDrawer.totalCashOut && zReportData.cashDrawer.totalCashOut > 0 ? (
-                  <div className="flex justify-between text-rose-700">
-                    <span>(-) Pengeluaran Kasir:</span>
-                    <span>- Rp {zReportData.cashDrawer.totalCashOut.toLocaleString('id-ID')}</span>
-                  </div>
-                ) : null}
-                <div className="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200">
-                  <span>Kas Seharusnya (Expected):</span>
-                  <span>Rp {zReportData.cashDrawer.expectedCash.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between font-bold text-blue-900">
-                  <span>Uang Fisik Dihitung (Actual):</span>
-                  <span>Rp {zReportData.cashDrawer.actualCash.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-dashed border-slate-300">
-                  <span>SELISIH KAS:</span>
-                  <span
-                    className={
-                      zReportData.cashDrawer.difference === 0
-                        ? 'text-emerald-700'
-                        : zReportData.cashDrawer.difference > 0
-                        ? 'text-blue-700'
-                        : 'text-rose-700'
-                    }
-                  >
-                    {zReportData.cashDrawer.difference > 0 ? '+' : ''}Rp{' '}
-                    {zReportData.cashDrawer.difference.toLocaleString('id-ID')} (
-                    {zReportData.cashDrawer.differenceLabel})
+                  <span className="font-bold text-emerald-700">
+                    Rp {cashSales.toLocaleString('id-ID')}
                   </span>
                 </div>
-              </div>
-
-              {/* Rincian Pengeluaran Kasir jika ada */}
-              {zReportData.cashMovements && zReportData.cashMovements.length > 0 && (
-                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
-                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
-                    RINCIAN PENGELUARAN KASIR
-                  </div>
-                  {zReportData.cashMovements.map((m: any) => (
-                    <div key={m.id} className="flex justify-between text-slate-600">
-                      <span className="truncate max-w-[180px]">{m.category} ({m.notes})</span>
-                      <span className="font-mono">{m.type === 'CASH_OUT' ? '-' : '+'} Rp {Number(m.amount).toLocaleString('id-ID')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Non Cash Summary */}
-              <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-3">
-                <div className="font-bold text-slate-800 uppercase text-[10px] tracking-wider mb-1">
-                  REKAP METODE PEMBAYARAN
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Total Tunai (CASH):</span>
-                  <span>Rp {zReportData.cashDrawer.totalCashSales.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Total QRIS / Non-Tunai:</span>
-                  <span>Rp {zReportData.nonCashSummary.totalQrisSales.toLocaleString('id-ID')}</span>
-                </div>
-                {zReportData.nonCashSummary.avgOrderValue !== undefined && zReportData.nonCashSummary.avgOrderValue > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Rata-rata (AOV):</span>
-                    <span className="font-semibold">
-                      Rp {zReportData.nonCashSummary.avgOrderValue.toLocaleString('id-ID')}
+                {totalDebtCashIn > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-emerald-700 font-semibold">(+) Pelunasan Kasbon Tunai:</span>
+                    <span className="font-bold text-emerald-700">
+                      Rp {totalDebtCashIn.toLocaleString('id-ID')}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between font-black text-blue-950 pt-1 border-t border-slate-200">
-                  <span>TOTAL OMSET SHIFT:</span>
-                  <span>Rp {zReportData.nonCashSummary.totalRevenue.toLocaleString('id-ID')}</span>
+                {totalCashIn > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
+                    <span className="font-bold text-emerald-600">
+                      Rp {totalCashIn.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
+                {totalCashOut > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-rose-600 font-semibold">(-) Pengeluaran Kasir (Kas Keluar):</span>
+                    <span className="font-bold text-rose-600">
+                      - Rp {totalCashOut.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs pt-2 border-t border-slate-200 font-extrabold">
+                  <span className="text-slate-900">Total Seharusnya Ada di Laci:</span>
+                  <span className="text-sm text-blue-900">
+                    Rp {expectedCash.toLocaleString('id-ID')}
+                  </span>
                 </div>
               </div>
 
-              {/* Channel Breakdown — breakdown per kanal penjualan */}
-              {zReportData.channelBreakdown && zReportData.channelBreakdown.length > 0 && (
-                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
-                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
-                    OMSET PER KANAL PENJUALAN
+              {/* Toggle Tampilkan Daftar Transaksi Selama Shift */}
+              <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowOrdersList(!showOrdersList)}
+                  className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-blue-900" />
+                    <span className="text-xs font-bold text-slate-800">
+                      Daftar Transaksi Selama Shift ({shiftOrders.length})
+                    </span>
                   </div>
-                  {zReportData.channelBreakdown.map((ch) => {
-                    const channelLabel: Record<string, string> = {
-                      DINE_IN: 'Dine In',
-                      TAKEAWAY: 'Takeaway',
-                      DELIVERY: 'Delivery',
-                      GOFOOD: 'GoFood',
-                      GRABFOOD: 'GrabFood',
-                      SHOPEEFOOD: 'ShopeeFood',
-                      QR_MENU: 'Self-Order QR',
-                    };
-                    return (
-                      <div key={ch.channel} className="flex justify-between text-slate-600">
-                        <span>{channelLabel[ch.channel] || ch.channel} ({ch.count}x)</span>
-                        <span className="font-mono font-semibold">
-                          Rp {Number(ch.revenue).toLocaleString('id-ID')}
-                        </span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+                    <span>{showOrdersList ? 'Tutup' : 'Lihat Rincian'}</span>
+                    {showOrdersList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
+                </button>
+
+                {showOrdersList && (
+                  <div className="p-3 border-t border-slate-200 space-y-3">
+                    {shiftOrders.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-slate-400">
+                        Belum ada pesanan yang terselesaikan pada shift ini.
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    ) : (
+                      <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 text-xs">
+                        {shiftOrders.map((ord) => (
+                          <div key={ord.id} className="py-2 flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-800">{ord.invoiceNumber}</span>
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                                  {ord.channel || ord.orderType || 'DINE_IN'}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-500 mt-0.5">
+                                {new Date(ord.createdAt).toLocaleTimeString('id-ID', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}{' '}
+                                • {ord.customerName || ord.tableNumber ? `${ord.customerName || ''} ${ord.tableNumber ? `(Meja ${ord.tableNumber})` : ''}` : 'Pelanggan'}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="font-black text-blue-950">
+                                Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
+                              </div>
+                              <span
+                                className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
+                                  ord.paymentMethod === 'CASH'
+                                    ? 'bg-emerald-50 text-emerald-700'
+                                    : 'bg-blue-50 text-blue-700'
+                                }`}
+                              >
+                                {ord.paymentMethod}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-              {zReportData.notes && (
-                <div className="text-[10px] text-slate-500 italic">
-                  Catatan: {zReportData.notes}
-                </div>
-              )}
+                    {/* Pelunasan Kasbon jika ada */}
+                    {shiftDebtPayments.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200">
+                        <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-800 mb-2">
+                          <Wallet className="w-3.5 h-3.5" />
+                          <span>Pelunasan Kasbon Tunai ({shiftDebtPayments.length})</span>
+                        </div>
+                        <div className="space-y-1.5 text-xs">
+                          {shiftDebtPayments.map((dp) => (
+                            <div key={dp.id} className="flex justify-between text-slate-700">
+                              <span>
+                                {dp.customerName}{' '}
+                                <span className="text-[10px] text-slate-400">
+                                  ({new Date(dp.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})
+                                </span>
+                              </span>
+                              <span className="font-bold text-emerald-700 font-mono">
+                                + Rp {Number(dp.amount).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              <div className="text-center pt-2 text-[10px] text-slate-400">
-                <p>Shift Resmi Ditutup. Terima Kasih.</p>
+              {/* Input Fisik Uang di Laci */}
+              <div>
+                <CurrencyInput
+                  label="Hitungan Fisik Uang Tunai di Laci (Actual Cash)"
+                  value={actualCash}
+                  onChange={(val) => setActualCash(val)}
+                  inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
+                  prefixClassName="text-sm font-extrabold"
+                  placeholder="0"
+                  required
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Keluarkan semua uang di laci kasir dan hitung secara manual.
+                </p>
+              </div>
+
+              {/* Realtime Difference Badge */}
+              <div
+                className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
+                  difference === 0
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : difference > 0
+                    ? 'bg-blue-50 border-blue-200 text-blue-800'
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}
+              >
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  {difference === 0 ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  )}
+                  <span>
+                    {difference === 0
+                      ? 'Status Kas: COCOK (PAS)'
+                      : difference > 0
+                      ? 'Status Kas: LEBIH (SURPLUS)'
+                      : 'Status Kas: KURANG (DEFISIT)'}
+                  </span>
+                </div>
+                <span className="text-sm font-black">
+                  {difference > 0 ? '+' : ''}Rp {difference.toLocaleString('id-ID')}
+                </span>
+              </div>
+
+              {/* Catatan Tutup Shift */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Catatan Serah Terima Kasir (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Contoh: Ada uang kembalian receh belum ditukar"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
+                />
               </div>
             </div>
-          </div>
 
-          {/* Sticky Actions for Step 2 */}
+            {/* Sticky Actions Footer */}
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                <Lock className="w-4 h-4 stroke-[2.5]" />
+                <span>{loading ? 'Menutup Shift...' : 'Kunci & Tutup Shift (Z-Report)'}</span>
+              </button>
+            </div>
+          </form>
+        ) : (
+          /* Step 2: Tampilan Resmi Z-Report Thermal */
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 bg-slate-100 flex flex-col items-center">
+              {/* Paper Selector */}
+              <div className="flex items-center gap-2 mb-4 no-print">
+                <span className="text-xs font-bold text-slate-500">Lebar Cetak:</span>
+                <div className="flex items-center bg-white rounded-xl p-0.5 border border-slate-300 text-[11px] font-bold">
+                  <button
+                    onClick={() => setPaperWidth('58mm')}
+                    className={`px-2 py-1 rounded-lg transition-all ${
+                      paperWidth === '58mm'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    58mm
+                  </button>
+                  <button
+                    onClick={() => setPaperWidth('80mm')}
+                    className={`px-2 py-1 rounded-lg transition-all ${
+                      paperWidth === '80mm'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    80mm
+                  </button>
+                </div>
+              </div>
+
+              {/* Slip Printable */}
+              <div
+                id="z-report-printable"
+                className={`bg-white p-5 sm:p-6 shadow-md rounded-2xl border border-slate-200 font-mono text-slate-900 space-y-4 ${
+                  paperWidth === '58mm' ? 'w-[280px] text-[11px]' : 'w-[360px] text-xs'
+                }`}
+              >
+                <div className="text-center border-b border-dashed border-slate-300 pb-3">
+                  <h4 className="font-extrabold text-sm uppercase tracking-tight text-slate-900">
+                    {zReportData.outlet}
+                  </h4>
+                  <div className="mt-2 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-bold tracking-wider">
+                    *** LAPORAN TUTUP SHIFT (Z-REPORT) ***
+                  </div>
+                </div>
+
+                {/* Meta */}
+                <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Kasir:</span>
+                    <span className="font-bold">{zReportData.cashier}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Buka Shift:</span>
+                    <span>{new Date(zReportData.startTime).toLocaleTimeString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Tutup Shift:</span>
+                    <span>{new Date(zReportData.endTime).toLocaleTimeString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Transaksi:</span>
+                    <span className="font-bold">{zReportData.totalTransactions} Transaksi</span>
+                  </div>
+                </div>
+
+                {/* Cash Drawer Reconciliation */}
+                <div className="space-y-1.5 border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase text-[10px] tracking-wider mb-1">
+                    REKONSILIASI KAS LACI
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Modal Awal:</span>
+                    <span>Rp {zReportData.cashDrawer.startingCash.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">(+) Penjualan Tunai:</span>
+                    <span>Rp {zReportData.cashDrawer.totalCashSales.toLocaleString('id-ID')}</span>
+                  </div>
+                  {zReportData.totalDebtCashIn && zReportData.totalDebtCashIn > 0 ? (
+                    <div className="flex justify-between text-emerald-700">
+                      <span>(+) Pelunasan Kasbon Tunai:</span>
+                      <span>+ Rp {zReportData.totalDebtCashIn.toLocaleString('id-ID')}</span>
+                    </div>
+                  ) : null}
+                  {zReportData.cashDrawer.totalCashIn && zReportData.cashDrawer.totalCashIn > 0 ? (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
+                      <span>Rp {zReportData.cashDrawer.totalCashIn.toLocaleString('id-ID')}</span>
+                    </div>
+                  ) : null}
+                  {zReportData.cashDrawer.totalCashOut && zReportData.cashDrawer.totalCashOut > 0 ? (
+                    <div className="flex justify-between text-rose-700">
+                      <span>(-) Pengeluaran Kasir:</span>
+                      <span>- Rp {zReportData.cashDrawer.totalCashOut.toLocaleString('id-ID')}</span>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200">
+                    <span>Kas Seharusnya (Expected):</span>
+                    <span>Rp {zReportData.cashDrawer.expectedCash.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-blue-900">
+                    <span>Uang Fisik Dihitung (Actual):</span>
+                    <span>Rp {zReportData.cashDrawer.actualCash.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-dashed border-slate-300">
+                    <span>SELISIH KAS:</span>
+                    <span
+                      className={
+                        zReportData.cashDrawer.difference === 0
+                          ? 'text-emerald-700'
+                          : zReportData.cashDrawer.difference > 0
+                          ? 'text-blue-700'
+                          : 'text-rose-700'
+                      }
+                    >
+                      {zReportData.cashDrawer.difference > 0 ? '+' : ''}Rp{' '}
+                      {zReportData.cashDrawer.difference.toLocaleString('id-ID')} (
+                      {zReportData.cashDrawer.differenceLabel})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Rincian Pengeluaran Kasir jika ada */}
+                {zReportData.cashMovements && zReportData.cashMovements.length > 0 && (
+                  <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                    <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                      RINCIAN PENGELUARAN KASIR
+                    </div>
+                    {zReportData.cashMovements.map((m: any) => (
+                      <div key={m.id} className="flex justify-between text-slate-600">
+                        <span className="truncate max-w-[180px]">{m.category} ({m.notes})</span>
+                        <span className="font-mono">{m.type === 'CASH_OUT' ? '-' : '+'} Rp {Number(m.amount).toLocaleString('id-ID')}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Non Cash Summary */}
+                <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase text-[10px] tracking-wider mb-1">
+                    REKAP METODE PEMBAYARAN
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Total Tunai (CASH):</span>
+                    <span>Rp {zReportData.cashDrawer.totalCashSales.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Total QRIS / Non-Tunai:</span>
+                    <span>Rp {zReportData.nonCashSummary.totalQrisSales.toLocaleString('id-ID')}</span>
+                  </div>
+                  {zReportData.nonCashSummary.avgOrderValue !== undefined && zReportData.nonCashSummary.avgOrderValue > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Rata-rata (AOV):</span>
+                      <span className="font-semibold">
+                        Rp {zReportData.nonCashSummary.avgOrderValue.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-black text-blue-950 pt-1 border-t border-slate-200">
+                    <span>TOTAL OMSET SHIFT:</span>
+                    <span>Rp {zReportData.nonCashSummary.totalRevenue.toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+
+                {/* Channel Breakdown */}
+                {zReportData.channelBreakdown && zReportData.channelBreakdown.length > 0 && (
+                  <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                    <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                      OMSET PER KANAL PENJUALAN
+                    </div>
+                    {zReportData.channelBreakdown.map((ch) => {
+                      const channelLabel: Record<string, string> = {
+                        DINE_IN: 'Dine In',
+                        TAKEAWAY: 'Takeaway',
+                        DELIVERY: 'Delivery',
+                        GOFOOD: 'GoFood',
+                        GRABFOOD: 'GrabFood',
+                        SHOPEEFOOD: 'ShopeeFood',
+                        QR_MENU: 'Self-Order QR',
+                      };
+                      return (
+                        <div key={ch.channel} className="flex justify-between text-slate-600">
+                          <span>{channelLabel[ch.channel] || ch.channel} ({ch.count}x)</span>
+                          <span className="font-mono font-semibold">
+                            Rp {Number(ch.revenue).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Rincian Daftar Transaksi di Struk Cetak Z-Report */}
+                {zReportData.orders && zReportData.orders.length > 0 && (
+                  <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                    <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                      RINCIAN TRANSAKSI ({zReportData.orders.length})
+                    </div>
+                    {zReportData.orders.map((ord) => (
+                      <div key={ord.id} className="flex justify-between text-slate-700 py-0.5">
+                        <span className="truncate max-w-[190px]">
+                          {ord.invoiceNumber} ({ord.paymentMethod})
+                        </span>
+                        <span className="font-mono font-semibold">
+                          Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Rincian Pelunasan Kasbon di Struk Cetak jika ada */}
+                {zReportData.debtPayments && zReportData.debtPayments.length > 0 && (
+                  <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                    <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                      PELUNASAN KASBON TUNAI ({zReportData.debtPayments.length})
+                    </div>
+                    {zReportData.debtPayments.map((dp) => (
+                      <div key={dp.id} className="flex justify-between text-slate-700 py-0.5">
+                        <span className="truncate max-w-[190px]">{dp.customerName}</span>
+                        <span className="font-mono font-semibold">
+                          Rp {Number(dp.amount).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {zReportData.notes && (
+                  <div className="text-[10px] text-slate-500 italic">
+                    Catatan: {zReportData.notes}
+                  </div>
+                )}
+
+                <div className="text-center pt-2 text-[10px] text-slate-400">
+                  <p>Shift Resmi Ditutup. Terima Kasih.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Actions for Step 2 */}
             <div className="p-4 sm:px-6 bg-white border-t border-slate-200 flex items-center justify-center gap-3 no-print shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] w-full">
               <button
                 onClick={handlePrint}

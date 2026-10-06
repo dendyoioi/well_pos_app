@@ -721,14 +721,14 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {selectedShift.orders?.length === 0 ? (
+                      {(!selectedShift.orders || selectedShift.orders.length === 0) ? (
                         <tr>
                           <td colSpan={4} className="px-3 py-6 text-center text-slate-400 text-xs">
                             Belum ada transaksi di shift ini
                           </td>
                         </tr>
                       ) : (
-                        selectedShift.orders?.map((ord: any) => (
+                        selectedShift.orders.map((ord: any) => (
                           <tr key={ord.id} className="hover:bg-slate-50">
                             <td className="px-3 py-2 font-bold text-slate-800">{ord.invoiceNumber}</td>
                             <td className="px-3 py-2 text-slate-500">
@@ -739,7 +739,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                             </td>
                             <td className="px-3 py-2">
                               <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-700">
-                                {ord.payments[0]?.method || 'CASH'}
+                                {ord.paymentMethod || ord.payments?.[0]?.method || 'CASH'}
                               </span>
                             </td>
                             <td className="px-3 py-2 text-right font-black text-blue-900">
@@ -752,6 +752,42 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                   </table>
                 </div>
               </div>
+
+              {/* Pelunasan Kasbon Tunai jika ada */}
+              {selectedShift.debtPayments && selectedShift.debtPayments.length > 0 && (
+                <div>
+                  <h4 className="font-extrabold text-xs text-emerald-800 uppercase tracking-wider mb-2.5">
+                    Pelunasan Kasbon Tunai ({selectedShift.debtPayments.length})
+                  </h4>
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase">
+                        <tr>
+                          <th className="px-3 py-2">Pelanggan</th>
+                          <th className="px-3 py-2">Waktu</th>
+                          <th className="px-3 py-2 text-right">Nominal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {selectedShift.debtPayments.map((dp: any) => (
+                          <tr key={dp.id} className="hover:bg-slate-50">
+                            <td className="px-3 py-2 font-bold text-slate-800">{dp.customerName}</td>
+                            <td className="px-3 py-2 text-slate-500">
+                              {new Date(dp.createdAt).toLocaleTimeString('id-ID', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </td>
+                            <td className="px-3 py-2 text-right font-black text-emerald-700">
+                              Rp {Number(dp.amount).toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">

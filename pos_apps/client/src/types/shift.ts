@@ -1,5 +1,31 @@
 export type ShiftStatus = 'OPEN' | 'CLOSED';
 
+export interface ShiftOrder {
+  id: string;
+  invoiceNumber: string;
+  orderType?: string | null;
+  channel?: string | null;
+  orderStatus?: string | null;
+  paymentStatus?: string | null;
+  grandTotal: number;
+  subtotal?: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  createdAt: string;
+  customerName?: string | null;
+  tableNumber?: string | null;
+  paymentMethod: string;
+  payments?: Array<{ method: string; amount: number }>;
+}
+
+export interface ShiftDebtPayment {
+  id: string;
+  amount: number;
+  customerName: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
 export interface Shift {
   id: string;
   outletId: string;
@@ -32,8 +58,12 @@ export interface Shift {
     totalRevenue: number;
     totalCashOut?: number;
     totalCashIn?: number;
+    totalDebtCashIn?: number;
     expectedCash: number;
   };
+  orders?: ShiftOrder[];
+  debtPayments?: ShiftDebtPayment[];
+  totalDebtCashIn?: number;
   cashMovements?: any[];
 }
 
@@ -53,8 +83,11 @@ export interface XReportData {
     cashSales: number;
     totalCashOut?: number;
     totalCashIn?: number;
+    totalDebtCashIn?: number;
     expectedCashInDrawer: number;
   };
+  debtPayments?: ShiftDebtPayment[];
+  totalDebtCashIn?: number;
   cashMovements?: any[];
   paymentSummary: {
     cashSales: number;
@@ -74,6 +107,7 @@ export interface XReportData {
     grandTotal: number;
     paymentMethod: string;
   }>;
+  allOrders?: ShiftOrder[];
 }
 
 export interface ZReportData {
@@ -88,11 +122,14 @@ export interface ZReportData {
     totalCashSales: number;
     totalCashOut?: number;
     totalCashIn?: number;
+    totalDebtCashIn?: number;
     expectedCash: number;
     actualCash: number;
     difference: number;
     differenceLabel: string;
   };
+  debtPayments?: ShiftDebtPayment[];
+  totalDebtCashIn?: number;
   cashMovements?: any[];
   nonCashSummary: {
     totalQrisSales: number;
@@ -106,5 +143,6 @@ export interface ZReportData {
     revenue: number;
   }>;
   totalTransactions: number;
+  orders?: ShiftOrder[];
   notes?: string | null;
 }

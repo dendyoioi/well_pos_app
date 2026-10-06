@@ -197,8 +197,80 @@ export const getCurrentShift = async (req: Request, res: Response) => {
       }
     });
 
+    // Ambil transaksi pelunasan piutang/kasbon pelanggan tunai selama shift
+    const debtCashRows = await prisma.customerDebtPayment.findMany({
+      where: {
+        OR: [
+          { shiftId: activeShift.id },
+          {
+            outletId: activeShift.outletId,
+            cashierId: activeShift.userId,
+            createdAt: { gte: activeShift.startTime, lte: activeShift.endTime || new Date() },
+          },
+        ],
+        paymentMethod: 'CASH',
+      },
+      include: {
+        debt: {
+          include: {
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalDebtCashIn = debtCashRows.reduce((sum, d) => sum + Number(d.amount), 0);
+    const formattedDebtPayments = debtCashRows.map((d) => ({
+      id: d.id,
+      amount: Number(d.amount),
+      customerName: d.debt?.customer?.name || 'Pelanggan',
+      notes: d.notes,
+      createdAt: d.createdAt,
+    }));
+
+    // Ambil seluruh daftar transaksi/pesanan selama shift berjalan
+    const shiftOrders = await prisma.order.findMany({
+      where: {
+        shiftId: activeShift.id,
+        orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+        payments: {
+          where: { status: 'CAPTURED' },
+          select: { paymentMethod: true, amount: true },
+        },
+      },
+    });
+
+    const formattedOrders = shiftOrders.map((o) => {
+      const primaryPayment = o.payments[0]?.paymentMethod || 'CASH';
+      return {
+        id: o.id,
+        invoiceNumber: o.invoiceNumber,
+        orderType: o.orderType,
+        channel: o.channel || o.orderType || 'DINE_IN',
+        orderStatus: o.orderStatus,
+        paymentStatus: o.paymentStatus,
+        grandTotal: Number(o.totalAmount),
+        subtotal: Number(o.subtotal),
+        discountAmount: Number(o.discountTotal),
+        taxAmount: Number(o.taxTotal),
+        createdAt: o.createdAt,
+        customerName: o.customer?.name || null,
+        tableNumber: o.tableNumber || null,
+        paymentMethod: primaryPayment,
+        payments: o.payments.map((pt) => ({
+          method: pt.paymentMethod,
+          amount: Number(pt.amount),
+        })),
+      };
+    });
+
     const startingCash = Number(activeShift.startingCash);
-    const expectedCash = startingCash + cashSalesTotal + totalCashIn - totalCashOut;
+    const expectedCash = startingCash + cashSalesTotal + totalCashIn + totalDebtCashIn - totalCashOut;
 
     return res.status(200).json({
       status: 'success',
@@ -215,8 +287,12 @@ export const getCurrentShift = async (req: Request, res: Response) => {
           totalRevenue: cashSalesTotal + qrisSalesTotal,
           totalCashOut,
           totalCashIn,
+          totalDebtCashIn,
           expectedCash,
         },
+        orders: formattedOrders,
+        debtPayments: formattedDebtPayments,
+        totalDebtCashIn,
         cashMovements,
       },
     });
@@ -294,7 +370,7 @@ export const getXReport = async (req: Request, res: Response) => {
       }
     });
 
-    // Ambil riwayat mutasi kas shift
+    // Ambil mutasi kas shift
     const cashMovements = await prisma.cashMovement.findMany({
       where: {
         shiftId: activeShift.id,
@@ -316,11 +392,44 @@ export const getXReport = async (req: Request, res: Response) => {
       }
     });
 
+    // Ambil pelunasan kasbon pelanggan tunai selama shift
+    const debtCashRows = await prisma.customerDebtPayment.findMany({
+      where: {
+        OR: [
+          { shiftId: activeShift.id },
+          {
+            outletId: activeShift.outletId,
+            cashierId: activeShift.userId,
+            createdAt: { gte: activeShift.startTime, lte: activeShift.endTime || new Date() },
+          },
+        ],
+        paymentMethod: 'CASH',
+      },
+      include: {
+        debt: {
+          include: {
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalDebtCashIn = debtCashRows.reduce((sum, d) => sum + Number(d.amount), 0);
+    const formattedDebtPayments = debtCashRows.map((d) => ({
+      id: d.id,
+      amount: Number(d.amount),
+      customerName: d.debt?.customer?.name || 'Pelanggan',
+      notes: d.notes,
+      createdAt: d.createdAt,
+    }));
+
     const startingCash = Number(activeShift.startingCash);
-    const expectedCashInDrawer = startingCash + totalCashSales + totalCashIn - totalCashOut;
+    const expectedCashInDrawer = startingCash + totalCashSales + totalCashIn + totalDebtCashIn - totalCashOut;
     const netRevenue = totalCashSales + totalQrisSales;
 
-    const recentOrders = Array.from(orderMap.values()).slice(0, 10);
+    const allOrders = Array.from(orderMap.values());
+    const recentOrders = allOrders.slice(0, 20);
 
     return res.status(200).json({
       status: 'success',
@@ -340,8 +449,11 @@ export const getXReport = async (req: Request, res: Response) => {
           cashSales: totalCashSales,
           totalCashOut,
           totalCashIn,
+          totalDebtCashIn,
           expectedCashInDrawer,
         },
+        debtPayments: formattedDebtPayments,
+        totalDebtCashIn,
         cashMovements,
         paymentSummary: {
           cashSales: totalCashSales,
@@ -356,6 +468,7 @@ export const getXReport = async (req: Request, res: Response) => {
           totalService,
         },
         recentOrders,
+        allOrders,
       },
     });
   } catch (error: any) {
@@ -468,8 +581,81 @@ export const closeShift = async (req: Request, res: Response) => {
       }
     });
 
+    // Ambil transaksi pelunasan piutang/kasbon pelanggan tunai selama shift
+    const debtCashRows = await prisma.customerDebtPayment.findMany({
+      where: {
+        OR: [
+          { shiftId: activeShift.id },
+          {
+            outletId: activeShift.outletId,
+            cashierId: activeShift.userId,
+            createdAt: { gte: activeShift.startTime, lte: activeShift.endTime || new Date() },
+          },
+        ],
+        paymentMethod: 'CASH',
+      },
+      include: {
+        debt: {
+          include: {
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalDebtCashIn = debtCashRows.reduce((sum, d) => sum + Number(d.amount), 0);
+    const formattedDebtPayments = debtCashRows.map((d) => ({
+      id: d.id,
+      amount: Number(d.amount),
+      customerName: d.debt?.customer?.name || 'Pelanggan',
+      notes: d.notes,
+      createdAt: d.createdAt,
+    }));
+
+    // Ambil seluruh daftar pesanan selama shift ini untuk rincian Z-Report
+    const shiftOrders = await prisma.order.findMany({
+      where: {
+        shiftId: activeShift.id,
+        paymentStatus: 'PAID',
+        orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+        payments: {
+          where: { status: 'CAPTURED' },
+          select: { paymentMethod: true, amount: true },
+        },
+      },
+    });
+
+    const formattedOrders = shiftOrders.map((o) => {
+      const primaryPayment = o.payments[0]?.paymentMethod || 'CASH';
+      return {
+        id: o.id,
+        invoiceNumber: o.invoiceNumber,
+        orderType: o.orderType,
+        channel: o.channel || o.orderType || 'DINE_IN',
+        orderStatus: o.orderStatus,
+        paymentStatus: o.paymentStatus,
+        grandTotal: Number(o.totalAmount),
+        subtotal: Number(o.subtotal),
+        discountAmount: Number(o.discountTotal),
+        taxAmount: Number(o.taxTotal),
+        createdAt: o.createdAt,
+        customerName: o.customer?.name || null,
+        tableNumber: o.tableNumber || null,
+        paymentMethod: primaryPayment,
+        payments: o.payments.map((pt) => ({
+          method: pt.paymentMethod,
+          amount: Number(pt.amount),
+        })),
+      };
+    });
+
     const startingCash = Number(activeShift.startingCash);
-    const expectedCash = startingCash + totalCashSales + totalCashIn - totalCashOut;
+    const expectedCash = startingCash + totalCashSales + totalCashIn + totalDebtCashIn - totalCashOut;
     const difference = actualCash - expectedCash; // Selisih: positif (lebih), negatif (kurang), 0 (cocok)
 
     const endTime = new Date();
@@ -482,7 +668,7 @@ export const closeShift = async (req: Request, res: Response) => {
         actualEnding: actualCash,
         cashDifference: difference,
         status: ShiftStatus.CLOSED,
-        notes: notes || `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Kas keluar: Rp ${totalCashOut.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`,
+        notes: notes || `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Kas keluar: Rp ${totalCashOut.toLocaleString('id-ID')}. Pelunasan kasbon: Rp ${totalDebtCashIn.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`,
       },
       include: {
         outlet: true,
@@ -505,12 +691,15 @@ export const closeShift = async (req: Request, res: Response) => {
           totalCashSales,
           totalCashOut,
           totalCashIn,
+          totalDebtCashIn,
           expectedCash,
           actualCash,
           difference,
           differenceLabel:
             difference === 0 ? 'COCOK (Pas)' : difference > 0 ? 'LEBIH (+)' : 'KURANG (-)',
         },
+        debtPayments: formattedDebtPayments,
+        totalDebtCashIn,
         cashMovements,
         nonCashSummary: {
           totalQrisSales,
@@ -523,6 +712,7 @@ export const closeShift = async (req: Request, res: Response) => {
           revenue: Number(r.revenue),
         })),
         totalTransactions: totalOrders,
+        orders: formattedOrders,
         notes: closedShift.notes,
       },
     });
@@ -652,6 +842,79 @@ export const getShiftById = async (req: Request, res: Response) => {
       else if (cm.type === 'CASH_IN') totalCashIn += Number(cm.amount);
     });
 
+    // Ambil transaksi pelunasan kasbon pelanggan tunai selama shift ini
+    const debtCashRows = await prisma.customerDebtPayment.findMany({
+      where: {
+        OR: [
+          { shiftId: shift.id },
+          {
+            outletId: shift.outletId,
+            cashierId: shift.userId,
+            createdAt: { gte: shift.startTime, lte: shift.endTime || new Date() },
+          },
+        ],
+        paymentMethod: 'CASH',
+      },
+      include: {
+        debt: {
+          include: {
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalDebtCashIn = debtCashRows.reduce((sum, d) => sum + Number(d.amount), 0);
+    const formattedDebtPayments = debtCashRows.map((d) => ({
+      id: d.id,
+      amount: Number(d.amount),
+      customerName: d.debt?.customer?.name || 'Pelanggan',
+      notes: d.notes,
+      createdAt: d.createdAt,
+    }));
+
+    // Ambil seluruh detail pesanan shift ini
+    const shiftOrders = await prisma.order.findMany({
+      where: {
+        shiftId: shift.id,
+        paymentStatus: 'PAID',
+        orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+        payments: {
+          where: { status: 'CAPTURED' },
+          select: { paymentMethod: true, amount: true },
+        },
+      },
+    });
+
+    const formattedOrders = shiftOrders.map((o) => {
+      const primaryPayment = o.payments[0]?.paymentMethod || 'CASH';
+      return {
+        id: o.id,
+        invoiceNumber: o.invoiceNumber,
+        orderType: o.orderType,
+        channel: o.channel || o.orderType || 'DINE_IN',
+        orderStatus: o.orderStatus,
+        paymentStatus: o.paymentStatus,
+        grandTotal: Number(o.totalAmount),
+        subtotal: Number(o.subtotal),
+        discountAmount: Number(o.discountTotal),
+        taxAmount: Number(o.taxTotal),
+        createdAt: o.createdAt,
+        customerName: o.customer?.name || null,
+        tableNumber: o.tableNumber || null,
+        paymentMethod: primaryPayment,
+        payments: o.payments.map((pt) => ({
+          method: pt.paymentMethod,
+          amount: Number(pt.amount),
+        })),
+      };
+    });
+
     return res.status(200).json({
       status: 'success',
       data: {
@@ -663,9 +926,12 @@ export const getShiftById = async (req: Request, res: Response) => {
         difference: shift.cashDifference !== null ? Number(shift.cashDifference) : null,
         totalCashOut,
         totalCashIn,
+        totalDebtCashIn,
+        debtPayments: formattedDebtPayments,
+        orders: formattedOrders,
         cashMovements,
         stats: {
-          totalOrders: orderSet.size,
+          totalOrders: formattedOrders.length,
           cashSales,
           qrisSales,
           totalRevenue: cashSales + qrisSales,

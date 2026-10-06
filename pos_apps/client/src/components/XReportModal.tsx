@@ -7,9 +7,11 @@ import {
   CreditCard,
   AlertCircle,
   RefreshCw,
+  Wallet,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { XReportData } from '../types/shift';
+import { printElementViaThermalIframe } from '../utils/thermalPrinter';
 
 interface XReportModalProps {
   isOpen: boolean;
@@ -48,11 +50,14 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    window.print();
+    printElementViaThermalIframe('x-report-printable', {
+      paperWidth,
+      title: `X-Report Laporan Berjalan - ${data?.outlet?.name || 'Well POS'}`,
+    });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white p-4 sm:p-5 flex items-center justify-between no-print">
@@ -175,6 +180,14 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                     Rp {data.cashDrawer.cashSales.toLocaleString('id-ID')}
                   </span>
                 </div>
+                {data.cashDrawer.totalDebtCashIn && data.cashDrawer.totalDebtCashIn > 0 ? (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>(+) Pelunasan Kasbon:</span>
+                    <span className="font-semibold">
+                      +Rp {data.cashDrawer.totalDebtCashIn.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                ) : null}
                 {data.cashDrawer.totalCashIn && data.cashDrawer.totalCashIn > 0 ? (
                   <div className="flex justify-between">
                     <span className="text-slate-600">(+) Kas Masuk:</span>
@@ -210,6 +223,24 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                       <span className="truncate max-w-[180px]">{m.category} ({m.notes})</span>
                       <span className={`font-mono font-medium ${m.type === 'CASH_OUT' ? 'text-rose-600' : 'text-emerald-600'}`}>
                         {m.type === 'CASH_OUT' ? '-' : '+'}Rp {Number(m.amount).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pelunasan Kasbon Pelanggan jika ada */}
+              {data.debtPayments && data.debtPayments.length > 0 && (
+                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Wallet className="w-3 h-3 text-emerald-700" />
+                    <span>PELUNASAN KASBON TUNAI ({data.debtPayments.length})</span>
+                  </div>
+                  {data.debtPayments.map((dp) => (
+                    <div key={dp.id} className="flex justify-between text-slate-700 py-0.5">
+                      <span className="truncate max-w-[190px]">{dp.customerName}</span>
+                      <span className="font-mono font-semibold text-emerald-700">
+                        +Rp {Number(dp.amount).toLocaleString('id-ID')}
                       </span>
                     </div>
                   ))}
@@ -277,6 +308,25 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                 )}
               </div>
 
+              {/* Daftar Transaksi Terakhir di Slip */}
+              {data.recentOrders && data.recentOrders.length > 0 && (
+                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
+                    TRANSAKSI TERBARU ({data.recentOrders.length})
+                  </div>
+                  {data.recentOrders.map((ord, idx) => (
+                    <div key={idx} className="flex justify-between text-slate-700 py-0.5">
+                      <span className="truncate max-w-[190px]">
+                        {ord.invoiceNumber} ({ord.paymentMethod})
+                      </span>
+                      <span className="font-mono font-semibold">
+                        Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Footer */}
               <div className="text-center pt-1 text-[10px] text-slate-400">
                 <p>Dokumen ini adalah laporan sementara (X-Report).</p>
@@ -290,7 +340,7 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
         <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between no-print">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+            className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             Tutup
           </button>
@@ -298,7 +348,7 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
           <button
             onClick={handlePrint}
             disabled={!data}
-            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             <Printer className="w-4 h-4 stroke-[2.5]" />
             <span>Cetak Slip X-Report</span>

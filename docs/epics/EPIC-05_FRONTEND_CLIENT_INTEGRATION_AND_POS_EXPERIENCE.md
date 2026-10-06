@@ -139,10 +139,14 @@ Tujuan utama **EPIC-05** adalah:
   - **Hasil**: Styling struk thermal dengan nomor invoice, nama kasir, rincian pembayaran CASH/QRIS, dan footer outlet.
   - **File Target**: `src/components/ReceiptPrint.tsx`, `src/utils/printReceipt.ts`.
 
-- [x] **Task 5.5.2: Cashier Shift Operations UI (Open, X-Report, Z-Report)** [DONE]
-  - **Deskripsi**: Siklus buka dan tutup laci kas kasir per outlet.
-  - **Hasil**: Endpoint `POST /api/shifts/open`, `GET /api/shifts/current`, dan `POST /api/shifts/close` tersinkron dengan tabel `shifts` (startingCash, expectedEnding, actualEnding, cashDifference).
-  - **File Target**: `src/controllers/shift.controller.ts`.
+- [x] **Task 5.5.2: Cashier Shift Operations UI (Open, X-Report, Z-Report) & Cash Reconciliation Audit** [DONE]
+  - **Deskripsi**: Siklus buka dan tutup laci kas kasir per outlet beserta rekonsiliasi kas fisik.
+  - **Hasil**: 
+    - Endpoint `POST /api/shifts/open`, `GET /api/shifts/current`, `GET /api/shifts/x-report`, `POST /api/shifts/close`, dan `GET /api/shifts/:id` tersinkron dengan tabel `shifts` (startingCash, expectedEnding, actualEnding, cashDifference).
+    - **Audit Perlindungan Kas Fisik**: Pelunasan piutang/kasbon pelanggan tunai (`CustomerDebtPayment` metode `CASH`) otomatis diperhitungkan ke dalam `expectedCash` laci kasir agar kasir tidak terindikasi surplus/selisih palsu.
+    - **Audit Tampilan Transaksi Shift**: Menyertakan array lengkap seluruh pesanan/transaksi aktif selama shift (`orders`), rincian pelunasan kasbon (`debtPayments`), dan ringkasan per kanal di antarmuka kasir (`CloseShiftModal.tsx`), laporan berjalan (`XReportModal.tsx`), serta audit backoffice (`ShiftsAuditView.tsx`).
+    - **Cetak Struk Thermal Terisolasi**: Mengganti pemanggilan `window.print()` mentah pada modal dengan `printElementViaThermalIframe` berbasis iframe tersembunyi ber-styling thermal 58mm/80mm agar hasil cetak Z-Report dan X-Report tidak blank atau terpotong background modal.
+  - **File Target**: `src/controllers/shift.controller.ts`, `src/utils/thermalPrinter.ts`, `src/components/CloseShiftModal.tsx`, `src/components/XReportModal.tsx`.
 
 ---
 
