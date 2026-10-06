@@ -61,6 +61,14 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
     onChange(numericValue, formatted);
   };
 
+  const hasCustomBg = inputClassName.includes('bg-');
+  const hasCustomText = inputClassName.includes('text-');
+  const hasCustomBorder = inputClassName.includes('border-');
+
+  const baseBg = hasCustomBg ? '' : (error ? 'bg-rose-50/30' : 'bg-white');
+  const baseText = hasCustomText ? '' : (error ? 'text-rose-900' : 'text-slate-900');
+  const baseBorder = hasCustomBorder ? '' : (error ? 'border-rose-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100');
+
   return (
     <div className={`w-full space-y-1.5 ${className}`}>
       {label && (
@@ -89,13 +97,9 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
           placeholder={placeholder}
           value={displayValue}
           onChange={handleChange}
-          className={`w-full rounded-xl border bg-white text-slate-900 ${
+          className={`w-full rounded-xl border ${baseBg} ${baseText} ${baseBorder} ${
             prefix ? 'pl-16' : 'pl-3.5'
-          } pr-3.5 py-2.5 text-sm font-semibold transition-all outline-none placeholder:text-slate-400 ${
-            error
-              ? 'border-rose-400 bg-rose-50/30 text-rose-900 focus:border-rose-500 focus:ring-4 focus:ring-rose-100'
-              : 'border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100'
-          } disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed ${inputClassName}`}
+          } pr-3.5 py-2.5 text-sm font-semibold transition-all outline-none placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed ${inputClassName}`}
         />
       </div>
       {error ? (

@@ -1600,6 +1600,30 @@ export const api = {
     return res.json();
   },
 
+  updatePlatformPromo: async (
+    id: string,
+    data: {
+      name?: string;
+      description?: string | null;
+      type?: 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'BONUS_TOKENS';
+      value?: number;
+      scope?: 'ALL' | 'REGISTRATION' | 'TOPUP';
+      minSpend?: number;
+      maxDiscount?: number | null;
+      usageLimit?: number | null;
+      validUntil?: string | null;
+      isActive?: boolean;
+      isPublished?: boolean;
+    }
+  ): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch(`/api/platform/promos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...platformAuthHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   togglePlatformPromo: async (id: string): Promise<{ status: string; data?: any; message?: string }> => {
     const res = await fetch(`/api/platform/promos/${id}/toggle`, {
       method: 'PATCH',

@@ -1482,6 +1482,67 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
   }
 };
 
+const updatePlatformPromoSchema = z.object({
+  name: z.string().min(3, 'Nama promo minimal 3 karakter').optional(),
+  description: z.string().optional().nullable(),
+  scope: z.enum(['ALL', 'REGISTRATION', 'TOPUP']).optional(),
+  type: z.enum(['DISCOUNT_PERCENT', 'DISCOUNT_FIXED', 'BONUS_TOKENS']).optional(),
+  value: z.number().positive('Nilai promo harus lebih dari 0').optional(),
+  minSpend: z.number().optional().default(0),
+  maxDiscount: z.number().optional().nullable(),
+  usageLimit: z.number().int().positive().optional().nullable(),
+  validUntil: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  isPublished: z.boolean().optional(),
+});
+
+export const updatePlatformPromo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const promo = await prisma.saaSPromo.findUnique({ where: { id } });
+    if (!promo) {
+      return res.status(404).json({ status: 'error', message: 'Promo tidak ditemukan' });
+    }
+
+    const parse = updatePlatformPromoSchema.safeParse(req.body);
+    if (!parse.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi data promo gagal',
+        errors: parse.error.flatten().fieldErrors,
+      });
+    }
+
+    const data = parse.data;
+    const updatePayload: any = {};
+    if (data.name !== undefined) updatePayload.name = data.name;
+    if (data.description !== undefined) updatePayload.description = data.description || null;
+    if (data.scope !== undefined) updatePayload.scope = data.scope;
+    if (data.type !== undefined) updatePayload.type = data.type;
+    if (data.value !== undefined) updatePayload.value = new Prisma.Decimal(data.value);
+    if (data.minSpend !== undefined) updatePayload.minSpend = new Prisma.Decimal(data.minSpend);
+    if (data.maxDiscount !== undefined) updatePayload.maxDiscount = data.maxDiscount ? new Prisma.Decimal(data.maxDiscount) : null;
+    if (data.usageLimit !== undefined) updatePayload.usageLimit = data.usageLimit || null;
+    if (data.validUntil !== undefined) updatePayload.validUntil = data.validUntil ? new Date(data.validUntil) : null;
+    if (data.isActive !== undefined) updatePayload.isActive = Boolean(data.isActive);
+    if (data.isPublished !== undefined) updatePayload.isPublished = Boolean(data.isPublished);
+
+    const updated = await prisma.saaSPromo.update({
+      where: { id },
+      data: updatePayload,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Kode promo "${updated.code}" berhasil diperbarui`,
+      data: updated,
+    });
+  } catch (error) {
+    console.error('Error update platform promo:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui data promo' });
+  }
+};
+
 export const togglePlatformPromo = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

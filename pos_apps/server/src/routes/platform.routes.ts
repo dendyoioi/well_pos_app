@@ -20,6 +20,7 @@ import {
   deletePlatformUser,
   getPlatformPromos,
   createPlatformPromo,
+  updatePlatformPromo,
   togglePlatformPromo,
   togglePublishPlatformPromo,
   deletePlatformPromo,
@@ -64,6 +65,8 @@ platformRouter.delete('/users/:id', authenticatePlatform, deletePlatformUser);
 // Rute Master Promo SaaS Platform (B2B)
 platformRouter.get('/promos', authenticatePlatform, getPlatformPromos);
 platformRouter.post('/promos', authenticatePlatform, createPlatformPromo);
+platformRouter.put('/promos/:id', authenticatePlatform, updatePlatformPromo);
+platformRouter.patch('/promos/:id', authenticatePlatform, updatePlatformPromo);
 platformRouter.patch('/promos/:id/toggle', authenticatePlatform, togglePlatformPromo);
 platformRouter.patch('/promos/:id/toggle-publish', authenticatePlatform, togglePublishPlatformPromo);
 platformRouter.delete('/promos/:id', authenticatePlatform, deletePlatformPromo);

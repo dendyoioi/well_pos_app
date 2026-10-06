@@ -181,6 +181,25 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   });
   const [submittingPromo, setSubmittingPromo] = useState(false);
 
+  // STATE MODAL EDIT PROMO SAAS
+  const [isEditPromoModalOpen, setIsEditPromoModalOpen] = useState(false);
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
+  const [editPromoForm, setEditPromoForm] = useState({
+    code: '',
+    name: '',
+    description: '',
+    scope: 'ALL' as 'ALL' | 'REGISTRATION' | 'TOPUP',
+    type: 'DISCOUNT_PERCENT' as 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'BONUS_TOKENS',
+    value: 20,
+    minSpend: 0,
+    maxDiscount: 100000,
+    usageLimit: 100,
+    validUntil: '',
+    isActive: true,
+    isPublished: true,
+  });
+  const [submittingEditPromo, setSubmittingEditPromo] = useState(false);
+
   // ----------------------------------------------------
   // PAGINATION STATES & AUTO-RESET (STANDAR KANONIKAL 10/25/50/100)
   // ----------------------------------------------------
@@ -890,6 +909,79 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
     } finally {
       setSubmittingPromo(false);
+    }
+  };
+
+  const handleOpenEditPromo = (promo: any) => {
+    setEditingPromoId(promo.id);
+    let dateStr = '';
+    if (promo.validUntil) {
+      try {
+        dateStr = new Date(promo.validUntil).toISOString().split('T')[0];
+      } catch (e) {
+        dateStr = '';
+      }
+    }
+    setEditPromoForm({
+      code: promo.code || '',
+      name: promo.name || '',
+      description: promo.description || '',
+      scope: promo.scope || 'ALL',
+      type: promo.type || 'DISCOUNT_PERCENT',
+      value: Number(promo.value) || 0,
+      minSpend: Number(promo.minSpend) || 0,
+      maxDiscount: promo.maxDiscount ? Number(promo.maxDiscount) : 0,
+      usageLimit: promo.usageLimit ? Number(promo.usageLimit) : 0,
+      validUntil: dateStr,
+      isActive: promo.isActive !== false,
+      isPublished: promo.isPublished !== false,
+    });
+    setIsEditPromoModalOpen(true);
+  };
+
+  const handleUpdatePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPromoId) return;
+    if (!editPromoForm.name.trim()) {
+      showAlert('Input Belum Lengkap', 'Nama promo wajib diisi', 'error');
+      return;
+    }
+    if (editPromoForm.value <= 0) {
+      showAlert('Input Tidak Valid', 'Nilai diskon atau token harus lebih dari 0', 'error');
+      return;
+    }
+
+    setSubmittingEditPromo(true);
+    try {
+      const payload: any = {
+        name: editPromoForm.name.trim(),
+        description: editPromoForm.description.trim() || null,
+        scope: editPromoForm.scope,
+        type: editPromoForm.type,
+        value: Number(editPromoForm.value),
+        minSpend: Number(editPromoForm.minSpend) || 0,
+        maxDiscount: editPromoForm.type === 'DISCOUNT_PERCENT' && Number(editPromoForm.maxDiscount) > 0
+          ? Number(editPromoForm.maxDiscount)
+          : null,
+        usageLimit: Number(editPromoForm.usageLimit) > 0 ? Number(editPromoForm.usageLimit) : null,
+        validUntil: editPromoForm.validUntil ? new Date(editPromoForm.validUntil).toISOString() : null,
+        isActive: editPromoForm.isActive,
+        isPublished: editPromoForm.isPublished,
+      };
+
+      const res = await api.updatePlatformPromo(editingPromoId, payload);
+      if (res.status === 'success') {
+        setActionFeedback('Kode promo berhasil diperbarui');
+        setIsEditPromoModalOpen(false);
+        setEditingPromoId(null);
+        await loadPlatformData();
+      } else {
+        showAlert('Gagal Memperbarui Promo', res.message || 'Gagal mengubah promo', 'error');
+      }
+    } catch (err: any) {
+      showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem', 'error');
+    } finally {
+      setSubmittingEditPromo(false);
     }
   };
 
@@ -4077,7 +4169,17 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
                     {/* Footer Actions */}
                     <div className="mt-5 pt-3 border-t border-slate-800/70 flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditPromo(promo)}
+                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border-indigo-500/30 flex items-center gap-1"
+                          title="Edit detail promo"
+                        >
+                          <Edit3 className="w-3 h-3 text-indigo-400" />
+                          <span>Edit</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => handleTogglePromo(promo)}
@@ -5755,208 +5857,582 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 6: BUAT PROMO SAAS PLATFORM BARU (B2B ENGINE)
       ========================================================================= */}
       {isCreatePromoModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 my-8">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setIsCreatePromoModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="text-center mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto mb-3 shadow-md">
-                <Tag className="w-6 h-6" />
+            {/* Header */}
+            <div className="flex items-center gap-3.5 p-5 sm:p-6 pb-4 border-b border-slate-800/80 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10 shrink-0">
+                <Tag className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-black text-white">Buat Kupon Promo SaaS B2B Baru</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Kupon diskon setup fee onboarding atau bonus kuota token untuk merchant.
-              </p>
+              <div className="pr-8">
+                <h3 className="text-base sm:text-lg font-black text-white tracking-tight">Buat Kupon Promo SaaS B2B</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Diskon biaya pendaftaran toko (onboarding) atau bonus token operasional merchant.
+                </p>
+              </div>
             </div>
 
-            <form onSubmit={handleCreatePromo} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Kode Kupon:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: HEMAT50K"
-                    value={newPromoForm.code}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, code: e.target.value.toUpperCase() })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-indigo-300 placeholder:text-slate-600 outline-none focus:border-indigo-500 uppercase"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Nama Promo:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Promo Grand Opening"
-                    value={newPromoForm.name}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Target Transaksi (Scope):</label>
-                  <select
-                    value={newPromoForm.scope}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, scope: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
-                  >
-                    <option value="ALL">ALL — Semua Transaksi (Registrasi &amp; Top-Up)</option>
-                    <option value="REGISTRATION">REGISTRATION — Khusus Pendaftaran Awal</option>
-                    <option value="TOPUP">TOPUP — Khusus Top-Up Kuota Token</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Tipe Benefit Kupon:</label>
-                  <select
-                    value={newPromoForm.type}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, type: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
-                  >
-                    <option value="DISCOUNT_PERCENT">DISCOUNT_PERCENT — Diskon Persentase (%)</option>
-                    <option value="DISCOUNT_FIXED">DISCOUNT_FIXED — Potongan Nominal Rupiah (Rp)</option>
-                    <option value="BONUS_TOKENS">BONUS_TOKENS — Ekstra Bonus Token Order Gratis</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    {newPromoForm.type === 'DISCOUNT_PERCENT'
-                      ? 'Nilai Diskon (%):'
-                      : newPromoForm.type === 'DISCOUNT_FIXED'
-                      ? 'Nominal Potongan (Rp):'
-                      : 'Jumlah Bonus Token:'}
-                  </label>
-                  {newPromoForm.type === 'DISCOUNT_FIXED' ? (
-                    <CurrencyInput
-                      value={newPromoForm.value}
-                      onChange={(val) => setNewPromoForm({ ...newPromoForm, value: val })}
-                      placeholder="0"
-                      inputClassName="bg-slate-950 border-slate-800 text-emerald-400 focus:border-indigo-500 text-xs py-2 font-bold"
-                      prefixClassName="bg-slate-900 border-slate-800 text-slate-400 text-xs"
+            {/* Form with Scrollable Body & Sticky Footer */}
+            <form onSubmit={handleCreatePromo} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="overflow-y-auto overscroll-contain flex-1 p-5 sm:p-6 space-y-4">
+                {/* Row 1: Kode & Nama */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Kode Kupon <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: HEMAT50K"
+                      value={newPromoForm.code}
+                      onChange={(e) => setNewPromoForm({ ...newPromoForm, code: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-indigo-300 placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 uppercase tracking-wider transition-all"
                     />
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="1"
-                        required
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Nama Promo <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: Promo Grand Opening"
+                      value={newPromoForm.name}
+                      onChange={(e) => setNewPromoForm({ ...newPromoForm, name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-semibold transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Scope & Tipe Benefit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Target Transaksi (Scope)
+                    </label>
+                    <select
+                      value={newPromoForm.scope}
+                      onChange={(e) => setNewPromoForm({ ...newPromoForm, scope: e.target.value as any })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                    >
+                      <option value="ALL">Semua Transaksi (Registrasi &amp; Top-Up)</option>
+                      <option value="REGISTRATION">Khusus Pendaftaran Toko (Onboarding)</option>
+                      <option value="TOPUP">Khusus Top-Up Kuota Token</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Tipe Benefit Kupon
+                    </label>
+                    <select
+                      value={newPromoForm.type}
+                      onChange={(e) => setNewPromoForm({ ...newPromoForm, type: e.target.value as any })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                    >
+                      <option value="DISCOUNT_PERCENT">Diskon Persentase (%)</option>
+                      <option value="DISCOUNT_FIXED">Potongan Nominal Tetap (Rp)</option>
+                      <option value="BONUS_TOKENS">Bonus Ekstra Kuota Token</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 3: Nilai Diskon / Potongan & Maksimal Potongan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      {newPromoForm.type === 'DISCOUNT_PERCENT'
+                        ? 'Nilai Diskon (%)'
+                        : newPromoForm.type === 'DISCOUNT_FIXED'
+                        ? 'Nominal Potongan (Rp)'
+                        : 'Jumlah Bonus Token'} <span className="text-rose-400">*</span>
+                    </label>
+                    {newPromoForm.type === 'DISCOUNT_FIXED' ? (
+                      <CurrencyInput
                         value={newPromoForm.value}
-                        onChange={(e) => setNewPromoForm({ ...newPromoForm, value: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-emerald-400 outline-none focus:border-indigo-500"
+                        onChange={(val) => setNewPromoForm({ ...newPromoForm, value: val })}
+                        placeholder="0"
+                        inputClassName="bg-slate-950 border-slate-700 text-emerald-400 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-bold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
-                        {newPromoForm.type === 'DISCOUNT_PERCENT' ? '%' : 'Token'}
-                      </span>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          required
+                          value={newPromoForm.value}
+                          onChange={(e) => setNewPromoForm({ ...newPromoForm, value: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-emerald-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                        />
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                          {newPromoForm.type === 'DISCOUNT_PERCENT' ? '%' : 'Token'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {newPromoForm.type === 'DISCOUNT_PERCENT' ? (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Maksimal Diskon (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={newPromoForm.maxDiscount}
+                        onChange={(val) => setNewPromoForm({ ...newPromoForm, maxDiscount: val })}
+                        placeholder="0 = Tanpa batas"
+                        inputClassName="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-semibold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Min. Belanja (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={newPromoForm.minSpend}
+                        onChange={(val) => setNewPromoForm({ ...newPromoForm, minSpend: val })}
+                        placeholder="0 = Tanpa batas"
+                        inputClassName="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-semibold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
                     </div>
                   )}
                 </div>
 
+                {/* Row 4: Min Belanja (jika percent) & Kuota Pemakaian */}
                 {newPromoForm.type === 'DISCOUNT_PERCENT' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Min. Belanja (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={newPromoForm.minSpend}
+                        onChange={(val) => setNewPromoForm({ ...newPromoForm, minSpend: val })}
+                        placeholder="0 = Tanpa batas"
+                        inputClassName="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-semibold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Batas Kuota Pemakaian
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0 = Tanpa batas kuota"
+                        value={newPromoForm.usageLimit}
+                        onChange={(e) => setNewPromoForm({ ...newPromoForm, usageLimit: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {newPromoForm.type !== 'DISCOUNT_PERCENT' && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Maksimal Diskon (Rp):</label>
-                    <CurrencyInput
-                      value={newPromoForm.maxDiscount}
-                      onChange={(val) => setNewPromoForm({ ...newPromoForm, maxDiscount: val })}
-                      placeholder="0 = Tanpa batas"
-                      inputClassName="bg-slate-950 border-slate-800 text-white focus:border-indigo-500 text-xs py-2"
-                      prefixClassName="bg-slate-900 border-slate-800 text-slate-400 text-xs"
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Batas Kuota Pemakaian
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0 = Tanpa batas kuota"
+                      value={newPromoForm.usageLimit}
+                      onChange={(e) => setNewPromoForm({ ...newPromoForm, usageLimit: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
                     />
                   </div>
                 )}
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Row 5: Tanggal Kedaluwarsa */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Min. Belanja (Rp):</label>
-                  <CurrencyInput
-                    value={newPromoForm.minSpend}
-                    onChange={(val) => setNewPromoForm({ ...newPromoForm, minSpend: val })}
-                    placeholder="0 = Tanpa batas"
-                    inputClassName="bg-slate-950 border-slate-800 text-white focus:border-indigo-500 text-xs py-2"
-                    prefixClassName="bg-slate-900 border-slate-800 text-slate-400 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Batas Kuota Pemakaian:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Contoh: 100 kali"
-                    value={newPromoForm.usageLimit}
-                    onChange={(e) => setNewPromoForm({ ...newPromoForm, usageLimit: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Berlaku Sampai Tanggal:</label>
-                <input
-                  type="date"
-                  value={newPromoForm.validUntil}
-                  onChange={(e) => setNewPromoForm({ ...newPromoForm, validUntil: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Deskripsi &amp; Syarat Singkat (Opsional):</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Khusus pendaftaran toko baru bulan ini atau top-up token."
-                  value={newPromoForm.description}
-                  onChange={(e) => setNewPromoForm({ ...newPromoForm, description: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 font-medium"
-                />
-              </div>
-
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
-                <div>
-                  <label htmlFor="promoIsPublished" className="block text-xs font-bold text-white cursor-pointer">
-                    Tayangkan di Website Publik (Landing Page)
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Berlaku Sampai Tanggal (Opsional)
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Jika dicentang, voucher akan muncul di halaman katalog promo landing page.
-                  </p>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      style={{ colorScheme: 'dark' }}
+                      value={newPromoForm.validUntil}
+                      onChange={(e) => setNewPromoForm({ ...newPromoForm, validUntil: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                    />
+                  </div>
                 </div>
-                <input
-                  type="checkbox"
-                  id="promoIsPublished"
-                  checked={newPromoForm.isPublished}
-                  onChange={(e) => setNewPromoForm({ ...newPromoForm, isPublished: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                />
+
+                {/* Row 6: Deskripsi */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Deskripsi &amp; Syarat Singkat (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Khusus pendaftaran toko baru bulan ini atau top-up token."
+                    value={newPromoForm.description}
+                    onChange={(e) => setNewPromoForm({ ...newPromoForm, description: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                  />
+                </div>
+
+                {/* Checkbox Publikasi Web */}
+                <div className="p-3.5 bg-slate-950/70 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+                  <div>
+                    <label htmlFor="promoIsPublished" className="block text-xs font-bold text-white cursor-pointer">
+                      Tayangkan di Website Publik (Landing Page)
+                    </label>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Jika dicentang, voucher akan otomatis muncul di bagian banner/katalog promo landing page publik.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="promoIsPublished"
+                    checked={newPromoForm.isPublished}
+                    onChange={(e) => setNewPromoForm({ ...newPromoForm, isPublished: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer shrink-0"
+                  />
+                </div>
               </div>
 
-              <div className="pt-2 flex items-center gap-3">
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800 shrink-0 flex items-center gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => setIsCreatePromoModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer border border-slate-700/60"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPromo}
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/40"
                 >
                   {submittingPromo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5" />}
                   <span>{submittingPromo ? 'Menerbitkan...' : 'Terbitkan Promo'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 7: EDIT PROMO SAAS PLATFORM (B2B ENGINE)
+      ========================================================================= */}
+      {isEditPromoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditPromoModalOpen(false);
+                setEditingPromoId(null);
+              }}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3.5 p-5 sm:p-6 pb-4 border-b border-slate-800/80 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-500/10 shrink-0">
+                <Edit3 className="w-5 h-5" />
+              </div>
+              <div className="pr-8">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-black text-white tracking-tight">Edit Kupon Promo SaaS</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    {editPromoForm.code}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Perbarui nama, tipe potongan, kuota, atau tanggal aktif voucher ini.
+                </p>
+              </div>
+            </div>
+
+            {/* Form with Scrollable Body & Sticky Footer */}
+            <form onSubmit={handleUpdatePromo} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="overflow-y-auto overscroll-contain flex-1 p-5 sm:p-6 space-y-4">
+                {/* Row 1: Kode Readonly & Nama */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Kode Kupon (Tetap)
+                    </label>
+                    <div className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-slate-400 flex items-center justify-between">
+                      <span>{editPromoForm.code}</span>
+                      <span className="text-[10px] text-slate-500 font-sans font-normal">Tidak dapat diubah</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Nama Promo <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: Promo Grand Opening"
+                      value={editPromoForm.name}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, name: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-semibold transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Scope & Tipe Benefit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Target Transaksi (Scope)
+                    </label>
+                    <select
+                      value={editPromoForm.scope}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, scope: e.target.value as any })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                    >
+                      <option value="ALL">Semua Transaksi (Registrasi &amp; Top-Up)</option>
+                      <option value="REGISTRATION">Khusus Pendaftaran Toko (Onboarding)</option>
+                      <option value="TOPUP">Khusus Top-Up Kuota Token</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Tipe Benefit Kupon
+                    </label>
+                    <select
+                      value={editPromoForm.type}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, type: e.target.value as any })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                    >
+                      <option value="DISCOUNT_PERCENT">Diskon Persentase (%)</option>
+                      <option value="DISCOUNT_FIXED">Potongan Nominal Tetap (Rp)</option>
+                      <option value="BONUS_TOKENS">Bonus Ekstra Kuota Token</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 3: Nilai Diskon / Potongan & Maksimal Potongan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      {editPromoForm.type === 'DISCOUNT_PERCENT'
+                        ? 'Nilai Diskon (%)'
+                        : editPromoForm.type === 'DISCOUNT_FIXED'
+                        ? 'Nominal Potongan (Rp)'
+                        : 'Jumlah Bonus Token'} <span className="text-rose-400">*</span>
+                    </label>
+                    {editPromoForm.type === 'DISCOUNT_FIXED' ? (
+                      <CurrencyInput
+                        value={editPromoForm.value}
+                        onChange={(val) => setEditPromoForm({ ...editPromoForm, value: val })}
+                        placeholder="0"
+                        inputClassName="bg-slate-950 border-slate-700 text-emerald-400 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-bold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          required
+                          value={editPromoForm.value}
+                          onChange={(e) => setEditPromoForm({ ...editPromoForm, value: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-emerald-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                        />
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                          {editPromoForm.type === 'DISCOUNT_PERCENT' ? '%' : 'Token'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {editPromoForm.type === 'DISCOUNT_PERCENT' ? (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Maksimal Diskon (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={editPromoForm.maxDiscount}
+                        onChange={(val) => setEditPromoForm({ ...editPromoForm, maxDiscount: val })}
+                        placeholder="0 = Tanpa batas"
+                        inputClassName="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-semibold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Min. Belanja (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={editPromoForm.minSpend}
+                        onChange={(val) => setEditPromoForm({ ...editPromoForm, minSpend: val })}
+                        placeholder="0 = Tanpa batas"
+                        inputClassName="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-semibold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 4: Min Belanja (jika percent) & Kuota Pemakaian */}
+                {editPromoForm.type === 'DISCOUNT_PERCENT' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Min. Belanja (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={editPromoForm.minSpend}
+                        onChange={(val) => setEditPromoForm({ ...editPromoForm, minSpend: val })}
+                        placeholder="0 = Tanpa batas"
+                        inputClassName="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-indigo-500 text-xs py-2 px-3 font-semibold"
+                        prefixClassName="bg-slate-800 border-slate-700 text-slate-300 text-xs px-3 py-2 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                        Batas Kuota Pemakaian
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0 = Tanpa batas kuota"
+                        value={editPromoForm.usageLimit}
+                        onChange={(e) => setEditPromoForm({ ...editPromoForm, usageLimit: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {editPromoForm.type !== 'DISCOUNT_PERCENT' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Batas Kuota Pemakaian
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0 = Tanpa batas kuota"
+                      value={editPromoForm.usageLimit}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, usageLimit: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                    />
+                  </div>
+                )}
+
+                {/* Row 5: Tanggal Kedaluwarsa */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Berlaku Sampai Tanggal (Opsional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      style={{ colorScheme: 'dark' }}
+                      value={editPromoForm.validUntil}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, validUntil: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 6: Deskripsi */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Deskripsi &amp; Syarat Singkat (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Khusus pendaftaran toko baru bulan ini atau top-up token."
+                    value={editPromoForm.description}
+                    onChange={(e) => setEditPromoForm({ ...editPromoForm, description: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
+                  />
+                </div>
+
+                {/* Status Toggles: Aktif & Publikasi */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+                    <div>
+                      <label htmlFor="editPromoIsActive" className="block text-xs font-bold text-white cursor-pointer">
+                        Status Aktif
+                      </label>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Bisa digunakan oleh merchant.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="editPromoIsActive"
+                      checked={editPromoForm.isActive}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, isActive: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-700 text-indigo-500 focus:ring-indigo-500 cursor-pointer shrink-0"
+                    />
+                  </div>
+
+                  <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+                    <div>
+                      <label htmlFor="editPromoIsPublished" className="block text-xs font-bold text-white cursor-pointer">
+                        Publikasi Website
+                      </label>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Tampil di katalog web publik.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="editPromoIsPublished"
+                      checked={editPromoForm.isPublished}
+                      onChange={(e) => setEditPromoForm({ ...editPromoForm, isPublished: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 cursor-pointer shrink-0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800 shrink-0 flex items-center gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditPromoModalOpen(false);
+                    setEditingPromoId(null);
+                  }}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer border border-slate-700/60"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEditPromo}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/40"
+                >
+                  {submittingEditPromo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Edit3 className="w-3.5 h-3.5" />}
+                  <span>{submittingEditPromo ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
                 </button>
               </div>
             </form>
