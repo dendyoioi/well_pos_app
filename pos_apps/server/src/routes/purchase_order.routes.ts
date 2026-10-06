@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Role } from '@prisma/client';
 import {
   getPurchaseOrders,
   getPurchaseOrderById,
@@ -7,13 +8,17 @@ import {
   receivePurchaseOrder,
   cancelPurchaseOrder,
 } from '../controllers/purchase_order.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
 
 export const purchaseOrderRouter = Router();
 
-purchaseOrderRouter.get('/', authenticate, getPurchaseOrders);
-purchaseOrderRouter.get('/:id', authenticate, getPurchaseOrderById);
-purchaseOrderRouter.post('/', authenticate, createPurchaseOrder);
-purchaseOrderRouter.post('/:id/issue', authenticate, issuePurchaseOrder);
-purchaseOrderRouter.post('/:id/receive', authenticate, receivePurchaseOrder);
-purchaseOrderRouter.post('/:id/cancel', authenticate, cancelPurchaseOrder);
+// Modul Purchase Order & Pengadaan Barang Supplier (Owner, Admin, Supervisor, dan Staf Gudang)
+purchaseOrderRouter.use(authenticate);
+purchaseOrderRouter.use(authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE));
+
+purchaseOrderRouter.get('/', getPurchaseOrders);
+purchaseOrderRouter.get('/:id', getPurchaseOrderById);
+purchaseOrderRouter.post('/', createPurchaseOrder);
+purchaseOrderRouter.post('/:id/issue', issuePurchaseOrder);
+purchaseOrderRouter.post('/:id/receive', receivePurchaseOrder);
+purchaseOrderRouter.post('/:id/cancel', cancelPurchaseOrder);

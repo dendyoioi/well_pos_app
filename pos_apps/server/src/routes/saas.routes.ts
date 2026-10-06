@@ -19,7 +19,8 @@ import {
   checkPakasirInvoiceStatus,
   simulateSandboxPayment,
 } from '../controllers/pakasir.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { Role } from '@prisma/client';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { tenantContext } from '../middlewares/saas.middleware';
 
 export const saasRouter = Router();
@@ -30,23 +31,23 @@ saasRouter.get('/public-config', getPublicPlatformConfig);
 saasRouter.get('/promos/validate-registration', validateRegistrationPromoCode);
 
 // Endpoint Pembuatan Toko Perdana dari Full-Screen Wizard (Memerlukan Login Owner)
-saasRouter.post('/stores/create-initial', authenticate, tenantContext, createInitialStore);
+saasRouter.post('/stores/create-initial', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), createInitialStore);
 
 // Endpoint Onboarding Toko (Memerlukan Login Owner)
-saasRouter.post('/onboarding', authenticate, tenantContext, onboardingClient);
+saasRouter.post('/onboarding', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), onboardingClient);
 
 // Endpoint Informasi Status Langganan & Masa Aktif
 saasRouter.get('/subscription', authenticate, tenantContext, getSubscriptionStatus);
 saasRouter.get('/my-subscription', authenticate, tenantContext, getSubscriptionStatus);
 
 // Endpoint Kuota Token & Top-Up Mandiri oleh Pemilik Toko
-saasRouter.post('/subscription/top-up', authenticate, tenantContext, topUpSubscriptionTokens);
+saasRouter.post('/subscription/top-up', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), topUpSubscriptionTokens);
 saasRouter.get('/promos/validate', authenticate, tenantContext, validateTenantPromoCode);
 saasRouter.get('/payment-config', authenticate, tenantContext, getPublicPlatformPaymentConfig);
 saasRouter.get('/notifications', authenticate, tenantContext, getTenantNotifications);
 
 // Endpoint Tagihan & Invoice Langganan
-saasRouter.post('/invoices', authenticate, tenantContext, createSubscriptionInvoice);
+saasRouter.post('/invoices', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), createSubscriptionInvoice);
 saasRouter.get('/invoices', authenticate, tenantContext, getSubscriptionInvoices);
 
 // Endpoint Callback Webhook Payment Gateway (Public)

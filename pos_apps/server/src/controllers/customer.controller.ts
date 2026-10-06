@@ -348,6 +348,27 @@ export const deleteCustomer = async (req: Request, res: Response) => {
       });
     }
 
+    // Periksa apakah pelanggan memiliki catatan kasbon piutang
+    const activeDebts = await prisma.customerDebt.count({
+      where: { customerId: id, status: { in: ['UNPAID', 'PARTIAL'] } },
+    });
+    if (activeDebts > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Pelanggan "${existing.name}" tidak dapat dihapus karena masih memiliki tagihan kasbon aktif. Harap lunasi tagihan terlebih dahulu.`,
+      });
+    }
+
+    const totalDebts = await prisma.customerDebt.count({
+      where: { customerId: id },
+    });
+    if (totalDebts > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Pelanggan "${existing.name}" memiliki riwayat catatan kasbon piutang sehingga tidak dapat dihapus demi menjaga integritas pembukuan finansial.`,
+      });
+    }
+
     // Jika pelanggan memiliki transaksi, lepaskan relasi order (set customerId = null) agar histori audit penjualan tetap utuh
     if (existing._count.orders > 0) {
       await prisma.order.updateMany({

@@ -1461,7 +1461,42 @@ RECORD PEMBARUAN: PENYESUAIAN HAK AKSES & PERAN STAF (GRANULAR RBAC ALIGNMENT)
 • Verifikasi Build:
   - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
 ===============================================================================
+
+===============================================================================
+RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY HARDENING)
+===============================================================================
+• Konteks & Driver:
+  - Double check mendalam terhadap potensi celah keamanan (bypassing RBAC) di mana token kasir/staf dapat memanggil endpoint mutasi atau analitik backend secara langsung melalui HTTP request.
+• 8 Temuan Krusial & Solusi Penguatan yang Telah Diterapkan:
+  1. Proteksi Laporan Finansial (report.routes.ts):
+     - Masalah: Endpoint `/financial`, `/cash-flow`, `/dead-stock`, `/export` sebelumnya hanya memeriksa `authenticate`. Kasir dapat membaca laba bersih & mengekspor laporan.
+     - Solusi: Seluruh rute laporan dikunci ketat dengan `authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR)`.
+  2. Proteksi Pengaturan Absensi & Jadwal Kerja (attendance.routes.ts):
+     - Masalah: Endpoint `/config`, `/sync-timezone`, `/report` dapat diakses staf non-manajerial.
+     - Solusi: Dikunci dengan `authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR)`. Rute kasir tetap dapat mengakses `/today`, `/clock-in`, `/clock-out` dengan PIN staf.
+  3. Proteksi Pengaturan Outlet, Saluran & Pajak PB1 (outlet.routes.ts):
+     - Masalah: `updateOutletFees`, `updateOutletChannels`, `updateOutletPaymentConfig` tidak memiliki guard peran.
+     - Solusi: Dikunci dengan `authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR)`. `createOutlet` dikunci khusus `Role.OWNER, Role.ADMIN`.
+  4. Proteksi Mutasi Katalog, Varian & Resep HPP (product, category, modifier, recipe):
+     - Masalah: Endpoint `POST/PUT/DELETE` produk, kategori, modifier, dan resep tidak dilindungi di tingkat router.
+     - Solusi: Seluruh mutasi dikunci dengan `authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE)`. `GET` tetap terbuka untuk staf kasir agar POS dapat melakukan checkout.
+  5. Proteksi Diskon & Promosi (promotion.routes.ts):
+     - Masalah: Pembuatan & penghapusan voucher/promosi belum di-guard peran.
+     - Solusi: Mutasi dikunci dengan `authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR)`. Validasi voucher tetap terbuka untuk kasir.
+  6. Integritas Data Kasbon & Pencegahan Hapus Pelanggan Berhutang (customer.controller.ts & customer.routes.ts):
+     - Masalah: Menghapus pelanggan yang memiliki kasbon aktif dapat merusak relasi foreign key atau menghilangkan piutang.
+     - Solusi: `DELETE /api/customers/:id` dikunci dengan `authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR)` dan divalidasi tidak boleh menghapus pelanggan yang memiliki riwayat kasbon piutang aktif.
+  7. Proteksi Akun Owner Utama (user.controller.ts):
+     - Masalah: Potensi penghapusan akun Owner oleh Admin atau perubahan status `role-owner` menjadi tidak aktif via API peran.
+     - Solusi: `deleteUser` menolak tegas penghapusan user ber-role `OWNER`. `updateRole` mengunci status `role-owner` agar selalu aktif dan memiliki 100% hak akses.
+  8. Privasi Histori Shift Kasir (shift.controller.ts):
+     - Masalah: Kasir biasa dapat melihat ringkasan audit selisih kas fisik seluruh kasir lain.
+     - Solusi: `getShiftHistory` otomatis men-scope query ke `userId: req.user.id` jika pemanggil bukan Owner/Admin/Supervisor.
+• Verifikasi Build:
+  - Exit code 0 pada `npm run build` di `pos_apps/server` dan `pos_apps/client`.
+===============================================================================
 ```
+
 
 
 

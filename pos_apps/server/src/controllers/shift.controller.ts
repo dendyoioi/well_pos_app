@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { ShiftStatus, PaymentMethod, CashMovementType } from '@prisma/client';
+import { ShiftStatus, PaymentMethod, CashMovementType, Role } from '@prisma/client';
 import { prisma } from '../config/prisma';
 
 const startShiftSchema = z.object({
@@ -544,10 +544,14 @@ export const getShiftHistory = async (req: Request, res: Response) => {
       targetOutletId = undefined;
     }
 
+    const userRole = req.user?.role;
+    const isPrivileged = userRole && ([Role.OWNER, Role.ADMIN, Role.SUPERVISOR] as Role[]).includes(userRole);
+
     const shifts = await prisma.shift.findMany({
       where: {
         ...(userTenantId ? { tenantId: userTenantId } : {}),
         outletId: targetOutletId || undefined,
+        ...(!isPrivileged && req.user ? { userId: req.user.id } : {}),
       },
       include: {
         user: { select: { name: true, email: true } },

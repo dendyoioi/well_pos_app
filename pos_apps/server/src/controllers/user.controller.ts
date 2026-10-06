@@ -399,6 +399,14 @@ export const deleteUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Pemilik Usaha (Owner) tidak dapat dinonaktifkan atau dihapus
+    if (user.role === Role.OWNER) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Akun Pemilik Usaha (Owner) utama tidak dapat dinonaktifkan atau dihapus.',
+      });
+    }
+
     // Jika user sudah memiliki riwayat transaksi/shift, lakukan soft-delete (isActive: false)
     if (user._count.orders > 0 || user._count.shifts > 0) {
       await prisma.user.update({
@@ -558,8 +566,8 @@ export const updateRole = async (req: Request, res: Response) => {
       ...existing,
       name: name ? name.trim() : existing.name,
       description: description !== undefined ? description : existing.description,
-      status: status !== undefined ? Boolean(status) : existing.status,
-      permissions: Array.isArray(permissions) ? permissions : existing.permissions,
+      status: existing.id === 'role-owner' ? true : (status !== undefined ? Boolean(status) : existing.status),
+      permissions: existing.id === 'role-owner' ? SYSTEM_PERMISSIONS.map((p) => p.id) : (Array.isArray(permissions) ? permissions : existing.permissions),
       functionalPermissions: functionalPermissions || existing.functionalPermissions,
       businessPermissions: businessPermissions || existing.businessPermissions,
     };
