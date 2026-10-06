@@ -9,6 +9,7 @@ import { api, authStorage } from './services/api';
 import type { User } from './types/auth';
 import { DialogProvider } from './context/DialogContext';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
+import { PullToRefresh } from './components/PullToRefresh';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -193,7 +194,8 @@ export const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <DialogProvider>
-        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
+        <PullToRefresh>
+          <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
           {/* JIKA MODE BUKU MENU QR, TAMPILKAN HALAMAN PELANGGAN */}
           {viewMode === 'menu' ? (
             <div className="flex-1 flex flex-col">
@@ -263,9 +265,10 @@ export const App: React.FC = () => {
           {/* Global Progressive Web App (PWA) Install Banner */}
           <PwaInstallBanner />
         </div>
-      </DialogProvider>
-    </ErrorBoundary>
-  );
+      </PullToRefresh>
+    </DialogProvider>
+  </ErrorBoundary>
+);
 };
 
 export default App;
