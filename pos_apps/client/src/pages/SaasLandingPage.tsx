@@ -1226,7 +1226,15 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               }
 
               return (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 text-left">
+                <div
+                  className={`grid gap-5 sm:gap-6 text-left ${
+                    displayedPromos.length === 1
+                      ? 'grid-cols-1 max-w-md mx-auto'
+                      : displayedPromos.length === 2
+                      ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
+                      : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full'
+                  }`}
+                >
                   {displayedPromos.map((promo) => {
                     const isCopied = copiedPromoCode === promo.code;
                     return (
