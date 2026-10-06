@@ -4,7 +4,7 @@
 **Dokumen Rujukan Utama**: `docs/00_PROJECT_CONTEXT.md`  
 **Basis Data**: PostgreSQL `pos_db` (40 Model Prisma Aktif Ternormalisasi Penuh)  
 **Terakhir Diperbarui**: 06 Oktober 2026  
-**Status Keseluruhan**: **EPIC-01 s.d EPIC-27 SELESAI 100% (COMPLETED ✅)**  
+**Status Keseluruhan**: **EPIC-01 s.d EPIC-28 SELESAI 100% (COMPLETED ✅)**  
 
 ---
 
@@ -15,7 +15,7 @@ Dokumen ini berfungsi sebagai **memori kerja permanen (*persistent cognitive mem
 
 ### 2. MASTER EPIC REGISTRY (END-TO-END PRODUCT ROADMAP)
 
-Produk Well POS memiliki total **27 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, otomasi WhatsApp Gateway, pemindai barcode live & cetak label stiker, serta pencatatan kasbon piutang pelanggan dan laporan arus kas riil:
+Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, otomasi WhatsApp Gateway, pemindai barcode live & cetak label stiker, pencatatan kasbon piutang pelanggan, serta absensi staf mandiri & multi-timezone otomatis:
 
 | Epic ID | Judul Epic | Status | Tahapan / Milestone | Fokus & Nilai Bisnis Utama |
 | :--- | :--- | :---: | :--- | :--- |
@@ -46,6 +46,9 @@ Produk Well POS memiliki total **27 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-25** | **Automated WhatsApp Gateway & Digital Receipt Engine (Fonnte API)** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-25.md`](./EPIC-25_WHATSAPP_GATEWAY_AUTOMATION.md) | Otomasi pengiriman struk via Fonnte API saat checkout & 1-klik manual kasir, arsitektur token multi-level (Toko -> Platform -> Simulator Sandbox), kontrol Backoffice, dan tab Superadmin WhatsApp Gateway. |
 | **EPIC-26** | **Retail Speed, Live Camera Barcode Scanner & Shelf Label Printing Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-26.md`](./EPIC-26_BARCODE_SCANNER_AND_LABEL_PRINTING.md) | Pemindai barcode kamera HP langsung di POS (WebRTC + ZXing scanner), auto-add keranjang belanja, generator & cetak stiker label barcode/rak produk (vektor SVG murni multi-ukuran: 40x30, 30x20, 50x30, 60x40 shelf talker, A4 grid). |
 | **EPIC-27** | **Customer Receivables (Kasbon & Piutang) & Real-Time Cash Flow Analytics Engine** | **COMPLETED ✅** | Fase 1 s.d 2<br/>[`EPIC-27.md`](./EPIC-27_CUSTOMER_RECEIVABLES_AND_CASH_FLOW_ANALYTICS.md) | Pencatatan kasbon pelanggan di kasir POS dengan toggle outlet (default nonaktif), jatuh tempo fleksibel (+7, +14, +30 hari atau kustom), buku kasbon Backoffice CRM (`CustomerDebtsTab`), penagihan 1-klik WhatsApp, pelunasan bertahap/lunas terintegrasi ke Laci Kasir shift (`DEBT_REPAYMENT`), dan Laporan Arus Kas Riil & Performa Toko (`CashFlowReportTab`) dengan 4 KPI, visualisasi grafik SVG omset harian & bulanan, rekap mutasi harian, dan ekspor CSV UTF-8 BOM. |
+| **EPIC-28** | **Staff Attendance (Absensi Mandiri Kasir & Non-Kasir) & Multi-Timezone Otomatis (WIB/WITA/WIT)** | **COMPLETED ✅** | Fase 3<br/>[`EPIC-28.md`](./EPIC-28_STAFF_ATTENDANCE_AND_MULTI_TIMEZONE.md) | Absensi staf mandiri via POS terminal dengan verifikasi PIN 4-6 digit (terpisah dari shift kasir), pengelolaan jadwal jam masuk/pulang & toleransi keterlambatan (grace period), pencatatan alasan keterlambatan & kepatuhan, sinkronisasi otomatis 100% zona waktu (WIB UTC+7, WITA UTC+8, WIT UTC+9) zero-config via `Intl.DateTimeFormat`, modal bottom-sheet PWA kanonikal (`StaffAttendanceModal.tsx`), serta rekapitulasi Backoffice Owner (`AttendanceReportView.tsx`) dengan 5 KPI, filter outlet & tanggal, paging kanonikal `<TablePagination />`, dan ekspor CSV UTF-8 BOM. |
+
+---
 
 ---
 
@@ -255,6 +258,33 @@ Produk Well POS memiliki total **27 Epic** yang mencakup seluruh siklus hidup pe
   │   - Tombol "Cetak Label ({selectedIds.length})" di Floating Bulk Action Bar saat produk di-checklist.
   │   - Tombol aksi barcode per baris tabel & kartu mobile untuk cetak instan 1 produk spesifik.
   └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
+[2026-10-06] FASE 2: KASBON PIUTANG PELANGGAN & LAPORAN ARUS KAS RIIL (EPIC-27)
+  ├── 1. Pencatatan Kasbon Pelanggan di Kasir POS:
+  │   - Toggle fleksibel per cabang (outlets.payment_config.enableCustomerDebt, default nonaktif).
+  │   - Pembayaran CUSTOMER_DEBT dengan pilihan jatuh tempo (+7, +14, +30 hari atau tanggal kustom).
+  ├── 2. Manajemen Buku Kasbon & Penagihan WhatsApp Backoffice CRM:
+  │   - CustomerDebtsTab.tsx: 4 KPI kasbon, filter status (UNPAID/PARTIAL/PAID), penagihan 1-klik WhatsApp.
+  │   - Modal pelunasan kasbon terintegrasi ke shift laci kasir (DEBT_REPAYMENT).
+  ├── 3. Laporan Arus Kas Riil & Performa Toko (CashFlowReportTab.tsx):
+  │   - 4 KPI utama: Arus Kas Bersih, Kas Masuk Penjualan, Kas Keluar OPEX, Kasbon Tertagih.
+  │   - Kurva visual SVG harian & bulanan, rekapitulasi mutasi, paging kanonikal, ekspor CSV UTF-8 BOM.
+  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
+[2026-10-06] FASE 3: ABSENSI STAF MANDIRI & MULTI-TIMEZONE OTOMATIS (EPIC-28)
+  ├── 1. Pemisahan Absensi Staf vs Shift Kasir (Pilihan 1 - Fully Decoupled):
+  │   - Staf non-kasir (barista, koki, waiter, gudang) dan kasir mencatat kehadiran mandiri via tombol [Absensi Staf] di POS terminal.
+  │   - Verifikasi PIN 4-6 digit staf per terminal bersama tanpa menyentuh pembukuan laci kasir (Shift).
+  ├── 2. Toleransi Keterlambatan (Late Tolerance Grace Period):
+  │   - Konfigurasi jam operasional standar (standardClockIn, standardClockOut) & toleransi menit (default 15m) per outlet (outlets.attendance_config).
+  │   - Real-time status: Jika clockIn <= jadwal + toleransi -> ON_TIME; jika lewat -> LATE dengan pencatatan lateMinutes dan alasan keterlambatan.
+  ├── 3. Sinkronisasi Otomatis 3 Zona Waktu Indonesia (WIB, WITA, WIT 100% Zero-Config):
+  │   - Deteksi otomatis timezone perangkat via Intl.DateTimeFormat().resolvedOptions().timeZone di PWA frontend, sinkron hening ke outlets.timezone.
+  │   - Standarisasi backend toOutletDateStr, toOutletTimeStr, resolveDateRange di date.utils.ts kebal terhadap server UTC.
+  ├── 4. Antarmuka Kasir & Backoffice Owner:
+  │   - StaffAttendanceModal.tsx: Pola modal responsif PWA kanonikal (Rule #10) dengan jam digital live, indikator status, form PIN, dan riwayat hari ini.
+  │   - AttendanceReportView.tsx di UsersView.tsx: Sub-tab rekapitulasi absensi dengan 5 KPI, filter tanggal & outlet, form pengaturan jadwal, paging kanonikal TablePagination, dan ekspor CSV UTF-8 BOM.
+  └── 5. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
 ```
 

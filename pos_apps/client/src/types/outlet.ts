@@ -279,6 +279,8 @@ export interface Outlet {
   channelsConfig?: SalesChannelConfig[] | null;
   paymentConfig?: PaymentConfig | null;
   loyaltyConfig?: OutletLoyaltyConfig | null;
+  timezone?: string | null;
+  attendanceConfig?: any;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

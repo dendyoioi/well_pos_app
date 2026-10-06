@@ -116,6 +116,35 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
       CREATE INDEX IF NOT EXISTS "customer_debt_payments_tenant_id_shift_id_idx" ON "customer_debt_payments"("tenant_id", "shift_id");
     `,
   },
+  {
+    id: '20261006_03_staff_attendance_and_multi_timezone',
+    description: 'Menambahkan kolom timezone, attendance_config pada outlets dan model attendances untuk absensi staf mandiri & toleransi kehadiran (Fase 3)',
+    sql: `
+      CREATE TYPE "AttendanceStatus" AS ENUM ('ON_TIME', 'LATE', 'EARLY_LEAVE');
+
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "timezone" VARCHAR(50) DEFAULT 'Asia/Jakarta';
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "attendance_config" JSONB;
+
+      CREATE TABLE IF NOT EXISTS "attendances" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "user_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+        "work_date" VARCHAR(20) NOT NULL,
+        "clock_in" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "clock_out" TIMESTAMP(3),
+        "duration_minutes" INTEGER,
+        "late_minutes" INTEGER DEFAULT 0,
+        "status" "AttendanceStatus" NOT NULL DEFAULT 'ON_TIME',
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "attendances_tenant_id_outlet_id_work_date_idx" ON "attendances"("tenant_id", "outlet_id", "work_date");
+      CREATE INDEX IF NOT EXISTS "attendances_tenant_id_user_id_work_date_idx" ON "attendances"("tenant_id", "user_id", "work_date");
+    `,
+  },
 ];
 
 /**

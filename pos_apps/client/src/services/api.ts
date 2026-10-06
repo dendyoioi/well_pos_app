@@ -2423,3 +2423,102 @@ export const stockTransferApi = {
   receiveStockTransfer: api.receiveStockTransfer,
 };
 
+export const attendanceApi = {
+  getTodayAttendance: async (outletId?: string): Promise<any> => {
+    const url = outletId ? `/api/attendance/today?outletId=${outletId}` : '/api/attendance/today';
+    const res = await fetch(url, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  clockIn: async (data: {
+    outletId: string;
+    userId: string;
+    pin?: string;
+    notes?: string;
+  }): Promise<any> => {
+    const res = await fetch('/api/attendance/clock-in', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  clockOut: async (data: {
+    outletId: string;
+    userId: string;
+    pin?: string;
+    notes?: string;
+  }): Promise<any> => {
+    const res = await fetch('/api/attendance/clock-out', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getAttendanceReport: async (params?: {
+    outletId?: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<any> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.userId) searchParams.append('userId', params.userId);
+    if (params?.startDate) searchParams.append('startDate', params.startDate);
+    if (params?.endDate) searchParams.append('endDate', params.endDate);
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const res = await fetch(`/api/attendance/report?${searchParams.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateAttendanceConfig: async (data: {
+    outletId: string;
+    timezone?: string;
+    standardClockIn?: string;
+    standardClockOut?: string;
+    lateToleranceMinutes?: number;
+  }): Promise<any> => {
+    const res = await fetch('/api/attendance/config', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  autoSyncTimezone: async (data: {
+    outletId: string;
+    clientTimezone: string;
+  }): Promise<any> => {
+    const res = await fetch('/api/attendance/sync-timezone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+};
+

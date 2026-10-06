@@ -15,6 +15,7 @@ import {
   ArrowDownCircle,
   Smartphone,
   Bluetooth,
+  UserCheck,
 } from 'lucide-react';
 import type { Outlet, SalesChannelConfig } from '../../types/outlet';
 import { normalizeSalesChannels } from '../../types/outlet';
@@ -43,6 +44,7 @@ export interface PosHeaderProps {
   currentUserRole?: string;
   channelsConfig?: SalesChannelConfig[];
   onToggleHandheldMode?: () => void;
+  onOpenAttendance?: () => void;
 }
 
 export const PosHeader: React.FC<PosHeaderProps> = ({
@@ -64,6 +66,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   currentUserRole,
   channelsConfig,
   onToggleHandheldMode,
+  onOpenAttendance,
 }) => {
   const [onlineDropdownOpen, setOnlineDropdownOpen] = useState(false);
   const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
@@ -330,6 +333,21 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
             title="Beralih ke Tampilan Handheld Smartphone (6.8 Inch)"
           >
             <span className="hidden sm:inline">Mode HP</span>
+          </Button>
+        )}
+
+        {/* Tombol Absensi Staf & Jam Kerja (Kasir & Non-Kasir) */}
+        {onOpenAttendance && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<UserCheck className="w-3.5 h-3.5 text-indigo-700" />}
+            onClick={onOpenAttendance}
+            className="text-xs border-indigo-200 hover:bg-indigo-50 text-indigo-800 font-bold"
+            title="Absensi Kehadiran Staf (Kasir & Non-Kasir) Mandiri"
+          >
+            <span className="hidden sm:inline">Absensi Staf</span>
+            <span className="sm:hidden">Absen</span>
           </Button>
         )}
 

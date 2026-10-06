@@ -33,9 +33,10 @@ import { OnDemandFeesPickerModal } from '../components/OnDemandFeesPickerModal';
 import { ProductModifierModal } from '../components/ProductModifierModal';
 import { KitchenTicketModal, buildKitchenTicketData } from '../components/KitchenTicketModal';
 import type { KitchenTicketData } from '../components/KitchenTicketModal';
+import { StaffAttendanceModal } from '../components/pos/StaffAttendanceModal';
 import { usePlan } from '../hooks/usePlan';
 import { useDialog } from '../context/DialogContext';
-import { api, customerApi, authStorage } from '../services/api';
+import { api, customerApi, authStorage, attendanceApi } from '../services/api';
 import type { User } from '../types/auth';
 
 interface PosTerminalViewProps {
@@ -72,6 +73,26 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     'Fitur Split Bill & Tahan Antrean tersedia di Paket Pro. Upgrade sekarang untuk mengaktifkan!'
   );
   const [upgradeFeatureHighlight, setUpgradeFeatureHighlight] = useState('Split Bill & Tahan Antrean');
+  const [staffAttendanceModalOpen, setStaffAttendanceModalOpen] = useState(false);
+
+  // 100% Otomatis Sync Timezone Outlet (Zero Configuration WIB / WITA / WIT)
+  useEffect(() => {
+    if (activeOutlet?.id) {
+      try {
+        const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (clientTz && clientTz !== activeOutlet.timezone) {
+          attendanceApi
+            .autoSyncTimezone({
+              outletId: activeOutlet.id,
+              clientTimezone: clientTz,
+            })
+            .catch(() => {});
+        }
+      } catch {
+        // Abaikan jika lingkungan browser tidak mendukung resolvedOptions
+      }
+    }
+  }, [activeOutlet?.id, activeOutlet?.timezone]);
 
   const triggerProUpgrade = (featureName: string) => {
     setUpgradeFeatureHighlight(featureName);
@@ -1643,6 +1664,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             currentUserRole={currentUserRole}
             channelsConfig={activeOutlet?.channelsConfig || undefined}
             onToggleHandheldMode={() => setHandheldModeOverride(true)}
+            onOpenAttendance={() => setStaffAttendanceModalOpen(true)}
           />
 
           {/* Banner Mode Pesanan Susulan */}
@@ -2038,6 +2060,13 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         isOpen={cameraScannerOpen}
         onClose={() => setCameraScannerOpen(false)}
         onScan={handleScanBarcode}
+      />
+
+      {/* Modal Absensi Staf & Jam Kerja (Fase 3) */}
+      <StaffAttendanceModal
+        isOpen={staffAttendanceModalOpen}
+        onClose={() => setStaffAttendanceModalOpen(false)}
+        activeOutlet={activeOutlet}
       />
     </div>
   );

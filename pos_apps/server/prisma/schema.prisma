@@ -87,6 +87,7 @@ model Tenant {
   customerPointLedgers  CustomerPointLedger[]
   customerDebts         CustomerDebt[]
   customerDebtPayments  CustomerDebtPayment[]
+  attendances           Attendance[]
 
   @@map("tenants")
 }
@@ -223,6 +224,7 @@ model User {
   dispatchedTransfers StockTransfer[] @relation("TransferDispatchedByUser")
   receivedTransfers   StockTransfer[] @relation("TransferReceivedByUser")
   customerDebtPayments CustomerDebtPayment[]
+  attendances         Attendance[]
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -241,11 +243,13 @@ model Outlet {
   industries    Json?     @map("industries")
   isWarehouse   Boolean?  @default(false) @map("is_warehouse")
   warehouseId   String?   @map("warehouse_id")
+  timezone      String?   @default("Asia/Jakarta") @map("timezone")
   receiptConfig Json?     @map("receipt_config")
   feesConfig    Json?     @map("fees_config")
   channelsConfig Json?    @map("channels_config")
   paymentConfig Json?     @map("payment_config")
   loyaltyConfig Json?     @map("loyalty_config")
+  attendanceConfig Json?  @map("attendance_config")
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -262,6 +266,7 @@ model Outlet {
   outletProducts   OutletProduct[]
   customerDebts    CustomerDebt[]
   customerDebtPayments CustomerDebtPayment[]
+  attendances      Attendance[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -1332,6 +1337,36 @@ model CustomerDebtPayment {
   @@index([tenantId, outletId])
   @@index([tenantId, shiftId])
   @@map("customer_debt_payments")
+}
+
+enum AttendanceStatus {
+  ON_TIME
+  LATE
+  EARLY_LEAVE
+}
+
+model Attendance {
+  id              String           @id @default(uuid())
+  tenantId        String           @map("tenant_id")
+  outletId        String           @map("outlet_id")
+  userId          String           @map("user_id")
+  workDate        String           @map("work_date") // YYYY-MM-DD sesuai zona waktu outlet
+  clockIn         DateTime         @default(now()) @map("clock_in")
+  clockOut        DateTime?        @map("clock_out")
+  durationMinutes Int?             @map("duration_minutes")
+  lateMinutes     Int?             @default(0) @map("late_minutes")
+  status          AttendanceStatus @default(ON_TIME)
+  notes           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, outletId, workDate])
+  @@index([tenantId, userId, workDate])
+  @@map("attendances")
 }
 
 

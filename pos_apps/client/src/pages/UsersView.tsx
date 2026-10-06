@@ -21,10 +21,12 @@ import {
   AlertCircle,
   Hash,
   LogOut,
+  Clock,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 import { TablePagination } from '../components/TablePagination';
+import { AttendanceReportView } from '../components/attendance/AttendanceReportView';
 import type { RolePermissions } from '../types/auth';
 import type { Outlet } from '../types/outlet';
 
@@ -76,6 +78,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
   const [pageSize, setPageSize] = useState<number>(10);
 
   // Full-Page View Mode: 'LIST' or 'FORM' (Zero Stacked Modals)
+  const [mainTab, setMainTab] = useState<'USERS' | 'ATTENDANCE'>('USERS');
   const [viewMode, setViewMode] = useState<'LIST' | 'FORM'>('LIST');
   const [formMode, setFormMode] = useState<'CREATE' | 'EDIT'>('CREATE');
   const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
@@ -901,10 +904,43 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
+      {/* Sub-tab Navigation */}
+      <div className="flex border-b border-slate-200 gap-2">
+        <button
+          type="button"
+          onClick={() => setMainTab('USERS')}
+          className={`py-3 px-5 font-bold text-xs sm:text-sm border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+            mainTab === 'USERS'
+              ? 'border-blue-900 text-blue-900 bg-white shadow-2xs rounded-t-2xl'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Daftar Akun &amp; Wewenang Staf</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('ATTENDANCE')}
+          className={`py-3 px-5 font-bold text-xs sm:text-sm border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+            mainTab === 'ATTENDANCE'
+              ? 'border-blue-900 text-blue-900 bg-white shadow-2xs rounded-t-2xl'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Rekapitulasi Absensi &amp; Jam Kerja</span>
+        </button>
+      </div>
+
+      {mainTab === 'ATTENDANCE' ? (
+        <AttendanceReportView />
+      ) : (
+        <>
+          {/* Metric Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+              <div>
             <span className="text-xs font-bold text-slate-500 uppercase">Total Petugas</span>
             <div className="text-2xl font-black text-blue-950 mt-1">{totalStaff}</div>
             <p className="text-[11px] text-slate-400 mt-0.5">Semua peran terdata</p>
@@ -1298,6 +1334,8 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           />
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };
