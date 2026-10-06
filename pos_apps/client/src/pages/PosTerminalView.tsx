@@ -411,17 +411,101 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     }
   }, [loadQrOrderData]);
 
+  const handlePullAppendOrder = (order: Order) => {
+    const newCartItems: CartItem[] = [];
+    (order.orderItems || []).forEach((item) => {
+      if (!item) return;
+      const pName = item.product?.name || '';
+      const matched = products.find(
+        (p) =>
+          (item.productId && p.id === item.productId) ||
+          (p.name && pName && p.name.toLowerCase() === pName.toLowerCase())
+      );
+      if (matched) {
+        newCartItems.push({
+          cartItemId: `item_append_${item.id || Date.now()}_${Math.random()}`,
+          product: matched,
+          quantity: item.quantity || 1,
+          discountAmount: item.discountAmount || 0,
+          customPrice: Number(item.unitPrice) || matched.price || matched.basePrice,
+        });
+      } else {
+        newCartItems.push({
+          cartItemId: `item_append_${item.id || Date.now()}_${Math.random()}`,
+          product: {
+            id: item.productId || item.id || `append_${Date.now()}`,
+            name: pName || 'Menu Dine In',
+            basePrice: Number(item.unitPrice) || 0,
+            price: Number(item.unitPrice) || 0,
+            costPrice: Number(item.costPrice) || 0,
+            unit: item.product?.unit || 'Pcs',
+            stock: 999,
+            minStockAlert: 0,
+            isActive: true,
+            barcode: item.product?.barcode || '',
+            sku: item.product?.sku || '',
+            category: { id: 'default', name: 'Menu Dine In' },
+          },
+          quantity: item.quantity || 1,
+          discountAmount: item.discountAmount || 0,
+          customPrice: Number(item.unitPrice) || 0,
+        });
+      }
+    });
+
+    setCart(newCartItems);
+    setCustomerName(order.customerName || (order.tableNumber ? `Pelanggan Meja ${order.tableNumber}` : ''));
+    setCustomerPhone(order.customerPhone || '');
+    setTableNumber(order.tableNumber || '');
+    setOrderChannel('DINE_IN');
+    setActivePulledOrder({
+      id: order.id,
+      invoiceNumber: order.invoiceNumber,
+      tableNumber: order.tableNumber || '',
+      customerName: order.customerName || '',
+      customerPhone: order.customerPhone || '',
+      channel: (order.channel as OrderChannel) || 'DINE_IN',
+      source: 'OPEN_TAB',
+    });
+    setActiveOpenTab({
+      id: order.id,
+      invoiceNumber: order.invoiceNumber,
+      queueNumber: order.queueNumber,
+      outletId: order.outletId,
+      cashierId: order.cashierId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      channel: order.channel || 'DINE_IN',
+      tableNumber: order.tableNumber,
+      notes: order.notes,
+      subtotal: order.subtotal,
+      discountAmount: order.discountAmount,
+      taxAmount: order.taxAmount,
+      serviceCharge: order.serviceCharge,
+      grandTotal: order.grandTotal,
+      orderStatus: order.orderStatus || 'PENDING',
+      paymentStatus: order.paymentStatus,
+      createdAt: order.createdAt,
+      items: (order.orderItems || []).map((it) => ({
+        id: it.id,
+        productId: it.productId,
+        productName: it.product?.name || 'Produk',
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        discountAmount: it.discountAmount,
+        subtotal: it.subtotal,
+        notes: undefined,
+      })),
+    });
+    setScanMessage(`Tagihan Meja ${order.tableNumber || ''} (#${order.invoiceNumber}) dimuat ke kasir untuk penambahan pesanan.`);
+  };
+
   useEffect(() => {
     if (appendOrderData) {
-      setOrderChannel('DINE_IN');
-      if (appendOrderData.tableNumber) {
-        setTableNumber(appendOrderData.tableNumber);
+      if (appendOrderData.paymentStatus === 'UNPAID') {
+        handlePullAppendOrder(appendOrderData);
       }
-      const baseCust = appendOrderData.customerName || (appendOrderData.tableNumber ? `Meja ${appendOrderData.tableNumber}` : 'Pelanggan');
-      setCustomerName(`${baseCust} (Susulan #${appendOrderData.invoiceNumber})`);
-      if (appendOrderData.customerPhone) {
-        setCustomerPhone(appendOrderData.customerPhone);
-      }
+      onClearAppendOrder?.();
     }
   }, [appendOrderData]);
 
@@ -1324,9 +1408,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
       const targetOrderId = activePulledOrder?.id || activeOpenTab?.id || undefined;
 
-      const susulanNote = appendOrderData
-        ? `[PESANAN SUSULAN] Ref Faktur #${appendOrderData.invoiceNumber}${appendOrderData.tableNumber ? ` (Meja ${appendOrderData.tableNumber})` : ''}`
-        : undefined;
+      const susulanNote = activeOpenTab?.notes || (activePulledOrder?.invoiceNumber ? `Ref Faktur #${activePulledOrder.invoiceNumber}` : undefined);
 
       const res = await api.checkoutOrder({
         items: cart.map((i) => ({

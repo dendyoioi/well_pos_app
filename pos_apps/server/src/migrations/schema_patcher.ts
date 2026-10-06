@@ -62,6 +62,11 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
     description: 'Menambahkan kolom channels_config JSONB pada tabel outlets untuk kustomisasi kanal penjualan & mitra online (EPIC-20)',
     sql: 'ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "channels_config" JSONB DEFAULT \'[]\'::jsonb;',
   },
+  {
+    id: '20261005_01_saas_promos_scope',
+    description: 'Menambahkan kolom scope pada tabel saas_promos untuk pembedaan voucher promo pendaftaran vs top-up (EPIC-23 / Onboarding Pricing)',
+    sql: 'ALTER TABLE "saas_promos" ADD COLUMN IF NOT EXISTS "scope" VARCHAR(50) DEFAULT \'ALL\';',
+  },
 ];
 
 /**

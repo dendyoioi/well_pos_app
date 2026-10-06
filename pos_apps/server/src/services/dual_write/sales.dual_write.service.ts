@@ -88,7 +88,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
             tx,
             `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
              FROM "orders" 
-             WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
+             WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= ($3 AT TIME ZONE 'UTC');`,
             tenantId,
             dto.targetOutletId,
             todayStart

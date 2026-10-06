@@ -177,6 +177,7 @@ model SaaSPromo {
   maxDiscount Decimal?  @db.Decimal(15, 2) @map("max_discount")
   usageLimit  Int?      @map("usage_limit")
   usedCount   Int       @default(0) @map("used_count")
+  scope       String    @default("ALL") @map("scope") // 'ALL' | 'REGISTRATION' | 'TOPUP'
   validFrom   DateTime  @default(now()) @map("valid_from")
   validUntil  DateTime? @map("valid_until")
   isActive    Boolean   @default(true) @map("is_active")

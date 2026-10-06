@@ -162,8 +162,8 @@ export class AnalyticsService {
       FROM "orders" o
       WHERE o.tenant_id = $1
         AND o.payment_status = 'PAID'
-        AND o.created_at >= $2
-        AND o.created_at <= $3
+        AND o.created_at >= ($2 AT TIME ZONE 'UTC')
+        AND o.created_at <= ($3 AT TIME ZONE 'UTC')
         ${outletClause}
       ORDER BY o.created_at ASC;
     `;
@@ -472,8 +472,8 @@ export class AnalyticsService {
       LEFT JOIN "categories" c ON c.id = p.category_id
       WHERE o.tenant_id = $1
         AND o.payment_status = 'PAID'
-        AND o.created_at >= $2
-        AND o.created_at <= $3
+        AND o.created_at >= ($2 AT TIME ZONE 'UTC')
+        AND o.created_at <= ($3 AT TIME ZONE 'UTC')
         ${outletClause}
       GROUP BY p.id, p.name, pv.sku, c.name;
     `;

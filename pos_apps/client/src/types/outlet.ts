@@ -132,10 +132,23 @@ export function normalizeOutletFees(savedFees?: OutletFee[] | null): OutletFee[]
   return result;
 }
 
+export interface WhatsAppConfig {
+  enabled?: boolean;
+  provider?: 'FONNTE';
+  autoSendOnCheckout?: boolean;
+  usePlatformGateway?: boolean;
+  usePlatformFallback?: boolean;
+  apiKey?: string;
+  senderNumber?: string;
+  customFooter?: string;
+}
+
 export interface ReceiptConfig {
   paperSize: '58mm' | '80mm';
   footerText?: string;
   showQueueNumber?: boolean;
+  showWatermark?: boolean; // Default true: Tampilkan watermark "Powered by Well POS"
+  whatsappConfig?: WhatsAppConfig;
 }
 
 export interface SalesChannelConfig {

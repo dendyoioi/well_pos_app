@@ -51,6 +51,7 @@ import {
 import { api, platformStorage, authStorage, type PlatformNotification } from '../services/api';
 import { TablePagination } from '../components/TablePagination';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
+import { formatThousands } from '../utils/currency';
 
 export interface TenantQuotaInfo {
   totalQuota: number;
@@ -136,9 +137,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   // ----------------------------------------------------
-  // NAVIGATION TABS: MERCHANT CONTROL, PLANS, BILLING, STAFF, PROMOS, NOTIFICATIONS
+  // NAVIGATION TABS: MERCHANT CONTROL, PLANS, BILLING, STAFF, PROMOS, NOTIFICATIONS, GATEWAY
   // ----------------------------------------------------
-  const [activeMainTab, setActiveMainTab] = useState<'MERCHANTS' | 'PLANS' | 'BILLING' | 'STAFF' | 'PROMOS' | 'NOTIFICATIONS'>('MERCHANTS');
+  const [activeMainTab, setActiveMainTab] = useState<'MERCHANTS' | 'PLANS' | 'BILLING' | 'STAFF' | 'PROMOS' | 'NOTIFICATIONS' | 'GATEWAY'>('MERCHANTS');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isBusinessInfoCollapsed, setIsBusinessInfoCollapsed] = useState(false);
 
@@ -166,9 +167,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [newPromoForm, setNewPromoForm] = useState({
     code: '',
     name: '',
+    scope: 'ALL' as 'ALL' | 'REGISTRATION' | 'TOPUP',
     type: 'DISCOUNT_PERCENT' as 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'BONUS_TOKENS',
     value: 20,
-    minSpend: 199000,
+    minSpend: 0,
     maxDiscount: 100000,
     usageLimit: 100,
     validUntil: '',
@@ -210,6 +212,33 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [notifPage, setNotifPage] = useState<number>(1);
   const [notifPageSize, setNotifPageSize] = useState<number>(10);
 
+  // ----------------------------------------------------
+  // DATA PENGELOLAAN WHATSAPP GATEWAY PLATFORM (FONNTE)
+  // ----------------------------------------------------
+  const [waSettings, setWaSettings] = useState<{
+    enabled: boolean;
+    provider: string;
+    apiKey: string;
+    senderNumber: string;
+    countryCode: string;
+    allowTenantFallback: boolean;
+  }>({
+    enabled: true,
+    provider: 'FONNTE',
+    apiKey: '',
+    senderNumber: '',
+    countryCode: '62',
+    allowTenantFallback: true,
+  });
+  const [savingWaSettings, setSavingWaSettings] = useState(false);
+  const [waTestPhone, setWaTestPhone] = useState('');
+  const [testingWa, setTestingWa] = useState(false);
+  const [waTestFeedback, setWaTestFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    simulated?: boolean;
+  } | null>(null);
+
   // Auto-reset page 1 when filter/search changes
   useEffect(() => {
     setTenantPage(1);
@@ -240,6 +269,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [paymentConfigLoading, setPaymentConfigLoading] = useState(false);
   const [paymentConfigSubmitting, setPaymentConfigSubmitting] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState({
+    registrationFee: 99000,
+    registrationBonusTokens: 100,
     tokenPrice: 69,
     minTokenPurchase: 250,
     qrisEnabled: true,
@@ -254,6 +285,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
   // Dedicated draft form state to prevent background polling from clobbering active user edits
   const [paymentConfigForm, setPaymentConfigForm] = useState({
+    registrationFee: 99000,
+    registrationBonusTokens: 100,
     tokenPrice: 69,
     minTokenPurchase: 250,
     qrisEnabled: true,
@@ -403,7 +436,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     setLoadingData(true);
     setActionFeedback(null);
     try {
-      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes, notifsRes] = await Promise.all([
+      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes, notifsRes, waRes] = await Promise.all([
         api.getPlatformDashboard(),
         api.getPlatformTenants({ search: searchQuery, status: statusFilter }),
         api.getPlatformPlans(),
@@ -412,6 +445,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         api.getPlatformPromos(),
         api.getPlatformPaymentSettings(),
         api.getPlatformNotifications(),
+        api.getPlatformWhatsAppSettings().catch(() => null),
       ]);
 
       if (dashRes.status === 'success') {
@@ -435,6 +469,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       if (notifsRes.status === 'success') {
         setNotifications(notifsRes.data || []);
       }
+      if (waRes && waRes.status === 'success' && waRes.data) {
+        setWaSettings(waRes.data);
+      }
       if (paymentRes.status === 'success' && paymentRes.data) {
         const d = paymentRes.data;
         const qris = d.qris || {};
@@ -443,6 +480,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           : (typeof qris.enabled === 'boolean' ? qris.enabled : true);
 
         const freshConfig = {
+          registrationFee: typeof d.registrationFee === 'number' && !isNaN(d.registrationFee) ? d.registrationFee : 99000,
+          registrationBonusTokens: typeof d.registrationBonusTokens === 'number' && !isNaN(d.registrationBonusTokens) ? d.registrationBonusTokens : 100,
           tokenPrice: typeof d.tokenPrice === 'number' && !isNaN(d.tokenPrice) ? d.tokenPrice : 69,
           minTokenPurchase: typeof d.minTokenPurchase === 'number' && !isNaN(d.minTokenPurchase) ? d.minTokenPurchase : 250,
           qrisEnabled: isQrisActive,
@@ -829,9 +868,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         setNewPromoForm({
           code: '',
           name: '',
+          scope: 'ALL',
           type: 'DISCOUNT_PERCENT',
           value: 20,
-          minSpend: 199000,
+          minSpend: 0,
           maxDiscount: 100000,
           usageLimit: 100,
           validUntil: '',
@@ -1019,6 +1059,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const handleOpenPaymentConfigModal = async () => {
     // Populate form draft with latest paymentConfig
     setPaymentConfigForm({
+      registrationFee: paymentConfig.registrationFee,
+      registrationBonusTokens: paymentConfig.registrationBonusTokens,
       tokenPrice: paymentConfig.tokenPrice,
       minTokenPurchase: paymentConfig.minTokenPurchase,
       qrisEnabled: paymentConfig.qrisEnabled,
@@ -1042,6 +1084,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           : (typeof qris.enabled === 'boolean' ? qris.enabled : true);
 
         const fresh = {
+          registrationFee: typeof d.registrationFee === 'number' && !isNaN(d.registrationFee) ? d.registrationFee : 99000,
+          registrationBonusTokens: typeof d.registrationBonusTokens === 'number' && !isNaN(d.registrationBonusTokens) ? d.registrationBonusTokens : 100,
           tokenPrice: typeof d.tokenPrice === 'number' && !isNaN(d.tokenPrice) ? d.tokenPrice : 69,
           minTokenPurchase: typeof d.minTokenPurchase === 'number' && !isNaN(d.minTokenPurchase) ? d.minTokenPurchase : 250,
           qrisEnabled: isQrisActive,
@@ -1071,6 +1115,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     try {
       setPaymentConfigSubmitting(true);
       const payload = {
+        registrationFee: Number(paymentConfigForm.registrationFee),
+        registrationBonusTokens: Number(paymentConfigForm.registrationBonusTokens),
         tokenPrice: Number(paymentConfigForm.tokenPrice),
         minTokenPurchase: Number(paymentConfigForm.minTokenPurchase),
         qrisEnabled: Boolean(paymentConfigForm.qrisEnabled),
@@ -1095,6 +1141,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           : (typeof qris.enabled === 'boolean' ? qris.enabled : Boolean(paymentConfigForm.qrisEnabled));
 
         const updatedConfig = {
+          registrationFee: typeof savedData.registrationFee === 'number' && !isNaN(savedData.registrationFee) ? savedData.registrationFee : Number(paymentConfigForm.registrationFee),
+          registrationBonusTokens: typeof savedData.registrationBonusTokens === 'number' && !isNaN(savedData.registrationBonusTokens) ? savedData.registrationBonusTokens : Number(paymentConfigForm.registrationBonusTokens),
           tokenPrice: typeof savedData.tokenPrice === 'number' && !isNaN(savedData.tokenPrice) ? savedData.tokenPrice : Number(paymentConfigForm.tokenPrice),
           minTokenPurchase: typeof savedData.minTokenPurchase === 'number' && !isNaN(savedData.minTokenPurchase) ? savedData.minTokenPurchase : Number(paymentConfigForm.minTokenPurchase),
           qrisEnabled: isQrisActive,
@@ -1298,6 +1346,66 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     return p;
   };
 
+  const handleSaveWaSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingWaSettings(true);
+    try {
+      const res = await api.updatePlatformWhatsAppSettings({
+        enabled: Boolean(waSettings.enabled),
+        provider: 'FONNTE',
+        apiKey: waSettings.apiKey ? waSettings.apiKey.trim() : undefined,
+        senderNumber: waSettings.senderNumber ? waSettings.senderNumber.trim() : undefined,
+        countryCode: waSettings.countryCode || '62',
+        allowTenantFallback: Boolean(waSettings.allowTenantFallback),
+      });
+      if (res.status === 'success' && res.data) {
+        setWaSettings(res.data);
+        showAlert('Pengaturan Berhasil Disimpan', 'Konfigurasi WhatsApp Gateway Platform telah diperbarui.', 'success');
+      } else {
+        showAlert('Gagal Menyimpan', res.message || 'Gagal menyimpan pengaturan WhatsApp Gateway.', 'error');
+      }
+    } catch (err: any) {
+      showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan sistem saat menyimpan pengaturan.', 'error');
+    } finally {
+      setSavingWaSettings(false);
+    }
+  };
+
+  const handleTestWaGateway = async () => {
+    const phone = waTestPhone.trim();
+    if (!phone) {
+      setWaTestFeedback({ type: 'error', message: 'Ketik nomor tujuan uji coba terlebih dahulu.' });
+      return;
+    }
+    setTestingWa(true);
+    setWaTestFeedback(null);
+    try {
+      const res = await api.testPlatformWhatsAppConnection({
+        phone,
+        message: 'Halo! Ini adalah pesan uji coba integrasi WhatsApp Gateway Well POS.',
+      });
+      if (res.status === 'success') {
+        setWaTestFeedback({
+          type: 'success',
+          message: res.message || 'Pesan uji coba berhasil dikirim!',
+          simulated: (res as any).data?.simulated,
+        });
+      } else {
+        setWaTestFeedback({
+          type: 'error',
+          message: res.message || 'Gagal mengirim pesan uji coba.',
+        });
+      }
+    } catch (err: any) {
+      setWaTestFeedback({
+        type: 'error',
+        message: err.message || 'Terjadi kesalahan saat menguji koneksi WhatsApp Gateway.',
+      });
+    } finally {
+      setTestingWa(false);
+    }
+  };
+
   // =========================================================================
   // VIEW 1: SUPERADMIN LOGIN FORM
   // =========================================================================
@@ -1424,8 +1532,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         return acc;
       }, 0);
 
-  // Model Bisnis F&B Pay-As-You-Go: Setup Fee Rp 99.000 / Merchant Onboarding (+100 Bonus Token)
-  const ONBOARDING_SETUP_FEE = 99000;
+  // Model Bisnis F&B Pay-As-You-Go: Setup Fee Dinamis / Merchant Onboarding (+ Bonus Token)
+  const ONBOARDING_SETUP_FEE = paymentConfig.registrationFee ?? 99000;
   const approvedTenants = tenants.filter((t) => t.status === 'ACTIVE' || t.status === 'TRIAL');
   const totalSetupFee = approvedTenants.length * ONBOARDING_SETUP_FEE;
 
@@ -1510,6 +1618,16 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       category: 'ADMINISTRASI',
       icon: Bell,
       badge: `${notifications.length}`,
+      pendingCount: 0,
+    },
+    {
+      id: 'GATEWAY' as const,
+      label: 'WhatsApp Gateway',
+      fullLabel: 'WhatsApp Gateway & Otomasi Struk',
+      description: 'Konfigurasi Fonnte API Key & pengujian pesan struk global',
+      category: 'ADMINISTRASI',
+      icon: MessageSquare,
+      badge: waSettings.enabled ? (waSettings.apiKey ? 'Aktif' : 'Sandbox') : 'Nonaktif',
       pendingCount: 0,
     },
   ];
@@ -3306,79 +3424,6 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 })}
               </div>
             </div>
-
-            {/* Feature Matrix Table */}
-            <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-amber-400" />
-                <span>Matriks Perbandingan Fitur Paket Enterprise-Lite F&amp;B</span>
-              </h4>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
-                      <th className="py-2.5 px-3">Fitur / Batasan Operasional</th>
-                      <th className="py-2.5 px-3">Starter Trial (Gratis)</th>
-                      <th className="py-2.5 px-3">Enterprise-Lite Starter</th>
-                      <th className="py-2.5 px-3 text-indigo-300 font-black">Enterprise-Lite Growth ⭐</th>
-                      <th className="py-2.5 px-3 text-purple-300 font-black">Enterprise-Lite Scale 🔥</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Kuota Token Transaksi</td>
-                      <td className="py-2.5 px-3 text-amber-400 font-bold">500 Order</td>
-                      <td className="py-2.5 px-3 text-amber-400 font-bold">1.000 Order</td>
-                      <td className="py-2.5 px-3 text-amber-400 font-black">2.000 Order</td>
-                      <td className="py-2.5 px-3 text-amber-400 font-black">5.000 Order</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Biaya per Order Selesai</td>
-                      <td className="py-2.5 px-3 text-slate-400">Rp 0 (Trial)</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">Rp 69 / order</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">Rp {paymentConfig.tokenPrice} / order</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-black">Rp 69 / order (Termurah)</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Masa Berlaku Kuota</td>
-                      <td className="py-2.5 px-3 text-amber-300 font-bold">∞ Tanpa Hangus</td>
-                      <td className="py-2.5 px-3 text-amber-300 font-bold">∞ Tanpa Hangus</td>
-                      <td className="py-2.5 px-3 text-amber-300 font-bold">∞ Tanpa Hangus</td>
-                      <td className="py-2.5 px-3 text-amber-300 font-bold">∞ Tanpa Hangus</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Batas Gerai Fisik F&amp;B</td>
-                      <td className="py-2.5 px-3">1 Gerai</td>
-                      <td className="py-2.5 px-3">2 Gerai</td>
-                      <td className="py-2.5 px-3 font-bold text-white">5 Gerai</td>
-                      <td className="py-2.5 px-3 font-bold text-white">Unlimited Gerai</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Batas Kasir Aktif</td>
-                      <td className="py-2.5 px-3">2 Kasir</td>
-                      <td className="py-2.5 px-3">5 Kasir</td>
-                      <td className="py-2.5 px-3 font-bold text-white">20 Kasir</td>
-                      <td className="py-2.5 px-3 font-bold text-white">Unlimited Kasir</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Resep BOM &amp; Backflushing</td>
-                      <td className="py-2.5 px-3 text-slate-500">Dasar</td>
-                      <td className="py-2.5 px-3 text-emerald-400">✔ Aktif</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">✔ Aktif Otomatis</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">✔ Multi-Gudang Terpadu</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-semibold text-white">Self-Ordering QR Meja &amp; Mitra Delivery</td>
-                      <td className="py-2.5 px-3 text-slate-500">-</td>
-                      <td className="py-2.5 px-3 text-emerald-400">✔ Aktif</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">✔ Aktif (GoFood/Grab/Shopee)</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold">✔ Prioritas Jalur Cepat</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </section>
         )}
 
@@ -3904,7 +3949,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     <div>
                       {/* Top bar */}
                       <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono font-black text-sm px-2.5 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 tracking-wider">
                             {promo.code}
                           </span>
@@ -3916,6 +3961,21 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
+                          <span
+                            className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border tracking-wider uppercase ${
+                              promo.scope === 'REGISTRATION'
+                                ? 'bg-purple-950/80 text-purple-300 border-purple-800'
+                                : promo.scope === 'TOPUP'
+                                ? 'bg-sky-950/80 text-sky-300 border-sky-800'
+                                : 'bg-slate-800/80 text-slate-300 border-slate-700'
+                            }`}
+                          >
+                            {promo.scope === 'REGISTRATION'
+                              ? '🎯 REGISTRASI'
+                              : promo.scope === 'TOPUP'
+                              ? '⚡ TOP-UP'
+                              : '🌐 SEMUA'}
+                          </span>
                         </div>
 
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border uppercase ${
@@ -4324,6 +4384,236 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             </section>
           );
         })()}
+
+        {/* =========================================================================
+            SECTION: WHATSAPP GATEWAY PLATFORM INTEGRATION (FONNTE)
+        ========================================================================= */}
+        {activeMainTab === 'GATEWAY' && (
+          <section className="space-y-6">
+            {/* Header Banner */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h2 className="text-lg font-black text-white flex items-center gap-2.5">
+                      <MessageSquare className="w-5 h-5 text-emerald-400" />
+                      <span>Integrasi WhatsApp Gateway Platform (Fonnte API)</span>
+                    </h2>
+                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      waSettings.enabled
+                        ? waSettings.apiKey ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                    }`}>
+                      {waSettings.enabled ? (waSettings.apiKey ? '● Live Fonnte Gateway' : '● Mode Sandbox Simulator') : '● Gateway Nonaktif'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                    Pusat konfigurasi pengiriman struk belanja digital otomatis via WhatsApp ke pelanggan. Jika Fonnte API Key kosong, sistem otomatis beralih ke Mode Sandbox Simulator untuk kenyamanan development &amp; demo tanpa kuota.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Kolom Kiri: Form Konfigurasi (7 Kolom) */}
+              <form onSubmit={handleSaveWaSettings} className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5">
+                <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-indigo-400" />
+                  <span>Kredensial &amp; Kebijakan Gateway</span>
+                </h3>
+
+                {/* Toggle Status Gateway */}
+                <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-800/50 border border-slate-700/60">
+                  <div>
+                    <div className="text-xs font-bold text-white">Status WhatsApp Gateway Platform</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Aktifkan fungsi pengiriman pesan otomatis melalui WhatsApp di seluruh tenant.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={waSettings.enabled}
+                      onChange={(e) => setWaSettings({ ...waSettings, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                {/* Toggle Multi-Level Fallback */}
+                <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-800/50 border border-slate-700/60">
+                  <div>
+                    <div className="text-xs font-bold text-white">Izinkan Tenant Menggunakan Gateway Platform</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Jika aktif, toko yang tidak memiliki Fonnte Token sendiri akan otomatis menggunakan gateway platform ini.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={waSettings.allowTenantFallback}
+                      onChange={(e) => setWaSettings({ ...waSettings, allowTenantFallback: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {/* API Key Fonnte */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Fonnte API Key (Token Akun Resmi)
+                  </label>
+                  <input
+                    type="password"
+                    value={waSettings.apiKey}
+                    onChange={(e) => setWaSettings({ ...waSettings, apiKey: e.target.value })}
+                    placeholder="Contoh: vQ9wK8... (Kosongkan jika ingin mode Simulator Sandbox)"
+                    className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Dapatkan token dari dashboard akun Fonnte Anda di <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-indigo-400 underline font-semibold">fonnte.com</a>.
+                  </p>
+                </div>
+
+                {/* Nomor Pengirim Resmi (Opsional) */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Nomor WhatsApp Pengirim Platform (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={waSettings.senderNumber}
+                    onChange={(e) => setWaSettings({ ...waSettings, senderNumber: e.target.value })}
+                    placeholder="Contoh: 081234567890"
+                    className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* Tombol Simpan */}
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingWaSettings}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/30 active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {savingWaSettings ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Simpan Pengaturan Gateway</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Kolom Kanan: Uji Coba Pengiriman & Info (5 Kolom) */}
+              <div className="lg:col-span-5 space-y-6">
+                {/* Card Test Dispatch */}
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span>Uji Coba Pengiriman WhatsApp</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Tes konektivitas perangkat gateway Fonnte dengan mengirimkan pesan uji coba ke nomor WhatsApp Anda.
+                  </p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">
+                        Nomor WhatsApp Tujuan Uji Coba
+                      </label>
+                      <div className="flex items-center rounded-xl bg-slate-800/80 border border-slate-700 overflow-hidden focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                        <span className="px-3 py-2.5 bg-slate-800 text-slate-400 font-bold text-xs border-r border-slate-700 select-none">
+                          🇮🇩 +62
+                        </span>
+                        <input
+                          type="tel"
+                          value={waTestPhone.replace(/^\+?62/, '').replace(/^0+/, '')}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '');
+                            setWaTestPhone(raw ? `+62${raw}` : '');
+                          }}
+                          placeholder="81234567890"
+                          className="w-full px-3 py-2.5 bg-transparent text-xs font-semibold text-white placeholder-slate-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTestWaGateway}
+                      disabled={testingWa || !waTestPhone.trim()}
+                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 cursor-pointer"
+                    >
+                      {testingWa ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Mengirim Pesan Uji Coba...</span>
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-4 h-4" />
+                          <span>Kirim Pesan Uji Coba (Test Dispatch)</span>
+                        </>
+                      )}
+                    </button>
+
+                    {waTestFeedback && (
+                      <div
+                        className={`p-3 rounded-2xl text-xs font-semibold flex items-center justify-between animate-in fade-in ${
+                          waTestFeedback.type === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                            : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {waTestFeedback.type === 'success' ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                          )}
+                          <span>{waTestFeedback.message}</span>
+                        </div>
+                        {waTestFeedback.simulated && (
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
+                            Simulator Mode
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Panduan & Arsitektur */}
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-3 text-xs text-slate-400">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <Info className="w-4 h-4 text-indigo-400" />
+                    <span>Arsitektur Multi-Level Gateway</span>
+                  </h4>
+                  <ul className="space-y-2 list-disc pl-4 text-[11px] leading-relaxed">
+                    <li>
+                      <strong>Prioritas 1 (Toko):</strong> Jika toko memasukkan Token Fonnte pribadi di menu Format Struk, kuota pengiriman dipotong dari akun toko tersebut.
+                    </li>
+                    <li>
+                      <strong>Prioritas 2 (Platform):</strong> Jika toko tidak memiliki token dan opsi fallback aktif, kuota diambil dari Platform Gateway ini.
+                    </li>
+                    <li>
+                      <strong>Prioritas 3 (Simulator):</strong> Jika kedua token tidak diisi, backend Well POS otomatis menjalankan Mock Simulator tanpa melempar crash error.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
       </div>
 
@@ -5460,17 +5750,32 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Tipe Benefit Kupon:</label>
-                <select
-                  value={newPromoForm.type}
-                  onChange={(e) => setNewPromoForm({ ...newPromoForm, type: e.target.value as any })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
-                >
-                  <option value="DISCOUNT_PERCENT">DISCOUNT_PERCENT — Diskon Persentase (%)</option>
-                  <option value="DISCOUNT_FIXED">DISCOUNT_FIXED — Potongan Nominal Rupiah (Rp)</option>
-                  <option value="BONUS_TOKENS">BONUS_TOKENS — Ekstra Bonus Token Order Gratis</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Target Transaksi (Scope):</label>
+                  <select
+                    value={newPromoForm.scope}
+                    onChange={(e) => setNewPromoForm({ ...newPromoForm, scope: e.target.value as any })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
+                  >
+                    <option value="ALL">ALL — Semua Transaksi (Registrasi &amp; Top-Up)</option>
+                    <option value="REGISTRATION">REGISTRATION — Khusus Pendaftaran Awal</option>
+                    <option value="TOPUP">TOPUP — Khusus Top-Up Kuota Token</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Tipe Benefit Kupon:</label>
+                  <select
+                    value={newPromoForm.type}
+                    onChange={(e) => setNewPromoForm({ ...newPromoForm, type: e.target.value as any })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
+                  >
+                    <option value="DISCOUNT_PERCENT">DISCOUNT_PERCENT — Diskon Persentase (%)</option>
+                    <option value="DISCOUNT_FIXED">DISCOUNT_FIXED — Potongan Nominal Rupiah (Rp)</option>
+                    <option value="BONUS_TOKENS">BONUS_TOKENS — Ekstra Bonus Token Order Gratis</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -5583,7 +5888,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       ========================================================================= */}
       {isPaymentConfigModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 max-h-[92vh] overflow-y-auto">
+          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative text-slate-200 max-h-[92vh] overflow-y-auto">
             <button
               type="button"
               onClick={() => setIsPaymentConfigModalOpen(false)}
@@ -5592,214 +5897,285 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
-                <Coins className="w-5 h-5 text-amber-400" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shrink-0">
+                <Coins className="w-6 h-6 text-amber-400" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">Pengaturan Biaya Token, Paket &amp; QRIS Platform</h3>
-                <p className="text-xs text-slate-400">
-                  Kelola tarif per token, kuota minimal beli, sakelar aktif/nonaktif QRIS, dan kredensial QRIS Platform HQ.
+                <h3 className="text-lg font-black text-white">Pengaturan Biaya Token, Pendaftaran &amp; QRIS Platform</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Kelola biaya aktivasi pendaftaran awal, kuota token kasir, tarif per token, sakelar QRIS, dan kredensial QRIS Platform HQ.
                 </p>
               </div>
             </div>
 
             {paymentConfigLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <RefreshCw className="w-6 h-6 animate-spin text-indigo-400" />
-                <span className="text-xs">Memuat pengaturan...</span>
+              <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2">
+                <RefreshCw className="w-7 h-7 animate-spin text-indigo-400" />
+                <span className="text-xs">Memuat pengaturan platform...</span>
               </div>
             ) : (
-              <form onSubmit={handleSavePaymentConfig} className="space-y-4">
-                {/* Bagian 1: Pengaturan Biaya Token & Minimum Beli */}
-                <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">
-                      1. Tarif Token &amp; Batas Minimum Pembelian
-                    </h4>
+              <form onSubmit={handleSavePaymentConfig} className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                  {/* ==================== KOLOM KIRI ==================== */}
+                  <div className="space-y-4">
+                    {/* Bagian 1: Biaya Pendaftaran Awal & Bonus Kuota Token Onboarding */}
+                    <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-400 fill-purple-400" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-purple-400">
+                          1. Biaya Pendaftaran Awal &amp; Bonus Kuota Onboarding
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Biaya Pendaftaran / Aktivasi (Rp):
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 pointer-events-none">Rp</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={paymentConfigForm.registrationFee === 0 ? '0' : formatThousands(paymentConfigForm.registrationFee)}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/\D/g, '');
+                                const num = raw ? parseInt(raw, 10) : 0;
+                                setPaymentConfigForm({ ...paymentConfigForm, registrationFee: num });
+                              }}
+                              placeholder="99.000"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-purple-400 transition-colors"
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-500 mt-1 block">
+                            Biaya registrasi di Landing Page (isi 0 jika gratis). Default: Rp 99.000.
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Bonus Kuota Token Awal:
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={0}
+                              required
+                              value={paymentConfigForm.registrationBonusTokens}
+                              onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, registrationBonusTokens: Math.max(0, Number(e.target.value)) })}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-purple-400"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 pointer-events-none">
+                              Token
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 mt-1 block">
+                            Kuota transaksi kasir saat akun disetujui Superadmin (default: 100 token).
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-[11px] text-slate-300 flex items-center justify-between">
+                        <span className="text-slate-400">Total Tarif Pendaftaran Baru:</span>
+                        <span className="font-mono font-black text-purple-300">
+                          {paymentConfigForm.registrationFee === 0 ? 'GRATIS (Rp 0)' : formatRupiah(paymentConfigForm.registrationFee)} ({paymentConfigForm.registrationBonusTokens.toLocaleString('id-ID')} Token Bonus)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bagian 2: Pengaturan Biaya Token & Minimum Beli */}
+                    <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-400">
+                          2. Tarif Token &amp; Batas Minimum Pembelian
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Harga per Token (Rp):
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 pointer-events-none">Rp</span>
+                            <input
+                              type="number"
+                              min={1}
+                              required
+                              value={paymentConfigForm.tokenPrice}
+                              onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, tokenPrice: Math.max(1, Number(e.target.value)) })}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-amber-400"
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-500 mt-1 block">
+                            Tarif acuan saat merchant beli kuota (default: Rp 69/token).
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">
+                            Minimum Pembelian Token:
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            required
+                            value={paymentConfigForm.minTokenPurchase}
+                            onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, minTokenPurchase: Math.max(1, Number(e.target.value)) })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-amber-400"
+                          />
+                          <span className="text-[10px] text-slate-500 mt-1 block">
+                            Batas terkecil order token kasir (default: 250 token).
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-[11px] text-slate-300 flex items-center justify-between">
+                        <span className="text-slate-400">Simulasi Order Minimal:</span>
+                        <span className="font-mono font-black text-amber-300">
+                          {paymentConfigForm.minTokenPurchase.toLocaleString('id-ID')} token × Rp {paymentConfigForm.tokenPrice} = {formatRupiah(paymentConfigForm.tokenPrice * paymentConfigForm.minTokenPurchase)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Harga per Token (Rp):
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2 text-xs font-bold text-slate-500">Rp</span>
+
+                  {/* ==================== KOLOM KANAN ==================== */}
+                  <div className="space-y-4">
+                    {/* Bagian 3: Sakelar Pembayaran QRIS */}
+                    <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <QrCode className="w-4 h-4 text-indigo-400" />
+                          <h4 className="text-xs font-black uppercase tracking-wider text-indigo-400">
+                            3. Status Metode Pembayaran QRIS
+                          </h4>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            paymentConfigForm.qrisEnabled
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          }`}
+                        >
+                          {paymentConfigForm.qrisEnabled ? '● QRIS AKTIF' : '○ NONAKTIF (MAINTENANCE)'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl">
+                        <div>
+                          <p className="text-xs font-bold text-white">Aktifkan Saluran Pembayaran QRIS</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Transfer Manual ditiadakan permanen. Jika nonaktif, Owner tidak dapat checkout kuota.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentConfigForm({ ...paymentConfigForm, qrisEnabled: !paymentConfigForm.qrisEnabled })}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            paymentConfigForm.qrisEnabled ? 'bg-indigo-600' : 'bg-slate-700'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              paymentConfigForm.qrisEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bagian 4: Kredensial QRIS Platform HQ */}
+                    <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Store className="w-4 h-4 text-slate-400" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                          4. Kredensial &amp; Barcode QRIS Platform HQ
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">Nama Merchant QRIS:</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Contoh: WELL POS PLATFORM HQ"
+                            value={paymentConfigForm.merchantName}
+                            onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, merchantName: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1">NMID (National Merchant ID):</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Contoh: ID1020030040050"
+                            value={paymentConfigForm.nmid}
+                            onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, nmid: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">URL Gambar QRIS Statis:</label>
                         <input
-                          type="number"
-                          min={1}
+                          type="url"
                           required
-                          value={paymentConfigForm.tokenPrice}
-                          onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, tokenPrice: Math.max(1, Number(e.target.value)) })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-amber-400"
+                          placeholder="https://..."
+                          value={paymentConfigForm.imageUrl}
+                          onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, imageUrl: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
                         />
                       </div>
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        Tarif acuan saat merchant beli kuota (default: Rp 69/token).
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">
-                        Minimum Pembelian Token:
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        required
-                        value={paymentConfigForm.minTokenPurchase}
-                        onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, minTokenPurchase: Math.max(1, Number(e.target.value)) })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none focus:border-amber-400"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        Batas terkecil order token kasir (default: 250 token).
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-[11px] text-slate-300 flex items-center justify-between">
-                    <span className="text-slate-400">Simulasi Order Minimal:</span>
-                    <span className="font-mono font-black text-amber-300">
-                      {paymentConfigForm.minTokenPurchase.toLocaleString('id-ID')} token × Rp {paymentConfigForm.tokenPrice} = {formatRupiah(paymentConfigForm.tokenPrice * paymentConfigForm.minTokenPurchase)}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Bagian 2: Sakelar Pembayaran QRIS */}
-                <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <QrCode className="w-4 h-4 text-indigo-400" />
-                      <h4 className="text-xs font-black uppercase tracking-wider text-indigo-400">
-                        2. Status Metode Pembayaran QRIS
-                      </h4>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        paymentConfigForm.qrisEnabled
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                      }`}
-                    >
-                      {paymentConfigForm.qrisEnabled ? '● QRIS AKTIF' : '○ NONAKTIF (MAINTENANCE)'}
-                    </span>
-                  </div>
+                      {paymentConfigForm.imageUrl && (
+                        <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-4">
+                          <div className="bg-white p-2 rounded-xl shadow-xs shrink-0">
+                            <img
+                              src={paymentConfigForm.imageUrl}
+                              alt="QRIS Preview"
+                              className="w-16 h-16 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          <div className="text-xs">
+                            <p className="font-bold text-white">{paymentConfigForm.merchantName || 'Pratinjau Merchant'}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">NMID: {paymentConfigForm.nmid || '-'}</p>
+                            <p className="text-[10px] text-emerald-400 mt-0.5">✔ Tampil otomatis di modal Top-Up Owner</p>
+                          </div>
+                        </div>
+                      )}
 
-                  <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl">
-                    <div>
-                      <p className="text-xs font-bold text-white">Aktifkan Saluran Pembayaran QRIS</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Transfer Manual ditiadakan permanen. Jika nonaktif, Owner tidak dapat melakukan checkout kuota.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentConfigForm({ ...paymentConfigForm, qrisEnabled: !paymentConfigForm.qrisEnabled })}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        paymentConfigForm.qrisEnabled ? 'bg-indigo-600' : 'bg-slate-700'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          paymentConfigForm.qrisEnabled ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Bagian 3: Kredensial QRIS Platform HQ */}
-                <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Store className="w-4 h-4 text-slate-400" />
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
-                      3. Kredensial &amp; Barcode QRIS Platform HQ
-                    </h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">Nama Merchant QRIS:</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Contoh: WELL POS PLATFORM HQ"
-                        value={paymentConfigForm.merchantName}
-                        onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, merchantName: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">NMID (National Merchant ID):</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Contoh: ID1020030040050"
-                        value={paymentConfigForm.nmid}
-                        onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, nmid: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">URL Gambar QRIS Statis:</label>
-                    <input
-                      type="url"
-                      required
-                      placeholder="https://..."
-                      value={paymentConfigForm.imageUrl}
-                      onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, imageUrl: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {paymentConfigForm.imageUrl && (
-                    <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-4">
-                      <div className="bg-white p-2 rounded-xl shadow-xs shrink-0">
-                        <img
-                          src={paymentConfigForm.imageUrl}
-                          alt="QRIS Preview"
-                          className="w-16 h-16 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">Catatan / Panduan untuk Merchant:</label>
+                        <textarea
+                          rows={2}
+                          value={paymentConfigForm.notes}
+                          onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, notes: e.target.value })}
+                          placeholder="Petunjuk scan QRIS untuk merchant..."
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 resize-none"
                         />
                       </div>
-                      <div className="text-xs">
-                        <p className="font-bold text-white">{paymentConfigForm.merchantName || 'Pratinjau Merchant'}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">NMID: {paymentConfigForm.nmid || '-'}</p>
-                        <p className="text-[10px] text-emerald-400 mt-0.5">✔ Tampil otomatis di modal Top-Up Owner</p>
-                      </div>
                     </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Catatan / Panduan untuk Merchant:</label>
-                    <textarea
-                      rows={2}
-                      value={paymentConfigForm.notes}
-                      onChange={(e) => setPaymentConfigForm({ ...paymentConfigForm, notes: e.target.value })}
-                      placeholder="Petunjuk scan QRIS untuk merchant..."
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 resize-none"
-                    />
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center gap-3">
+                {/* Footer Actions */}
+                <div className="border-t border-slate-800 pt-4 flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setIsPaymentConfigModalOpen(false)}
-                    className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={paymentConfigSubmitting}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {paymentConfigSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    <span>{paymentConfigSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
+                    <span>{paymentConfigSubmitting ? 'Menyimpan Pengaturan...' : 'Simpan Pengaturan'}</span>
                   </button>
                 </div>
               </form>

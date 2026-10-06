@@ -48,12 +48,12 @@ export class SalesReadAdapter extends BaseReadAdapter {
 
     if (startDate) {
       params.push(parseDateBoundary(startDate, false));
-      whereClauses.push(`o.created_at >= $${params.length}`);
+      whereClauses.push(`o.created_at >= ($${params.length} AT TIME ZONE 'UTC')`);
     }
 
     if (endDate) {
       params.push(parseDateBoundary(endDate, true));
-      whereClauses.push(`o.created_at <= $${params.length}`);
+      whereClauses.push(`o.created_at <= ($${params.length} AT TIME ZONE 'UTC')`);
     }
 
     if (search && search.trim() !== '') {

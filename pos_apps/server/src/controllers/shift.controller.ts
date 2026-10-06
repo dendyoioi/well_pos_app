@@ -261,7 +261,7 @@ export const getXReport = async (req: Request, res: Response) => {
               o.created_at as "createdAt", pt.payment_method as "paymentMethod", pt.amount
        FROM "orders" o
        LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
-       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+       WHERE o.shift_id = $1 AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
        ORDER BY o.created_at DESC;`,
       activeShift.id
     );
@@ -409,7 +409,7 @@ export const closeShift = async (req: Request, res: Response) => {
       `SELECT pt.payment_method as "paymentMethod", pt.amount
        FROM "payment_transactions" pt
        JOIN "orders" o ON o.id = pt.order_id
-       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED' AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
       activeShift.id
     );
 
@@ -426,18 +426,18 @@ export const closeShift = async (req: Request, res: Response) => {
 
     const countRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT count(*)::int as count FROM "orders" 
-       WHERE shift_id = $1 AND order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       WHERE shift_id = $1 AND payment_status = 'PAID' AND order_status NOT IN ('CANCELLED', 'VOIDED');`,
       activeShift.id
     );
     const totalOrders = countRows[0]?.count || 0;
 
     // ─── Breakdown omset per channel penjualan ───────────────────────────────
     const channelRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o.order_channel as channel, COUNT(*)::int as count,
+      `SELECT COALESCE(o.channel, o.order_type, 'DINE_IN') as channel, COUNT(*)::int as count,
               COALESCE(SUM(o.grand_total), 0) as revenue
        FROM "orders" o
-       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
-       GROUP BY o.order_channel
+       WHERE o.shift_id = $1 AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+       GROUP BY COALESCE(o.channel, o.order_type, 'DINE_IN')
        ORDER BY revenue DESC;`,
       activeShift.id
     );
@@ -613,7 +613,7 @@ export const getShiftById = async (req: Request, res: Response) => {
               pt.payment_method as "paymentMethod", pt.amount
        FROM "orders" o
        LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
-       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       WHERE o.shift_id = $1 AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
       id
     );
 

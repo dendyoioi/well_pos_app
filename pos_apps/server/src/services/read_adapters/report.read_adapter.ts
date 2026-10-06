@@ -50,8 +50,8 @@ export class ReportReadAdapter extends BaseReadAdapter {
       FROM "orders" o
       WHERE o.tenant_id = $1 
         AND o.payment_status = 'PAID'
-        AND o.created_at >= $2 
-        AND o.created_at <= $3
+        AND o.created_at >= ($2 AT TIME ZONE 'UTC') 
+        AND o.created_at <= ($3 AT TIME ZONE 'UTC')
         ${outletCondition}
       ORDER BY o.created_at DESC;
     `;
@@ -265,8 +265,8 @@ export class ReportReadAdapter extends BaseReadAdapter {
       FROM "cash_movements" cm
       WHERE cm.tenant_id = $1
         AND cm.type = 'CASH_OUT'
-        AND cm.created_at >= $2
-        AND cm.created_at <= $3
+        AND cm.created_at >= ($2 AT TIME ZONE 'UTC')
+        AND cm.created_at <= ($3 AT TIME ZONE 'UTC')
         ${expOutletCondition};
     `;
     const expenseRows = await this.queryRaw<any>(expensesSql, ...expParams);

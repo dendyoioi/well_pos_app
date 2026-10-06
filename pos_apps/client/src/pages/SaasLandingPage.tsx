@@ -11,6 +11,10 @@ import {
   ChevronRight,
   Laptop,
   Smartphone,
+  QrCode,
+  RefreshCw,
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -39,14 +43,115 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
+  // Konfigurasi dinamis biaya pendaftaran & bonus token dari platform
+  const [platformConfig, setPlatformConfig] = useState({
+    registrationFee: 99000,
+    registrationBonusTokens: 100,
+  });
+
+  // State Voucher Promo Pendaftaran
+  const [showPromoField, setShowPromoField] = useState(false);
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   const [registerSuccessData, setRegisterSuccessData] = useState<{
     ownerName: string;
     email: string;
     phone: string;
+    finalAmount?: number;
+    bonusTokens?: number;
+    promoCode?: string;
+    payment?: {
+      invoiceNumber: string;
+      amount: number;
+      discountAmount: number;
+      bonusTokens: number;
+      isFree: boolean;
+      qrString?: string;
+      paymentUrl?: string;
+      expiredAt?: string;
+      isSandbox?: boolean;
+    };
   } | null>(null);
+
+  const [paymentPaid, setPaymentPaid] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [simulatingPayment, setSimulatingPayment] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Polling status pembayaran Pakasir jika transaksi UNPAID
+  useEffect(() => {
+    if (!registerSuccessData?.payment || registerSuccessData.payment.isFree || paymentPaid) {
+      return;
+    }
+
+    const invoiceNum = registerSuccessData.payment.invoiceNumber;
+    let isMounted = true;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.checkPakasirInvoiceStatus(invoiceNum);
+        if (res.status === 'success' && res.data?.status === 'PAID') {
+          if (isMounted) {
+            setPaymentPaid(true);
+          }
+        }
+      } catch (e) {
+        // Silently catch polling error
+      }
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [registerSuccessData, paymentPaid]);
+
+  const handleCheckPaymentStatus = async () => {
+    if (!registerSuccessData?.payment?.invoiceNumber) return;
+    setCheckingPayment(true);
+    try {
+      const res = await api.checkPakasirInvoiceStatus(registerSuccessData.payment.invoiceNumber);
+      if (res.status === 'success' && res.data?.status === 'PAID') {
+        setPaymentPaid(true);
+      }
+    } catch (err: any) {
+      console.error('Gagal mengecek status pembayaran:', err);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  const handleSimulateSandboxPayment = async () => {
+    if (!registerSuccessData?.payment?.invoiceNumber) return;
+    setSimulatingPayment(true);
+    try {
+      const res = await api.simulatePakasirSandboxPayment(registerSuccessData.payment.invoiceNumber);
+      if (res.status === 'success') {
+        setPaymentPaid(true);
+      }
+    } catch (err: any) {
+      console.error('Gagal simulasi sandbox:', err);
+    } finally {
+      setSimulatingPayment(false);
+    }
+  };
+
+  // Fetch konfigurasi publik platform saat halaman dimuat
+  useEffect(() => {
+    api.getPublicPlatformConfig().then((res) => {
+      if (res.status === 'success' && res.data) {
+        setPlatformConfig({
+          registrationFee: typeof res.data.registrationFee === 'number' ? res.data.registrationFee : 99000,
+          registrationBonusTokens: typeof res.data.registrationBonusTokens === 'number' ? res.data.registrationBonusTokens : 100,
+        });
+      }
+    }).catch((err) => console.error('Gagal mengambil info konfigurasi platform:', err));
+  }, []);
 
   // Listen to hash change for #register deep-linking
   useEffect(() => {
@@ -60,6 +165,26 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
+
+  const handleApplyRegistrationPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoError(null);
+    setValidatingPromo(true);
+    try {
+      const res = await api.validateRegistrationPromo(promoInput.trim());
+      if (res.status === 'success' && res.data) {
+        setAppliedPromo(res.data);
+      } else {
+        setPromoError(res.message || 'Kupon promo tidak dapat digunakan');
+        setAppliedPromo(null);
+      }
+    } catch (err: any) {
+      setPromoError(err.message || 'Gagal memeriksa kupon promo');
+      setAppliedPromo(null);
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,14 +223,22 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
         email: regEmail.trim(),
         password: regPassword,
         confirmPassword: regConfirmPassword,
+        promoCode: appliedPromo?.code,
       });
 
       if (res.status === 'success') {
+        const paymentInfo = res.data?.payment;
+        const isFree = paymentInfo ? paymentInfo.isFree : (appliedPromo ? appliedPromo.isFree : false);
         setRegisterSuccessData({
           ownerName: `${regFirstName.trim()} ${regLastName.trim()}`.trim(),
           email: regEmail.trim(),
           phone: formattedPhone,
+          finalAmount: paymentInfo ? paymentInfo.amount : (appliedPromo ? appliedPromo.finalAmount : platformConfig.registrationFee),
+          bonusTokens: paymentInfo ? paymentInfo.bonusTokens : (appliedPromo ? appliedPromo.totalBonusTokens : platformConfig.registrationBonusTokens),
+          promoCode: appliedPromo?.code,
+          payment: paymentInfo,
         });
+        setPaymentPaid(Boolean(isFree));
         setRegisterModalOpen(true);
       } else {
         setError(res.message || 'Pendaftaran akun gagal. Mohon periksa kembali isian Anda.');
@@ -808,47 +941,207 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       ========================================================================= */}
       <Modal
         isOpen={registerModalOpen}
-        onClose={() => setRegisterModalOpen(false)}
-        title={registerSuccessData ? 'Pendaftaran Akun Berhasil!' : 'Daftar Akun Pemilik (Owner)'}
+        onClose={() => {
+          setRegisterModalOpen(false);
+          if (paymentPaid) {
+            setRegisterSuccessData(null);
+            setPaymentPaid(false);
+          }
+        }}
+        title={
+          registerSuccessData
+            ? paymentPaid || registerSuccessData.finalAmount === 0
+              ? 'Aktivasi Akun Berhasil!'
+              : 'Selesaikan Pembayaran QRIS'
+            : 'Daftar Akun Pemilik (Owner)'
+        }
         subtitle={
           registerSuccessData
-            ? 'Akun pemilik Anda telah tercatat dan sedang menunggu verifikasi Super Admin.'
+            ? paymentPaid || registerSuccessData.finalAmount === 0
+              ? 'Akun pemilik bisnis dan kuota token transaksi Anda telah aktif.'
+              : 'Pindai kode QRIS di bawah ini untuk menyelesaikan aktivasi pendaftaran akun Anda.'
             : 'Buat akun pemilik bisnis. Toko/outlet Anda akan dikonfigurasi setelah akun disetujui.'
         }
-        size="md"
+        size={registerSuccessData && !paymentPaid && (registerSuccessData.finalAmount ?? 0) > 0 ? 'lg' : 'md'}
       >
         {registerSuccessData ? (
-          <div className="text-center py-4 space-y-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            <div>
-              <h4 className="text-base font-black text-slate-900">
-                Pendaftaran Berhasil, {registerSuccessData.ownerName}!
-              </h4>
-              <p className="text-xs text-slate-500 mt-1">
-                Akun pemilik bisnis Anda telah berhasil didaftarkan dan sedang menunggu persetujuan Super Admin.
+          paymentPaid || registerSuccessData.finalAmount === 0 ? (
+            /* =========================================================
+               TAMPILAN 1: SUKSES AKTIVASI (LUNAS / GRATIS)
+               ========================================================= */
+            <div className="text-center py-4 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 className="w-9 h-9" />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-slate-900">
+                  Selamat Datang, {registerSuccessData.ownerName}!
+                </h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  {registerSuccessData.finalAmount === 0
+                    ? 'Pendaftaran akun gratis Anda telah aktif dan siap digunakan.'
+                    : 'Pembayaran berhasil dikonfirmasi via QRIS Pakasir. Akun pemilik dan kuota token Anda telah aktif.'}
+                </p>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2.5">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Email Akun:</span>
+                  <strong className="text-slate-900 font-mono">{registerSuccessData.email}</strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Nomor WhatsApp:</span>
+                  <strong className="text-slate-900">{registerSuccessData.phone}</strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Biaya Aktivasi:</span>
+                  <strong className={registerSuccessData.finalAmount === 0 ? 'text-emerald-600 font-bold' : 'text-slate-900'}>
+                    {registerSuccessData.finalAmount === 0 ? 'GRATIS (Rp 0)' : `Rp ${registerSuccessData.finalAmount?.toLocaleString('id-ID')}`}
+                  </strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Status Pembayaran:</span>
+                  <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Lunas (PAID)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Bonus Token Transaksi:</span>
+                  <strong className="text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 font-bold">
+                    +{registerSuccessData.bonusTokens || 100} Token Aktif
+                  </strong>
+                </div>
+                {registerSuccessData.promoCode && (
+                  <div className="flex justify-between items-center text-slate-500">
+                    <span>Kupon Promo:</span>
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {registerSuccessData.promoCode}
+                    </span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-slate-500">
+                  <span>Status Akun:</span>
+                  <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Aktif &amp; Terverifikasi
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Anda sekarang dapat langsung masuk ke aplikasi untuk mulai mengatur toko, outlet, dan katalog menu Anda.
               </p>
+              <button
+                onClick={() => {
+                  setRegisterModalOpen(false);
+                  setRegisterSuccessData(null);
+                  setPaymentPaid(false);
+                  onOpenPos();
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+              >
+                <span>Masuk ke Backoffice / Kasir</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-1.5">
-              <p className="text-slate-500">Email Akun: <strong className="text-slate-900">{registerSuccessData.email}</strong></p>
-              <p className="text-slate-500">Nomor WhatsApp: <strong className="text-slate-900">{registerSuccessData.phone}</strong></p>
-              <p className="text-slate-500">Status Akun: <span className="text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Menunggu Approval Super Admin</span></p>
+          ) : (
+            /* =========================================================
+               TAMPILAN 2: QRIS PAKASIR UNTUK PEMBAYARAN REGISTRASI
+               ========================================================= */
+            <div className="py-2 space-y-4 text-center">
+              {/* Header Box Total Bayar */}
+              <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-4 text-center shadow-sm">
+                <div className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[11px] font-semibold text-blue-200 mb-2">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>QRIS Otomatis Pakasir</span>
+                </div>
+                <div className="text-xs text-blue-200 font-medium">Total Biaya Aktivasi Akun</div>
+                <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
+                  Rp {registerSuccessData.finalAmount?.toLocaleString('id-ID')}
+                </div>
+                {registerSuccessData.payment?.invoiceNumber && (
+                  <div className="text-[11px] text-blue-300 font-mono mt-1">
+                    Invoice: {registerSuccessData.payment.invoiceNumber}
+                  </div>
+                )}
+              </div>
+
+              {/* Dynamic QR Code Card */}
+              <div className="flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+                {registerSuccessData.payment?.qrString ? (
+                  <div className="p-3 bg-white border-2 border-slate-900 rounded-2xl shadow-sm inline-block">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(registerSuccessData.payment.qrString)}`}
+                      alt="QRIS Pembayaran Pakasir"
+                      className="w-48 h-48 sm:w-52 sm:h-52 object-contain mx-auto"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-48 h-48 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 text-xs">
+                    Membuat kode QRIS...
+                  </div>
+                )}
+
+                {/* Real-time Waiting Pulse */}
+                <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  <span>Menunggu pembayaran via QRIS...</span>
+                </div>
+
+                <p className="text-[11px] text-slate-500 mt-2 max-w-xs leading-relaxed">
+                  Pindai QR di atas menggunakan aplikasi <strong>BCA, Mandiri, BRI, BNI, GoPay, OVO, Dana, ShopeePay</strong>, atau mobile banking lainnya.
+                </p>
+              </div>
+
+              {/* Rincian Singkat Akun */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-left text-xs space-y-1.5">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Nama Pemilik:</span>
+                  <strong className="text-slate-900">{registerSuccessData.ownerName}</strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Email Login:</span>
+                  <strong className="text-slate-900 font-mono">{registerSuccessData.email}</strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Bonus Token Setelah Lunas:</span>
+                  <strong className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-bold">
+                    +{registerSuccessData.bonusTokens || 100} Token Transaksi
+                  </strong>
+                </div>
+                {registerSuccessData.promoCode && (
+                  <div className="flex justify-between items-center text-slate-500">
+                    <span>Kupon Terpasang:</span>
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {registerSuccessData.promoCode}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Tombol Aksi: Cek Status & Sandbox Pay */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCheckPaymentStatus}
+                  disabled={checkingPayment}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${checkingPayment ? 'animate-spin' : ''}`} />
+                  <span>{checkingPayment ? 'Mengecek Status Pembayaran...' : 'Cek Status Pembayaran Sekarang'}</span>
+                </button>
+
+                {registerSuccessData.payment?.isSandbox && (
+                  <button
+                    type="button"
+                    onClick={handleSimulateSandboxPayment}
+                    disabled={simulatingPayment}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 transition-all cursor-pointer border border-amber-400 shadow-sm disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{simulatingPayment ? 'Memproses Simulasi...' : '⚡ Simulasikan Pembayaran Berhasil (Uji Coba Sandbox)'}</span>
+                  </button>
+                )}
+              </div>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Setelah disetujui Super Admin, Anda dapat masuk dan membuat toko/outlet pertama Anda langsung dari dashboard.
-            </p>
-            <button
-              onClick={() => {
-                setRegisterModalOpen(false);
-                onOpenPos();
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all cursor-pointer"
-            >
-              <span>Lanjut ke Halaman Masuk</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          )
         ) : (
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
             {error && (
@@ -918,6 +1211,98 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               onChange={(e) => setRegConfirmPassword(e.target.value)}
               required
             />
+
+            {/* 6. Ringkasan Biaya Registrasi & Kupon Promo */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Biaya Aktivasi Pendaftaran:</span>
+                <span className="font-bold text-slate-900">
+                  {appliedPromo ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="line-through text-slate-400">
+                        {platformConfig.registrationFee === 0 ? 'Gratis' : `Rp ${platformConfig.registrationFee.toLocaleString('id-ID')}`}
+                      </span>
+                      <span className="text-emerald-600 font-black">
+                        {appliedPromo.finalAmount === 0 ? 'GRATIS (Rp 0)' : `Rp ${appliedPromo.finalAmount.toLocaleString('id-ID')}`}
+                      </span>
+                    </span>
+                  ) : platformConfig.registrationFee === 0 ? (
+                    <span className="text-emerald-600 font-black">GRATIS (Rp 0)</span>
+                  ) : (
+                    `Rp ${platformConfig.registrationFee.toLocaleString('id-ID')}`
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Bonus Kuota Transaksi Awal:</span>
+                <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                  +{appliedPromo ? appliedPromo.totalBonusTokens : platformConfig.registrationBonusTokens} Token Siap Pakai
+                </span>
+              </div>
+
+              {/* Input Kupon Promo */}
+              <div className="pt-2 border-t border-slate-200/80">
+                {!showPromoField && !appliedPromo ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowPromoField(true)}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>+ Punya Kode Voucher Promo?</span>
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-extrabold text-slate-700">
+                      Kode Voucher Promo Pendaftaran
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Contoh: MERDEKA100"
+                        value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                        disabled={Boolean(appliedPromo)}
+                        className="flex-1 uppercase font-mono text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
+                      />
+                      {appliedPromo ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppliedPromo(null);
+                            setPromoInput('');
+                            setPromoError(null);
+                          }}
+                          className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          Hapus
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={validatingPromo || !promoInput.trim()}
+                          onClick={handleApplyRegistrationPromo}
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                          {validatingPromo ? 'Cek...' : 'Terapkan'}
+                        </button>
+                      )}
+                    </div>
+                    {appliedPromo && (
+                      <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name}</span>
+                      </p>
+                    )}
+                    {promoError && (
+                      <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{promoError}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="pt-2">
               <button

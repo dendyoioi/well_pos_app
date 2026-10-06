@@ -512,6 +512,242 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
     ],
   },
+  {
+    id: 'bluetooth_printer',
+    title: '14. Printer Kasir Bluetooth Thermal (Web Bluetooth BLE)',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Perangkat & Printer',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER'],
+    shortDesc: 'Koneksi nirkabel printer kasir Bluetooth (58mm / 80mm ESC/POS) langsung dari browser tablet/laptop kasir tanpa kabel USB dan driver tambahan.',
+    actionTab: 'settings_receipt',
+    actionLabel: 'Buka Pengaturan Struk & Printer',
+    image: '/guide/onboarding-format-struk.png',
+    imageCaption: 'Konfigurasi Printer Thermal & Tombol Koneksi Bluetooth BLE pada Pengaturan Resto.',
+    steps: [
+      {
+        number: 1,
+        title: 'Nyalakan Printer & Aktifkan Bluetooth Perangkat',
+        description:
+          'Pastikan printer thermal kasir (58mm atau 80mm) dalam posisi menyala dengan kertas terpasang rapi, dan Bluetooth pada tablet / laptop kasir aktif.',
+      },
+      {
+        number: 2,
+        title: 'Sambungkan via Web Bluetooth',
+        description:
+          'Buka menu Pengaturan Resto > Format Struk Kasir (atau tombol sambung di jendela sukses transaksi kasir). Klik tombol "Sambungkan Printer Bluetooth". Pop-up browser Chrome/Edge akan memindai printer terdekat.',
+        highlight: 'Web Bluetooth BLE murni — bekerja langsung di browser tanpa instalasi driver desktop.',
+      },
+      {
+        number: 3,
+        title: 'Pilih Nama Printer Kasir & Sandingkan',
+        description:
+          'Pilih nama printer Anda (misalnya: RPP02N, PT-210, MPT-II, Thermal Printer) lalu klik Sandingkan (Pair). Status indikator printer akan berubah hijau menjadi "Terhubung".',
+      },
+      {
+        number: 4,
+        title: 'Uji Cetak Struk & Buka Laci Kas',
+        description:
+          'Tekan tombol "Uji Cetak Struk" untuk memverifikasi keluaran nota thermal, dan tekan "Buka Laci Kas" jika printer tersambung dengan laci kasir RJ11.',
+      },
+      {
+        number: 5,
+        title: 'Cetak 1-Klik Saat Transaksi Kasir Selesai',
+        description:
+          'Setiap kali transaksi checkout berhasil di POS, klik tombol "Cetak Struk Bluetooth" di jendela sukses pembayaran. Nota langsung tercetak dalam hitungan detik.',
+        highlight: 'Proses cetak 100% read-only dan tidak membebani mutasi database kasir.',
+      },
+    ],
+    tips: 'Gunakan browser Google Chrome atau Microsoft Edge untuk dukungan Web Bluetooth resmi. Untuk perangkat iOS/iPad, gunakan opsi cetak standar browser (AirPrint / System Print).',
+    warning: 'Pastikan printer Bluetooth tidak sedang terhubung secara eksklusif ke ponsel lain agar sinyal BLE dapat ditemukan oleh browser kasir.',
+  },
+  {
+    id: 'whatsapp_receipt',
+    title: '15. Integrasi WhatsApp Gateway & Resi Digital (Fonnte)',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Setup & Konfigurasi',
+    targetRoles: ['OWNER', 'ADMIN'],
+    shortDesc: 'Keputusan otomatisasi pengiriman bukti transaksi / e-receipt berformat nota rapi ke nomor WhatsApp pelanggan melalui Fonnte Gateway atau tautan wa.me.',
+    actionTab: 'settings_receipt',
+    actionLabel: 'Buka Pengaturan Resi WhatsApp',
+    image: '/guide/onboarding-format-struk.png',
+    imageCaption: 'Pengaturan WhatsApp Gateway: Saklar aktivasi resi digital otomatis dan konfigurasi token Fonnte.',
+    steps: [
+      {
+        number: 1,
+        title: 'Keputusan Otomatisasi di Tangan Owner',
+        description:
+          'Wewenang mengaktifkan pengiriman resi otomatis sepenuhnya dipegang oleh Owner/Admin toko. Kasir di lapangan tidak perlu dibebani konfigurasi teknis.',
+        highlight: 'Segregasi wewenang: Owner menetapkan token gateway, kasir hanya melayani pelanggan.',
+      },
+      {
+        number: 2,
+        title: 'Daftarkan Akun & API Key Fonnte',
+        description:
+          'Dapatkan API Token dari akun resmi Fonnte (fonnte.com). Anda dapat memasukkan token toko sendiri atau memanfaatkan gateway terpusat platform.',
+      },
+      {
+        number: 3,
+        title: 'Aktivasi di Pengaturan Resto',
+        description:
+          'Buka Pengaturan Resto > Format Struk Kasir > bagian "Integrasi WhatsApp Gateway". Nyalakan saklar "Aktifkan Pengiriman Resi WhatsApp Otomatis", masukkan token, lalu simpan.',
+      },
+      {
+        number: 4,
+        title: 'Kasir Menginput Nomor WA Pelanggan',
+        description:
+          'Saat kasir melayani transaksi di POS Terminal, tanyakan nomor WhatsApp pelanggan dan ketik di kolom nomor telepon (misal: 08123456789 atau +62812...).',
+      },
+      {
+        number: 5,
+        title: 'Pengiriman Resi Otomatis Non-Blocking',
+        description:
+          'Begitu tombol "Selesaikan & Bayar" ditekan, server di latar belakang secara asinkron mengirimkan resi resmi berformat rapi ke WhatsApp pelanggan.',
+        highlight: 'Transaksi kasir selesai instan tanpa menunggu proses pengiriman WA selesai.',
+      },
+      {
+        number: 6,
+        title: 'Opsi Manual Kasir (wa.me)',
+        description:
+          'Jika nomor WA belum sempat diinput saat checkout atau toko belum berlangganan Fonnte, kasir tetap dapat mengirim resi manual via tombol "Kirim via WhatsApp (wa.me)" di modal pembayaran sukses.',
+      },
+    ],
+    tips: 'Resi digital WhatsApp ramah lingkungan, menghemat pengeluaran kertas thermal gulung, dan nomor WA pelanggan otomatis tersimpan di data riwayat pesanan untuk keperluan promosi toko mendatang.',
+    warning: 'Pengiriman otomatis berjalan asinkron (non-blocking). Jika kuota Fonnte habis atau koneksi pelanggan terganggu, transaksi kasir tetap sah dan tidak akan dibatalkan.',
+  },
+  {
+    id: 'pwa_install',
+    title: '16. Aplikasi Kasir Desktop & Tablet (PWA / Layar Penuh)',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Perangkat & Terminal',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER'],
+    shortDesc: 'Instalasi Well POS menjadi aplikasi mandiri (*standalone app*) di Tablet Android, iPad, Laptop Windows, atau Mac dengan kecepatan instan tanpa address bar browser.',
+    actionTab: 'pos',
+    actionLabel: 'Buka Terminal Kasir (POS)',
+    image: '/guide/pos-terminal-transaksi.png',
+    imageCaption: 'Antarmuka Kasir Well POS dalam mode Standalone PWA Layar Penuh.',
+    steps: [
+      {
+        number: 1,
+        title: 'Buka Well POS di Perangkat Kasir',
+        description:
+          'Akses website Well POS melalui browser Google Chrome, Microsoft Edge, atau Safari di tablet / komputer kasir Anda.',
+      },
+      {
+        number: 2,
+        title: 'Klik Tombol Pasang Aplikasi Kasir',
+        description:
+          'Pada bagian bawah layar kasir, klik banner biru "Pasang Aplikasi Well POS Kasir" (atau klik ikon instal di bilah alamat browser).',
+        highlight: 'Progressive Web App resmi dengan ikon beresolusi tinggi dan manifest terstandarisasi.',
+      },
+      {
+        number: 3,
+        title: 'Konfirmasi Instalasi ke Layar Utama',
+        description:
+          'Konfirmasi pop-up pemasangan. Ikon resmi Well POS akan langsung disematkan pada layar utama (Home Screen Android/iPad atau Desktop Windows/Mac).',
+      },
+      {
+        number: 4,
+        title: 'Buka Layar Penuh Mandiri (Standalone Window)',
+        description:
+          'Jalankan aplikasi dari ikon Home Screen tersebut. Antarmuka Well POS akan tampil penuh tanpa bilah URL browser, memberikan area kerja yang luas dan ergonomis bagi kasir.',
+      },
+      {
+        number: 5,
+        title: 'Akses Super Cepat via Service Worker',
+        description:
+          'Aset aplikasi kasir di-cache secara aman oleh Service Worker, membuat aplikasi terbuka instan bahkan saat koneksi internet toko sedang lambat.',
+      },
+    ],
+    tips: 'Pemasangan mode standalone PWA sangat direkomendasikan agar kasir fokus melayani pelanggan dan tidak terdistraksi membuka tab browser lain.',
+  },
+  {
+    id: 'open_tab_rules',
+    title: '17. Alur Open Tab Meja & Kebijakan Pesanan Susulan (Anti-Fraud)',
+    category: 'CASHIER',
+    categoryLabel: 'Operasional Kasir',
+    targetRoles: ['CASHIER', 'SUPERVISOR', 'OWNER'],
+    shortDesc: 'Standar operasional pesanan susulan (add-on): Perbedaan meja belum lunas (UNPAID) dan penguncian ketat transaksi lunas (PAID) demi mencegah manipulasi kas.',
+    actionTab: 'orders',
+    actionLabel: 'Buka Riwayat Pesanan',
+    image: '/guide/pos-terminal-transaksi.png',
+    imageCaption: 'Pembeda Status Pesanan: Meja Belum Lunas (Open Tab) vs Pesanan Terkunci (PAID).',
+    steps: [
+      {
+        number: 1,
+        title: 'Pesanan Meja Belum Bayar (Open Tab / UNPAID)',
+        description:
+          'Pelanggan makan di tempat (Dine-In) yang belum menyelesaikan pembayaran memiliki status UNPAID. Meja ini berstatus terbuka (open tab).',
+      },
+      {
+        number: 2,
+        title: 'Tambah Pesanan Susulan (+ Susulan)',
+        description:
+          'Jika pelanggan di meja tersebut ingin menambah menu baru (misal ekstra minuman atau camilan), kasir membuka Riwayat Pesanan atau Detail Meja lalu menekan tombol "+ Susulan".',
+        highlight: 'Menu tambahan ditarik langsung ke keranjang kasir untuk ditambahkan item baru.',
+      },
+      {
+        number: 3,
+        title: 'Pembaruan Tagihan Meja Terbuka',
+        description:
+          'Item baru diperbarui ke pesanan meja yang sama tanpa membuat tagihan terpisah, menjaga struk meja tetap terintegrasi.',
+      },
+      {
+        number: 4,
+        title: 'Pesanan Lunas (PAID) Terkunci Total',
+        description:
+          'Untuk pesanan yang pembayarannya telah diselesaikan (PAID), sistem secara tegas mengunci transaksi. Tombol susulan dinonaktifkan secara permanen.',
+        highlight: 'SOP Anti-Fraud: Transaksi lunas tidak dapat disusul atau diubah kembali.',
+      },
+      {
+        number: 5,
+        title: 'Pelanggan Tambah Menu Setelah Bayar = Transaksi Baru',
+        description:
+          'Jika pelanggan ingin memesan lagi setelah nota tercetak lunas, kasir wajib membuat transaksi penjualan baru di kasir. Hal ini menjamin uang fisik di laci kasir cocok dengan Z-Report dan menutup celah selisih kas.',
+      },
+    ],
+    tips: 'Kebijakan ini menjamin laporan rekap omzet kasir dan mutasi HPP bahan baku selalu sinkron 100% dengan fisik laci kasir.',
+    warning: 'Jangan pernah membatalkan nota yang sudah dibayar tunai hanya untuk menggabungkan pesanan susulan. Buatlah transaksi baru agar pembukuan kasir tetap tertib.',
+  },
+  {
+    id: 'payment_methods',
+    title: '18. Metode Pembayaran Kasir & Integrasi QRIS / EDC',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Keuangan & Regulasi',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR'],
+    shortDesc: 'Aktivasi dan standarisasi opsi pembayaran kasir: Uang Tunai, QRIS Statis/Dinamis, Mesin EDC Debit/Kredit, dan Transfer Bank.',
+    actionTab: 'settings_payment',
+    actionLabel: 'Buka Metode Pembayaran',
+    image: '/guide/pos-terminal-transaksi.png',
+    imageCaption: 'Konfigurasi Metode Pembayaran Toko & Pilihan Pembayaran di Mesin Kasir.',
+    steps: [
+      {
+        number: 1,
+        title: 'Pilih Metode Pembayaran yang Diterima',
+        description:
+          'Buka Pengaturan Resto > Metode Pembayaran. Aktifkan saluran bayar yang tersedia di toko Anda: Tunai, QRIS, EDC Bank (Debit/Kredit), atau Transfer.',
+      },
+      {
+        number: 2,
+        title: 'Input Kode QRIS Usaha',
+        description:
+          'Jika toko menggunakan QRIS cetak/statis (misal QRIS BCA, Mandiri, BRI, GoPay), Anda dapat mengunggah gambar QRIS atau kode NMDID agar kasir dapat menampilkannya langsung di layar kasir.',
+      },
+      {
+        number: 3,
+        title: 'Kasir Memilih Jalur Pembayaran di Terminal',
+        description:
+          'Saat checkout di POS, kasir cukup mengetuk kartu pembayaran yang dipilih pelanggan. Sistem secara otomatis menghitung kembalian tunai atau mencatat nomor referensi transaksi digital.',
+      },
+      {
+        number: 4,
+        title: 'Rekap Omzet per Metode di Z-Report',
+        description:
+          'Di akhir hari saat tutup shift, sistem merinci total omzet non-tunai (QRIS & EDC) secara terpisah dari uang tunai fisik di laci kasir.',
+        highlight: 'Rekonsiliasi laci kasir akurat: Omzet non-tunai dipisahkan dari uang tunai fisik.',
+      },
+    ],
+    tips: 'Pemisahan omzet non-tunai dan tunai memudahkan kasir saat rekonsiliasi laci kasir (Blind Drop) dan mempermudah pencocokan mutasi rekening koran toko.',
+  },
 ];
 
 interface UserGuideViewProps {

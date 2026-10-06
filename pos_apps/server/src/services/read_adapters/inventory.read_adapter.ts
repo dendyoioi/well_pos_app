@@ -96,12 +96,12 @@ export class InventoryReadAdapter extends BaseReadAdapter {
 
     if (startDate) {
       params.push(parseDateBoundary(startDate, false));
-      whereClauses.push(`il.created_at >= $${params.length}`);
+      whereClauses.push(`il.created_at >= ($${params.length} AT TIME ZONE 'UTC')`);
     }
 
     if (endDate) {
       params.push(parseDateBoundary(endDate, true));
-      whereClauses.push(`il.created_at <= $${params.length}`);
+      whereClauses.push(`il.created_at <= ($${params.length} AT TIME ZONE 'UTC')`);
     }
 
     params.push(limit);

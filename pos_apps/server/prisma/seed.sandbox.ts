@@ -114,6 +114,12 @@ export async function runSandboxSeed() {
     await prisma.recipe.deleteMany({ where: { tenantId: tId } });
     await prisma.paymentTransaction.deleteMany({ where: { tenantId: tId } });
     await prisma.orderItem.deleteMany({ where: { tenantId: tId } });
+    try {
+      await prisma.$executeRawUnsafe(`DELETE FROM "hold_orders" WHERE tenant_id = $1;`, tId);
+    } catch {
+      // Abaikan jika tabel belum dibuat
+    }
+    await prisma.cashMovement.deleteMany({ where: { tenantId: tId } });
     await prisma.order.deleteMany({ where: { tenantId: tId } });
     await prisma.shift.deleteMany({ where: { tenantId: tId } });
     await prisma.inventoryLedger.deleteMany({ where: { tenantId: tId } });

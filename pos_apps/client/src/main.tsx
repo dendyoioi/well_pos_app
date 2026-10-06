@@ -2,6 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { pwaService } from './services/pwa.service'
+
+// Registrasi Service Worker PWA (Offline shell caching & install)
+pwaService.registerServiceWorker();
 
 // Prefiks global /api bila VITE_API_URL diatur di environment cloud (Vercel)
 const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');

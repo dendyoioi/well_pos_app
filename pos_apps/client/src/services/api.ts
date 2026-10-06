@@ -2,7 +2,7 @@ import type { AuthResponse, User } from '../types/auth';
 import type { Category, Product, StockMovement, LowStockProduct } from '../types/product';
 import type { CheckoutPayload, Order, HoldOrder, OpenTabOrder, OpenTabPayload } from '../types/order';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
-import type { Outlet, OutletFee, SalesChannelConfig, PaymentConfig, OutletLoyaltyConfig } from '../types/outlet';
+import type { Outlet, OutletFee, SalesChannelConfig, PaymentConfig, OutletLoyaltyConfig, ReceiptConfig } from '../types/outlet';
 import type { QrTable, QrMenuSettings, QrLiveOrder, PublicMenuResponse } from '../types/qr_menu';
 import type { ModifierGroup, UpsertModifierGroupInput } from '../types/modifier';
 import type { Recipe, UpsertRecipeInput, RecipeInventoryItem } from '../types/recipe';
@@ -688,6 +688,18 @@ export const api = {
     return res.json();
   },
 
+  sendOrderWhatsApp: async (orderId: string, recipientPhone?: string): Promise<{ status: string; message: string; data?: any }> => {
+    const res = await fetch(`/api/orders/${orderId}/send-whatsapp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify({ recipientPhone }),
+    });
+    return res.json();
+  },
+
   voidOrder: async (
     orderId: string,
     payload: { pin?: string; reason: string; notes?: string }
@@ -1094,12 +1106,67 @@ export const api = {
     confirmPassword?: string;
     businessName?: string;
     ownerName?: string;
-  }): Promise<{ status: string; data?: any; message?: string; errors?: any }> => {
+    promoCode?: string;
+  }): Promise<{
+    status: string;
+    data?: {
+      tenant: any;
+      user: any;
+      payment?: {
+        invoiceNumber: string;
+        amount: number;
+        discountAmount: number;
+        bonusTokens: number;
+        isFree: boolean;
+        qrString?: string;
+        paymentUrl?: string;
+        expiredAt?: string;
+        isSandbox?: boolean;
+      };
+    };
+    message?: string;
+    errors?: any;
+  }> => {
     const res = await fetch('/api/saas/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    return res.json();
+  },
+
+  getPublicPlatformConfig: async (): Promise<{
+    status: string;
+    data?: {
+      registrationFee: number;
+      registrationBonusTokens: number;
+      tokenPrice: number;
+      minTokenPurchase: number;
+      packages: any[];
+    };
+    message?: string;
+  }> => {
+    const res = await fetch('/api/saas/public-config');
+    return res.json();
+  },
+
+  validateRegistrationPromo: async (code: string): Promise<{
+    status: string;
+    data?: {
+      code: string;
+      name: string;
+      type: string;
+      value: number;
+      originalFee: number;
+      discountAmount: number;
+      bonusTokens: number;
+      totalBonusTokens: number;
+      finalAmount: number;
+      isFree: boolean;
+    };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/saas/promos/validate-registration?code=${encodeURIComponent(code.trim().toUpperCase())}`);
     return res.json();
   },
 
@@ -1475,6 +1542,37 @@ export const api = {
     return res.json();
   },
 
+  getPlatformWhatsAppSettings: async (): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch('/api/platform/whatsapp/settings', {
+      headers: platformAuthHeader(),
+    });
+    return res.json();
+  },
+
+  updatePlatformWhatsAppSettings: async (data: any): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch('/api/platform/whatsapp/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...platformAuthHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  testPlatformWhatsAppConnection: async (data: { apiKey?: string; testPhone?: string; phone?: string; message?: string }): Promise<{ status: string; device?: any; testSend?: any; message?: string; data?: any }> => {
+    const res = await fetch('/api/platform/whatsapp/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...platformAuthHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   // ----------------------------------------------------
   // PENGELOLAAN NOTIFIKASI & PENGUMUMAN SUPERADMIN
   // ----------------------------------------------------
@@ -1556,7 +1654,7 @@ export const api = {
       phone?: string;
       isWarehouse?: boolean;
       isActive?: boolean;
-      receiptConfig?: { paperSize: '58mm' | '80mm'; footerText?: string; showQueueNumber?: boolean };
+      receiptConfig?: Partial<ReceiptConfig>;
       loyaltyConfig?: OutletLoyaltyConfig;
     }
   ): Promise<{ status: string; data?: Outlet; message?: string }> => {

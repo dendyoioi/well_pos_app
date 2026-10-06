@@ -132,6 +132,14 @@ export interface Order {
       paperSize: '58mm' | '80mm';
       footerText?: string;
       showQueueNumber?: boolean;
+      showWatermark?: boolean;
+      whatsappConfig?: {
+        enabled?: boolean;
+        apiKey?: string;
+        senderNumber?: string;
+        usePlatformGateway?: boolean;
+        usePlatformFallback?: boolean;
+      };
     } | null;
   };
   cashier?: {

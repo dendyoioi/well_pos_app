@@ -8,11 +8,18 @@ import {
   Monitor,
   Store,
   RefreshCw,
+  Bluetooth,
+  Zap,
+  Power,
+  Coins,
+  MessageCircle,
+  ExternalLink,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 import { ThermalReceiptPreview } from '../components/ThermalReceiptPreview';
+import { useBluetoothPrinter } from '../hooks/useBluetoothPrinter';
 
 interface ReceiptSettingsViewProps {
   activeOutlet: Outlet | null;
@@ -24,9 +31,20 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   onOutletUpdated,
 }) => {
   const dialog = useDialog();
+  const btPrinter = useBluetoothPrinter();
+  const [testingBt, setTestingBt] = useState(false);
+  const [kickingBt, setKickingBt] = useState(false);
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
   const [footerText, setFooterText] = useState('Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @wellpos.id');
   const [showQueueNumber, setShowQueueNumber] = useState(true);
+  const [showWatermark, setShowWatermark] = useState(true);
+
+  // WhatsApp Gateway Automated Dispatch Settings
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [waUsePlatformFallback, setWaUsePlatformFallback] = useState(true);
+  const [waApiKey, setWaApiKey] = useState('');
+  const [waSenderNumber, setWaSenderNumber] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -41,6 +59,23 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
       }
       if (activeOutlet.receiptConfig.showQueueNumber !== undefined) {
         setShowQueueNumber(activeOutlet.receiptConfig.showQueueNumber);
+      }
+      if (activeOutlet.receiptConfig.showWatermark !== undefined) {
+        setShowWatermark(activeOutlet.receiptConfig.showWatermark !== false);
+      } else {
+        setShowWatermark(true);
+      }
+      if (activeOutlet.receiptConfig.whatsappConfig) {
+        const w = activeOutlet.receiptConfig.whatsappConfig;
+        setWaEnabled(!!w.enabled);
+        setWaUsePlatformFallback(w.usePlatformFallback !== false);
+        setWaApiKey(w.apiKey || '');
+        setWaSenderNumber(w.senderNumber || '');
+      } else {
+        setWaEnabled(false);
+        setWaUsePlatformFallback(true);
+        setWaApiKey('');
+        setWaSenderNumber('');
       }
     }
   }, [activeOutlet]);
@@ -62,6 +97,14 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
           paperSize,
           footerText: footerText.trim(),
           showQueueNumber,
+          showWatermark,
+          whatsappConfig: {
+            enabled: waEnabled,
+            provider: 'FONNTE',
+            usePlatformFallback: waUsePlatformFallback,
+            apiKey: waUsePlatformFallback ? undefined : waApiKey.trim(),
+            senderNumber: waSenderNumber.trim() || undefined,
+          },
         },
       });
 
@@ -81,6 +124,41 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
       dialog.toast(err.message || 'Terjadi kesalahan saat menyimpan pengaturan struk.', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConnectBluetooth = async () => {
+    try {
+      const ok = await btPrinter.connect();
+      if (ok) {
+        dialog.toast(`Printer Bluetooth "${btPrinter.deviceName || 'Thermal'}" berhasil terhubung!`, 'success');
+      }
+    } catch (err: any) {
+      dialog.toast(err.message || 'Gagal menghubungkan printer Bluetooth', 'error');
+    }
+  };
+
+  const handleTestPrint = async () => {
+    setTestingBt(true);
+    try {
+      await btPrinter.testPrint(paperSize);
+      dialog.toast('Cetak uji coba berhasil dikirim ke printer Bluetooth!', 'success');
+    } catch (err: any) {
+      dialog.toast(err.message || 'Gagal mengirim cetak uji coba', 'error');
+    } finally {
+      setTestingBt(false);
+    }
+  };
+
+  const handleTestKickDrawer = async () => {
+    setKickingBt(true);
+    try {
+      await btPrinter.kickDrawer();
+      dialog.toast('Sinyal pemicu laci kasir (ESC/POS 24V) berhasil dikirim!', 'success');
+    } catch (err: any) {
+      dialog.toast(err.message || 'Gagal memicu laci kasir', 'error');
+    } finally {
+      setKickingBt(false);
     }
   };
 
@@ -172,10 +250,120 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Informasi Header Outlet */}
+          {/* 2. Koneksi Printer Thermal Bluetooth (Direct 1-Klik) */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="block text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Bluetooth className="w-4 h-4 text-blue-900" />
+                <span>2. Printer Bluetooth Thermal (1-Klik Cetak Langsung)</span>
+              </label>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mb-3">
+              Hubungkan printer thermal fisik Anda (Panda, Goojprt, Iware, RPP02N, Epson, Xprinter) untuk mencetak struk kasir seketika tanpa membuka pop-up print browser.
+            </p>
+
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                    btPrinter.isConnected
+                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                      : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    <Bluetooth className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-extrabold text-slate-900">
+                        {btPrinter.isConnected
+                          ? btPrinter.deviceName || 'Printer Bluetooth Terhubung'
+                          : 'Belum Ada Printer Terhubung'}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        btPrinter.isConnected
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {btPrinter.isConnected ? '● Terhubung' : 'Terputus'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {btPrinter.isConnected
+                        ? 'Siap mencetak langsung via Web Bluetooth API (ESC/POS).'
+                        : 'Nyalakan Bluetooth & printer thermal Anda, lalu klik hubungkan.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {btPrinter.isConnected ? (
+                    <button
+                      type="button"
+                      onClick={btPrinter.disconnect}
+                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                      <span>Putus</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleConnectBluetooth}
+                      disabled={btPrinter.isConnecting}
+                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      {btPrinter.isConnecting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Mencari Printer...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Hubungkan Printer Bluetooth</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {btPrinter.isConnected && (
+                <div className="pt-3 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestPrint}
+                    disabled={testingBt}
+                    className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-900 border border-slate-300 hover:border-blue-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>{testingBt ? 'Mencetak...' : `Cetak Uji Coba (${paperSize})`}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTestKickDrawer}
+                    disabled={kickingBt}
+                    className="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-900 border border-slate-300 hover:border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Coins className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{kickingBt ? 'Mengirim Sinyal...' : 'Uji Buka Laci Kasir'}</span>
+                  </button>
+                </div>
+              )}
+
+              {btPrinter.lastError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span>{btPrinter.lastError}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Informasi Header Outlet */}
           <div className="pt-4 border-t border-slate-100">
             <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-2">
-              2. Kop &amp; Header Struk (Otomatis dari Profil Toko)
+              3. Kop &amp; Header Struk (Otomatis dari Profil Toko)
             </label>
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
               <div className="flex justify-between">
@@ -200,12 +388,12 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             </p>
           </div>
 
-          {/* Pengaturan Nomor Antrean / Panggilan Pesanan */}
+          {/* 4. Pengaturan Nomor Antrean / Panggilan Pesanan */}
           <div className="pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
-                  3. Nomor Antrean / Panggilan Pesanan (#01)
+                  4. Nomor Antrean / Panggilan Pesanan (#01)
                 </label>
                 <p className="text-xs text-slate-500 font-medium">
                   Cetak nomor panggilan berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan barista/pelayan memanggil pelanggan secara cepat tanpa perlu input nama/meja.
@@ -223,10 +411,10 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Catatan Kaki (Footer Text) */}
+          {/* 5. Catatan Kaki (Footer Text) */}
           <div className="pt-4 border-t border-slate-100">
             <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5">
-              4. Pesan Footer Struk (Catatan Kaki)
+              5. Pesan Footer Struk (Catatan Kaki)
             </label>
             <p className="text-xs text-slate-500 mb-2 font-medium">
               Teks yang tercetak di bagian paling bawah struk belanja kasir.
@@ -238,6 +426,158 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
               placeholder="Contoh: Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @toko.anda"
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-hidden font-mono"
             />
+          </div>
+
+          {/* 6. Watermark Struk Kasir ("Powered by Well POS") */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
+                  6. Watermark Struk (&quot;Powered by Well POS&quot;)
+                </label>
+                <p className="text-xs text-slate-500 font-medium">
+                  Tampilkan identitas branding &quot;Powered by Well POS&quot; di bagian paling bawah struk kasir, nota PDF, cetak printer thermal fisik, dan pesan WhatsApp.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={showWatermark}
+                  onChange={(e) => setShowWatermark(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* 7. Otomasi Pengiriman Struk WhatsApp Gateway (Fonnte API) */}
+          <div className="pt-4 border-t border-slate-100 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  <span>7. Pengiriman Struk Otomatis via WhatsApp Gateway</span>
+                </label>
+                <p className="text-xs text-slate-500 font-medium">
+                  Kirim nota/struk belanja langsung ke WhatsApp pelanggan saat kasir menyelesaikan checkout secara otomatis tanpa perlu membuka aplikasi WhatsApp.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={waEnabled}
+                  onChange={(e) => setWaEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            {waEnabled && (
+              <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-3.5 animate-in fade-in">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <span className="text-xs font-extrabold text-emerald-950">
+                      Sumber Kuota WhatsApp Gateway
+                    </span>
+                    <p className="text-[11px] text-emerald-800/80">
+                      Pilih apakah menggunakan jalur gateway platform Superadmin atau token Fonnte milik toko sendiri.
+                    </p>
+                  </div>
+                  <div className="inline-flex rounded-xl bg-white p-1 border border-emerald-300 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setWaUsePlatformFallback(true)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        waUsePlatformFallback
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Gateway Platform
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWaUsePlatformFallback(false)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !waUsePlatformFallback
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Token Pribadi (Fonnte)
+                    </button>
+                  </div>
+                </div>
+
+                {!waUsePlatformFallback && (
+                  <div className="space-y-4 pt-2 border-t border-emerald-200/60">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Fonnte API Token Toko Anda
+                      </label>
+                      <input
+                        type="password"
+                        value={waApiKey}
+                        onChange={(e) => setWaApiKey(e.target.value)}
+                        placeholder="Contoh: aBcDeFgHiJkLmNoP123456"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-hidden"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Token disimpan aman dan terenkripsi untuk mengotorisasi pengiriman struk atas nama nomor toko Anda.
+                      </p>
+                    </div>
+
+                    {/* Panduan Eksklusif Owner untuk Aktivasi Fonnte */}
+                    <div className="p-4 bg-white rounded-2xl border border-emerald-200/80 shadow-2xs space-y-2.5 text-xs text-slate-700">
+                      <div className="flex items-center gap-1.5 font-black text-emerald-950">
+                        <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span>Panduan Aktivasi WhatsApp Gateway Toko (Fonnte API)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Sebagai Owner, Anda dapat menghubungkan nomor WhatsApp bisnis toko agar kasir dapat mengirim struk belanja pelanggan secara otomatis:
+                      </p>
+                      <ol className="list-decimal pl-4 space-y-1.5 text-slate-600 text-[11px] leading-relaxed">
+                        <li>
+                          Buka situs resmi{' '}
+                          <a
+                            href="https://fonnte.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-emerald-700 font-bold underline inline-flex items-center gap-0.5 hover:text-emerald-800"
+                          >
+                            fonnte.com <ExternalLink className="w-3 h-3 inline" />
+                          </a>{' '}
+                          dan daftarkan akun toko Anda.
+                        </li>
+                        <li>
+                          Di dashboard Fonnte, masuk ke menu <strong>Device</strong> lalu lakukan <strong>Scan QR</strong> menggunakan nomor WhatsApp resmi toko hingga status terhubung (<em>Connected</em>).
+                        </li>
+                        <li>
+                          Salin <strong>API Token</strong> perangkat Anda dari dashboard Fonnte.
+                        </li>
+                        <li>
+                          Tempelkan token tersebut pada kolom input di atas, lalu klik tombol <strong>Simpan Format Struk</strong> di bawah.
+                        </li>
+                        <li>
+                          <strong>Selesai!</strong> Kasir di meja pembayaran kini dapat langsung mengirimkan struk otomatis ke nomor pembeli hanya dengan 1 kali klik.
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+
+                {waUsePlatformFallback && (
+                  <div className="text-[11px] text-emerald-900 bg-white/80 p-2.5 rounded-xl border border-emerald-200/60 flex items-center gap-2">
+                    <span className="text-emerald-600 font-bold">●</span>
+                    <span>
+                      Menggunakan jalur integrasi <strong>WhatsApp Gateway Platform (Superadmin)</strong>. Toko tidak perlu mengonfigurasi API token sendiri.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
@@ -271,6 +611,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             address={activeOutlet?.address || 'Jl. Kemang Raya No. 10, Jakarta Selatan'}
             phone={activeOutlet?.phone || '0812-3456-7890'}
             showQueueNumber={showQueueNumber}
+            showWatermark={showWatermark}
             footerText={footerText}
             showControls={false}
           />

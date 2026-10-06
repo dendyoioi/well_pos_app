@@ -181,14 +181,15 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `services/purchasing.service.ts`: Purchase order supplier & update HPP moving average saat penerimaan barang.
   - `services/stock_transfer.service.ts`: Mutasi & alokasi transfer stok antar outlet/gudang.
   - `services/mail.service.ts`: Layanan notifikasi email transaksional & invoice SaaS.
+  - `services/whatsapp.service.ts`: Otomasi WhatsApp Gateway resmi (Fonnte API), normalisasi nomor telepon Indonesia (+628...), builder markdown struk, multi-level token resolution (Toko -> Platform -> Sandbox Simulator), background auto-send saat checkout, dan manual trigger kasir.
   - `services/role.service.ts`: Manajemen matriks izin RBAC per role pengguna.
   - `services/dual_write/sales.dual_write.service.ts`: Mesin ACID checkout, mutasi stok, open tab, dan dynamic warehouse backflushing.
   - `services/read_adapters/`: Adapter pembacaan terisolasi (`catalog.read_adapter.ts`, `inventory.read_adapter.ts`, `order.read_adapter.ts`, `report.read_adapter.ts`).
 - **Controllers Kunci**:
   - `controllers/auth.controller.ts`: Login password bcrypt (Owner/Admin), login PIN kasir bcrypt, get profile, pair device terminal.
-  - `controllers/saas.controller.ts`: Pendaftaran mandiri (`registerClient`), setup awal toko (`createInitialStore`), onboarding, status lisensi langganan live (`getSubscriptionStatus`), top-up saldo token kuota mandiri (`topUpSubscriptionTokens`), verifikasi kupon promo B2B (`validateTenantPromoCode`), riwayat faktur digital tenant (`getSubscriptionInvoices`), dan notifikasi resmi Superadmin (`getTenantNotifications`).
-  - `controllers/platform.controller.ts`: Kontrol Superadmin (triage pendaftar, verifikasi nomor WA, setujui/tolak status tenant, impersonasi toko, buku besar billing & mutasi token `/api/platform/invoices`, manajemen staf platform RBAC `/api/platform/users`, promo SaaS B2B voucher engine `/api/platform/promos`, serta Pusat Notifikasi & Broadcast Superadmin `/api/platform/notifications`).
-  - `controllers/outlet.controller.ts`: Manajemen outlet toko & gudang, alokasi pasokan `warehouseId`, konfigurasi kanal & pajak PB1/service charge.
+  - `controllers/saas.controller.ts`: Pendaftaran mandiri (`registerClient`), setup awal toko (`createInitialStore`), onboarding, publik platform config & tarif pendaftaran (`getPublicPlatformConfig`), validasi voucher registrasi landing page (`validateRegistrationPromoCode`), status lisensi langganan live (`getSubscriptionStatus`), top-up saldo token kuota mandiri (`topUpSubscriptionTokens`), verifikasi kupon promo B2B (`validateTenantPromoCode`), riwayat faktur digital tenant (`getSubscriptionInvoices`), dan notifikasi resmi Superadmin (`getTenantNotifications`).
+  - `controllers/platform.controller.ts`: Kontrol Superadmin (triage pendaftar, verifikasi nomor WA, setujui/tolak status tenant, impersonasi toko, buku besar billing & mutasi token `/api/platform/invoices`, manajemen staf platform RBAC `/api/platform/users`, promo SaaS B2B voucher engine `/api/platform/promos`, Pusat Notifikasi & Broadcast Superadmin `/api/platform/notifications`, serta Integrasi WhatsApp Gateway Platform `/api/platform/whatsapp/*`).
+  - `controllers/outlet.controller.ts`: Manajemen outlet toko & gudang, alokasi pasokan `warehouseId`, konfigurasi kanal, format struk, WhatsApp config, dan pajak PB1/service charge.
   - `controllers/product.controller.ts` & `controllers/category.controller.ts`: CRUD master katalog produk, kategori, varian, dan scoping `outlet_products`.
   - `controllers/inventory.controller.ts`: Saldo stok fisik, opname, kartu mutasi, dan alokasi stok gudang.
   - `controllers/recipe.controller.ts` & `controllers/modifier.controller.ts`: Takaran resep F&B BOM, modifiers/topping, dan kalkulasi HPP.
@@ -196,7 +197,7 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `controllers/supplier.controller.ts` & `controllers/purchase_order.controller.ts`: CRUD pemasok/vendor & siklus PO.
   - `controllers/stock_transfer.controller.ts`: Mutasi pemindahan barang antar cabang & dari gudang pusat.
   - `controllers/promotion.controller.ts`: CRUD voucher promo kupon & diskon.
-  - `controllers/order.controller.ts`: Riwayat transaksi, open tab meja terisi, cetak ulang struk, void order.
+  - `controllers/order.controller.ts`: Riwayat transaksi, open tab meja terisi, cetak ulang struk, void order, background auto-send WhatsApp, dan manual trigger WhatsApp Gateway (`/api/orders/:id/send-whatsapp`).
   - `controllers/shift.controller.ts`: Buka/tutup shift kasir, laporan X/Z report, selisih kas (*cash over/short*).
   - `controllers/customer.controller.ts`: CRM member & rekap saldo poin loyalitas.
   - `controllers/report.controller.ts`: Laporan finansial, P&L, analisis performa menu & HPP.
@@ -208,13 +209,14 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
 - **Main Shell**: `App.tsx` (Routing modal hash `#landing`, `#pos` / `#login`, `#superadmin`, `#qr-menu`, context validator).
 - **Core SaaS & Autentikasi**:
   - `pages/SaasLandingPage.tsx`: Halaman depan publik SaaS, tabel komparasi paket, modal pendaftaran mandiri 5-field (`#register`).
-  - `pages/SuperadminDashboardPage.tsx`: Control tower SuperAdmin platform bernuansa obsidian dark mode premium dengan **Sidebar Menu vertikal modular di Desktop** dan **Burger Bar Drawer di Handheld/Mobile**, mengelompokkan 6 modul navigasi:
+  - `pages/SuperadminDashboardPage.tsx`: Control tower SuperAdmin platform bernuansa obsidian dark mode premium dengan **Sidebar Menu vertikal modular di Desktop** dan **Burger Bar Drawer di Handheld/Mobile**, mengelompokkan 7 modul navigasi:
     1. **Modul 1: Manajemen Merchant & Saldo Token**: Triage status pendaftar, pemantauan sirkulasi token Pay-As-You-Go, accordion outlet fisik & gudang, serta modal top-up kuota dengan kalkulator promo.
     2. **Modul 2: Master Paket Kuota Fleksibel**: Matriks komparasi fitur F&B, tarif per order, limit cabang/kasir.
     3. **Modul 3: Riwayat Billing & Invoicing (Ledger)**: Audit mutasi kas masuk, pelacakan faktur setup fee & top-up token, serta pratinjau faktur digital sah elektronik (Tax Invoice Preview).
     4. **Modul 4: Master Promo SaaS (B2B Voucher Engine)**: Penerbitan kupon diskon onboarding & bonus token transaksi level platform.
     5. **Modul 5: Tim Staff Platform (RBAC)**: Tata kelola wewenang staf internal Well POS HQ (`SUPER_ADMIN`, `BILLING`, `SUPPORT`) dengan proteksi root SuperAdmin.
     6. **Modul 6: Pusat Siaran & Notifikasi**: Penerbitan pesan pengumuman massal & status pemeliharaan sistem ke toko.
+    7. **Modul 7: WhatsApp Gateway Platform (Fonnte API)**: Pusat pengaturan Fonnte API Key platform, nomor pengirim resmi, sakelar izin fallback tenant, dan uji coba pengiriman live/simulator.
   - `pages/LoginPage.tsx`: Dual-login (Login kasir dengan ID Toko + PIN Kasir Bcrypt & Login Backoffice Owner via Email + Password Bcrypt).
   - `pages/DashboardPage.tsx`: Gatekeeper onboarding toko (jika `outlets.length === 0` tampilkan `FullScreenStoreWizard`, jika toko ada masuk ke `BackofficeLayout`), auto-redirect tab kasir ke tab inventori saat masuk mode gudang.
   - `components/saas/FullScreenStoreWizard.tsx`: Wizard layar penuh onboarding toko perdana dengan master 58 klasifikasi sub-industri (Ritel, F&B, Jasa).
@@ -236,7 +238,7 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `pages/ProductAnalyticsView.tsx`: Analisis Menu & HPP (peringkat menu terlaris Pareto, kontribusi laba kotor & margin per resep produk, modal bahan baku COGS, dan analisis slow-moving/dead stock).
   - `pages/ShiftsAuditView.tsx`: Audit rekap shift kasir, rekonsiliasi kas (X/Z Report) & deteksi selisih kas.
   - `pages/UsersView.tsx` & `pages/StaffRolesView.tsx`: Manajemen staf toko & matriks perizinan hak akses multi-role.
-  - `pages/ReceiptSettingsView.tsx`: Kustomisasi format struk kasir (58mm/80mm, kop toko, footer) & live thermal preview.
+  - `pages/ReceiptSettingsView.tsx`: Kustomisasi format struk kasir (58mm/80mm, kop toko, footer, toggle nomor antrean, toggle watermark "Powered by Well POS" [default aktif], koneksi Direct Web Bluetooth thermal printer & cash drawer, serta otomasi WhatsApp Gateway Fonnte) & live thermal preview.
   - `pages/TaxesSettingsView.tsx`: Konfigurasi Pajak Daerah Restoran (PB1 10%), Service Charge, dan Biaya Kemasan Takeaway.
   - `pages/SalesChannelsSettingsView.tsx`: Manajemen kanal penjualan langsung & mitra online delivery (GoFood, GrabFood, ShopeeFood, Maxim), RBAC hak akses, dan zero stacked modals.
   - `pages/PaymentSettingsView.tsx`: Konfigurasi metode pembayaran toko, dropzone upload QRIS statis cabang, NMID nasional, bank penerbit, dan live preview kartu QRIS.
@@ -246,8 +248,12 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `pages/QrLiveOrdersView.tsx`: Live feed pesanan dapur masuk dari self-ordering QR meja secara real-time.
   - `pages/QrMenuSettingsView.tsx`: Pengaturan nama kafe, logo, banner, dan instruksi bayar di kasir.
 - **Pusat Panduan & SOP Operasional (Knowledge Base & Interactive Guide)**:
-  - `pages/UserGuideView.tsx`: Halaman mandiri dokumentasi panduan visual berstruktur 12 bab SOP lengkap dengan screenshot antarmuka resolusi tinggi, filter multi-peran, search live, dan tombol pintas aksi langsung ke menu konfigurasi.
+  - `pages/UserGuideView.tsx`: Halaman mandiri dokumentasi panduan visual berstruktur 18 bab SOP lengkap (mencakup Onboarding, Katalog Produk, Mode Gudang, Pajak PB1, Format Struk, Kanal Mitra, Pairing PIN Kasir, POS Terminal, Shift X/Z, Void PIN Supervisor, Mutasi Stok, QR Meja, Kelola Staf, Bluetooth Thermal Printer, WhatsApp Gateway & Resi Digital, PWA Standalone Layar Penuh, Kebijakan Open Tab vs Pesanan Susulan, dan Metode Pembayaran Digital) dengan screenshot antarmuka resolusi tinggi, filter multi-peran, search live, dan tombol pintas aksi langsung ke menu konfigurasi.
   - `components/ui/FloatingGuideWidget.tsx`: Widget bantuan melayang di sudut kanan bawah backoffice yang interaktif mendeteksi tab konfigurasi aktif dan menyediakan akses cepat ke bab SOP terkait serta pembukaan Pusat Panduan Lengkap. Akses panduan juga tersedia di kartu bantuan footer sidebar Backoffice.
+- **Infrastruktur Hardware & Progressive Web App (PWA)**:
+  - `services/bluetoothPrinter.service.ts` & `hooks/useBluetoothPrinter.ts`: Driver Web Bluetooth Thermal ESC/POS (58mm/80mm), 1-klik cetak langsung tanpa pop-up dialog print browser, dan pemicu sinyal laci kasir otomatis (pulse ESC/POS 24V).
+  - `services/pwa.service.ts` & `hooks/usePwaInstall.ts`: Progressive Web App (PWA) installation lifecycle, Service Worker caching (`sw.js`), Web App Manifest (`manifest.webmanifest`), dan instalasi banner kontekstual di sidebar Backoffice.
+  - `utils/escpos.ts`: Encoder binary ESC/POS untuk feed, align, bold, font size, cut paper, dan cash drawer pulse.
 
 ## 7. ARSITEKTUR AUTENTIKASI, ONBOARDING & TATA KELOLA MULTI-TOKO
 
@@ -352,7 +358,9 @@ Well POS menerapkan sistem hak akses berbasis domain fungsional operasional nyat
 3. **Dual-Action Checkout (Bayar Langsung vs Bayar Belakangan / Open Tab)**:
    - **Bayar Langsung (Tender Langsung)**: Membuka modal multi-tender (Cash, QRIS, Kartu Debit/Kredit) dan langsung menghasilkan transaksi `PAID` / `COMPLETED`.
    - **Simpan & Kirim Dapur (Bayar Nanti / Open Tab)**: Khusus pesanan Dine In (makan di tempat dengan meja), kasir dapat mengirim pesanan ke dapur dengan status `paymentStatus: 'UNPAID'` via `POST /api/orders/open-tab`.
-   - **Pelunasan Meja Terisi**: Kasir dapat memantau seluruh meja belum lunas lewat modal `OpenTabsModal` ("Tagihan Meja"), menarik kembali pesanan ke kasir (menambah item menu), atau langsung menyelesaikan pembayaran (`existingOrderId` via `salesDualWriteService.processCheckout`).
+   - **Pelunasan Meja Terisi & Aturan Pesanan Susulan**:
+     - **Pesanan Lunas (`PAID`) Tidak Boleh Susulan**: Transaksi yang telah dibayar berstatus final (*closed accounting record*). Dilarang menyajikan tombol "+ Susulan" pada transaksi `PAID` (baik di modal sukses bayar `OrderSuccessModal`, riwayat `OrdersView`, maupun `OrderDetailModal`). Jika pelanggan yang sudah melunasi tagihannya ingin memesan menu tambahan, kasir membuat transaksi baru seperti biasa.
+     - **Pesanan Susulan Khusus Tagihan Aktif Belum Bayar (`UNPAID`)**: Aksi "+ Susulan" dikhususkan eksklusif untuk pesanan aktif `DINE_IN` dengan `paymentStatus: 'UNPAID'`. Saat kasir menekan "+ Susulan", sistem memuat item sebelumnya ke keranjang kasir (`handlePullAppendOrder`), mengikat `activePulledOrder` & `activeOpenTab` (`existingOrderId`), sehingga penambahan menu baru otomatis menyatu ke dalam tagihan meja yang sama tanpa menyebabkan meja terblokir/konflik (*table occupied conflict*). Kasir dapat memperbarui tagihan ke dapur atau langsung melunasi seluruhnya (`processCheckout` dengan `existingOrderId`).
 
 4. **Pengeluaran Kasir Dinamis & Petty Cash Laci (Kas Masuk / Kas Keluar)**:
    - Kasir yang diberikan izin oleh Owner (`canCashOut: true` atau memiliki peran Owner/Admin/Supervisor) dapat mencatat mutasi kas operasional (`CashMovement`) langsung dari laci kasir saat shift berjalan (contoh: iuran lingkungan/sampah, belanja darurat toko seperti es batu/gas, ongkir kurir, dsb).
@@ -440,7 +448,7 @@ Berikut adalah catatan hal-hal yang **masih disimulasikan / belum terhubung ke p
 | **Printer Kasir** | Menggunakan dialog browser `window.print()` dan canvas PDF. | Perlu driver **Web Bluetooth / USB ESC/POS binary** tanpa dialog browser, auto-cutter paper, dan trigger buka laci kasir (*cash drawer kick*). |
 | **Barcode Scanner** | Hanya merespons text field input aktif. | Perlu global keyboard wedge listener (< 50ms keystroke gap) agar scan barcode fisik langsung masuk keranjang belanja dari layar mana pun. |
 | **Payment Gateway** | Webhook simulator & URL pembayaran mock (`simulator.controller.ts`). | Perlu integrasi API credentials live Midtrans / Xendit dengan validasi tanda tangan kriptografi (`Signature Key`). |
-| **WhatsApp Gateway** | Menggunakan URL link manual `api.whatsapp.com/send?...`. | Perlu engine otomatis via provider WhatsApp Gateway resmi (Fonnte/Waba/Twilio) agar OTP dan digital receipt terkirim di background. |
+| **WhatsApp Gateway** | **SELESAI (EPIC-25) ✅**: Terintegrasi resmi Fonnte API (`whatsapp.service.ts`), background auto-send checkout, 1-klik kasir di `OrderSuccessModal.tsx`, dan arsitektur token multi-level (Toko -> Platform -> Sandbox Simulator). | Siap produksi live Fonnte maupun simulasi sandbox. |
 | **Email SMTP** | Mock transporter nodemailer (output terminal). | Perlu koneksi ke relay SMTP produksi (Resend, SendGrid, Mailgun, atau AWS SES) untuk notifikasi tagihan dan invoice. |
 | **UI Resep & KDS** | UI Resep (`RecipesView.tsx`) & Live Orders Dapur (`QrLiveOrdersView.tsx`) telah aktif di Backoffice. | Opsional: Penambahan mode layar sentuh terisolasi khusus *Station KDS Dapur* (Kitchen Display Station) tanpa akses navigasi backoffice. |
 | **UI Purchasing PO** | Modul Pemasok (`SuppliersView.tsx`) aktif; Backend API PO & Transfer siap. | Perlu tab formulir Purchase Order supplier dan penerimaan surat jalan barang masuk langsung di UI. |
@@ -579,6 +587,19 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
       - *Foto Produk*: Maksimal dimensi $600\times 600\text{px}$, format WebP (fallback JPEG), kualitas $0.8$ ($80\%$). Menurunkan ukuran file foto dari $\sim 2\text{MB}$ ke $\sim 30\text{--}60\text{KB}$ (efisiensi ruang dan bandwidth $\ge 90\%$).
       - *Barcode QRIS*: Maksimal dimensi $800\times 800\text{px}$, kualitas $0.85$ ($85\%$) untuk menjamin ketajaman pemindaian optik barcode kamera tanpa mengorbankan performa.
     - **Toleransi File Kamera Ponsel**: Pengguna diizinkan mengunggah file foto beresolusi tinggi langsung dari kamera HP hingga $15\text{MB}$. Browser secara otomatis mengompresi dan menampilkan statistik penghematan ukuran data (`savingsPercent` dan perbandingan ukuran sebelum vs sesudah).
+24. **Standar Progressive Web App (PWA) & 1-Click Install ke Layar Utama (Home Screen HP/Tablet/Desktop)**:
+    - **Web App Manifest**: Berkas `public/manifest.webmanifest` wajib memiliki konfigurasi `display: "standalone"`, `theme_color: "#0f172a"`, `background_color: "#ffffff"`, serta ikon beresolusi tinggi format SVG (`icon-192.svg`, `icon-512.svg`, dan `icon-maskable.svg` dengan safe-zone margin 15%).
+    - **Service Worker Caching Cerdas (`public/sw.js`)**: Menerapkan *stale-while-revalidate* untuk aset statis frontend (CSS, JS bundle, SVG icon, font) agar mesin kasir terbuka instan (< 300ms), dan *network-first* murni tanpa caching untuk seluruh endpoint `/api/*` guna menjamin transaksi kasir, mutasi stok, laporan keuangan, dan saldo token selalu akurat real-time.
+    - **Deteksi Platform & Banner Kanonikal**: Event bawaan `beforeinstallprompt` dicegat dan dikelola terpusat oleh `pwa.service.ts` serta diekspos reaktif melalui hook `usePwaInstall()`. Banner melayang `<PwaInstallBanner />` otomatis tampil di bawah layar (dapat disembunyikan per sesi via `sessionStorage`). Khusus perangkat Apple iOS (Safari iPhone/iPad), sistem mendeteksi platform dan menampilkan modal interaktif panduan 3 langkah (*Bagikan* $\rightarrow$ *Tambah ke Layar Utama*).
+    - **Akses Pasang Aplikasi Eksklusif di Sidebar ([`BackofficeLayout.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/saas/BackofficeLayout.tsx))**: Tombol `<PwaInstallButton />` diletakkan secara terfokus hanya pada bagian bawah menu sidebar navigasi Backoffice (menjaga topbar header dan form pengaturan tetap bersih, rapi, dan tidak penuh sesak oleh tombol).
+25. **Standar Komparasi Tanggal SQL & Penanganan Zona Waktu (WIB UTC+7 vs PostgreSQL `timestamp without time zone`)**:
+    - **Akar Masalah**: Kolom `created_at` pada tabel PostgreSQL bertipe `timestamp without time zone` dan menyimpan nilai UTC (dari Node.js `new Date()`). Ketika query SQL mentransmisikan parameter tanggal `Date` atau `timestamptz` (seperti batas hari WIB `00:00:00+07:00` = `17:00:00Z` hari sebelumnya), PostgreSQL secara otomatis meng-cast kolom `created_at` menggunakan session timezone (`Asia/Jakarta`). Akibatnya, nilai waktu UTC tergeser mundur 7 jam (contoh: transaksi pukul 05:35 WIB diinterpretasikan sebagai 15:35 WIB kemarin) sehingga transaksi pagi hari menghilang dari filter *Hari Ini*.
+    - **Solusi Kanonikal Wajib**: Pada seluruh raw query SQL (`$queryRawUnsafe` / adapter) yang membandingkan tanggal `created_at` dengan parameter rentang tanggal, WAJIB menggunakan konstruksi:
+      ```sql
+      AND created_at >= ($param AT TIME ZONE 'UTC')
+      AND created_at <= ($param AT TIME ZONE 'UTC')
+      ```
+      Pola ini dievaluasi oleh PostgreSQL pada *query planning phase* menjadi konstanta `timestamp without time zone` yang SARGable (100% ramah index tanpa sequence scan) dan menjamin transaksi dari jam 00:00 hingga 23:59 WIB tercakup secara sempurna.
 
 ---
 

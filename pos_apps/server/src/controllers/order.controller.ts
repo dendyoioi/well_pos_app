@@ -10,6 +10,7 @@ import { salesReadAdapter, isReadFromTargetEnabled } from '../services/read_adap
 import { loyaltyService, LoyaltyService } from '../services/loyalty.service';
 import { promotionService } from '../services/promotion.service';
 import { qrMenuService } from '../services/qr_menu.service';
+import { whatsAppService } from '../services/whatsapp.service';
 import { toWibDateStr } from '../utils/date.utils';
 
 // Skema validasi item keranjang belanja
@@ -658,6 +659,56 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       }
     }
 
+    // Otomatis kirim struk WhatsApp jika customerPhone terisi dan outlet/platform mengizinkan
+    const customerPhoneToSend = (result as any)?.customerPhone || finalCustomerPhone;
+    if (customerPhoneToSend && targetOutletId) {
+      try {
+        const outletConfig = (result as any)?.outlet?.receiptConfig;
+        const waConfig = outletConfig?.whatsappConfig;
+        if (waConfig?.autoSendOnCheckout !== false) {
+          whatsAppService
+            .sendOrderReceipt(
+              {
+                invoiceNumber: (result as any).invoiceNumber,
+                queueNumber: (result as any).queueNumber,
+                createdAt: (result as any).createdAt,
+                customerName: (result as any).customerName,
+                customerPhone: customerPhoneToSend,
+                outlet: {
+                  name: (result as any).outlet?.name || 'Well POS Toko',
+                  address: (result as any).outlet?.address,
+                  phone: (result as any).outlet?.phone,
+                  receiptConfig: outletConfig,
+                },
+                cashierName: (result as any).cashier?.name,
+                orderItems: ((result as any).orderItems || []).map((it: any) => ({
+                  name: it.product?.name || it.productName || 'Produk',
+                  quantity: it.quantity,
+                  unitPrice: it.unitPrice,
+                  discountAmount: it.discountAmount,
+                  subtotal: it.subtotal,
+                })),
+                subtotal: (result as any).subtotal,
+                discountAmount: (result as any).discountAmount,
+                taxAmount: (result as any).taxAmount,
+                serviceCharge: (result as any).serviceCharge,
+                grandTotal: (result as any).grandTotal,
+                pointsEarned: (result as any).pointsEarned,
+                pointsRedeemed: (result as any).pointsRedeemed,
+                pointDiscountAmount: (result as any).pointDiscountAmount,
+                payments: (result as any).payments || [],
+              },
+              customerPhoneToSend
+            )
+            .catch((waErr) => {
+              console.warn('[WHATSAPP AUTO-SEND BACKGROUND ERROR]', waErr);
+            });
+        }
+      } catch (err) {
+        console.warn('Gagal memicu pengiriman otomatis WhatsApp struk:', err);
+      }
+    }
+
     return res.status(201).json({
       status: 'success',
       message: 'Transaksi berhasil diselesaikan',
@@ -846,6 +897,103 @@ export const sendOrderEmail = async (req: Request, res: Response) => {
     return res.status(500).json({
       status: 'error',
       message: error.message || 'Gagal mengirim email struk',
+    });
+  }
+};
+
+/**
+ * Controller: Kirim Struk WhatsApp via Fonnte Gateway (atau Simulator)
+ * @route POST /api/orders/:id/send-whatsapp
+ */
+export const sendOrderWhatsApp = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { recipientPhone } = req.body;
+
+    let userTenantId = req.user?.tenantId || req.tenantId;
+    if (!userTenantId) {
+      const orderTenant = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT tenant_id FROM "orders" WHERE id = $1 LIMIT 1;`,
+        id
+      );
+      userTenantId = orderTenant[0]?.tenant_id;
+    }
+
+    const order = await salesReadAdapter.getOrderById(userTenantId || '', id);
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Transaksi tidak ditemukan',
+      });
+    }
+
+    const targetPhone = recipientPhone || order.customer?.phone;
+    if (!targetPhone || !targetPhone.trim()) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nomor WhatsApp tujuan wajib diisi',
+      });
+    }
+
+    // Ambil receiptConfig toko untuk template / custom Fonnte API Key
+    const outletRow = await prisma.outlet.findUnique({
+      where: { id: order.outletId },
+      select: { name: true, address: true, phone: true, receiptConfig: true },
+    });
+
+    const sendResult = await whatsAppService.sendOrderReceipt(
+      {
+        invoiceNumber: order.invoiceNumber,
+        queueNumber: order.queueNumber,
+        createdAt: order.createdAt,
+        customerName: order.customer?.name || null,
+        customerPhone: targetPhone,
+        outlet: {
+          name: outletRow?.name || order.outlet?.name || 'Well POS Toko',
+          address: outletRow?.address,
+          phone: outletRow?.phone,
+          receiptConfig: outletRow?.receiptConfig,
+        },
+        cashierName: order.cashier?.name,
+        orderItems: (order.orderItems || []).map((item: any) => ({
+          name: item.productName || item.name || 'Produk',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discountAmount: item.discountAmount,
+          subtotal: item.subtotal,
+        })),
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount || order.discountTotal || 0,
+        taxAmount: order.taxAmount || order.taxTotal || 0,
+        serviceCharge: order.serviceCharge || order.serviceTotal || 0,
+        grandTotal: order.grandTotal || order.totalAmount,
+        payments: (order.payments || []).map((p: any) => ({
+          method: p.method || p.paymentMethod || 'CASH',
+          amountPaid: p.amountPaid || p.amount,
+          changeGiven: p.changeGiven || 0,
+        })),
+      },
+      targetPhone
+    );
+
+    if (sendResult.status === 'success') {
+      return res.status(200).json({
+        status: 'success',
+        message: sendResult.message,
+        data: sendResult,
+      });
+    } else {
+      return res.status(400).json({
+        status: 'error',
+        message: sendResult.message,
+        data: sendResult,
+      });
+    }
+  } catch (error: any) {
+    console.error('Error saat mengirim WhatsApp struk:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Gagal mengirim WhatsApp struk',
     });
   }
 };
@@ -1578,7 +1726,7 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
         const queueResult = await prisma.$queryRawUnsafe<{ next_queue: number }[]>(
           `SELECT (COALESCE(MAX(queue_number), 0) + 1)::int as next_queue 
            FROM "orders" 
-           WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= $3;`,
+           WHERE tenant_id = $1 AND outlet_id = $2 AND created_at >= ($3 AT TIME ZONE 'UTC');`,
           tenantId,
           targetOutletId,
           todayStart

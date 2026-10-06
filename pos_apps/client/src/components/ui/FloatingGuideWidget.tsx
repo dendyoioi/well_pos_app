@@ -16,9 +16,9 @@ const TAB_CONTEXT_MAP: Record<
     subtitle: 'Cara mengatur tarif PB1 10%, service fee, dan packaging fee.',
   },
   settings_receipt: {
-    sectionId: 'receipt',
-    title: 'Panduan Format Struk Kasir',
-    subtitle: 'Pengaturan printer thermal 58/80mm & nomor antrean.',
+    sectionId: 'bluetooth_printer',
+    title: 'Panduan Struk, Printer & WA',
+    subtitle: 'Koneksi printer Bluetooth 58/80mm & otomatisasi resi WA.',
   },
   settings_channels: {
     sectionId: 'channels',
@@ -26,7 +26,7 @@ const TAB_CONTEXT_MAP: Record<
     subtitle: 'Atur mark-up harga mitra online GoFood/Grab/Shopee.',
   },
   settings_payment: {
-    sectionId: 'pos',
+    sectionId: 'payment_methods',
     title: 'Panduan Metode Pembayaran',
     subtitle: 'Aktivasi QRIS, EDC Bank, dan pembayaran tunai kasir.',
   },

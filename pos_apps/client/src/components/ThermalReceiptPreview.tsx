@@ -29,12 +29,14 @@ export interface ThermalReceiptPreviewProps {
   grandTotal?: number;
   paymentMethod?: string;
   footerText?: string;
+  showWatermark?: boolean;
   showControls?: boolean;
 }
 
 export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   paperSize = '58mm',
   onPaperSizeChange,
+  showWatermark = true,
   brandName = 'WELL POS CAFE',
   storeName = 'Outlet Kemang Raya',
   address = 'Jl. Kemang Raya No. 10, Jakarta Selatan',
@@ -255,10 +257,12 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
             <span className="text-[8px] mt-0.5 tracking-widest uppercase">E-Receipt Verified</span>
           </div>
 
-          {/* Signature */}
-          <div className="text-center text-[8px] text-slate-400 pt-1">
-            Powered by Well POS
-          </div>
+          {/* Signature / Watermark */}
+          {showWatermark && (
+            <div className="text-center text-[8px] text-slate-400 pt-1">
+              Powered by Well POS
+            </div>
+          )}
         </div>
 
         {/* Jagged / Sawtooth Bottom Edge */}

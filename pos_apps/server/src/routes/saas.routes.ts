@@ -9,6 +9,8 @@ import {
   topUpSubscriptionTokens,
   validateTenantPromoCode,
   getPublicPlatformPaymentConfig,
+  getPublicPlatformConfig,
+  validateRegistrationPromoCode,
   getTenantNotifications,
   handleBillingWebhook,
 } from '../controllers/saas.controller';
@@ -22,8 +24,10 @@ import { tenantContext } from '../middlewares/saas.middleware';
 
 export const saasRouter = Router();
 
-// Endpoint Pendaftaran Mandiri (Public)
+// Endpoint Pendaftaran Mandiri & Info Publik (Public)
 saasRouter.post('/register', registerClient);
+saasRouter.get('/public-config', getPublicPlatformConfig);
+saasRouter.get('/promos/validate-registration', validateRegistrationPromoCode);
 
 // Endpoint Pembuatan Toko Perdana dari Full-Screen Wizard (Memerlukan Login Owner)
 saasRouter.post('/stores/create-initial', authenticate, tenantContext, createInitialStore);

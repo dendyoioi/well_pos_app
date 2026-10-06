@@ -1,0 +1,56 @@
+{
+  "name": "Well POS — Aplikasi Kasir & Stok Toko",
+  "short_name": "Well POS",
+  "description": "Sistem Kasir Cloud (POS), Manajemen Stok Bahan F&B & Ritel, serta Multi-Outlet Terpadu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090d16",
+  "theme_color": "#0f172a",
+  "lang": "id",
+  "categories": ["business", "finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Terminal Kasir POS",
+      "short_name": "Kasir",
+      "description": "Buka langsung layar penjualan kasir cepat",
+      "url": "/#pos",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ringkasan Bisnis",
+      "short_name": "Dashboard",
+      "description": "Lihat omset, laba, dan transaksi harian",
+      "url": "/#overview",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Format Struk Kasir",
+      "short_name": "Struk",
+      "description": "Pengaturan printer thermal & format nota",
+      "url": "/#receipt_settings",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { CustomerQrMenuView } from './pages/CustomerQrMenuView';
 import { api, authStorage } from './services/api';
 import type { User } from './types/auth';
 import { DialogProvider } from './context/DialogContext';
+import { PwaInstallBanner } from './components/PwaInstallBanner';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -259,6 +260,8 @@ export const App: React.FC = () => {
               />
             </div>
           )}
+          {/* Global Progressive Web App (PWA) Install Banner */}
+          <PwaInstallBanner />
         </div>
       </DialogProvider>
     </ErrorBoundary>

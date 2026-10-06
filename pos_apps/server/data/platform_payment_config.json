@@ -1,4 +1,6 @@
 {
+  "registrationFee": 99000,
+  "registrationBonusTokens": 100,
   "tokenPrice": 100,
   "minTokenPurchase": 100,
   "qrisEnabled": true,

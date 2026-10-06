@@ -27,6 +27,9 @@ import {
   getPlatformNotifications,
   createPlatformNotification,
   deletePlatformNotification,
+  getPlatformWhatsAppSettings,
+  updatePlatformWhatsAppSettings,
+  testPlatformWhatsAppConnection,
 } from '../controllers/platform.controller';
 
 export const platformRouter = Router();
@@ -66,6 +69,11 @@ platformRouter.delete('/promos/:id', authenticatePlatform, deletePlatformPromo);
 // Rute Konfigurasi Pembayaran & QRIS Statis Platform
 platformRouter.get('/payment-config', authenticatePlatform, getPlatformPaymentSettings);
 platformRouter.put('/payment-config', authenticatePlatform, updatePlatformPaymentSettings);
+
+// Rute Konfigurasi WhatsApp Gateway Platform (Fonnte)
+platformRouter.get('/whatsapp/settings', authenticatePlatform, getPlatformWhatsAppSettings);
+platformRouter.put('/whatsapp/settings', authenticatePlatform, updatePlatformWhatsAppSettings);
+platformRouter.post('/whatsapp/test', authenticatePlatform, testPlatformWhatsAppConnection);
 
 // Rute Pengelolaan Notifikasi & Pengumuman Superadmin
 platformRouter.get('/notifications', authenticatePlatform, getPlatformNotifications);

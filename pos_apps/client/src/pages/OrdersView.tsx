@@ -565,13 +565,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                               </span>
                             ) : (
                               <>
-                                {/* Tombol + Susulan: HANYA DINE_IN & BUKAN VOID */}
-                                {onAppendOrder && order.channel === 'DINE_IN' && (
+                                {/* Tombol + Susulan: HANYA DINE_IN & BELUM BAYAR (UNPAID) */}
+                                {onAppendOrder && order.channel === 'DINE_IN' && order.paymentStatus === 'UNPAID' && (
                                   <button
                                     type="button"
                                     onClick={() => onAppendOrder(order)}
                                     className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
-                                    title="Tambah Pesanan Susulan (Khusus Makan di Tempat)"
+                                    title="Tambah Pesanan Susulan (Khusus Meja Belum Bayar)"
                                   >
                                     <UtensilsCrossed className="w-4 h-4 text-amber-700" />
                                   </button>
@@ -706,13 +706,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                         </span>
                       ) : (
                         <>
-                          {/* Tombol + Susulan: HANYA DINE_IN & BUKAN VOID */}
-                          {onAppendOrder && order.channel === 'DINE_IN' && (
+                          {/* Tombol + Susulan: HANYA DINE_IN & BELUM BAYAR (UNPAID) */}
+                          {onAppendOrder && order.channel === 'DINE_IN' && order.paymentStatus === 'UNPAID' && (
                             <button
                               type="button"
                               onClick={() => onAppendOrder(order)}
                               className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
-                              title="Tambah Pesanan Susulan (Khusus Makan di Tempat)"
+                              title="Tambah Pesanan Susulan (Khusus Meja Belum Bayar)"
                             >
                               <UtensilsCrossed className="w-4 h-4 text-amber-700" />
                             </button>
@@ -774,7 +774,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         order={selectedOrder}
-        onAppendOrder={onAppendOrder}
       />
 
       {/* Modal Rincian Lengkap Transaksi */}

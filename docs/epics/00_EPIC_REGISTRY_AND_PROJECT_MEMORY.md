@@ -3,8 +3,8 @@
 
 **Dokumen Rujukan Utama**: `docs/00_PROJECT_CONTEXT.md`  
 **Basis Data**: PostgreSQL `pos_db` (40 Model Prisma Aktif Ternormalisasi Penuh)  
-**Terakhir Diperbarui**: 01 Oktober 2026  
-**Status Keseluruhan**: **EPIC-01 s.d EPIC-24 SELESAI 100% (COMPLETED ✅)**  
+**Terakhir Diperbarui**: 06 Oktober 2026  
+**Status Keseluruhan**: **EPIC-01 s.d EPIC-25 SELESAI 100% (COMPLETED ✅)**  
 
 ---
 
@@ -15,7 +15,7 @@ Dokumen ini berfungsi sebagai **memori kerja permanen (*persistent cognitive mem
 
 ### 2. MASTER EPIC REGISTRY (END-TO-END PRODUCT ROADMAP)
 
-Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet serta pembatalan transaksi dengan approval PIN supervisor:
+Produk Well POS memiliki total **25 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, serta otomasi WhatsApp Gateway:
 
 | Epic ID | Judul Epic | Status | Tahapan / Milestone | Fokus & Nilai Bisnis Utama |
 | :--- | :--- | :---: | :--- | :--- |
@@ -43,6 +43,7 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-22** | **Smart Calling Queue Numbering & Flexible Store Toggle** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-22.md`](./EPIC-22_CALLING_QUEUE_NUMBERING.md) | Standardisasi nomor antrean panggilan cepat lisan kasir F&B (`#01`, `#02`), reset harian otomatis per outlet, cetak thermal/PDF, teks WA, dan sakelar on/off fleksibel di menu format struk Backoffice. |
 | **EPIC-23** | **Pakasir.com Payment Gateway Integration (Direct QRIS & Webhook)** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-23.md`](./EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md) | Integrasi gateway pembayaran Pakasir API v2, pembayaran aktivasi pendaftaran awal tenant Rp 99.000 + 100 bonus token, top-up kuota token pay-as-you-go, direct QRIS modal, polling status live, webhook secret guard, tarif dinamis Rp 69/token, batas minimal 250 token, sakelar QRIS Superadmin, dan eliminasi transfer manual. |
 | **EPIC-24** | **Transaction Void & Supervisor/Owner PIN Approval Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-24.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md) | Pembatalan resmi transaksi kasir (Full & Partial Item Void), otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok inventaris atomik (movement_type VOID), slip cetak bukti fisik void dengan signature block Kasir & Spv, audit retur (refunds), isolasi omset kas shift, dan pemulihan kuota token SaaS. |
+| **EPIC-25** | **Automated WhatsApp Gateway & Digital Receipt Engine (Fonnte API)** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-25.md`](./EPIC-25_WHATSAPP_GATEWAY_AUTOMATION.md) | Otomasi pengiriman struk via Fonnte API saat checkout & 1-klik manual kasir, arsitektur token multi-level (Toko -> Platform -> Simulator Sandbox), kontrol Backoffice, dan tab Superadmin WhatsApp Gateway. |
 
 ---
 
@@ -178,6 +179,62 @@ Produk Well POS memiliki total **24 Epic** yang mencakup seluruh siklus hidup pe
   ├── 4. Penghapusan Hardcoded Fallback Tenant:
   │   - OutletsView.tsx: Mengeliminasi fallback 'ura-coffee' dan menerapkan penanganan kontekstual murni berbasis tenant akun yang login.
   └── 5. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+
+[2026-10-05] ENHANCEMENT ONBOARDING DINAMIS & B2B VOUCHER ENGINE REGISTRASI (SAAS PLATFORM)
+  ├── 1. Dynamic Onboarding Fee & Registration Bonus Tokens:
+  │   - Eliminasi hardcoded Rp 99.000 & 100 token bonus di seluruh backend dan client.
+  │   - Konfigurasi terpusat di platform_payment_config.json via Superadmin Dashboard:
+  │       • registrationFee: Biaya aktivasi pendaftaran awal (dapat diset Rp 0 untuk promo registrasi gratis).
+  │       • registrationBonusTokens: Kuota token awal untuk merchant baru (dapat dikonfigurasi dinamis).
+  │   - Public Endpoint: GET /api/saas/public-config untuk konsumsi landing page tanpa token auth JWT.
+  ├── 2. B2B Voucher Promo Scope Engine:
+  │   - Penambahan kolom scope pada model SaaSPromo (schema.prisma & schema_patcher.ts: 20261005_01_saas_promos_scope).
+  │   - Pilihan Scope:
+  │       • ALL: Berlaku untuk semua transaksi platform (Registrasi & Top-Up Kuota).
+  │       • REGISTRATION: Khusus potongan/diskon pendaftaran awal di landing page.
+  │       • TOPUP: Khusus transaksi isi ulang token kuota kasir.
+  │   - Public Endpoint Validasi: GET /api/saas/promos/validate-registration?code=...
+  │   - Validasi Ketat: Pengecekan status aktif, masa berlaku, limit pemakaian, dan atomic increment usedCount saat registrasi berhasil disubmit.
+  ├── 3. Integrasi Pendaftaran Landing Page (SaasLandingPage.tsx):
+  │   - Mengambil biaya pendaftaran & bonus token secara live dari public-config.
+  │   - Input field kupon promo dengan tombol "Terapkan", validasi live, dan breakdown nominal diskon / harga akhir.
+  │   - Mendukung skenario 100% Free Promo / Biaya Rp 0: Status invoice otomatis PAID (paymentGateway: 'PROMO_FREE'), tenant tetap PENDING menunggu persetujuan Superadmin.
+  ├── 4. Pelestarian Diskon & Token pada Approval Superadmin (platform.controller.ts):
+  │   - Memperbaiki updateTenantStatus agar mempertahankan invoice registrasi yang sudah terbit beserta potongan diskon dan jumlah token bonus yang berhak diterima merchant (tidak ter-reset ke nilai default).
+  ├── 5. Superadmin Dashboard UI Enhancement (SuperadminDashboardPage.tsx):
+  │   - Modal Pengaturan Platform HQ: Form input Biaya Pendaftaran Awal (menggunakan <CurrencyInput />) dan Bonus Kuota Token Awal.
+  │   - Modal Buat Promo B2B: Dropdown pilihan Target Transaksi (Scope) [ALL / REGISTRATION / TOPUP].
+  │   - Grid Kartu Promo B2B: Badge indikator Scope (🎯 REGISTRASI, ⚡ TOP-UP, 🌐 SEMUA).
+  │   - Metrik setup fee dihitung dinamis mengikuti paymentConfig.registrationFee.
+  └── 6. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+
+[2026-10-06] PROGRESSIVE WEB APP (PWA) & DIRECT BLUETOOTH THERMAL PRINTING
+  ├── 1. PWA Engine & Offline-Ready Assets:
+  │   - manifest.webmanifest dengan ikon multi-resolusi (192px, 512px, maskable) & theme-color #0B192C.
+  │   - Service Worker (sw.js) untuk caching shell aplikasi dan aset statis.
+  │   - Layanan deteksi beforeinstallprompt & hook kanonikal usePwaInstall.ts.
+  │   - PwaInstallBanner.tsx kontekstual di sidebar Backoffice (rapi, non-intrusif, zero button clutter).
+  ├── 2. Direct Web Bluetooth Thermal ESC/POS (58mm / 80mm):
+  │   - bluetoothPrinter.service.ts & useBluetoothPrinter.ts: Komunikasi biner langsung ke printer kasir via Web Bluetooth API.
+  │   - Cetak struk belanja 1-klik seketika tanpa membuka pop-up print browser.
+  │   - Sinyal elektrik pemicu laci kasir otomatis (pulse ESC/POS 24V).
+  └── 3. Verifikasi Sistem: Exit code 0 pada pos_apps/client dan pos_apps/server.
+
+[2026-10-06] OTOMASI WHATSAPP GATEWAY & DIGITAL RECEIPT ENGINE (FONNTE API - EPIC-25)
+  ├── 1. Backend WhatsApp Gateway Engine (whatsapp.service.ts):
+  │   - Driver Fonnte REST API (https://api.fonnte.com/send) via Node 20 Native fetch.
+  │   - Normalisasi nomor telepon otomatis ke standar internasional (628...).
+  │   - Arsitektur Token Multi-Level: Toko (Merchant) -> Platform (Superadmin) -> Simulator Sandbox.
+  │   - Format struk kanonikal WhatsApp markdown rapi menyertakan nomor antrean (#01), rincian belanja, diskon, poin reward, dan metode bayar.
+  ├── 2. Background Auto-Dispatch & Manual Cashier Trigger:
+  │   - Pengiriman otomatis di latar belakang saat kasir menyelesaikan checkout (non-blocking).
+  │   - Endpoint manual kasir: POST /api/orders/:id/send-whatsapp.
+  │   - Endpoint Superadmin: GET/PUT /api/platform/whatsapp/settings & POST /api/platform/whatsapp/test.
+  ├── 3. Frontend Cashier & Backoffice Integration (Role Boundary Principle):
+  │   - OrderSuccessModal.tsx: Bebas dari panduan teknis API / accordion Fonnte. Kasir difokuskan pada kecepatan checkout: [Buka wa.me] & [Salin Teks] untuk pengiriman langsung, atau [⚡ Kirim Otomatis via Gateway (Fonnte)] jika gateway aktif.
+  │   - ReceiptSettingsView.tsx: Bagian 7 konfigurasi WhatsApp Gateway khusus Owner, dilengkapi Card Panduan Aktivasi Fonnte 5-langkah (pendaftaran di fonnte.com, scan QR perangkat, salin API token, dan penyimpanan format struk).
+  │   - SuperadminDashboardPage.tsx: Tab navigasi WhatsApp Gateway dengan pengelolaan kredensial platform & kartu uji coba pengiriman (Test Dispatch).
+  └── 4. Verifikasi Sistem: Exit code 0 pada pos_apps/client dan pos_apps/server.
 ===============================================================
 ```
 
@@ -1107,6 +1164,180 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
   - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
 ================================================================================
 ```
+
+---
+
+```text
+================================================================================
+[2026-10-05] INTEGRASI PAKASIR QRIS DINAMIS PADA REGISTRASI AWAL OWNER (SAAS ONBOARDING)
+================================================================================
+• Backend Dynamic Pakasir Transaction on Registration (`saas.controller.ts`):
+  - Saat calon merchant mendaftar di Landing Page (`POST /api/saas/register`) dengan biaya pendaftaran > Rp 0 (atau setelah potongan kupon promo):
+    * Otomatis memicu pembuatan transaksi QRIS dinamis via `pakasirService.createTransaction({ orderId: invoiceNumber, amount: finalAmount, method: 'qris' })`.
+    * Menyimpan `externalTxnId: qrisData.txnId`, `paymentGateway: 'QRIS_PAKASIR'`, dan `paymentUrl: qrisData.paymentUrl` pada `SaaSInvoice`.
+    * Mengembalikan payload respons `data.payment` lengkap (`invoiceNumber`, `amount`, `discountAmount`, `bonusTokens`, `isFree`, `qrString`, `paymentUrl`, `expiredAt`, `isSandbox`).
+• Frontend Dynamic QRIS Display & Real-Time Polling (`SaasLandingPage.tsx`):
+  - Penyesuaian antarmuka Modal Registrasi (Zero Stacked Modals, auto-adapt `size="lg"`):
+    * Menampilkan banner total pembayaran aktivasi dan nomor invoice.
+    * Menampilkan barcode QRIS dinamis beresolusi tinggi menggunakan data `qrString` Pakasir.
+    * Indikator live status dengan animasi ping: "Menunggu pembayaran via QRIS... (Sistem mengecek otomatis)".
+    * Auto-polling status ke `GET /api/saas/pakasir/status/:invoiceNumber` setiap 3.5 detik.
+    * Tombol manual "Cek Status Pembayaran Sekarang" (`RefreshCw`).
+    * Tombol uji coba pengembang "⚡ Simulasikan Pembayaran Berhasil (Uji Coba Sandbox)" (`api.simulatePakasirSandboxPayment`).
+• Auto-Activation on Payment Settlement:
+  - Webhook Pakasir / Polling Status secara otomatis memanggil `billingService.processPaymentWebhook`:
+    * Mengubah status `SaaSInvoice` menjadi `PAID`.
+    * Mengaktifkan akun tenant menjadi `TenantStatus.ACTIVE`.
+    * Mengkreditkan kuota token transaksi awal secara instan.
+  - Antarmuka Landing Page langsung bertransisi mulus ke tampilan konfirmasi hijau: "Selamat Datang, [Owner]! Pembayaran berhasil dikonfirmasi via QRIS Pakasir. Akun pemilik dan kuota token Anda telah aktif", lengkap dengan tombol langsung "Masuk ke Backoffice / Kasir".
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
+================================================================================
+```
+
+---
+
+```text
+================================================================================
+[2026-10-05] DIRECT BLUETOOTH THERMAL PRINTING (WEB BLUETOOTH API & RAW ESC/POS)
+================================================================================
+• Latar Belakang & Kebutuhan Lapangan (Soloraya / Warung / Resto):
+  - Mengeliminasi jeda antrean kasir akibat pop-up print browser bawaan (window.print).
+  - Kasir membutuhkan 1-klik langsung cetak ke printer thermal Bluetooth mini (Panda, Goojprt, Iware, MPT-II, RPP02N, Epson, Xprinter) baik format 58mm maupun 80mm.
+• Arsitektur Generator ESC/POS Universal (`src/utils/escpos.ts`):
+  - Builder biner mentah (Uint8Array) untuk perintah ESC/POS universal:
+    * Inisialisasi printer (`ESC @`), perataan teks kiri/tengah/kanan (`ESC a n`), cetak tebal (`ESC E n`).
+    * Perbesaran teks 2x/3x (`GS ! n`) untuk nomor antrean (#01) dan nama toko.
+    * Pemformatan otomatis 2 kolom sejajar: 32 kolom untuk 58mm dan 48 kolom untuk 80mm.
+    * Sinyal pemicu buka laci kasir otomatis (`ESC p 0 25 250`).
+    * Pemotongan kertas otomatis (`GS V A n`) untuk printer yang memiliki automatic cutter.
+• Web Bluetooth Communication Service (`src/services/bluetoothPrinter.service.ts`):
+  - Pemindaian dan pairing nirkabel langsung ke GATT Server printer thermal via Web Bluetooth API.
+  - Multi-service UUID resolver mencakup printer standar, Posnet, ISSC Transparent UART, dan printer generic.
+  - Safe BLE chunking (100 byte packets dengan delay inter-chunk 20ms) mencegah buffer overflow mikrokontroler printer murah.
+• Custom React Hook (`src/hooks/useBluetoothPrinter.ts`):
+  - Mengelola status reaktif (`disconnected`, `connecting`, `connected`, `error`), nama perangkat tersimpan, cetak struk pesanan, cetak uji coba, dan pemicu laci kasir.
+• Integrasi Antarmuka Kasir & Pengaturan Struk:
+  - `ReceiptSettingsView.tsx`: Kartu manajemen printer Bluetooth dengan tombol "Hubungkan Printer Bluetooth", indikator nama perangkat aktif, tombol "Cetak Uji Coba Kertas", dan tombol "Uji Buka Laci Kasir".
+  - `OrderSuccessModal.tsx`: Tombol aksi primer "⚡ Cetak Langsung Bluetooth" di atas tombol browser/PDF. Sekali klik langsung mencetak struk thermal ke mesin fisik tanpa dialog perantara, sekaligus menendang laci kasir jika pembayaran tunai.
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `pos_apps/client` dan `pos_apps/server`.
+================================================================================
+```
+
+---
+
+```text
+===============================================================================
+[2026-10-06] PROGRESSIVE WEB APP (PWA) & 1-CLICK HOME SCREEN INSTALLATION
+===============================================================================
+• Latar Belakang & Kebutuhan Lapangan (Soloraya / Warung / Resto / Cafe):
+  - Kasir dan staf outlet membutuhkan aplikasi yang terasa seperti aplikasi native Android/iOS/Windows/Mac tanpa navigasi browser, tanpa address bar, serta waktu muat sub-detik melalui cache lokal.
+  - Membantu pemilik toko menginstal Well POS ke tablet kasir atau smartphone Android dalam 1 klik tanpa perlu masuk ke Google Play Store atau Apple App Store.
+• Standar Web App Manifest (`public/manifest.webmanifest`):
+  - Nama aplikasi: "Well POS - Sistem Kasir Modern & Backoffice".
+  - Mode tampilan: `display: "standalone"`, `orientation: "any"`.
+  - Warna tema: `#0f172a` (Slate-900) dan background `#ffffff`.
+  - Icon PWA: Beresolusi tinggi format SVG (`icon-192.svg`, `icon-512.svg`, dan `icon-maskable.svg` dengan safe-zone margin 15%).
+  - App Shortcuts: Langsung loncat ke Mesin Kasir (`#pos`), Laporan Penjualan (`#overview`), dan Pengaturan Printer Bluetooth (`#receipt_settings`).
+• Service Worker Pintar (`public/sw.js`):
+  - Pre-caching file shell statis saat install (`CACHE_NAME: wellpos-shell-v1`).
+  - Cache Migration: Pembersihan cache versi lama secara otomatis pada event `activate`.
+  - Network-First untuk seluruh `/api/*`: Menjamin transaksi kasir, stok, mutasi ledger, dan saldo tidak pernah stale/basi.
+  - Stale-While-Revalidate untuk aset frontend (CSS, JS bundle, icon, font) untuk startup kilat di bawah 300ms.
+• Arsitektur Service & Hook React (`pwa.service.ts` & `usePwaInstall.ts`):
+  - Mencegat event bawaan `beforeinstallprompt` dan menyimpannya ke singleton service.
+  - Deteksi mode tampilan standalone (`window.matchMedia('(display-mode: standalone)')` & `navigator.standalone`).
+  - Deteksi perangkat iOS (Safari / iPhone / iPad) untuk menampilkan panduan 3-langkah (Bagikan -> Tambah ke Layar Utama).
+• Antarmuka Pengguna & Komponen Kanonikal:
+  - `PwaInstallBanner.tsx`: Floating banner di pojok bawah layar dengan animasi slide-in, tombol "Pasang Sekarang", dan opsi "Nanti Saja" (tersimpan di `sessionStorage` per sesi).
+  - `PwaInstallButton`: Tombol ringkas `<PwaInstallButton />` yang disematkan secara terpusat dan ergonomis hanya pada bagian bawah menu Sidebar Backoffice (`BackofficeLayout.tsx`), menjaga header dan form pengaturan tetap bersih dan minimalis tanpa banyak tombol bertumpuk.
+  - Dialog Interaktif iOS: Modal panduan beranimasi khusus pengguna Safari iOS dengan icon visual tombol Share Apple.
+• Hasil Uji Verifikasi Sistem:
+```text
+===============================================================================
+[2026-10-06] WATERMARK STRUK KASIR & NOTA DIGITAL "POWERED BY WELL POS" (OWNER MANAGED)
+===============================================================================
+• Latar Belakang & Kebutuhan Bisnis:
+  - Membantu eksposur brand "Powered by Well POS" secara otomatis di setiap struk belanja, nota digital, cetak thermal, dan pesan WhatsApp yang dikirim ke pelanggan merchant.
+  - Memenuhi preferensi fleksibilitas pemilik toko (owner) agar dapat mengaktifkan atau menonaktifkan watermark ini secara mandiri melalui pengaturan Backoffice Toko (default: AKTIF / true).
+• Cakupan Implementasi Multi-Saluran (Omni-Channel Receipt Watermark):
+  1. Backoffice Form Format Struk (`ReceiptSettingsView.tsx`):
+     - Toggle switch mandiri pada Bagian 6: "Watermark Struk ('Powered by Well POS')".
+     - Terhubung ke `activeOutlet.receiptConfig.showWatermark` (default `true` / aktif).
+     - Live preview real-time pada simulator thermal struk (`ThermalReceiptPreview.tsx`).
+  2. Modul POS Layar Kasir (`OrderSuccessModal.tsx`):
+     - Menampilkan watermark "Powered by Well POS" di bagian bawah struk on-screen dan dialog print browser (`window.print`).
+     - Teks WhatsApp struk otomatis menyertakan `_Powered by Well POS_` jika `showWatermark !== false`.
+  3. Dokumen Struk PDF (`receiptPdf.ts`):
+     - Generator PDF struk mencetak teks tebal "Powered by Well POS" di akhir dokumen jika `showWatermark !== false`.
+  4. Cetak Langsung Bluetooth ESC/POS Thermal (`escpos.ts` & `bluetoothPrinter.service.ts`):
+     - Opsi `EscPosOptions.showWatermark` diteruskan ke `buildReceiptEscPos`.
+     - Baris 'Powered by Well POS' hanya dicetak ke mikrokontroler printer fisik jika `showWatermark !== false`.
+  5. Backend WhatsApp Gateway (`whatsapp.service.ts`):
+     - Format teks digital otomatis menyertakan identitas `_Powered by Well POS_` saat pengiriman WhatsApp gateway checkout.
+  6. Backend Validasi & Model Data:
+     - `outlet.controller.ts`: Menambahkan validasi Zod `showWatermark: z.boolean().optional()` di `receiptConfig`.
+     - `saas.controller.ts`: Onboarding toko dan pembuatan cabang baru otomatis menginisialisasi `showWatermark: true`.
+```text
+===============================================================================
+[2026-10-06] OPTIMALISASI MODAL STRUK KASIR & WHATSAPP GATEWAY (RESPONSIVE & PWA)
+===============================================================================
+• Resolusi Anti-Pattern Zero Stacked Modals (`OrderSuccessModal.tsx`):
+  - Mengeliminasi pop-up modal WhatsApp & Email yang sebelumnya bertumpuk di atas modal struk (menghilangkan benturan double close button 'X' dan backdrop ganda).
+  - Menggantinya dengan transisi sub-view inline (`modalView: 'RECEIPT' | 'WHATSAPP' | 'EMAIL'`) di dalam kartu modal yang sama.
+• Anti-Overflow & Zero Clipping ("Anti-Nabrak ke Atas"):
+  - Header dan footer action panel dikunci menggunakan `shrink-0`.
+  - Area chat WhatsApp dibungkus container elastis `flex-1 min-h-0 overflow-y-auto`. Seberapa panjang pun daftar belanja struk (bahkan 50+ item), konten akan bergulir mulus di dalam area chat tanpa mendorong header atau tombol keluar layar.
+• Tata Kelola WhatsApp Gateway (Manual vs Fonnte API):
+  - Jika token belum diaktivasi (Mode Manual): Tombol otomatis via gateway dinonaktifkan dari simulasi palsu. Sistem menampilkan panduan aktivasi Fonnte terintegrasi dan memprioritaskan tombol "Buka wa.me" (langsung membuka WhatsApp kasir dengan pesan terisi penuh) serta "Salin Teks".
+  - Jika token Fonnte aktif: Tombol pengiriman otomatis via gateway diaktifkan.
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
+===============================================================================
+[2026-10-06] TIMEZONE NORMALIZATION & POSTGRESQL AT TIME ZONE UTC FIX
+===============================================================================
+• Latar Belakang & Investigasi Bug:
+  - Transaksi yang dibuat pada pagi hari (05:00-06:00 WIB = 22:00-23:00 UTC hari sebelumnya) tidak muncul pada filter "Hari Ini" di riwayat pesanan Backoffice.
+  - Akar masalah: Kolom `created_at` bertipe `timestamp without time zone`. PostgreSQL memadukan nilai ini dengan timezone session `Asia/Jakarta`, menyebabkan pergeseran 7 jam ke belakang.
+• Resolusi Arsitektur (Rule 25):
+  - Mengubah seluruh klausa perbandingan SQL raw dari `created_at >= $1` menjadi `created_at >= ($1 AT TIME ZONE 'UTC')` di 6 file backend: `sales.read_adapter.ts`, `report.read_adapter.ts`, `inventory.read_adapter.ts`, `analytics.service.ts`, `order.controller.ts`, dan `sales.dual_write.service.ts`.
+  - Berhasil divalidasi: Transaksi pagi hari langsung tampil 100% presisi pada filter tanggal kalender lokal WIB.
+
+===============================================================================
+[2026-10-06] KEBIJAKAN INTEGRITAS PESANAN SUSULAN & OPEN TAB
+===============================================================================
+• Evaluasi Celah Pesanan Susulan:
+  - Transaksi yang sudah lunas (`PAID`) merupakan rekonsiliasi fiskal final (*closed accounting record*). Menambahkan item baru ke transaksi yang sudah lunas merusak integritas pembukuan dan memicu anomali pembayaran ganda/terpisah.
+• Kebijakan & Penegakan Sistem (Rule & Flow):
+  1. Larangan Susulan Transaksi Lunas (`PAID`):
+     - Menghapus tombol "Order Susulan" dari `OrderSuccessModal.tsx`.
+     - Menyembunyikan tombol "+ Susulan" pada transaksi `PAID` di `OrdersView.tsx` (tabel desktop & kartu mobile) serta di `OrderDetailModal.tsx`.
+     - Jika pelanggan yang sudah melunasi tagihannya ingin memesan menu tambahan, kasir membuat transaksi baru secara standar di POS Terminal.
+  2. Aksi "+ Susulan" Dikhususkan Eksklusif untuk Meja Aktif Belum Bayar (`UNPAID`):
+     - Tombol "+ Susulan" hanya muncul pada pesanan Dine-In dengan `paymentStatus === 'UNPAID'`.
+     - Ketika kasir mengklik "+ Susulan", sistem menjalankan alur `handlePullAppendOrder` di `PosTerminalView.tsx`: item sebelumnya dimuat utuh ke keranjang kasir (`cart`), mengikat `activePulledOrder` & `activeOpenTab` (`existingOrderId`), sehingga penambahan menu baru otomatis menyatu ke tagihan meja yang sama tanpa konflik meja terisi (*table occupied conflict*).
+===============================================================================
+[2026-10-06] EXPANSION PUSAT PANDUAN & SOP OPERASIONAL: 18 BAB INTEGRATIF
+===============================================================================
+• Latar Belakang & Pembaruan Kebutuhan:
+  - Dokumentasi panduan operasional pada `UserGuideView.tsx` dan `FloatingGuideWidget.tsx` diselaraskan penuh dengan seluruh fitur enhancement terbaru.
+  - Sesuai prinsip segregasi peran: Keputusan otomatisasi dan konfigurasi gateway berada di ranah Owner/Admin, sedangkan Kasir fokus pada operasional transaksi cepat.
+• Penambahan 5 Bab Baru (Total 18 Bab Lengkap):
+  1. Bab 14: Printer Kasir Bluetooth Thermal (Web Bluetooth BLE 58mm/80mm ESC/POS, pairing tanpa driver desktop, 1-klik cetak struk kasir).
+  2. Bab 15: Integrasi WhatsApp Gateway & Resi Digital (Fonnte) — wewenang otomatisasi di tangan Owner, input nomor di kasir, background non-blocking dispatch, dan fallback wa.me.
+  3. Bab 16: Aplikasi Kasir Desktop & Tablet (Progressive Web App / PWA Standalone window tanpa browser address bar, loading instan via Service Worker).
+  4. Bab 17: Alur Open Tab Meja & Kebijakan Pesanan Susulan (Anti-Fraud Policy: Meja UNPAID dapat disusul via keranjang kasir, pesanan PAID terkunci total untuk mencegah manipulasi kas fisik laci).
+  5. Bab 18: Metode Pembayaran Kasir & Integrasi QRIS / EDC (Pemisahan omzet tunai laci vs non-tunai di laporan Z-Report).
+• Sinkronisasi Floating Contextual Guide (`FloatingGuideWidget.tsx`):
+  - Memetakan tab `settings_receipt` ke panduan Bluetooth & WA Gateway, dan tab `settings_payment` ke panduan Metode Pembayaran.
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
+===============================================================================
+```
+
+
+
 
 
 

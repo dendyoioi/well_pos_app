@@ -408,8 +408,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <span>Lihat Struk</span>
             </button>
 
-            {/* Order Susulan (HANYA jika DINE IN & TIDAK VOIDED) */}
-            {onAppendOrder && isDineIn && !isVoided && (
+            {/* Order Susulan (HANYA jika DINE IN & TIDAK VOIDED & BELUM BAYAR / UNPAID) */}
+            {onAppendOrder && isDineIn && !isVoided && order.paymentStatus === 'UNPAID' && (
               <button
                 type="button"
                 onClick={() => {
@@ -417,7 +417,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   onAppendOrder(order);
                 }}
                 className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
-                title="Buat Pesanan Susulan untuk Meja Ini"
+                title="Buat Pesanan Susulan untuk Meja Ini (Khusus Belum Bayar)"
               >
                 <UtensilsCrossed className="w-4 h-4 text-amber-700" />
                 <span>+ Susulan</span>

@@ -35,6 +35,7 @@ import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
 import { api, type PlatformNotification } from '../../services/api';
 import { FloatingGuideWidget } from '../ui/FloatingGuideWidget';
+import { PwaInstallButton } from '../PwaInstallBanner';
 
 interface BackofficeLayoutProps {
   user: User;
@@ -673,6 +674,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               </button>
             </div>
           )}
+        </div>
+
+        {/* Akses Cepat Pasang PWA di Sidebar */}
+        <div className="pt-3 mt-3 border-t border-slate-200">
+          <PwaInstallButton className="w-full justify-center" />
         </div>
       </div>
     );

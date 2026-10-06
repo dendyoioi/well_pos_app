@@ -56,7 +56,16 @@ const updateOutletSchema = z.object({
     paperSize: z.enum(['58mm', '80mm']).default('58mm'),
     footerText: z.string().optional(),
     showQueueNumber: z.boolean().optional(),
-  }).optional(),
+    showWatermark: z.boolean().optional(),
+    whatsappConfig: z.object({
+      enabled: z.boolean().optional(),
+      autoSendOnCheckout: z.boolean().optional(),
+      usePlatformGateway: z.boolean().optional(),
+      apiKey: z.string().optional(),
+      senderNumber: z.string().optional(),
+      customFooter: z.string().optional(),
+    }).passthrough().optional(),
+  }).passthrough().optional(),
   loyaltyConfig: z.object({
     isActive: z.boolean().default(false),
     pointsPerSpend: z.number().int().min(1).default(10000),
@@ -321,9 +330,7 @@ export const updateOutlet = async (req: Request, res: Response) => {
 
     const updated = await prisma.outlet.update({
       where: { id },
-      data: {
-        ...parseResult.data,
-      },
+      data: parseResult.data as any,
     });
 
     return res.status(200).json({

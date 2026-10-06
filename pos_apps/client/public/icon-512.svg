@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg512" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="45%" stop-color="#0f2454" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+    <linearGradient id="accent512" x1="100" y1="100" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="glow512" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bg512)" />
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.35" />
+
+  <!-- Center Store / POS Terminal Icon -->
+  <g transform="translate(126, 110)" filter="url(#glow512)">
+    <!-- Store Roof / Awning -->
+    <path d="M130 20 L234 85 L26 85 Z" fill="url(#accent512)" />
+    <!-- Awning ridges -->
+    <path d="M26 85 Q52 115 78 85 Q104 115 130 85 Q156 115 182 85 Q208 115 234 85" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" />
+    <!-- Shop Front Body -->
+    <rect x="46" y="100" width="168" height="128" rx="16" fill="#ffffff" fill-opacity="0.95" />
+    <!-- Door / Register Display -->
+    <rect x="94" y="136" width="72" height="92" rx="10" fill="#0f2454" />
+    <rect x="110" y="152" width="40" height="26" rx="6" fill="#38bdf8" />
+    <circle cx="130" cy="202" r="6" fill="#10b981" />
+  </g>
+
+  <!-- Text brand at bottom -->
+  <text x="256" y="408" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="52" fill="#ffffff" letter-spacing="2">WELL POS</text>
+  <circle cx="406" cy="386" r="9" fill="#10b981" />
+</svg>

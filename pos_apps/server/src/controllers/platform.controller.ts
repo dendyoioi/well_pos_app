@@ -8,6 +8,7 @@ import { prisma } from '../config/prisma';
 import { TenantStatus, Role, InvoiceStatus, PlatformRole, Prisma } from '@prisma/client';
 import { billingService } from '../services/billing.service';
 import { licenseWorkerService } from '../services/licenseWorker.service';
+import { whatsAppService } from '../services/whatsapp.service';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -438,16 +439,23 @@ export const updateTenantStatus = async (req: Request, res: Response) => {
         },
       });
 
+      const config = readPlatformPaymentConfig();
+      const defaultRegFee = config.registrationFee ?? 99000;
+      const defaultBonusTokens = config.registrationBonusTokens ?? 100;
+
       if (existingRegInvoice) {
-        // Update invoice pendaftaran menjadi PAID dengan 100 bonus token
+        // Tandai invoice pendaftaran menjadi PAID (pertahankan nominal diskon dan token awal yang sudah disetujui/promo)
+        const finalTokenAmount = existingRegInvoice.tokenAmount !== null && existingRegInvoice.tokenAmount !== undefined
+          ? existingRegInvoice.tokenAmount
+          : defaultBonusTokens;
+
         await prisma.saaSInvoice.update({
           where: { id: existingRegInvoice.id },
           data: {
-            amount: new Prisma.Decimal(99000),
-            tokenAmount: 100,
+            tokenAmount: finalTokenAmount,
             status: InvoiceStatus.PAID,
-            paidAt: new Date(),
-            notes: 'Biaya Aktivasi Pendaftaran Akun Pemilik + 100 Bonus Token Transaksi (Disetujui Super Admin)',
+            paidAt: existingRegInvoice.paidAt || new Date(),
+            notes: existingRegInvoice.notes || `Biaya Aktivasi Pendaftaran Akun Pemilik + ${finalTokenAmount} Bonus Token Transaksi (Disetujui Super Admin)`,
             payments: {
               create: {
                 paymentChannel: 'APPROVAL_SUPERADMIN',
@@ -463,9 +471,9 @@ export const updateTenantStatus = async (req: Request, res: Response) => {
             invoiceNumber,
             tenantId: id,
             planId: defaultPlan.id,
-            amount: new Prisma.Decimal(99000),
-            tokenAmount: 100,
-            notes: 'Biaya Aktivasi Pendaftaran Akun Pemilik + 100 Bonus Token Transaksi (Disetujui Super Admin)',
+            amount: new Prisma.Decimal(defaultRegFee),
+            tokenAmount: defaultBonusTokens,
+            notes: `Biaya Aktivasi Pendaftaran Akun Pemilik + ${defaultBonusTokens} Bonus Token Transaksi (Disetujui Super Admin)`,
             status: InvoiceStatus.PAID,
             dueDate: new Date(),
             paidAt: new Date(),
@@ -1392,6 +1400,7 @@ export const getPlatformPromos = async (_req: Request, res: Response) => {
         id: p.id,
         code: p.code,
         name: p.name,
+        scope: (p as any).scope || 'ALL',
         type: p.type,
         value: Number(p.value),
         minSpend: p.minSpend ? Number(p.minSpend) : 0,
@@ -1413,6 +1422,7 @@ export const getPlatformPromos = async (_req: Request, res: Response) => {
 const createPlatformPromoSchema = z.object({
   code: z.string().min(3, 'Kode promo minimal 3 karakter').toUpperCase(),
   name: z.string().min(3, 'Nama promo minimal 3 karakter'),
+  scope: z.enum(['ALL', 'REGISTRATION', 'TOPUP']).optional().default('ALL'),
   type: z.enum(['DISCOUNT_PERCENT', 'DISCOUNT_FIXED', 'BONUS_TOKENS']),
   value: z.number().positive('Nilai promo harus lebih dari 0'),
   minSpend: z.number().optional().default(0),
@@ -1432,7 +1442,7 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
       });
     }
 
-    const { code, name, type, value, minSpend, maxDiscount, usageLimit, validUntil } = parse.data;
+    const { code, name, scope = 'ALL', type, value, minSpend, maxDiscount, usageLimit, validUntil } = parse.data;
 
     const existing = await prisma.saaSPromo.findUnique({ where: { code } });
     if (existing) {
@@ -1444,6 +1454,7 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
         id: `promo-${code.toLowerCase()}-${Date.now().toString(36)}`,
         code,
         name,
+        scope: scope || 'ALL',
         type,
         value: new Prisma.Decimal(value),
         minSpend: new Prisma.Decimal(minSpend || 0),
@@ -1507,7 +1518,9 @@ export const deletePlatformPromo = async (req: Request, res: Response) => {
 const PAYMENT_CONFIG_FILE = path.join(__dirname, '../../data/platform_payment_config.json');
 
 const DEFAULT_PLATFORM_CONFIG = {
-  tokenPrice: 69,
+  registrationFee: 99000,
+  registrationBonusTokens: 100,
+  tokenPrice: 100,
   minTokenPurchase: 250,
   qrisEnabled: true,
   qris: {
@@ -1522,9 +1535,9 @@ const DEFAULT_PLATFORM_CONFIG = {
     updatedAt: new Date().toISOString(),
   },
   packages: [
-    { id: 'pkg-starter-250', name: 'Starter 250', tokens: 250, label: 'Starter 250', price: 0, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
-    { id: 'pkg-basic-1000', name: 'Basic 1.000', tokens: 1000, label: 'Basic 1.000', price: 0, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
-    { id: 'pkg-pro-2500', name: 'Pro 2.500', tokens: 2500, label: 'Pro 2.500', price: 0, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
+    { id: 'pkg-starter-250', name: 'Starter 250', tokens: 250, label: 'Starter 250', price: 25000, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
+    { id: 'pkg-basic-1000', name: 'Basic 500', tokens: 500, label: 'Basic 500', price: 37500, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
+    { id: 'pkg-pro-2500', name: 'Pro 1.500', tokens: 1500, label: 'Pro 1.500', price: 90000, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
     { id: 'pkg-enterprise-5000', name: 'Enterprise 5.000', tokens: 5000, label: 'Enterprise 5.000', price: 0, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
   ],
 };
@@ -1542,6 +1555,8 @@ export const readPlatformPaymentConfig = () => {
       return {
         ...DEFAULT_PLATFORM_CONFIG,
         ...parsed,
+        registrationFee: typeof parsed.registrationFee === 'number' && !isNaN(parsed.registrationFee) && parsed.registrationFee >= 0 ? parsed.registrationFee : DEFAULT_PLATFORM_CONFIG.registrationFee,
+        registrationBonusTokens: typeof parsed.registrationBonusTokens === 'number' && !isNaN(parsed.registrationBonusTokens) && parsed.registrationBonusTokens >= 0 ? parsed.registrationBonusTokens : DEFAULT_PLATFORM_CONFIG.registrationBonusTokens,
         tokenPrice: typeof parsed.tokenPrice === 'number' && !isNaN(parsed.tokenPrice) ? parsed.tokenPrice : DEFAULT_PLATFORM_CONFIG.tokenPrice,
         minTokenPurchase: typeof parsed.minTokenPurchase === 'number' && !isNaN(parsed.minTokenPurchase) ? parsed.minTokenPurchase : DEFAULT_PLATFORM_CONFIG.minTokenPurchase,
         qrisEnabled: isQrisActive,
@@ -1576,6 +1591,12 @@ export const writePlatformPaymentConfig = (data: any) => {
       ? data.qris.enabled
       : (data.qrisEnabled === 'true' ? true : data.qrisEnabled === 'false' ? false : current.qrisEnabled));
 
+  const parsedRegFee = Number(data.registrationFee);
+  const registrationFeeVal = !isNaN(parsedRegFee) && parsedRegFee >= 0 ? parsedRegFee : current.registrationFee;
+
+  const parsedBonusTokens = Number(data.registrationBonusTokens);
+  const registrationBonusTokensVal = !isNaN(parsedBonusTokens) && parsedBonusTokens >= 0 ? parsedBonusTokens : current.registrationBonusTokens;
+
   const parsedTokenPrice = Number(data.tokenPrice);
   const tokenPriceVal = !isNaN(parsedTokenPrice) && parsedTokenPrice > 0 ? parsedTokenPrice : current.tokenPrice;
 
@@ -1596,6 +1617,8 @@ export const writePlatformPaymentConfig = (data: any) => {
 
   const updated = {
     ...current,
+    registrationFee: registrationFeeVal,
+    registrationBonusTokens: registrationBonusTokensVal,
     tokenPrice: tokenPriceVal,
     minTokenPurchase: minTokenPurchaseVal,
     qrisEnabled: qrisEnabledVal,
@@ -1641,6 +1664,72 @@ export const updatePlatformPaymentSettings = async (req: Request, res: Response)
   } catch (error) {
     console.error('Error updating platform payment settings:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memperbarui pengaturan pembayaran platform' });
+  }
+};
+
+/**
+ * Controller: Ambil Pengaturan WhatsApp Gateway Platform (Fonnte)
+ * @route GET /api/platform/whatsapp/settings
+ */
+export const getPlatformWhatsAppSettings = async (_req: Request, res: Response) => {
+  try {
+    const config = whatsAppService.readPlatformConfig();
+    return res.status(200).json({
+      status: 'success',
+      data: config,
+    });
+  } catch (error) {
+    console.error('Error getting platform WhatsApp settings:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat pengaturan WhatsApp platform' });
+  }
+};
+
+/**
+ * Controller: Simpan Pengaturan WhatsApp Gateway Platform (Fonnte)
+ * @route PUT /api/platform/whatsapp/settings
+ */
+export const updatePlatformWhatsAppSettings = async (req: Request, res: Response) => {
+  try {
+    const { apiKey, senderNumber, enabled, allowTenantFallback } = req.body;
+    const updated = whatsAppService.writePlatformConfig({
+      apiKey: apiKey !== undefined ? String(apiKey).trim() : undefined,
+      senderNumber: senderNumber !== undefined ? String(senderNumber).trim() : undefined,
+      enabled: enabled !== undefined ? Boolean(enabled) : undefined,
+      allowTenantFallback: allowTenantFallback !== undefined ? Boolean(allowTenantFallback) : undefined,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Pengaturan WhatsApp Gateway Platform berhasil disimpan',
+      data: updated,
+    });
+  } catch (error) {
+    console.error('Error updating platform WhatsApp settings:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui pengaturan WhatsApp platform' });
+  }
+};
+
+/**
+ * Controller: Uji Coba Koneksi Fonnte Device WhatsApp
+ * @route POST /api/platform/whatsapp/test
+ */
+export const testPlatformWhatsAppConnection = async (req: Request, res: Response) => {
+  try {
+    const { apiKey, testPhone } = req.body;
+    const activeKey = apiKey || whatsAppService.readPlatformConfig().apiKey;
+
+    if (!activeKey) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Masukkan token Fonnte API terlebih dahulu untuk melakukan pengetesan',
+      });
+    }
+
+    const testRes = await whatsAppService.testDeviceConnection(activeKey, testPhone);
+    return res.status(200).json(testRes);
+  } catch (error: any) {
+    console.error('Error testing WhatsApp connection:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal menguji koneksi WhatsApp' });
   }
 };
 

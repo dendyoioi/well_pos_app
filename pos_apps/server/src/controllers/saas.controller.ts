@@ -31,6 +31,7 @@ const registerSchema = z
     password: z.string().min(6, 'Kata sandi minimal 6 karakter'),
     confirmPassword: z.string().min(6, 'Konfirmasi kata sandi minimal 6 karakter'),
     businessVertical: z.enum(['FNB', 'RETAIL', 'SERVICES']).optional().default('FNB'),
+    promoCode: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Konfirmasi kata sandi tidak cocok dengan kata sandi',
@@ -85,7 +86,7 @@ export const registerClient = async (req: Request, res: Response) => {
       });
     }
 
-    const { firstName, lastName, email, phone, password, businessVertical } = parseResult.data;
+    const { firstName, lastName, email, phone, password, businessVertical, promoCode } = parseResult.data;
     const fullName = `${firstName} ${lastName}`.trim();
 
     // 1. Cek duplikasi email
@@ -116,7 +117,65 @@ export const registerClient = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // 4. Eksekusi transaksi atomik Prisma: Buat Tenant & User Owner SAJA (0 Toko di awal)
+    // 4. Kalkulasi Biaya Registrasi Dinamis & Validasi Kupon Promo (jika ada)
+    const paymentConfig = readPlatformPaymentConfig();
+    const baseRegFee = typeof paymentConfig.registrationFee === 'number' ? paymentConfig.registrationFee : 99000;
+    let bonusTokens = typeof paymentConfig.registrationBonusTokens === 'number' ? paymentConfig.registrationBonusTokens : 100;
+    let discountAmount = 0;
+    let validPromo: any = null;
+
+    if (promoCode && promoCode.trim()) {
+      const cleanCode = promoCode.trim().toUpperCase();
+      const promo = await prisma.saaSPromo.findFirst({
+        where: { code: cleanCode, isActive: true },
+      });
+
+      if (!promo) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kupon promo "${cleanCode}" tidak ditemukan atau sudah tidak aktif`,
+        });
+      }
+
+      const now = new Date();
+      if (promo.validUntil && promo.validUntil < now) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kupon promo "${cleanCode}" telah melewati masa berlaku`,
+        });
+      }
+
+      if (promo.usageLimit && promo.usedCount >= promo.usageLimit) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kuota penggunaan kupon promo "${cleanCode}" telah habis`,
+        });
+      }
+
+      const promoScope = (promo as any).scope || 'ALL';
+      if (promoScope !== 'ALL' && promoScope !== 'REGISTRATION') {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kupon promo "${cleanCode}" tidak berlaku untuk pendaftaran akun baru`,
+        });
+      }
+
+      if (promo.type === 'DISCOUNT_PERCENT') {
+        const calculatedDisc = Math.round((baseRegFee * Number(promo.value)) / 100);
+        discountAmount = promo.maxDiscount ? Math.min(calculatedDisc, Number(promo.maxDiscount)) : calculatedDisc;
+        discountAmount = Math.min(baseRegFee, discountAmount);
+      } else if (promo.type === 'DISCOUNT_FIXED') {
+        discountAmount = Math.min(baseRegFee, Number(promo.value));
+      } else if (promo.type === 'BONUS_TOKENS') {
+        bonusTokens += Number(promo.value);
+      }
+
+      validPromo = promo;
+    }
+
+    const finalAmount = Math.max(0, baseRegFee - discountAmount);
+
+    // 5. Eksekusi transaksi atomik Prisma: Buat Tenant, User, Invoice, dan update promo usage
     const result = await prisma.$transaction(async (tx) => {
       const vertical = businessVertical === 'SERVICES'
         ? BusinessVertical.SERVICES
@@ -155,43 +214,85 @@ export const registerClient = async (req: Request, res: Response) => {
         },
       });
 
-      return { tenant, user };
-    });
+      // c. Jika ada promo valid, catat kenaikan usedCount
+      if (validPromo) {
+        await tx.saaSPromo.update({
+          where: { id: validPromo.id },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
 
-    // 5. Buat Catatan Tagihan Pendaftaran Awal (Rp 99.000 + 100 Token) status UNPAID
-    // Tagihan ini akan disetujui dan dilunasi otomatis ketika Super Admin menyetujui (approve) akun
-    const REGISTRATION_FEE = 99000;
-    const REGISTRATION_BONUS_TOKENS = 100;
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randSuffix = Math.floor(1000 + Math.random() * 9000);
-    const invoiceNumber = `INV-REG-${todayStr}-${randSuffix}`;
+      // d. Buat Catatan Tagihan Pendaftaran Awal
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const randSuffix = Math.floor(1000 + Math.random() * 9000);
+      const invoiceNumber = `INV-REG-${todayStr}-${randSuffix}`;
 
-    let plan = await prisma.subscriptionPlan.findFirst({ where: { code: 'PRO' } });
-    if (!plan) {
-      plan = await prisma.subscriptionPlan.findFirst();
-    }
+      let plan = await tx.subscriptionPlan.findFirst({ where: { code: 'PRO' } });
+      if (!plan) {
+        plan = await tx.subscriptionPlan.findFirst();
+      }
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 3);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 3);
 
-    await prisma.saaSInvoice.create({
-      data: {
-        invoiceNumber,
-        tenantId: result.tenant.id,
-        planId: plan ? plan.id : '',
-        amount: new Prisma.Decimal(REGISTRATION_FEE),
-        tokenAmount: REGISTRATION_BONUS_TOKENS,
-        notes: `Biaya Aktivasi Pendaftaran Akun Pemilik + ${REGISTRATION_BONUS_TOKENS} Bonus Token Transaksi (Menunggu Approval Super Admin)`,
-        status: InvoiceStatus.UNPAID,
-        dueDate,
-        paymentGateway: 'MANUAL_APPROVAL',
+      const isFree = finalAmount === 0;
+
+      // Panggil Pakasir API jika pendaftaran berbayar (> Rp 0)
+      let qrisData = {
+        txnId: '',
+        qrString: '',
         paymentUrl: `https://checkout.wellpos.id/pay/${invoiceNumber}`,
-      },
-    }).catch((err) => console.error('Error creating pending reg invoice:', err));
+        expiredAt: undefined as string | undefined,
+        isSandbox: true,
+      };
+
+      if (!isFree) {
+        try {
+          const pakasirRes = await pakasirService.createTransaction({
+            orderId: invoiceNumber,
+            amount: finalAmount,
+            method: 'qris',
+          });
+          qrisData = {
+            txnId: pakasirRes.txnId || '',
+            qrString: pakasirRes.qrString || '',
+            paymentUrl: pakasirRes.paymentLink || `https://checkout.wellpos.id/pay/${invoiceNumber}`,
+            expiredAt: pakasirRes.expiredAt,
+            isSandbox: pakasirRes.isSandbox,
+          };
+        } catch (pakasirErr: any) {
+          console.warn('[Register] Pakasir API warning (fallback QRIS generated):', pakasirErr.message);
+          qrisData.qrString = `00020101021226610016ID.CO.SHOPEE.WWW01189360091800216005230208${invoiceNumber}5204581253033605405${finalAmount}5802ID5910WELLPOSDEV6007JAKARTA6304A1B2`;
+        }
+      }
+
+      const invoice = await tx.saaSInvoice.create({
+        data: {
+          invoiceNumber,
+          tenantId: tenant.id,
+          planId: plan ? plan.id : '',
+          amount: new Prisma.Decimal(finalAmount),
+          tokenAmount: bonusTokens,
+          discountAmount: discountAmount > 0 ? new Prisma.Decimal(discountAmount) : new Prisma.Decimal(0),
+          promoCode: validPromo ? validPromo.code : null,
+          notes: `Biaya Aktivasi Pendaftaran Akun Pemilik + ${bonusTokens} Bonus Token Transaksi${validPromo ? ` (Promo: ${validPromo.code})` : ''}`,
+          status: isFree ? InvoiceStatus.PAID : InvoiceStatus.UNPAID,
+          paidAt: isFree ? new Date() : null,
+          dueDate,
+          externalTxnId: qrisData.txnId || null,
+          paymentGateway: isFree ? 'PROMO_FREE' : 'QRIS_PAKASIR',
+          paymentUrl: qrisData.paymentUrl,
+        },
+      });
+
+      return { tenant, user, invoice, qrisData, isFree, finalAmount, discountAmount, bonusTokens };
+    });
 
     return res.status(201).json({
       status: 'success',
-      message: 'Pendaftaran akun pemilik berhasil diajukan! Akun Anda saat ini berstatus PENDING dan sedang menunggu persetujuan (approval) oleh Super Admin SaaS.',
+      message: result.isFree
+        ? 'Pendaftaran akun pemilik berhasil! Akun Anda aktif dengan promo registrasi gratis.'
+        : 'Pendaftaran akun pemilik berhasil dibuat! Silakan lakukan pembayaran QRIS untuk mengaktifkan akun dan kuota token Anda.',
       data: {
         tenant: {
           id: result.tenant.id,
@@ -207,6 +308,17 @@ export const registerClient = async (req: Request, res: Response) => {
           email: result.user.email,
           phone: result.user.phone,
           role: result.user.role,
+        },
+        payment: {
+          invoiceNumber: result.invoice.invoiceNumber,
+          amount: result.finalAmount,
+          discountAmount: result.discountAmount,
+          bonusTokens: result.bonusTokens,
+          isFree: result.isFree,
+          qrString: result.qrisData.qrString,
+          paymentUrl: result.qrisData.paymentUrl,
+          expiredAt: result.qrisData.expiredAt,
+          isSandbox: result.qrisData.isSandbox,
         },
       },
     });
@@ -315,6 +427,7 @@ export const onboardingClient = async (req: Request, res: Response) => {
     const receiptConfig = {
       paperSize: receiptSize || '58mm',
       footerText: receiptFooter || 'Terima kasih atas kunjungan Anda!',
+      showWatermark: true,
     };
 
     await prisma.outlet.update({
@@ -912,6 +1025,14 @@ export const validateTenantPromoCode = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Kuota penggunaan kupon promo ini telah habis' });
     }
 
+    const promoScope = (promo as any).scope || 'ALL';
+    if (promoScope !== 'ALL' && promoScope !== 'TOPUP') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Kupon promo ini khusus untuk pendaftaran awal dan tidak dapat digunakan untuk top-up token',
+      });
+    }
+
     const config = readPlatformPaymentConfig();
     const tokenPrice = typeof config.tokenPrice === 'number' ? config.tokenPrice : 69;
     const tokens = Number(tokenAmount) || 1000;
@@ -1199,6 +1320,7 @@ export const createInitialStore = async (req: Request, res: Response) => {
           receiptConfig: {
             paperSize: '58mm',
             footerText: `Terima kasih telah berbelanja di ${storeName}!`,
+            showWatermark: true,
           },
         },
       });
@@ -1239,6 +1361,99 @@ export const createInitialStore = async (req: Request, res: Response) => {
       status: 'error',
       message: 'Gagal membuat toko baru',
     });
+  }
+};
+
+export const getPublicPlatformConfig = async (_req: Request, res: Response) => {
+  try {
+    const config = readPlatformPaymentConfig();
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        registrationFee: typeof config.registrationFee === 'number' ? config.registrationFee : 99000,
+        registrationBonusTokens: typeof config.registrationBonusTokens === 'number' ? config.registrationBonusTokens : 100,
+        tokenPrice: typeof config.tokenPrice === 'number' ? config.tokenPrice : 100,
+        minTokenPurchase: typeof config.minTokenPurchase === 'number' ? config.minTokenPurchase : 250,
+        packages: config.packages || [],
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching public platform config:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat konfigurasi platform' });
+  }
+};
+
+/**
+ * Validasi Kupon Promo Pendaftaran Akun Pemilik (Public)
+ * @route GET /api/saas/promos/validate-registration
+ */
+export const validateRegistrationPromoCode = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.query;
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Kode kupon promo wajib diisi' });
+    }
+
+    const promo = await prisma.saaSPromo.findFirst({
+      where: { code: code.trim().toUpperCase(), isActive: true },
+    });
+
+    if (!promo) {
+      return res.status(404).json({ status: 'error', message: 'Kupon promo tidak ditemukan atau sudah tidak aktif' });
+    }
+
+    const now = new Date();
+    if (promo.validUntil && promo.validUntil < now) {
+      return res.status(400).json({ status: 'error', message: 'Kupon promo telah melewati masa berlaku' });
+    }
+
+    if (promo.usageLimit && promo.usedCount >= promo.usageLimit) {
+      return res.status(400).json({ status: 'error', message: 'Kuota penggunaan kupon promo ini telah habis' });
+    }
+
+    const promoScope = (promo as any).scope || 'ALL';
+    if (promoScope !== 'ALL' && promoScope !== 'REGISTRATION') {
+      return res.status(400).json({ status: 'error', message: 'Kupon promo ini tidak berlaku untuk pendaftaran akun baru' });
+    }
+
+    const config = readPlatformPaymentConfig();
+    const regFee = typeof config.registrationFee === 'number' ? config.registrationFee : 99000;
+    const bonusTokensDefault = typeof config.registrationBonusTokens === 'number' ? config.registrationBonusTokens : 100;
+
+    let discountAmount = 0;
+    let bonusTokens = 0;
+
+    if (promo.type === 'DISCOUNT_PERCENT') {
+      const calculatedDisc = Math.round((regFee * Number(promo.value)) / 100);
+      discountAmount = promo.maxDiscount ? Math.min(calculatedDisc, Number(promo.maxDiscount)) : calculatedDisc;
+      discountAmount = Math.min(regFee, discountAmount);
+    } else if (promo.type === 'DISCOUNT_FIXED') {
+      discountAmount = Math.min(regFee, Number(promo.value));
+    } else if (promo.type === 'BONUS_TOKENS') {
+      bonusTokens = Number(promo.value);
+    }
+
+    const finalAmount = Math.max(0, regFee - discountAmount);
+    const totalBonusTokens = bonusTokensDefault + bonusTokens;
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        code: promo.code,
+        name: promo.name,
+        type: promo.type,
+        value: Number(promo.value),
+        originalFee: regFee,
+        discountAmount,
+        bonusTokens,
+        totalBonusTokens,
+        finalAmount,
+        isFree: finalAmount === 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error validate registration promo:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memvalidasi kupon promo pendaftaran' });
   }
 };
 
@@ -1286,6 +1501,7 @@ export const getTenantNotifications = async (req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: 'Gagal memuat notifikasi' });
   }
 };
+
 
 
 

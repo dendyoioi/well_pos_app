@@ -9,7 +9,8 @@ import { ORDER_CHANNEL_LABELS } from '../types/order';
 export const generateReceiptPdf = (
   order: Order,
   paperSize: '58mm' | '80mm' = '80mm',
-  isFree: boolean = false
+  isFree: boolean = false,
+  showWatermark?: boolean
 ) => {
   const widthMm = paperSize === '58mm' ? 58 : 80;
   
@@ -286,11 +287,16 @@ export const generateReceiptPdf = (
     doc.text('Bukti pembayaran yang sah', widthMm / 2, y, { align: 'center' });
   }
 
-  if (isFree) {
+  const shouldShowWatermark =
+    showWatermark !== undefined
+      ? showWatermark
+      : (order.outlet?.receiptConfig?.showWatermark !== false || isFree);
+
+  if (shouldShowWatermark) {
     y += 3.5;
     doc.setFont('courier', 'bold');
     doc.setFontSize(paperSize === '58mm' ? 5.5 : 6.5);
-    doc.text('Powered by Well POS (Aplikasi Kasir Gratis)', widthMm / 2, y, { align: 'center' });
+    doc.text('Powered by Well POS', widthMm / 2, y, { align: 'center' });
   }
 
   // Unduh File PDF
