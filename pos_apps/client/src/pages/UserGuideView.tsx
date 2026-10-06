@@ -10,8 +10,8 @@ import {
   AlertTriangle,
   Lightbulb,
   ArrowRight,
-  Sliders,
   Lock,
+  ArrowUp,
 } from 'lucide-react';
 import type { UserRole } from '../types/auth';
 
@@ -1046,6 +1046,34 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
+  // Filter sections berdasarkan query pencarian dan kategori
+  const filteredSections = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return GUIDE_SECTIONS.filter((sec) => {
+      const matchCategory =
+        selectedCategory === 'ALL' ||
+        sec.category === selectedCategory ||
+        (selectedCategory === 'SUPERVISOR' &&
+          (sec.category === 'SUPERVISOR' || sec.targetRoles.includes('SUPERVISOR')));
+      if (!matchCategory) return false;
+      if (!q) return true;
+
+      const inTitle = sec.title.toLowerCase().includes(q);
+      const inDesc = sec.shortDesc.toLowerCase().includes(q);
+      const inCategory = sec.categoryLabel.toLowerCase().includes(q);
+      const inTips = (sec.tips || '').toLowerCase().includes(q);
+      const inWarning = (sec.warning || '').toLowerCase().includes(q);
+      const inSteps = sec.steps.some(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q) ||
+          (s.highlight || '').toLowerCase().includes(q)
+      );
+
+      return inTitle || inDesc || inCategory || inTips || inWarning || inSteps;
+    });
+  }, [searchQuery, selectedCategory]);
+
   // Auto-scroll ke section terpilih saat initialSection berubah
   useEffect(() => {
     if (initialSection) {
@@ -1089,6 +1117,14 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
     }
   }, [lightboxImage]);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const scrollContainers = document.querySelectorAll('.overflow-y-auto');
+    scrollContainers.forEach((el) => {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  };
+
   const scrollToSection = (id: string) => {
     setActiveSectionId(id);
     const targetSec = GUIDE_SECTIONS.find((s) => s.id === id);
@@ -1111,33 +1147,30 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
     }, isCurrentlyVisible ? 10 : 120);
   };
 
-  // Filter sections berdasarkan query pencarian dan kategori
-  const filteredSections = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return GUIDE_SECTIONS.filter((sec) => {
-      const matchCategory =
-        selectedCategory === 'ALL' ||
-        sec.category === selectedCategory ||
-        (selectedCategory === 'SUPERVISOR' &&
-          (sec.category === 'SUPERVISOR' || sec.targetRoles.includes('SUPERVISOR')));
-      if (!matchCategory) return false;
-      if (!q) return true;
+  // Pantau bab yang sedang aktif di viewport menggunakan IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSectionId(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: '-20% 0px -65% 0px',
+        threshold: 0,
+      }
+    );
 
-      const inTitle = sec.title.toLowerCase().includes(q);
-      const inDesc = sec.shortDesc.toLowerCase().includes(q);
-      const inCategory = sec.categoryLabel.toLowerCase().includes(q);
-      const inTips = (sec.tips || '').toLowerCase().includes(q);
-      const inWarning = (sec.warning || '').toLowerCase().includes(q);
-      const inSteps = sec.steps.some(
-        (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q) ||
-          (s.highlight || '').toLowerCase().includes(q)
-      );
-
-      return inTitle || inDesc || inCategory || inTips || inWarning || inSteps;
+    Object.values(sectionRefs.current).forEach((el) => {
+      if (el) observer.observe(el);
     });
-  }, [searchQuery, selectedCategory]);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [filteredSections]);
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -1189,100 +1222,126 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
         </div>
       </div>
 
-      {/* ─── 2. CATEGORY FILTER TABS & QUICK SHORTCUT PILLS ─── */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5 text-xs font-black text-slate-700">
-            <Sliders className="w-4 h-4 text-blue-900" />
-            <span>Kategori Panduan Sesuai Peran:</span>
-          </div>
-
-          <span className="text-[11px] font-bold text-slate-500">
-            Menampilkan <strong>{filteredSections.length}</strong> dari {GUIDE_SECTIONS.length} modul panduan
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-          <button
-            onClick={() => setSelectedCategory('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              selectedCategory === 'ALL'
-                ? 'bg-blue-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            Semua Modul
-          </button>
-          <button
-            onClick={() => setSelectedCategory('OWNER_ADMIN')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-              selectedCategory === 'OWNER_ADMIN'
-                ? 'bg-blue-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <span>👑 Owner &amp; Admin</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory('CASHIER')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-              selectedCategory === 'CASHIER'
-                ? 'bg-blue-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <span>💳 Kasir &amp; POS</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory('SUPERVISOR')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-              selectedCategory === 'SUPERVISOR'
-                ? 'bg-blue-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <span>🛡️ Supervisor &amp; Audit</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory('WAREHOUSE')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-              selectedCategory === 'WAREHOUSE'
-                ? 'bg-blue-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <span>📦 Gudang &amp; Logistik</span>
-          </button>
-          <button
-            onClick={() => setSelectedCategory('QR_MENU')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-              selectedCategory === 'QR_MENU'
-                ? 'bg-blue-950 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <span>📱 Buku Menu QR Meja</span>
-          </button>
-        </div>
-
-        {/* Quick Jump Links Bar */}
-        <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto text-[11px] scrollbar-thin">
-          <span className="font-bold text-slate-400 shrink-0">
-            Lompat Cepat ({filteredSections.length}):
-          </span>
-          {filteredSections.map((sec) => (
+      {/* ─── 2. STICKY CATEGORY FILTER TABS & QUICK SHORTCUT DOCK ─── */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/90 shadow-md shadow-slate-900/5 space-y-2 transition-all -mx-1 sm:mx-0">
+        {/* Baris 1: Filter Kategori & Tombol Aksi Cepat */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Kategori Filter Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-thin flex-1 min-w-0">
             <button
-              key={sec.id}
-              onClick={() => scrollToSection(sec.id)}
-              className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-colors cursor-pointer ${
-                activeSectionId === sec.id
-                  ? 'bg-blue-100 text-blue-950 border border-blue-300'
-                  : 'text-slate-600 hover:bg-slate-100'
+              type="button"
+              onClick={() => setSelectedCategory('ALL')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedCategory === 'ALL'
+                  ? 'bg-blue-950 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {sec.title.split('. ')[1] || sec.title}
+              Semua ({GUIDE_SECTIONS.length})
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('OWNER_ADMIN')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                selectedCategory === 'OWNER_ADMIN'
+                  ? 'bg-blue-950 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>👑 Owner &amp; Admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('CASHIER')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                selectedCategory === 'CASHIER'
+                  ? 'bg-blue-950 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>💳 Kasir &amp; POS</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('SUPERVISOR')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                selectedCategory === 'SUPERVISOR'
+                  ? 'bg-blue-950 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>🛡️ Supervisor &amp; Audit</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('WAREHOUSE')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                selectedCategory === 'WAREHOUSE'
+                  ? 'bg-blue-950 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>📦 Gudang &amp; Logistik</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('QR_MENU')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                selectedCategory === 'QR_MENU'
+                  ? 'bg-blue-950 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>📱 Menu QR Meja</span>
+            </button>
+          </div>
+
+          {/* Sisi Kanan: Tombol Cepat Ke Atas */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-bold text-slate-400 hidden xl:inline">
+              {filteredSections.length} bab aktif
+            </span>
+            <button
+              type="button"
+              onClick={scrollToTop}
+              className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-950 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+              title="Kembali ke Bagian Paling Atas (Pencarian)"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Ke Atas</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Baris 2: Sub-bar Lompat Cepat Horizontal Scrollable */}
+        <div className="pt-2 border-t border-slate-100/80 flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-thin">
+          <span className="font-black text-slate-400 shrink-0 uppercase tracking-wider text-[10px] pr-1">
+            Lompat Cepat ({filteredSections.length}):
+          </span>
+          {filteredSections.map((sec) => {
+            const isActive = activeSectionId === sec.id;
+            const chapNum = sec.title.split('.')[0];
+            const chapTitle = sec.title.split('. ')[1] || sec.title;
+            return (
+              <button
+                key={sec.id}
+                onClick={() => scrollToSection(sec.id)}
+                className={`px-2 py-1 rounded-lg font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1 ${
+                  isActive
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+                title={sec.title}
+              >
+                <span className={`text-[10px] px-1 rounded ${isActive ? 'bg-blue-800 text-amber-300 font-black' : 'bg-slate-200 text-slate-600'}`}>
+                  #{chapNum}
+                </span>
+                <span className="max-w-[140px] sm:max-w-[180px] truncate">
+                  {chapTitle}
+                </span>
+              </button>
+            );
+          })}
           {selectedCategory !== 'ALL' && (
             <button
               type="button"
@@ -1325,7 +1384,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
               ref={(el) => {
                 sectionRefs.current[sec.id] = el;
               }}
-              className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300"
+              className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300 scroll-mt-24 sm:scroll-mt-28"
             >
               {/* Section Header */}
               <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
