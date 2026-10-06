@@ -255,7 +255,7 @@ export const VoucherSelectionModal: React.FC<VoucherSelectionModalProps> = ({
 
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-400">
                       <span>Min. Belanja: Rp {minAmount.toLocaleString('id-ID')}</span>
-                      {promo.maxDiscountAmount && Number(promo.maxDiscountAmount) > 0 && (
+                      {promo.discountType === 'PERCENTAGE' && promo.maxDiscountAmount && Number(promo.maxDiscountAmount) > 0 && (
                         <span>Maks. Potongan: Rp {Number(promo.maxDiscountAmount).toLocaleString('id-ID')}</span>
                       )}
                     </div>

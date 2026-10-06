@@ -174,7 +174,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     type: 'DISCOUNT_PERCENT' as 'DISCOUNT_PERCENT' | 'DISCOUNT_FIXED' | 'BONUS_TOKENS',
     value: 20,
     minSpend: 0,
-    maxDiscount: 100000,
+    maxDiscount: 0,
     usageLimit: 100,
     validUntil: '',
     isPublished: true,
@@ -884,7 +884,20 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     if (!newPromoForm.code || !newPromoForm.name || !newPromoForm.value) return;
     setSubmittingPromo(true);
     try {
-      const res = await api.createPlatformPromo(newPromoForm);
+      const sanitizedPayload = {
+        ...newPromoForm,
+        code: newPromoForm.code.trim().toUpperCase(),
+        name: newPromoForm.name.trim(),
+        description: newPromoForm.description.trim() || undefined,
+        value: Number(newPromoForm.value),
+        minSpend: Number(newPromoForm.minSpend) || 0,
+        maxDiscount: newPromoForm.type === 'DISCOUNT_PERCENT' && Number(newPromoForm.maxDiscount) > 0
+          ? Number(newPromoForm.maxDiscount)
+          : null,
+        usageLimit: Number(newPromoForm.usageLimit) > 0 ? Number(newPromoForm.usageLimit) : null,
+        validUntil: newPromoForm.validUntil ? new Date(newPromoForm.validUntil).toISOString() : null,
+      };
+      const res = await api.createPlatformPromo(sanitizedPayload);
       if (res.status === 'success') {
         setActionFeedback(res.message || 'Kode promo berhasil diterbitkan');
         setIsCreatePromoModalOpen(false);
@@ -896,7 +909,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           type: 'DISCOUNT_PERCENT',
           value: 20,
           minSpend: 0,
-          maxDiscount: 100000,
+          maxDiscount: 0,
           usageLimit: 100,
           validUntil: '',
           isPublished: true,
@@ -4140,7 +4153,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                             <span className="text-slate-200 font-semibold">{formatRupiah(promo.minSpend)}</span>
                           </div>
                         )}
-                        {promo.maxDiscount > 0 && (
+                        {promo.type === 'DISCOUNT_PERCENT' && promo.maxDiscount > 0 && (
                           <div className="flex justify-between">
                             <span>Maks. Potongan:</span>
                             <span className="text-slate-200 font-semibold">{formatRupiah(promo.maxDiscount)}</span>
@@ -5938,7 +5951,14 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     </label>
                     <select
                       value={newPromoForm.type}
-                      onChange={(e) => setNewPromoForm({ ...newPromoForm, type: e.target.value as any })}
+                      onChange={(e) => {
+                        const nextType = e.target.value as any;
+                        setNewPromoForm({
+                          ...newPromoForm,
+                          type: nextType,
+                          maxDiscount: nextType === 'DISCOUNT_PERCENT' ? newPromoForm.maxDiscount : 0,
+                        });
+                      }}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
                     >
                       <option value="DISCOUNT_PERCENT">Diskon Persentase (%)</option>
@@ -6222,7 +6242,14 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     </label>
                     <select
                       value={editPromoForm.type}
-                      onChange={(e) => setEditPromoForm({ ...editPromoForm, type: e.target.value as any })}
+                      onChange={(e) => {
+                        const nextType = e.target.value as any;
+                        setEditPromoForm({
+                          ...editPromoForm,
+                          type: nextType,
+                          maxDiscount: nextType === 'DISCOUNT_PERCENT' ? editPromoForm.maxDiscount : 0,
+                        });
+                      }}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-medium transition-all"
                     >
                       <option value="DISCOUNT_PERCENT">Diskon Persentase (%)</option>

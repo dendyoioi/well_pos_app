@@ -153,6 +153,13 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
       ALTER TABLE "saas_promos" ADD COLUMN IF NOT EXISTS "description" TEXT;
     `,
   },
+  {
+    id: '20261007_02_saas_promos_clean_non_percent_max_discount',
+    description: 'Membersihkan kolom max_discount menjadi NULL untuk promo yang bertipe nominal tetap (DISCOUNT_FIXED) atau token bonus (BONUS_TOKENS)',
+    sql: `
+      UPDATE "saas_promos" SET "max_discount" = NULL WHERE "type" != 'DISCOUNT_PERCENT';
+    `,
+  },
 ];
 
 /**

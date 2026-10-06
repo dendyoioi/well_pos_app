@@ -1453,6 +1453,9 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: `Kode promo "${code}" sudah digunakan` });
     }
 
+    const isPercent = type === 'DISCOUNT_PERCENT';
+    const sanitizedMaxDiscount = isPercent && maxDiscount ? new Prisma.Decimal(maxDiscount) : null;
+
     const promo = await prisma.saaSPromo.create({
       data: {
         id: `promo-${code.toLowerCase()}-${Date.now().toString(36)}`,
@@ -1463,7 +1466,7 @@ export const createPlatformPromo = async (req: Request, res: Response) => {
         type,
         value: new Prisma.Decimal(value),
         minSpend: new Prisma.Decimal(minSpend || 0),
-        maxDiscount: maxDiscount ? new Prisma.Decimal(maxDiscount) : null,
+        maxDiscount: sanitizedMaxDiscount,
         usageLimit: usageLimit || null,
         validUntil: validUntil ? new Date(validUntil) : null,
         isActive: true,
@@ -1515,13 +1518,18 @@ export const updatePlatformPromo = async (req: Request, res: Response) => {
 
     const data = parse.data;
     const updatePayload: any = {};
+    const targetType = data.type || promo.type;
     if (data.name !== undefined) updatePayload.name = data.name;
     if (data.description !== undefined) updatePayload.description = data.description || null;
     if (data.scope !== undefined) updatePayload.scope = data.scope;
     if (data.type !== undefined) updatePayload.type = data.type;
     if (data.value !== undefined) updatePayload.value = new Prisma.Decimal(data.value);
     if (data.minSpend !== undefined) updatePayload.minSpend = new Prisma.Decimal(data.minSpend);
-    if (data.maxDiscount !== undefined) updatePayload.maxDiscount = data.maxDiscount ? new Prisma.Decimal(data.maxDiscount) : null;
+    if (targetType !== 'DISCOUNT_PERCENT') {
+      updatePayload.maxDiscount = null;
+    } else if (data.maxDiscount !== undefined) {
+      updatePayload.maxDiscount = data.maxDiscount ? new Prisma.Decimal(data.maxDiscount) : null;
+    }
     if (data.usageLimit !== undefined) updatePayload.usageLimit = data.usageLimit || null;
     if (data.validUntil !== undefined) updatePayload.validUntil = data.validUntil ? new Date(data.validUntil) : null;
     if (data.isActive !== undefined) updatePayload.isActive = Boolean(data.isActive);

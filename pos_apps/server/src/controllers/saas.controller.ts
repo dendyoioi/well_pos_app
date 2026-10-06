@@ -838,34 +838,64 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
 
     // Evaluasi Promo jika ada
     if (promoCode && promoCode.trim() !== '') {
+      const cleanCode = promoCode.trim().toUpperCase();
       const promo = await prisma.saaSPromo.findFirst({
-        where: { code: promoCode.trim().toUpperCase(), isActive: true },
+        where: { code: cleanCode, isActive: true },
       });
 
-      if (promo) {
-        const now = new Date();
-        const notExpired = !promo.validUntil || promo.validUntil >= now;
-        const withinUsageLimit = !promo.usageLimit || promo.usedCount < promo.usageLimit;
-        const meetsMinSpend = !promo.minSpend || baseAmount >= Number(promo.minSpend);
-
-        if (notExpired && withinUsageLimit && meetsMinSpend) {
-          if (promo.type === 'DISCOUNT_PERCENT') {
-            discountAmount = Math.round((baseAmount * Number(promo.value)) / 100);
-            if (promo.maxDiscount) {
-              discountAmount = Math.min(discountAmount, Number(promo.maxDiscount));
-            }
-          } else if (promo.type === 'DISCOUNT_FIXED') {
-            discountAmount = Math.min(baseAmount, Number(promo.value));
-          } else if (promo.type === 'BONUS_TOKENS') {
-            finalTokenAmount += Number(promo.value);
-          }
-
-          await prisma.saaSPromo.update({
-            where: { id: promo.id },
-            data: { usedCount: { increment: 1 } },
-          }).catch(() => {});
-        }
+      if (!promo) {
+        return res.status(404).json({
+          status: 'error',
+          message: `Kupon promo "${cleanCode}" tidak ditemukan atau sudah tidak aktif`,
+        });
       }
+
+      const now = new Date();
+      if (promo.validUntil && promo.validUntil < now) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kupon promo "${cleanCode}" telah melewati masa berlaku`,
+        });
+      }
+
+      if (promo.usageLimit && promo.usedCount >= promo.usageLimit) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kuota penggunaan kupon promo "${cleanCode}" telah habis`,
+        });
+      }
+
+      const promoScope = (promo as any).scope || 'ALL';
+      if (promoScope !== 'ALL' && promoScope !== 'TOPUP') {
+        return res.status(400).json({
+          status: 'error',
+          message: `Kupon promo "${cleanCode}" khusus untuk pendaftaran akun baru dan tidak dapat digunakan untuk top-up token`,
+        });
+      }
+
+      if (promo.minSpend && baseAmount < Number(promo.minSpend)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Minimal transaksi untuk kupon "${cleanCode}" adalah Rp ${Number(promo.minSpend).toLocaleString('id-ID')}`,
+        });
+      }
+
+      if (promo.type === 'DISCOUNT_PERCENT') {
+        const calculatedDisc = Math.round((baseAmount * Number(promo.value)) / 100);
+        discountAmount = promo.maxDiscount && Number(promo.maxDiscount) > 0
+          ? Math.min(calculatedDisc, Number(promo.maxDiscount))
+          : calculatedDisc;
+        discountAmount = Math.min(baseAmount, discountAmount);
+      } else if (promo.type === 'DISCOUNT_FIXED') {
+        discountAmount = Math.min(baseAmount, Number(promo.value));
+      } else if (promo.type === 'BONUS_TOKENS') {
+        finalTokenAmount += Number(promo.value);
+      }
+
+      await prisma.saaSPromo.update({
+        where: { id: promo.id },
+        data: { usedCount: { increment: 1 } },
+      }).catch(() => {});
     }
 
     const finalAmount = Math.max(0, baseAmount - discountAmount);
@@ -1050,9 +1080,10 @@ export const validateTenantPromoCode = async (req: Request, res: Response) => {
 
     if (promo.type === 'DISCOUNT_PERCENT') {
       discountAmount = Math.round((baseAmount * Number(promo.value)) / 100);
-      if (promo.maxDiscount) {
+      if (promo.maxDiscount && Number(promo.maxDiscount) > 0) {
         discountAmount = Math.min(discountAmount, Number(promo.maxDiscount));
       }
+      discountAmount = Math.min(baseAmount, discountAmount);
     } else if (promo.type === 'DISCOUNT_FIXED') {
       discountAmount = Math.min(baseAmount, Number(promo.value));
     } else if (promo.type === 'BONUS_TOKENS') {

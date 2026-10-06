@@ -1295,12 +1295,12 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                           </p>
 
                           {/* Syarat Khusus (Min Belanja / Max Diskon) */}
-                          {(promo.minSpend > 0 || promo.maxDiscount > 0) && (
+                          {(promo.minSpend > 0 || (promo.type === 'DISCOUNT_PERCENT' && promo.maxDiscount > 0)) && (
                             <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500 font-medium">
                               {promo.minSpend > 0 && (
                                 <span>Min. transaksi Rp {Number(promo.minSpend).toLocaleString('id-ID')}</span>
                               )}
-                              {promo.maxDiscount > 0 && (
+                              {promo.type === 'DISCOUNT_PERCENT' && promo.maxDiscount > 0 && (
                                 <span>Maks. diskon Rp {Number(promo.maxDiscount).toLocaleString('id-ID')}</span>
                               )}
                             </div>
