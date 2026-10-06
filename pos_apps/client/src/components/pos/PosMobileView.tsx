@@ -25,6 +25,7 @@ import {
   Users,
   Bike,
   Bluetooth,
+  Camera,
 } from 'lucide-react';
 import type { Product, Category } from '../../types/product';
 import type { CartItem, OrderChannel } from '../../types/order';
@@ -105,6 +106,7 @@ export interface PosMobileViewProps {
   pointsToRedeem?: number;
   onChangePointsToRedeem?: (points: number) => void;
   currentUser?: { name?: string; role?: string; email?: string } | null;
+  onOpenBarcodeScanner?: () => void;
 }
 
 export const PosMobileView: React.FC<PosMobileViewProps> = ({
@@ -168,6 +170,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   onLogout,
   allowedTabs,
   currentUser,
+  onOpenBarcodeScanner,
 }) => {
   // Mobile UI States
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -308,23 +311,36 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
       {/* 2. Search Bar & Horizontal Category Carousel */}
       <div className="bg-white border-b border-slate-200 p-2.5 space-y-2 shrink-0 shadow-2xs">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari menu atau kode..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl pl-8 pr-7 py-1.5 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-          />
-          {searchQuery && (
+        {/* Search Input & Camera Scanner Button */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari menu atau kode..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl pl-8 pr-7 py-1.5 text-xs font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {onOpenBarcodeScanner && (
             <button
               type="button"
-              onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 p-0.5"
+              onClick={onOpenBarcodeScanner}
+              className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-900 shrink-0 shadow-2xs active:scale-95 cursor-pointer"
+              title="Buka Pemindai Barcode Kamera HP"
+              aria-label="Scan Barcode via Kamera"
             >
-              <X className="w-3.5 h-3.5" />
+              <Camera className="w-4 h-4 text-blue-900" />
             </button>
           )}
         </div>

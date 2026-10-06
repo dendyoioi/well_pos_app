@@ -25,6 +25,7 @@ import { ProductModal } from '../components/ProductModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { AssignCatalogProductModal } from '../components/AssignCatalogProductModal';
 import { FullScreenProductImportModal } from '../components/FullScreenProductImportModal';
+import { ProductBarcodeLabelsModal } from '../components/ProductBarcodeLabelsModal';
 import { TablePagination } from '../components/TablePagination';
 import { exportProductsToCsv } from '../utils/productExportCsv';
 import { api } from '../services/api';
@@ -67,6 +68,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [barcodeLabelsModalOpen, setBarcodeLabelsModalOpen] = useState(false);
+  const [productsForLabels, setProductsForLabels] = useState<Product[]>([]);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [bulkCategoryModalOpen, setBulkCategoryModalOpen] = useState(false);
   const [selectedTargetCategoryId, setSelectedTargetCategoryId] = useState<string>('');
@@ -490,6 +493,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               <span className="hidden sm:inline">Ekspor CSV</span>
             </button>
 
+            {/* Cetak Label Barcode / Stiker Rak */}
+            <button
+              type="button"
+              onClick={() => {
+                setProductsForLabels(products);
+                setBarcodeLabelsModalOpen(true);
+              }}
+              className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/50 hover:bg-blue-100/50 text-blue-950 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+              title="Cetak label barcode / stiker rak untuk produk"
+            >
+              <Barcode className="w-4 h-4 text-blue-900 shrink-0" />
+              <span className="sm:hidden">Label</span>
+              <span className="hidden sm:inline">Cetak Label</span>
+            </button>
+
             {/* Impor Massal Produk */}
             {canManage && (
               <button
@@ -852,6 +870,26 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                               </div>
                             </div>
 
+                            {/* Cetak Label Barcode Produk */}
+                            <div className="relative group flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProductsForLabels([p]);
+                                  setBarcodeLabelsModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-900 hover:bg-blue-50 transition-colors cursor-pointer"
+                              >
+                                <Barcode className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                  Cetak Label Barcode
+                                </span>
+                                <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                              </div>
+                            </div>
+
                             {/* Edit Menu */}
                             <div className="relative group flex items-center">
                               <button
@@ -1057,6 +1095,18 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          onClick={() => {
+                            setProductsForLabels([p]);
+                            setBarcodeLabelsModalOpen(true);
+                          }}
+                          className="p-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:text-blue-900 hover:bg-blue-50 transition-all shadow-2xs flex items-center justify-center cursor-pointer min-h-[32px] min-w-[32px]"
+                          title="Cetak Label Barcode"
+                        >
+                          <Barcode className="w-3.5 h-3.5 text-blue-900" />
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => handleEdit(p)}
                           className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:text-blue-900 hover:bg-blue-50 text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer min-h-[32px]"
                         >
@@ -1140,6 +1190,22 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             >
               <Power className="w-3.5 h-3.5 text-amber-400" />
               <span>Nonaktifkan</span>
+            </button>
+
+            {/* Cetak Label Terpilih Massal */}
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={() => {
+                const selected = products.filter((p) => selectedIds.includes(p.id));
+                setProductsForLabels(selected);
+                setBarcodeLabelsModalOpen(true);
+              }}
+              className="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+              title="Cetak label barcode / stiker rak untuk produk terpilih"
+            >
+              <Barcode className="w-3.5 h-3.5 text-blue-200" />
+              <span>Cetak Label</span>
             </button>
 
             {/* Hapus Terpilih */}
@@ -1270,6 +1336,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         loading={actionLoading}
       />
 
+      {/* Modal Cetak Label Barcode / Stiker Rak Produk (EPIC-26) */}
+      <ProductBarcodeLabelsModal
+        isOpen={barcodeLabelsModalOpen}
+        onClose={() => setBarcodeLabelsModalOpen(false)}
+        products={productsForLabels.length > 0 ? productsForLabels : products}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, LayoutGrid, List, Barcode, X } from 'lucide-react';
+import { Search, LayoutGrid, List, Barcode, X, Camera } from 'lucide-react';
 import type { Category } from '../../types/product';
 
 export interface CategoryFilterPillsProps {
@@ -13,6 +13,7 @@ export interface CategoryFilterPillsProps {
   onToggleViewMode: (mode: 'grid' | 'compact') => void;
   scanMessage?: string | null;
   onClearScanMessage?: () => void;
+  onOpenBarcodeScanner?: () => void;
 }
 
 export const CategoryFilterPills: React.FC<CategoryFilterPillsProps> = ({
@@ -26,6 +27,7 @@ export const CategoryFilterPills: React.FC<CategoryFilterPillsProps> = ({
   onToggleViewMode,
   scanMessage,
   onClearScanMessage,
+  onOpenBarcodeScanner,
 }) => {
   return (
     <div className="space-y-3 shrink-0">
@@ -58,6 +60,20 @@ export const CategoryFilterPills: React.FC<CategoryFilterPillsProps> = ({
             </button>
           )}
         </div>
+
+        {/* Live Camera Scanner Button */}
+        {onOpenBarcodeScanner && (
+          <button
+            type="button"
+            onClick={onOpenBarcodeScanner}
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/90 shadow-2xs transition-all flex items-center gap-1.5 text-xs font-extrabold shrink-0 cursor-pointer active:scale-95"
+            title="Buka Pemindai Barcode Kamera HP / Webcam"
+            aria-label="Scan Barcode via Kamera"
+          >
+            <Camera className="w-4 h-4 text-blue-900" />
+            <span className="hidden sm:inline">Scan Kamera</span>
+          </button>
+        )}
 
         {/* View Mode Toggle */}
         <div className="flex items-center p-1 bg-white border border-slate-200 rounded-xl shadow-2xs">

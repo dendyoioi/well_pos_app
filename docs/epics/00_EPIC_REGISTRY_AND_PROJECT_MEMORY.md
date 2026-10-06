@@ -15,7 +15,7 @@ Dokumen ini berfungsi sebagai **memori kerja permanen (*persistent cognitive mem
 
 ### 2. MASTER EPIC REGISTRY (END-TO-END PRODUCT ROADMAP)
 
-Produk Well POS memiliki total **25 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, serta otomasi WhatsApp Gateway:
+Produk Well POS memiliki total **26 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, otomasi WhatsApp Gateway, serta pemindai barcode live & cetak label stiker:
 
 | Epic ID | Judul Epic | Status | Tahapan / Milestone | Fokus & Nilai Bisnis Utama |
 | :--- | :--- | :---: | :--- | :--- |
@@ -44,6 +44,7 @@ Produk Well POS memiliki total **25 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-23** | **Pakasir.com Payment Gateway Integration (Direct QRIS & Webhook)** | **COMPLETED ✅** | Fase 1 s.d 4<br/>[`EPIC-23.md`](./EPIC-23_PAKASIR_PAYMENT_GATEWAY_INTEGRATION.md) | Integrasi gateway pembayaran Pakasir API v2, pembayaran aktivasi pendaftaran awal tenant Rp 99.000 + 100 bonus token, top-up kuota token pay-as-you-go, direct QRIS modal, polling status live, webhook secret guard, tarif dinamis Rp 69/token, batas minimal 250 token, sakelar QRIS Superadmin, dan eliminasi transfer manual. |
 | **EPIC-24** | **Transaction Void & Supervisor/Owner PIN Approval Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-24.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md) | Pembatalan resmi transaksi kasir (Full & Partial Item Void), otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok inventaris atomik (movement_type VOID), slip cetak bukti fisik void dengan signature block Kasir & Spv, audit retur (refunds), isolasi omset kas shift, dan pemulihan kuota token SaaS. |
 | **EPIC-25** | **Automated WhatsApp Gateway & Digital Receipt Engine (Fonnte API)** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-25.md`](./EPIC-25_WHATSAPP_GATEWAY_AUTOMATION.md) | Otomasi pengiriman struk via Fonnte API saat checkout & 1-klik manual kasir, arsitektur token multi-level (Toko -> Platform -> Simulator Sandbox), kontrol Backoffice, dan tab Superadmin WhatsApp Gateway. |
+| **EPIC-26** | **Retail Speed, Live Camera Barcode Scanner & Shelf Label Printing Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-26.md`](./EPIC-26_BARCODE_SCANNER_AND_LABEL_PRINTING.md) | Pemindai barcode kamera HP langsung di POS (WebRTC + ZXing scanner), auto-add keranjang belanja, generator & cetak stiker label barcode/rak produk (vektor SVG murni multi-ukuran: 40x30, 30x20, 50x30, 60x40 shelf talker, A4 grid). |
 
 ---
 
@@ -235,6 +236,24 @@ Produk Well POS memiliki total **25 Epic** yang mencakup seluruh siklus hidup pe
   │   - ReceiptSettingsView.tsx: Bagian 7 konfigurasi WhatsApp Gateway khusus Owner, dilengkapi Card Panduan Aktivasi Fonnte 5-langkah (pendaftaran di fonnte.com, scan QR perangkat, salin API token, dan penyimpanan format struk).
   │   - SuperadminDashboardPage.tsx: Tab navigasi WhatsApp Gateway dengan pengelolaan kredensial platform & kartu uji coba pengiriman (Test Dispatch).
   └── 4. Verifikasi Sistem: Exit code 0 pada pos_apps/client dan pos_apps/server.
+
+[2026-10-06] RETAIL SPEED, LIVE CAMERA BARCODE SCANNER & SHELF LABEL PRINTING (EPIC-26 - FASE 1)
+  ├── 1. Live Camera Barcode Scanner Langsung di POS (WebRTC + ZXing Library):
+  │   - BarcodeCameraScannerModal.tsx: Pemindai barcode multi-format 1D (EAN-13, EAN-8, UPC, Code 128, Code 39) & 2D (QR Code) via kamera smartphone / webcam.
+  │   - Tombol pemicu pemindai kamera terintegrasi di PosMobileView.tsx (samping search input mobile) & CategoryFilterPills.tsx (desktop/tablet).
+  │   - Audio chime sintetis via Web Audio API + haptic feedback getar (navigator.vibrate) saat barcode terdeteksi.
+  │   - Auto-detection ke produk & varian katalog: Langsung memasukkan produk ke keranjang kasir (auto-add to cart) dengan feedback notifikasi scan banner.
+  ├── 2. Vector SVG Barcode & Shelf Label Printing Engine:
+  │   - BarcodeRenderer.tsx: Generator barcode SVG tajam berbasis JsBarcode dengan auto-fallback format Code 128 / EAN tanpa blur untuk printer thermal & kertas kantor A4.
+  │   - ProductBarcodeLabelsModal.tsx: Studio pratinjau live & konfigurasi cetak stiker label produk/rak.
+  │   - Multi-Template Label: Thermal 40x30 mm, 30x20 mm, 50x30 mm, Stiker Rak / Shelf Talker 60x40 mm (harga mencolok), dan Kertas A4 Grid (3x8 = 24 label/lembar).
+  │   - Pengaturan cetak dinamis: Tampilkan Nama Toko, Nama Produk, Harga Jual, Teks Barcode, serta penentuan jumlah salinan (copies) per produk atau massal.
+  │   - Pencetakan terisolasi via hidden iframe (clean print, tanpa merusak atau membekukan layout aplikasi).
+  ├── 3. Integrasi Katalog Produk Backoffice (ProductsView.tsx):
+  │   - Tombol "Cetak Label" di Toolbar Utama untuk cetak massal produk katalog.
+  │   - Tombol "Cetak Label ({selectedIds.length})" di Floating Bulk Action Bar saat produk di-checklist.
+  │   - Tombol aksi barcode per baris tabel & kartu mobile untuk cetak instan 1 produk spesifik.
+  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
 ```
 

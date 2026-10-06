@@ -17,6 +17,7 @@ import {
   HoldOrdersModal,
   OpenTabsModal,
   PosMobileView,
+  BarcodeCameraScannerModal,
 } from '../components/pos';
 import { VoucherSelectionModal } from '../components/pos/VoucherSelectionModal';
 import { SplitBillModal } from '../components/pos/SplitBillModal';
@@ -127,6 +128,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
   const [voucherModalOpen, setVoucherModalOpen] = useState<boolean>(false);
   const [splitBillModalOpen, setSplitBillModalOpen] = useState<boolean>(false);
+  const [cameraScannerOpen, setCameraScannerOpen] = useState<boolean>(false);
 
   // CRM Members
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -743,21 +745,27 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart, currentShift, products, paymentModalOpen, xReportModalOpen, closeShiftModalOpen]);
 
-  const handleScanBarcode = (code: string) => {
+  const handleScanBarcode = (code: string): { success: boolean; productName?: string } => {
+    const cleanCode = code.trim().toLowerCase();
     const found = products.find(
       (p) =>
-        (p.barcode && p.barcode.toLowerCase() === code.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase() === code.toLowerCase())
+        (p.barcode && p.barcode.toLowerCase() === cleanCode) ||
+        (p.sku && p.sku.toLowerCase() === cleanCode) ||
+        (p.modifiers && p.modifiers.some((m) =>
+          m.options?.some((opt) => opt.name.toLowerCase() === cleanCode)
+        ))
     );
     if (found) {
       handleProductSelect(found);
       playBeep(true);
       setScanMessage(`✅ Scan: ${found.name}`);
       setTimeout(() => setScanMessage(null), 2500);
+      return { success: true, productName: found.name };
     } else {
       playBeep(false);
       setScanMessage(`❌ Barcode "${code}" tidak ditemukan di katalog`);
       setTimeout(() => setScanMessage(null), 3500);
+      return { success: false };
     }
   };
 
@@ -1608,6 +1616,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           onLogout={onLogout}
           allowedTabs={allowedTabs}
           currentUser={currentUser}
+          onOpenBarcodeScanner={() => setCameraScannerOpen(true)}
         />
       ) : (
         <>
@@ -1682,6 +1691,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                 onToggleViewMode={(mode) => setViewMode(mode)}
                 scanMessage={scanMessage}
                 onClearScanMessage={() => setScanMessage(null)}
+                onOpenBarcodeScanner={() => setCameraScannerOpen(true)}
               />
 
               <ProductCatalogGrid
@@ -2021,6 +2031,13 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         onClose={() => setUpgradeModalOpen(false)}
         featureHighlight={upgradeFeatureHighlight}
         message={upgradeMessage}
+      />
+
+      {/* Live Camera Barcode Scanner Modal (EPIC-26) */}
+      <BarcodeCameraScannerModal
+        isOpen={cameraScannerOpen}
+        onClose={() => setCameraScannerOpen(false)}
+        onScan={handleScanBarcode}
       />
     </div>
   );
