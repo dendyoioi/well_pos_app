@@ -65,6 +65,24 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
     description: 'Mencatat pengeluaran uang tunai operasional (iuran lingkungan, belanja toko, dll.) langsung dari kas kasir',
     category: 'REGISTER_SALES',
   },
+  {
+    id: 'sales_customer_debt',
+    label: 'Pemberian Kasbon Pelanggan di Kasir (Piutang)',
+    description: 'Memproses pesanan dengan kasbon / piutang pelanggan di layar kasir',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_debt_payment',
+    label: 'Terima Pelunasan Kasbon di Kasir',
+    description: 'Menerima setoran uang pelunasan hutang/kasbon pelanggan di meja kasir',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'attendance_clock',
+    label: 'Absensi Mandiri Staf (Clock In & Out)',
+    description: 'Mencatat waktu absensi kehadiran datang dan pulang kerja mandiri menggunakan PIN staf di kasir',
+    category: 'REGISTER_SALES',
+  },
 
   // 2. Menu, Katalog & Resep
   {
@@ -89,6 +107,12 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
     id: 'menu_modifiers',
     label: 'Kelola Varian & Modifiers (Topping)',
     description: 'Mengatur pilihan ekstra shot, sirup, level gula, dan opsi kustom',
+    category: 'CATALOG_RECIPES',
+  },
+  {
+    id: 'menu_barcode_labels',
+    label: 'Cetak Label Barcode & Stiker Rak',
+    description: 'Mencetak stiker barcode produk, kode SKU, dan label harga rak toko (shelf tags)',
     category: 'CATALOG_RECIPES',
   },
 
@@ -143,6 +167,18 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
     description: 'Melihat laba kotor, margin profitabilitas, dan audit margin modal',
     category: 'REPORTS_FINANCIAL',
   },
+  {
+    id: 'report_cash_flow',
+    label: 'Laporan Arus Kas Riil (Cash Flow)',
+    description: 'Melihat rekap mutasi riil uang kas masuk, kas keluar, setoran modal awal, dan saldo kas bersih outlet',
+    category: 'REPORTS_FINANCIAL',
+  },
+  {
+    id: 'crm_debt_manage',
+    label: 'Buku Kasbon CRM & Penagihan Piutang',
+    description: 'Melihat buku piutang pelanggan, kelola limit kasbon, dan kirim pengingat tagihan WhatsApp otomatis',
+    category: 'REPORTS_FINANCIAL',
+  },
 
   // 5. Pengaturan & Tata Kelola
   {
@@ -167,6 +203,12 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
     id: 'settings_printer',
     label: 'Konfigurasi Printer & Format Struk',
     description: 'Mengatur ukuran kertas thermal 58mm/80mm dan catatan footer nota',
+    category: 'SETTINGS_GOVERNANCE',
+  },
+  {
+    id: 'attendance_manage',
+    label: 'Rekapitulasi Absensi & Jam Kerja Toko',
+    description: 'Melihat rekap kehadiran seluruh staf, menetapkan jam kerja operasional, toleransi keterlambatan, dan ekspor lembar kehadiran',
     category: 'SETTINGS_GOVERNANCE',
   },
 ];
@@ -213,7 +255,7 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
   {
     id: 'role-supervisor',
     name: 'Supervisor / Manajer Toko',
-    description: 'Mengelola operasional harian cabang, otorisasi void/diskon kasir, dan laporan shift',
+    description: 'Mengelola operasional harian cabang, otorisasi void/diskon kasir, absensi, dan laporan shift',
     status: true,
     isDefault: true,
     permissions: [
@@ -225,9 +267,13 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
       'sales_drawer',
       'sales_reprint',
       'sales_cash_expense',
+      'sales_customer_debt',
+      'sales_debt_payment',
+      'attendance_clock',
       'menu_view',
       'menu_manage',
       'menu_modifiers',
+      'menu_barcode_labels',
       'stock_view',
       'stock_in',
       'stock_adjustment',
@@ -235,7 +281,10 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
       'report_x',
       'report_z',
       'report_sales',
+      'report_cash_flow',
+      'crm_debt_manage',
       'settings_printer',
+      'attendance_manage',
     ],
     businessPermissions: {
       orderDiscount: { maxPercent: 30, maxAmount: 250000 },
@@ -245,7 +294,7 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
   {
     id: 'role-cashier',
     name: 'Kasir Toko (Cashier)',
-    description: 'Melayani transaksi pemesanan, menerima pembayaran kasir, buka/tutup shift laci pribadi',
+    description: 'Melayani transaksi pemesanan, kasbon pelanggan, pelunasan piutang, buka/tutup shift, dan absensi',
     status: true,
     isDefault: true,
     permissions: [
@@ -254,6 +303,10 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
       'sales_hold',
       'sales_discount',
       'sales_reprint',
+      'sales_cash_expense',
+      'sales_customer_debt',
+      'sales_debt_payment',
+      'attendance_clock',
       'menu_view',
       'report_x',
     ],
@@ -265,7 +318,7 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
   {
     id: 'role-warehouse',
     name: 'Staf Gudang (Warehouse)',
-    description: 'Fokus pada pengelolaan persediaan, barang masuk supplier, opname, dan transfer cabang',
+    description: 'Fokus pada persediaan, cetak barcode rak, penerimaan PO supplier, opname, transfer, dan absensi',
     status: true,
     isDefault: true,
     permissions: [
@@ -274,6 +327,8 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
       'stock_adjustment',
       'stock_transfer',
       'menu_view',
+      'menu_barcode_labels',
+      'attendance_clock',
     ],
     businessPermissions: {
       orderDiscount: { maxPercent: 0, maxAmount: 0 },
@@ -283,13 +338,31 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
   {
     id: 'role-barista',
     name: 'Barista & Kru Dapur (Kitchen)',
-    description: 'Menerima tiket pesanan dapur, memeriksa ketersediaan resep, dan melihat antrean',
+    description: 'Menerima tiket pesanan dapur, memeriksa ketersediaan resep, melihat antrean, dan absensi mandiri',
     status: true,
     isDefault: true,
     permissions: [
       'menu_view',
       'stock_view',
       'sales_hold',
+      'attendance_clock',
+    ],
+    businessPermissions: {
+      orderDiscount: { maxPercent: 0, maxAmount: 0 },
+      productDiscount: { maxPercent: 0, maxAmount: 0 },
+    },
+  },
+  {
+    id: 'role-waiter',
+    name: 'Pelayan & Pramusaji (Waiter)',
+    description: 'Melayani pemesanan meja pelanggan, antrean tamu, melihat daftar menu, dan absensi mandiri',
+    status: true,
+    isDefault: true,
+    permissions: [
+      'menu_view',
+      'sales_checkout',
+      'sales_hold',
+      'attendance_clock',
     ],
     businessPermissions: {
       orderDiscount: { maxPercent: 0, maxAmount: 0 },
@@ -352,6 +425,11 @@ class RoleService {
         all.push(cr);
       }
     });
+    // Pastikan peran Owner selalu memiliki 100% seluruh izin sistem tanpa terkecuali
+    const ownerIdx = all.findIndex((r) => r.id === 'role-owner');
+    if (ownerIdx >= 0) {
+      all[ownerIdx].permissions = SYSTEM_PERMISSIONS.map((p) => p.id);
+    }
     return all;
   }
 

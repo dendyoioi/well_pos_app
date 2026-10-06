@@ -1,4 +1,4 @@
-export type UserRole = 'OWNER' | 'ADMIN' | 'SUPERVISOR' | 'WAREHOUSE' | 'CASHIER';
+export type UserRole = 'OWNER' | 'ADMIN' | 'SUPERVISOR' | 'WAREHOUSE' | 'CASHIER' | 'KITCHEN' | 'WAITER';
 
 export interface Outlet {
   id: string;

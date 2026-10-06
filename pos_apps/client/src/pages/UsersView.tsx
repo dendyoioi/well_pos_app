@@ -417,6 +417,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
     if (upper.includes('BARISTA') || upper.includes('KITCHEN') || upper.includes('DAPUR')) {
       return { label: roleName, color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
     }
+    if (upper.includes('WAITER') || upper.includes('PELAYAN')) {
+      return { label: roleName, color: 'bg-teal-100 text-teal-800 border-teal-200' };
+    }
     return { label: roleName, color: 'bg-blue-100 text-blue-900 border-blue-200' };
   };
 

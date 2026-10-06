@@ -231,6 +231,8 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'outlets',
     'guide',
   ],
+  KITCHEN: ['pos', 'recipes', 'guide'],
+  WAITER: ['pos', 'orders', 'qr_orders', 'guide'],
 };
 
 const DEFAULT_TAB: Record<UserRole, TabKey> = {
@@ -239,6 +241,8 @@ const DEFAULT_TAB: Record<UserRole, TabKey> = {
   SUPERVISOR: 'overview',
   ADMIN: 'overview',
   OWNER: 'overview',
+  KITCHEN: 'pos',
+  WAITER: 'pos',
 };
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, onUserChange: _onUserChange }) => {

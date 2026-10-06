@@ -1428,7 +1428,41 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
 • Hasil Uji Verifikasi Sistem:
   - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
 ===============================================================================
+
+===============================================================================
+RECORD PEMBARUAN: PENYESUAIAN HAK AKSES & PERAN STAF (GRANULAR RBAC ALIGNMENT)
+===============================================================================
+• Konteks & Driver:
+  - Menyelaraskan seluruh master izin sistem (SYSTEM_PERMISSIONS) dan peran standar bawaan (DEFAULT_FNB_ROLES) terhadap fitur-fitur baru yang telah diimplementasikan pada Fase 1, Fase 2, dan Fase 3.
+• Izin Sistem Baru yang Ditambahkan (Backend role.service.ts & Frontend StaffRolesView.tsx):
+  1. Kategori Kasir & Penjualan POS (REGISTER_SALES):
+     - `sales_cash_expense`: Catat Kas Keluar / Pengeluaran Kasir
+     - `sales_customer_debt`: Pemberian Kasbon Pelanggan di Layar Kasir POS (Piutang)
+     - `sales_debt_payment`: Terima Setoran Pelunasan Kasbon Pelanggan di Kasir
+     - `attendance_clock`: Absensi Mandiri Staf (Clock In & Clock Out via PIN Kasir)
+  2. Kategori Menu & Resep (CATALOG_RECIPES):
+     - `menu_barcode_labels`: Cetak Label Barcode & Stiker Rak Produk (Shelf Tags)
+  3. Kategori Laporan & Finansial (REPORTS_FINANCIAL):
+     - `report_cash_flow`: Laporan Arus Kas Riil (Cash Flow Statement & Rekap Kas Bersih)
+     - `crm_debt_manage`: Buku Kasbon CRM & Penagihan Piutang (Kirim WhatsApp Pengingat)
+  4. Kategori Pengaturan & Tata Kelola (SETTINGS_GOVERNANCE):
+     - `attendance_manage`: Rekapitulasi Absensi Seluruh Staf & Pengaturan Jam Kerja Outlet
+• Penyelarasan Peran Bawaan Sistem (DEFAULT_FNB_ROLES):
+  - `role-owner`: Akses penuh 100% tanpa batas ke seluruh izin sistem (otomatis diproteksi).
+  - `role-supervisor`: Diberikan izin operasional lengkap mencakup kasbon, pelunasan kasbon, absensi mandiri, cetak barcode label, laporan arus kas, buku kasbon CRM, dan kelola rekap absensi.
+  - `role-cashier`: Diberikan izin kasir inti, kas keluar kasir, transaksi kasbon pelanggan, pelunasan kasbon, dan absensi mandiri staf.
+  - `role-warehouse`: Diberikan izin persediaan gudang, cetak barcode stiker rak, dan absensi mandiri staf.
+  - `role-barista` (Kitchen): Diberikan izin katalog menu, pantau stok, antrean hold, dan absensi mandiri staf.
+  - `role-waiter` (Pramusaji): Diberikan template peran resmi untuk pemesanan meja, antrean hold, katalog menu, dan absensi mandiri staf.
+• Sinkronisasi Dashboard & Tipe Frontend:
+  - `UserRole` di `types/auth.ts` diperluas menyertakan `'KITCHEN' | 'WAITER'` sesuai enum Prisma `Role`.
+  - `DashboardPage.tsx` (`ROLE_TABS` & `DEFAULT_TAB`) disinkronkan untuk peran KITCHEN dan WAITER.
+  - `UsersView.tsx` badge peran visual dipercantik untuk kru dapur dan pramusaji.
+• Verifikasi Build:
+  - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
+===============================================================================
 ```
+
 
 
 
