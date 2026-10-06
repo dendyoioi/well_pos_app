@@ -34,6 +34,7 @@ import { normalizeSalesChannels } from '../../types/outlet';
 import type { Promotion } from '../../types/promotion';
 import type { Shift } from '../../types/shift';
 import type { QrTable } from '../../types/qr_menu';
+import { PwaInstallButton } from '../PwaInstallBanner';
 
 export interface PosMobileViewProps {
   activeOutlet: Outlet | null | undefined;
@@ -1181,8 +1182,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
               </div>
             </div>
 
-            {/* 4. Bottom Controls: Desktop Switcher & Kunci / Logout */}
+            {/* 4. Bottom Controls: Pasang PWA, Desktop Switcher & Kunci / Logout */}
             <div className="pt-3 border-t border-slate-100 space-y-2 shrink-0">
+              <PwaInstallButton className="w-full justify-center" />
+
               <button
                 type="button"
                 onClick={() => {

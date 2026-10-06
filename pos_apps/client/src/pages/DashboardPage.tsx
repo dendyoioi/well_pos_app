@@ -68,6 +68,7 @@ import { BackofficeLayout } from '../components/saas/BackofficeLayout';
 import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
 import { BillingTokensView } from './BillingTokensView';
 import { UserGuideView } from './UserGuideView';
+import { PwaInstallButton } from '../components/PwaInstallBanner';
 import { api } from '../services/api';
 
 interface DashboardPageProps {
@@ -1008,8 +1009,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               </div>
             </div>
 
-            {/* Bottom Actions Drawer: PIN Lock & Logout */}
+            {/* Bottom Actions Drawer: Pasang PWA, PIN Lock & Logout */}
             <div className="pt-3 border-t border-slate-100 space-y-2">
+              <PwaInstallButton className="w-full justify-center" />
+
               <button
                 type="button"
                 onClick={() => {
@@ -1103,6 +1106,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
         {/* User Profile & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <PwaInstallButton />
+
           <div className="hidden sm:flex flex-col text-right">
             <span className="text-sm font-bold text-slate-800">{user.name}</span>
             <span className="text-xs text-slate-500">{user.email}</span>

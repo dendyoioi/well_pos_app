@@ -160,16 +160,28 @@ export const PwaInstallBanner: React.FC = () => {
 export const PwaInstallButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const { isInstallable, isInstalled, isIos, installing, installApp } = usePwaInstall();
   const [showIosGuide, setShowIosGuide] = useState(false);
+  const [showBrowserGuide, setShowBrowserGuide] = useState(false);
 
-  if (isInstalled || (!isInstallable && !isIos)) {
+  // Jika sudah terpasang (berjalan di standalone PWA window), sembunyikan tombol
+  if (isInstalled) {
     return null;
   }
+
+  const handleClick = () => {
+    if (isIos) {
+      setShowIosGuide(true);
+    } else if (isInstallable) {
+      installApp();
+    } else {
+      setShowBrowserGuide(true);
+    }
+  };
 
   return (
     <>
       <button
         type="button"
-        onClick={isIos ? () => setShowIosGuide(true) : installApp}
+        onClick={handleClick}
         disabled={installing}
         title="Pasang aplikasi Well POS ke layar utama perangkat Anda"
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all active:scale-95 cursor-pointer shadow-2xs ${className}`}
@@ -193,9 +205,54 @@ export const PwaInstallButton: React.FC<{ className?: string }> = ({ className =
             </p>
             <button
               onClick={() => setShowIosGuide(false)}
-              className="w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+              className="w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer"
             >
               Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Browser Desktop / Android Fallback Guide Modal */}
+      {showBrowserGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl text-slate-900 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <span className="font-extrabold text-xs text-blue-950 flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-blue-700" />
+                <span>Petunjuk Pasang Aplikasi</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowBrowserGuide(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-xs text-slate-600">
+              <div className="p-3 bg-blue-50/70 rounded-2xl border border-blue-100 space-y-1">
+                <p className="font-bold text-blue-950">Komputer / Laptop (Chrome / Edge):</p>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Klik ikon <strong>Pasang (Install)</strong> di ujung kanan bilah alamat (URL bar) atau menu titik tiga (⋮) &gt; pilih <strong>"Simpan dan Bagikan"</strong> &gt; <strong>"Pasang Well POS"</strong>.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1">
+                <p className="font-bold text-slate-900">HP / Tablet Android:</p>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Ketuk menu titik tiga (⋮) di pojok kanan atas browser &gt; pilih <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Pasang Aplikasi"</strong>.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowBrowserGuide(false)}
+              className="w-full py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer shadow-xs transition-all"
+            >
+              Mengerti
             </button>
           </div>
         </div>

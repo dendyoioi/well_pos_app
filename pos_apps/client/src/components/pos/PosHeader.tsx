@@ -20,6 +20,7 @@ import { normalizeSalesChannels } from '../../types/outlet';
 import type { Shift } from '../../types/shift';
 import type { OrderChannel } from '../../types/order';
 import { Button, Badge } from '../ui';
+import { PwaInstallButton } from '../PwaInstallBanner';
 
 export interface PosHeaderProps {
   activeOutlet?: Outlet | null;
@@ -299,6 +300,9 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
             <span className="hidden sm:inline">Biaya &amp; Pajak</span>
           </Button>
         )}
+
+        {/* Tombol Pasang Aplikasi PWA */}
+        <PwaInstallButton />
 
         {/* Toggle Mode Handheld / HP */}
         {onToggleHandheldMode && (

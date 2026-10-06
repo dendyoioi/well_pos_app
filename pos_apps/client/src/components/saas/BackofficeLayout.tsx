@@ -287,6 +287,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <span>Kelola Toko &amp; Gudang</span>
             </button>
           </div>
+
+          {/* Akses Cepat Pasang PWA di Sidebar Gudang */}
+          <div className="pt-3 mt-3 border-t border-indigo-200/80">
+            <PwaInstallButton className="w-full justify-center" />
+          </div>
         </div>
       );
     }
