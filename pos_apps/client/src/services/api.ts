@@ -961,6 +961,74 @@ export const api = {
     return res.blob();
   },
 
+  getCashFlowReport: async (params?: { startDate?: string; endDate?: string; outletId?: string }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.outletId) query.append('outletId', params.outletId);
+
+    const res = await fetch(`/api/reports/cash-flow?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getSalesPerformanceReport: async (params?: { startDate?: string; endDate?: string; outletId?: string }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.outletId) query.append('outletId', params.outletId);
+
+    const res = await fetch(`/api/reports/sales-performance?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getCustomerDebts: async (params?: {
+    search?: string;
+    status?: string;
+    customerId?: string;
+    outletId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.status) query.append('status', params.status);
+    if (params?.customerId) query.append('customerId', params.customerId);
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+
+    const res = await fetch(`/api/customers/debts?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getCustomerDebtDetail: async (debtId: string): Promise<any> => {
+    const res = await fetch(`/api/customers/debts/${debtId}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  payCustomerDebt: async (
+    debtId: string,
+    data: { amount: number; paymentMethod?: string; shiftId?: string; notes?: string; referenceNumber?: string }
+  ): Promise<any> => {
+    const res = await fetch(`/api/customers/debts/${debtId}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   // ----------------------------------------------------
   // MANAJEMEN PENGGUNA & STAF
   // ----------------------------------------------------
@@ -2268,6 +2336,50 @@ export const customerApi = {
     data: { deltaPoints: number; notes: string; type?: string }
   ): Promise<{ status: string; message?: string; data?: any }> => {
     const res = await fetch(`/api/customers/${id}/adjust-points`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getDebts: async (params?: {
+    search?: string;
+    status?: string;
+    customerId?: string;
+    outletId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.status) query.append('status', params.status);
+    if (params?.customerId) query.append('customerId', params.customerId);
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+
+    const res = await fetch(`/api/customers/debts?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getDebtDetail: async (debtId: string): Promise<any> => {
+    const res = await fetch(`/api/customers/debts/${debtId}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  payDebt: async (
+    debtId: string,
+    data: { amount: number; paymentMethod?: string; shiftId?: string; notes?: string; referenceNumber?: string }
+  ): Promise<any> => {
+    const res = await fetch(`/api/customers/debts/${debtId}/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

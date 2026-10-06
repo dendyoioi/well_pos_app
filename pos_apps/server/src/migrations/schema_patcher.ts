@@ -67,6 +67,55 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
     description: 'Menambahkan kolom scope pada tabel saas_promos untuk pembedaan voucher promo pendaftaran vs top-up (EPIC-23 / Onboarding Pricing)',
     sql: 'ALTER TABLE "saas_promos" ADD COLUMN IF NOT EXISTS "scope" VARCHAR(50) DEFAULT \'ALL\';',
   },
+  {
+    id: '20261006_02_customer_debts_and_payments',
+    description: 'Menambahkan model customer_debts dan customer_debt_payments untuk pencatatan kasbon piutang pelanggan dan pelunasan (Fase 2)',
+    sql: `
+      ALTER TYPE "PaymentMethod" ADD VALUE IF NOT EXISTS 'CUSTOMER_DEBT';
+
+      CREATE TYPE "CustomerDebtStatus" AS ENUM ('UNPAID', 'PARTIAL', 'PAID', 'CANCELLED');
+
+      CREATE TABLE IF NOT EXISTS "customer_debts" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "customer_id" TEXT NOT NULL REFERENCES "customers"("id") ON DELETE RESTRICT,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE RESTRICT,
+        "total_amount" DECIMAL(15, 2) NOT NULL,
+        "paid_amount" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "remaining_amount" DECIMAL(15, 2) NOT NULL,
+        "due_date" TIMESTAMP(3),
+        "status" "CustomerDebtStatus" NOT NULL DEFAULT 'UNPAID',
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "customer_debts_tenant_id_customer_id_idx" ON "customer_debts"("tenant_id", "customer_id");
+      CREATE INDEX IF NOT EXISTS "customer_debts_tenant_id_outlet_id_idx" ON "customer_debts"("tenant_id", "outlet_id");
+      CREATE INDEX IF NOT EXISTS "customer_debts_tenant_id_order_id_idx" ON "customer_debts"("tenant_id", "order_id");
+      CREATE INDEX IF NOT EXISTS "customer_debts_tenant_id_status_idx" ON "customer_debts"("tenant_id", "status");
+
+      CREATE TABLE IF NOT EXISTS "customer_debt_payments" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "debt_id" TEXT NOT NULL REFERENCES "customer_debts"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "cashier_id" TEXT REFERENCES "users"("id") ON DELETE RESTRICT,
+        "shift_id" TEXT REFERENCES "shifts"("id") ON DELETE RESTRICT,
+        "amount" DECIMAL(15, 2) NOT NULL,
+        "payment_method" "PaymentMethod" NOT NULL DEFAULT 'CASH',
+        "reference_number" TEXT,
+        "notes" TEXT,
+        "paid_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "customer_debt_payments_tenant_id_debt_id_idx" ON "customer_debt_payments"("tenant_id", "debt_id");
+      CREATE INDEX IF NOT EXISTS "customer_debt_payments_tenant_id_outlet_id_idx" ON "customer_debt_payments"("tenant_id", "outlet_id");
+      CREATE INDEX IF NOT EXISTS "customer_debt_payments_tenant_id_shift_id_idx" ON "customer_debt_payments"("tenant_id", "shift_id");
+    `,
+  },
 ];
 
 /**
@@ -115,7 +164,18 @@ export async function runAutoSchemaPatcher(prisma: PrismaClient): Promise<{
           .map((s) => s.trim())
           .filter((s) => s.length > 0);
         for (const stmt of statements) {
-          await prisma.$executeRawUnsafe(stmt);
+          try {
+            await prisma.$executeRawUnsafe(stmt);
+          } catch (stmtErr: any) {
+            if (
+              stmtErr?.message?.includes('already exists') ||
+              stmtErr?.code === '42710' ||
+              stmtErr?.code === '42P07'
+            ) {
+              continue;
+            }
+            throw stmtErr;
+          }
         }
 
         // Catat ke tabel pelacak

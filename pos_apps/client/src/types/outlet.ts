@@ -247,8 +247,14 @@ export interface QrisConfig {
   isActive: boolean;
 }
 
+export interface CustomerDebtConfig {
+  allowCredit: boolean;
+  defaultDueDays?: number;
+}
+
 export interface PaymentConfig {
   qris?: QrisConfig | null;
+  customerDebt?: CustomerDebtConfig | null;
 }
 
 export interface OutletLoyaltyConfig {

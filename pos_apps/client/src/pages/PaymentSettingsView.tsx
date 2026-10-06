@@ -12,8 +12,12 @@ import {
   Eye,
   RefreshCw,
   Loader2,
+  Users,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
-import type { Outlet, PaymentConfig, QrisConfig } from '../types/outlet';
+import type { Outlet, PaymentConfig, QrisConfig, CustomerDebtConfig } from '../types/outlet';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 import { compressImage } from '../utils/imageCompressor';
@@ -36,9 +40,18 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
     imageUrl: null,
   };
 
+  const currentDebt: CustomerDebtConfig = activeOutlet?.paymentConfig?.customerDebt || {
+    allowCredit: false,
+    defaultDueDays: 7,
+  };
+
   const [isActive, setIsActive] = useState<boolean>(currentQris.isActive ?? true);
   const [imageUrl, setImageUrl] = useState<string | null>(currentQris.imageUrl || null);
   const [isCompressing, setIsCompressing] = useState(false);
+
+  // State Kasbon / Piutang Pelanggan
+  const [allowCredit, setAllowCredit] = useState<boolean>(currentDebt.allowCredit ?? false);
+  const [defaultDueDays, setDefaultDueDays] = useState<number>(currentDebt.defaultDueDays ?? 7);
 
   // Sinkronisasi saat activeOutlet berubah
   useEffect(() => {
@@ -46,6 +59,10 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       const q = activeOutlet.paymentConfig?.qris;
       setIsActive(q?.isActive ?? true);
       setImageUrl(q?.imageUrl || null);
+
+      const cd = activeOutlet.paymentConfig?.customerDebt;
+      setAllowCredit(cd?.allowCredit ?? false);
+      setDefaultDueDays(cd?.defaultDueDays ?? 7);
     }
   }, [activeOutlet?.id, activeOutlet?.paymentConfig]);
 
@@ -112,9 +129,15 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
         imageUrl: imageUrl || null,
       };
 
+      const updatedDebt: CustomerDebtConfig = {
+        allowCredit,
+        defaultDueDays: Number(defaultDueDays) || 7,
+      };
+
       const updatedPaymentConfig: PaymentConfig = {
         ...(activeOutlet.paymentConfig || {}),
         qris: updatedQris,
+        customerDebt: updatedDebt,
       };
 
       const res = await api.updateOutletPaymentConfig(activeOutlet.id, updatedPaymentConfig);
@@ -126,7 +149,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             paymentConfig: updatedPaymentConfig,
           });
         }
-        dialog.toast('Pengaturan QRIS Toko berhasil disimpan!', 'success');
+        dialog.toast('Pengaturan metode pembayaran berhasil disimpan!', 'success');
       } else {
         dialog.alert({
           title: 'Gagal Menyimpan',
@@ -415,6 +438,133 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* KARTU PENGATURAN KASBON & PIUTANG PELANGGAN */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 bg-amber-50 text-amber-700 rounded-2xl border border-amber-200/60 shrink-0">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="text-base font-black text-slate-900 tracking-tight">
+                  Kasbon &amp; Piutang Pelanggan (Pay Later)
+                </h2>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    allowCredit
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {allowCredit ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Aktif di Kasir
+                    </>
+                  ) : (
+                    'Nonaktif (Default)'
+                  )}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+                Aktifkan opsi kasbon / piutang agar kasir dapat memproses transaksi pelanggan terdaftar yang ingin membayar belakangan. Seluruh kasbon tercatat otomatis di buku piutang dan uang laci bertambah saat kasbon dilunasi tunai.
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle Switch */}
+          <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+            <span className="text-xs font-bold text-slate-700">
+              {allowCredit ? 'Izinkan Kasbon' : 'Nonaktifkan Kasbon'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAllowCredit(!allowCredit)}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
+                allowCredit ? 'bg-amber-600' : 'bg-slate-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-xs ${
+                  allowCredit ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {allowCredit && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            {/* Konfigurasi Jatuh Tempo */}
+            <div className="space-y-4 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <label className="text-xs font-bold text-slate-800">
+                  Jangka Waktu Jatuh Tempo Standar
+                </label>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Pilih batas waktu pelunasan default saat kasir mencatat kasbon baru di kasir (dapat diubah manual per transaksi).
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[7, 14, 30].map((days) => (
+                  <button
+                    key={days}
+                    type="button"
+                    onClick={() => setDefaultDueDays(days)}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      defaultDueDays === days
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {days} Hari
+                  </button>
+                ))}
+              </div>
+              <div className="pt-2">
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Atau masukkan jumlah hari kustom:
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="180"
+                    value={defaultDueDays}
+                    onChange={(e) => setDefaultDueDays(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                  />
+                  <span className="absolute right-3.5 top-2 text-xs font-bold text-slate-400">
+                    Hari
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Aturan & Panduan Keamanan Kasbon */}
+            <div className="bg-amber-50/40 border border-amber-200/60 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Aturan Operasional Kasir</span>
+              </div>
+              <ul className="text-[11px] text-slate-600 space-y-2 list-disc pl-4 leading-relaxed">
+                <li>
+                  <strong className="text-slate-800">Wajib Pilih Pelanggan:</strong> Kasir dilarang mencatat kasbon untuk konsumen umum/anonim demi mencegah kerugian piutang fiktif.
+                </li>
+                <li>
+                  <strong className="text-slate-800">Status Pesanan:</strong> Pesanan tetap selesai diproses (stok bahan/barang terpotong), namun status pembayaran berstatus <em>Belum Lunas</em>.
+                </li>
+                <li>
+                  <strong className="text-slate-800">Integrasi Kas Fisik Laci:</strong> Saat pelanggan melunasi kasbon secara tunai, sistem otomatis mencatat kas masuk di shift kasir aktif sehingga laci tetap seimbang.
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -85,6 +85,8 @@ model Tenant {
   promotions            Promotion[]
   promotionUsages       PromotionUsage[]
   customerPointLedgers  CustomerPointLedger[]
+  customerDebts         CustomerDebt[]
+  customerDebtPayments  CustomerDebtPayment[]
 
   @@map("tenants")
 }
@@ -220,6 +222,7 @@ model User {
   createdPOs          PurchaseOrder[] @relation("POCreatedByUser")
   dispatchedTransfers StockTransfer[] @relation("TransferDispatchedByUser")
   receivedTransfers   StockTransfer[] @relation("TransferReceivedByUser")
+  customerDebtPayments CustomerDebtPayment[]
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -257,6 +260,8 @@ model Outlet {
   sourceTransfers  StockTransfer[]   @relation("TransferSourceOutlet")
   targetTransfers  StockTransfer[]   @relation("TransferTargetOutlet")
   outletProducts   OutletProduct[]
+  customerDebts    CustomerDebt[]
+  customerDebtPayments CustomerDebtPayment[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -284,6 +289,7 @@ model Shift {
   user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
   orders Order[]
   cashMovements CashMovement[]
+  customerDebtPayments CustomerDebtPayment[]
 
   @@index([tenantId, outletId, status])
   @@map("shifts")
@@ -335,6 +341,7 @@ model Customer {
   orders          Order[]
   pointLedgers    CustomerPointLedger[]
   promotionUsages PromotionUsage[]
+  debts           CustomerDebt[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, phone])
@@ -747,6 +754,7 @@ model Order {
   refunds         Refund[]
   promotionUsages PromotionUsage[]
   pointLedgers    CustomerPointLedger[]
+  customerDebts   CustomerDebt[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -1004,6 +1012,7 @@ enum PaymentMethod {
   BANK_TRANSFER
   EWALLET
   VOUCHER
+  CUSTOMER_DEBT
 }
 
 enum PaymentTxStatus {
@@ -1259,5 +1268,71 @@ model PromotionUsage {
   @@index([tenantId, orderId])
   @@map("promotion_usages")
 }
+
+// ==========================================
+// 12. CUSTOMER DEBTS & RECEIVABLES (KASBON)
+// ==========================================
+
+enum CustomerDebtStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+model CustomerDebt {
+  id              String             @id @default(uuid())
+  tenantId        String             @map("tenant_id")
+  outletId        String             @map("outlet_id")
+  customerId      String             @map("customer_id")
+  orderId         String             @map("order_id")
+  totalAmount     Decimal            @map("total_amount") @db.Decimal(15, 2)
+  paidAmount      Decimal            @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  remainingAmount Decimal            @map("remaining_amount") @db.Decimal(15, 2)
+  dueDate         DateTime?          @map("due_date")
+  status          CustomerDebtStatus @default(UNPAID)
+  notes           String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet   Outlet                @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  customer Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  order    Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payments CustomerDebtPayment[]
+
+  @@index([tenantId, customerId])
+  @@index([tenantId, outletId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, status])
+  @@map("customer_debts")
+}
+
+model CustomerDebtPayment {
+  id              String        @id @default(uuid())
+  tenantId        String        @map("tenant_id")
+  debtId          String        @map("debt_id")
+  outletId        String        @map("outlet_id")
+  cashierId       String?       @map("cashier_id")
+  shiftId         String?       @map("shift_id")
+  amount          Decimal       @db.Decimal(15, 2)
+  paymentMethod   PaymentMethod @default(CASH) @map("payment_method")
+  referenceNumber String?       @map("reference_number")
+  notes           String?
+  paidAt          DateTime      @default(now()) @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  debt    CustomerDebt @relation(fields: [debtId], references: [id], onDelete: Restrict)
+  outlet  Outlet       @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  cashier User?        @relation(fields: [cashierId], references: [id], onDelete: Restrict)
+  shift   Shift?       @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, debtId])
+  @@index([tenantId, outletId])
+  @@index([tenantId, shiftId])
+  @@map("customer_debt_payments")
+}
+
 
 

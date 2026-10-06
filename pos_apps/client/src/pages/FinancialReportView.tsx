@@ -29,6 +29,7 @@ import { computePresetDateRange } from '../utils/date';
 import { TablePagination } from '../components/TablePagination';
 import { SalesProfitTrendChart } from '../components/SalesProfitTrendChart';
 import { TableSkeleton } from '../components/ui';
+import { CashFlowReportTab } from '../components/CashFlowReportTab';
 
 interface FinancialReportViewProps {
   activeOutlet?: Outlet | null;
@@ -36,6 +37,27 @@ interface FinancialReportViewProps {
 
 export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ activeOutlet }) => {
   const { isFree } = usePlan();
+  const [activeReportSubTab, setActiveReportSubTab] = useState<'pnl' | 'cashflow'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('subtab') === 'cashflow') return 'cashflow';
+    }
+    return 'pnl';
+  });
+
+  const handleSubTabChange = (tab: 'pnl' | 'cashflow') => {
+    setActiveReportSubTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (tab === 'cashflow') {
+        url.searchParams.set('subtab', 'cashflow');
+      } else {
+        url.searchParams.delete('subtab');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
   const [data, setData] = useState<FinancialReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isLockedByApi, setIsLockedByApi] = useState<boolean>(false);
@@ -175,8 +197,40 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
+      {/* Subtab Navigation: Laba Rugi vs Arus Kas */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 no-print">
+        <button
+          type="button"
+          onClick={() => handleSubTabChange('pnl')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeReportSubTab === 'pnl'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span>Laba Rugi &amp; Finansial (P&amp;L)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSubTabChange('cashflow')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeReportSubTab === 'cashflow'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <Banknote className="w-4 h-4" />
+          <span>Arus Kas Riil &amp; Performa Toko</span>
+        </button>
+      </div>
+
+      {activeReportSubTab === 'cashflow' ? (
+        <CashFlowReportTab activeOutlet={activeOutlet} />
+      ) : (
+        <>
+          {/* Header Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20">
             <TrendingUp className="w-6 h-6 stroke-[2.5]" />
@@ -986,6 +1040,8 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
           </div>
         </>
       ) : null}
+        </>
+      )}
 
       {/* Modal Edukasi Upgrade PRO */}
       <UpgradeModal

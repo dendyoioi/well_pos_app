@@ -4,7 +4,7 @@
 **Dokumen Rujukan Utama**: `docs/00_PROJECT_CONTEXT.md`  
 **Basis Data**: PostgreSQL `pos_db` (40 Model Prisma Aktif Ternormalisasi Penuh)  
 **Terakhir Diperbarui**: 06 Oktober 2026  
-**Status Keseluruhan**: **EPIC-01 s.d EPIC-25 SELESAI 100% (COMPLETED ✅)**  
+**Status Keseluruhan**: **EPIC-01 s.d EPIC-27 SELESAI 100% (COMPLETED ✅)**  
 
 ---
 
@@ -15,7 +15,7 @@ Dokumen ini berfungsi sebagai **memori kerja permanen (*persistent cognitive mem
 
 ### 2. MASTER EPIC REGISTRY (END-TO-END PRODUCT ROADMAP)
 
-Produk Well POS memiliki total **26 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, otomasi WhatsApp Gateway, serta pemindai barcode live & cetak label stiker:
+Produk Well POS memiliki total **27 Epic** yang mencakup seluruh siklus hidup pengembangan dari fondasi arsitektur hingga peluncuran SaaS produksi, sandbox lokal, modernisasi antarmuka pengguna, tata kelola multi-toko, kanal penjualan mitra online, alokasi katalog multi-outlet, pembatalan transaksi dengan approval PIN supervisor, otomasi WhatsApp Gateway, pemindai barcode live & cetak label stiker, serta pencatatan kasbon piutang pelanggan dan laporan arus kas riil:
 
 | Epic ID | Judul Epic | Status | Tahapan / Milestone | Fokus & Nilai Bisnis Utama |
 | :--- | :--- | :---: | :--- | :--- |
@@ -45,6 +45,7 @@ Produk Well POS memiliki total **26 Epic** yang mencakup seluruh siklus hidup pe
 | **EPIC-24** | **Transaction Void & Supervisor/Owner PIN Approval Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-24.md`](./EPIC-24_TRANSACTION_VOID_AND_SUPERVISOR_APPROVAL.md) | Pembatalan resmi transaksi kasir (Full & Partial Item Void), otorisasi PIN 6-digit Supervisor/Owner, pemulihan stok inventaris atomik (movement_type VOID), slip cetak bukti fisik void dengan signature block Kasir & Spv, audit retur (refunds), isolasi omset kas shift, dan pemulihan kuota token SaaS. |
 | **EPIC-25** | **Automated WhatsApp Gateway & Digital Receipt Engine (Fonnte API)** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-25.md`](./EPIC-25_WHATSAPP_GATEWAY_AUTOMATION.md) | Otomasi pengiriman struk via Fonnte API saat checkout & 1-klik manual kasir, arsitektur token multi-level (Toko -> Platform -> Simulator Sandbox), kontrol Backoffice, dan tab Superadmin WhatsApp Gateway. |
 | **EPIC-26** | **Retail Speed, Live Camera Barcode Scanner & Shelf Label Printing Engine** | **COMPLETED ✅** | Fase 1<br/>[`EPIC-26.md`](./EPIC-26_BARCODE_SCANNER_AND_LABEL_PRINTING.md) | Pemindai barcode kamera HP langsung di POS (WebRTC + ZXing scanner), auto-add keranjang belanja, generator & cetak stiker label barcode/rak produk (vektor SVG murni multi-ukuran: 40x30, 30x20, 50x30, 60x40 shelf talker, A4 grid). |
+| **EPIC-27** | **Customer Receivables (Kasbon & Piutang) & Real-Time Cash Flow Analytics Engine** | **COMPLETED ✅** | Fase 1 s.d 2<br/>[`EPIC-27.md`](./EPIC-27_CUSTOMER_RECEIVABLES_AND_CASH_FLOW_ANALYTICS.md) | Pencatatan kasbon pelanggan di kasir POS dengan toggle outlet (default nonaktif), jatuh tempo fleksibel (+7, +14, +30 hari atau kustom), buku kasbon Backoffice CRM (`CustomerDebtsTab`), penagihan 1-klik WhatsApp, pelunasan bertahap/lunas terintegrasi ke Laci Kasir shift (`DEBT_REPAYMENT`), dan Laporan Arus Kas Riil & Performa Toko (`CashFlowReportTab`) dengan 4 KPI, visualisasi grafik SVG omset harian & bulanan, rekap mutasi harian, dan ekspor CSV UTF-8 BOM. |
 
 ---
 

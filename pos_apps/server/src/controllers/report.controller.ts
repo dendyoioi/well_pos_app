@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { analyticsService } from '../services/analytics.service';
 import { reportReadAdapter } from '../services/read_adapters/report.read_adapter';
+import { resolveDateRange, toWibDateStr } from '../utils/date.utils';
 
 /**
  * Helper: Cek hak akses fitur Pro untuk modul analitik & finansial
@@ -229,3 +230,327 @@ export const exportReport = async (req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: 'Gagal mengekspor laporan' });
   }
 };
+
+/**
+ * Controller: Laporan Arus Kas (Cash Flow Summary) Real-Time
+ * @route GET /api/reports/cash-flow
+ */
+export const getCashFlowSummary = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = resolveAuthenticatedTenantId(req);
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const { startDate, endDate, outletId } = req.query;
+    let targetOutletId = (outletId as string) || user?.outletId;
+    if (outletId === 'ALL') {
+      targetOutletId = undefined;
+    }
+
+    const { start, end } = resolveDateRange(startDate as string, endDate as string);
+
+    // 1. Kas Masuk dari Penjualan Tunai Kasir
+    const cashSalesRows = await prisma.paymentTransaction.findMany({
+      where: {
+        tenantId,
+        paymentMethod: 'CASH',
+        status: 'CAPTURED',
+        createdAt: { gte: start, lte: end },
+        ...(targetOutletId ? { order: { outletId: targetOutletId } } : {}),
+      },
+      select: {
+        id: true,
+        amount: true,
+        createdAt: true,
+        order: { select: { id: true, invoiceNumber: true, outletId: true } },
+      },
+    });
+
+    const totalCashSales = cashSalesRows.reduce((sum, r) => sum + Number(r.amount), 0);
+
+    // 2. Kas Masuk dari Pelunasan Piutang Kasbon
+    const debtRepaymentsRows = await prisma.customerDebtPayment.findMany({
+      where: {
+        tenantId,
+        paymentMethod: 'CASH',
+        paidAt: { gte: start, lte: end },
+        ...(targetOutletId ? { outletId: targetOutletId } : {}),
+      },
+      include: {
+        debt: {
+          select: {
+            id: true,
+            customer: { select: { id: true, name: true } },
+            order: { select: { id: true, invoiceNumber: true } },
+          },
+        },
+        cashier: { select: { id: true, name: true } },
+      },
+    });
+
+    const totalDebtRepayments = debtRepaymentsRows.reduce((sum, r) => sum + Number(r.amount), 0);
+
+    // 3. Mutasi Kas Masuk & Kas Keluar Kasir (cash_movements: CASH_IN vs CASH_OUT)
+    const cashMovements = await prisma.cashMovement.findMany({
+      where: {
+        tenantId,
+        createdAt: { gte: start, lte: end },
+        ...(targetOutletId ? { outletId: targetOutletId } : {}),
+      },
+      include: {
+        user: { select: { id: true, name: true } },
+        outlet: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let totalManualCashIn = 0;
+    let totalCashOut = 0;
+    for (const mov of cashMovements) {
+      const amt = Number(mov.amount);
+      if (mov.type === 'CASH_IN') {
+        if (mov.category !== 'DEBT_REPAYMENT') {
+          totalManualCashIn += amt;
+        }
+      } else if (mov.type === 'CASH_OUT') {
+        totalCashOut += amt;
+      }
+    }
+
+    // 4. Kas Keluar dari Refund Tunai
+    const refundRows = await prisma.refund.findMany({
+      where: {
+        tenantId,
+        createdAt: { gte: start, lte: end },
+        ...(targetOutletId ? { order: { outletId: targetOutletId } } : {}),
+      },
+      select: { id: true, amount: true, createdAt: true },
+    });
+    const totalRefunds = refundRows.reduce((sum, r) => sum + Number(r.amount), 0);
+
+    // 5. Total Inflow, Outflow, dan Net Cash Flow
+    const totalCashInflow = totalCashSales + totalDebtRepayments + totalManualCashIn;
+    const totalCashOutflow = totalCashOut + totalRefunds;
+    const netCashFlow = totalCashInflow - totalCashOutflow;
+
+    // 6. Ringkasan Piutang Aktif (Customer Debts Outstanding)
+    const outstandingDebtsAgg = await prisma.customerDebt.aggregate({
+      where: {
+        tenantId,
+        ...(targetOutletId ? { outletId: targetOutletId } : {}),
+        status: { in: ['UNPAID', 'PARTIAL'] },
+      },
+      _sum: { remainingAmount: true },
+      _count: { id: true },
+    });
+
+    // 7. Agregasi Harian (Daily Cash Flow Breakdown)
+    const dailyMap = new Map<string, { date: string; cashSales: number; debtRepayments: number; manualCashIn: number; cashOut: number; refunds: number; netFlow: number }>();
+
+    const getDaily = (dateStr: string) => {
+      if (!dailyMap.has(dateStr)) {
+        dailyMap.set(dateStr, {
+          date: dateStr,
+          cashSales: 0,
+          debtRepayments: 0,
+          manualCashIn: 0,
+          cashOut: 0,
+          refunds: 0,
+          netFlow: 0,
+        });
+      }
+      return dailyMap.get(dateStr)!;
+    };
+
+    for (const cs of cashSalesRows) {
+      const d = toWibDateStr(new Date(cs.createdAt));
+      const entry = getDaily(d);
+      entry.cashSales += Number(cs.amount);
+      entry.netFlow += Number(cs.amount);
+    }
+
+    for (const dr of debtRepaymentsRows) {
+      const d = toWibDateStr(new Date(dr.paidAt));
+      const entry = getDaily(d);
+      entry.debtRepayments += Number(dr.amount);
+      entry.netFlow += Number(dr.amount);
+    }
+
+    for (const cm of cashMovements) {
+      const d = toWibDateStr(new Date(cm.createdAt));
+      const entry = getDaily(d);
+      const amt = Number(cm.amount);
+      if (cm.type === 'CASH_IN' && cm.category !== 'DEBT_REPAYMENT') {
+        entry.manualCashIn += amt;
+        entry.netFlow += amt;
+      } else if (cm.type === 'CASH_OUT') {
+        entry.cashOut += amt;
+        entry.netFlow -= amt;
+      }
+    }
+
+    for (const rf of refundRows) {
+      const d = toWibDateStr(new Date(rf.createdAt));
+      const entry = getDaily(d);
+      const amt = Number(rf.amount);
+      entry.refunds += amt;
+      entry.netFlow -= amt;
+    }
+
+    const dailyBreakdown = Array.from(dailyMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        summary: {
+          totalCashSales,
+          totalDebtRepayments,
+          totalManualCashIn,
+          totalCashInflow,
+          totalCashOut,
+          totalRefunds,
+          totalCashOutflow,
+          netCashFlow,
+          outstandingReceivables: Number(outstandingDebtsAgg._sum.remainingAmount || 0),
+          unpaidReceivablesCount: outstandingDebtsAgg._count.id || 0,
+        },
+        dailyBreakdown,
+        recentMovements: cashMovements.slice(0, 30),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getCashFlowSummary:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat laporan arus kas', error: error.message });
+  }
+};
+
+/**
+ * Controller: Grafik & Tren Performa Toko (Omset Harian & Bulanan)
+ * @route GET /api/reports/sales-performance
+ */
+export const getSalesPerformanceTrend = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = resolveAuthenticatedTenantId(req);
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
+    }
+
+    const { startDate, endDate, outletId } = req.query;
+    let targetOutletId = (outletId as string) || user?.outletId;
+    if (outletId === 'ALL') {
+      targetOutletId = undefined;
+    }
+
+    const { start, end } = resolveDateRange(startDate as string, endDate as string);
+
+    // Ambil seluruh order dalam rentang tanggal
+    const orders = await prisma.order.findMany({
+      where: {
+        tenantId,
+        paymentStatus: { in: ['PAID', 'PARTIALLY_PAID'] },
+        createdAt: { gte: start, lte: end },
+        ...(targetOutletId ? { outletId: targetOutletId } : {}),
+      },
+      select: {
+        id: true,
+        totalAmount: true,
+        subtotal: true,
+        discountTotal: true,
+        createdAt: true,
+        channel: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // 1. Agregasi Omset Harian
+    const dailyMap = new Map<string, { date: string; revenue: number; orderCount: number }>();
+    for (const o of orders) {
+      const d = toWibDateStr(new Date(o.createdAt));
+      if (!dailyMap.has(d)) {
+        dailyMap.set(d, { date: d, revenue: 0, orderCount: 0 });
+      }
+      const entry = dailyMap.get(d)!;
+      entry.revenue += Number(o.totalAmount);
+      entry.orderCount += 1;
+    }
+    const dailyTrend = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+    // 2. Agregasi Omset Bulanan (12 Bulan Terakhir)
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+    const yearOrders = await prisma.order.findMany({
+      where: {
+        tenantId,
+        paymentStatus: { in: ['PAID', 'PARTIALLY_PAID'] },
+        createdAt: { gte: twelveMonthsAgo },
+        ...(targetOutletId ? { outletId: targetOutletId } : {}),
+      },
+      select: {
+        id: true,
+        totalAmount: true,
+        createdAt: true,
+      },
+    });
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    const monthlyMap = new Map<string, { monthKey: string; monthLabel: string; revenue: number; orderCount: number }>();
+    for (const o of yearOrders) {
+      const d = new Date(o.createdAt);
+      const year = d.getFullYear();
+      const monthIdx = d.getMonth();
+      const monthKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+      const monthLabel = `${monthNames[monthIdx]} ${year}`;
+
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, { monthKey, monthLabel, revenue: 0, orderCount: 0 });
+      }
+      const entry = monthlyMap.get(monthKey)!;
+      entry.revenue += Number(o.totalAmount);
+      entry.orderCount += 1;
+    }
+
+    const monthlyTrend = Array.from(monthlyMap.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+
+    // 3. Ringkasan KPI
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const totalOrders = orders.length;
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+
+    let bestDay = { date: '-', revenue: 0 };
+    for (const d of dailyTrend) {
+      if (d.revenue > bestDay.revenue) {
+        bestDay = { date: d.date, revenue: d.revenue };
+      }
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        summary: {
+          totalRevenue,
+          totalOrders,
+          avgOrderValue,
+          bestDay,
+        },
+        dailyTrend,
+        monthlyTrend,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getSalesPerformanceTrend:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat tren performa toko', error: error.message });
+  }
+};
+

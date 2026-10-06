@@ -10,7 +10,7 @@ export interface CartItem {
   customPrice?: number;
 }
 
-export type PaymentMethodType = 'CASH' | 'QRIS' | 'DEBIT' | 'CREDIT' | 'TRANSFER' | 'SPLIT';
+export type PaymentMethodType = 'CASH' | 'QRIS' | 'DEBIT' | 'CREDIT' | 'TRANSFER' | 'SPLIT' | 'DEBT';
 
 export type OrderChannel = 'DINE_IN' | 'TAKEAWAY' | 'QR_MENU' | 'GOFOOD' | 'GRABFOOD' | 'SHOPEEFOOD' | 'DELIVERY';
 
@@ -29,6 +29,8 @@ export interface PaymentPayload {
   amountPaid: number;
   changeGiven?: number;
   qrisReference?: string;
+  dueDate?: string;
+  debtNotes?: string;
 }
 
 export interface CheckoutPayload {
@@ -56,6 +58,8 @@ export interface CheckoutPayload {
   outletId?: string;
   promotionId?: string;
   pointsToRedeem?: number;
+  dueDate?: string;
+  debtNotes?: string;
 }
 
 export interface OrderItem {

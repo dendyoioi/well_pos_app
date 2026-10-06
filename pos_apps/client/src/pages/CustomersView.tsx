@@ -23,15 +23,43 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Receipt,
+  Clock,
 } from 'lucide-react';
 import { customerApi } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
+import type { Outlet } from '../types/outlet';
 import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
+import { CustomerDebtsTab } from '../components/CustomerDebtsTab';
 
-export const CustomersView: React.FC = () => {
+interface CustomersViewProps {
+  activeOutlet?: Outlet | null;
+}
+
+export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) => {
   const dialog = useDialog();
+  const [activeSubTab, setActiveSubTab] = useState<'directory' | 'debts'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('subtab') === 'debts') return 'debts';
+    }
+    return 'directory';
+  });
+
+  const handleSubTabChange = (tab: 'directory' | 'debts') => {
+    setActiveSubTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (tab === 'debts') {
+        url.searchParams.set('subtab', 'debts');
+      } else {
+        url.searchParams.delete('subtab');
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [summary, setSummary] = useState<CustomerSummaryStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -341,8 +369,40 @@ export const CustomersView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* 1. Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+      {/* Subtab Navigation: Direktori Pelanggan vs Buku Kasbon & Piutang */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => handleSubTabChange('directory')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeSubTab === 'directory'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Direktori &amp; Loyalitas Pelanggan</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSubTabChange('debts')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeSubTab === 'debts'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Buku Kasbon &amp; Piutang</span>
+        </button>
+      </div>
+
+      {activeSubTab === 'debts' ? (
+        <CustomerDebtsTab activeOutlet={activeOutlet} />
+      ) : (
+        <>
+          {/* 1. Header Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
         <div>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
@@ -1283,6 +1343,8 @@ export const CustomersView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

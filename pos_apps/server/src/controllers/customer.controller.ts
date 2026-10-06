@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { PaymentStatus, PointTxType } from '@prisma/client';
+import { PaymentStatus, PointTxType, CustomerDebtStatus, PaymentMethod } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { loyaltyService } from '../services/loyalty.service';
 
@@ -467,4 +467,332 @@ export const adjustCustomerPoints = async (req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: error.message || 'Gagal menyesuaikan poin pelanggan' });
   }
 };
+
+/**
+ * Controller: Mengambil daftar kasbon / piutang pelanggan
+ * @route GET /api/customers/debts
+ */
+export const getCustomerDebts = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const search = (req.query.search as string)?.trim();
+    const status = (req.query.status as string)?.trim()?.toUpperCase(); // ALL, UNPAID, PARTIAL, PAID
+    const customerId = (req.query.customerId as string)?.trim();
+    const outletId = (req.query.outletId as string)?.trim();
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const where: any = { tenantId };
+    if (outletId && outletId !== 'ALL') {
+      where.outletId = outletId;
+    }
+    if (customerId) {
+      where.customerId = customerId;
+    }
+    if (status && status !== 'ALL' && ['UNPAID', 'PARTIAL', 'PAID', 'CANCELLED'].includes(status)) {
+      where.status = status as CustomerDebtStatus;
+    }
+    if (search) {
+      where.OR = [
+        { customer: { name: { contains: search, mode: 'insensitive' } } },
+        { customer: { phone: { contains: search, mode: 'insensitive' } } },
+        { order: { invoiceNumber: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [debts, totalRecords, summaryAgg] = await Promise.all([
+      prisma.customerDebt.findMany({
+        where,
+        include: {
+          customer: {
+            select: { id: true, name: true, phone: true, code: true },
+          },
+          outlet: {
+            select: { id: true, name: true },
+          },
+          order: {
+            select: { id: true, invoiceNumber: true, totalAmount: true, createdAt: true },
+          },
+          payments: {
+            orderBy: { paidAt: 'desc' },
+            include: {
+              cashier: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.customerDebt.count({ where }),
+      prisma.customerDebt.aggregate({
+        where: {
+          tenantId,
+          ...(outletId && outletId !== 'ALL' ? { outletId } : {}),
+          ...(customerId ? { customerId } : {}),
+        },
+        _sum: {
+          totalAmount: true,
+          paidAmount: true,
+          remainingAmount: true,
+        },
+        _count: {
+          id: true,
+        },
+      }),
+    ]);
+
+    const unpaidCount = await prisma.customerDebt.count({
+      where: {
+        tenantId,
+        ...(outletId && outletId !== 'ALL' ? { outletId } : {}),
+        status: { in: ['UNPAID', 'PARTIAL'] },
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: debts,
+      meta: {
+        totalRecords,
+        page,
+        limit,
+        totalPages: Math.ceil(totalRecords / limit),
+      },
+      summary: {
+        totalDebt: Number(summaryAgg._sum.totalAmount || 0),
+        totalPaid: Number(summaryAgg._sum.paidAmount || 0),
+        totalRemaining: Number(summaryAgg._sum.remainingAmount || 0),
+        unpaidCount,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getCustomerDebts:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat daftar piutang pelanggan', error: error.message });
+  }
+};
+
+/**
+ * Controller: Mengambil rincian piutang pelanggan beserta histori pembayarannya
+ * @route GET /api/customers/debts/:debtId
+ */
+export const getCustomerDebtDetail = async (req: Request, res: Response) => {
+  try {
+    const { debtId } = req.params;
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const debt = await prisma.customerDebt.findFirst({
+      where: { id: debtId, tenantId },
+      include: {
+        customer: true,
+        outlet: { select: { id: true, name: true } },
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            totalAmount: true,
+            createdAt: true,
+            items: {
+              include: {
+                productVariant: {
+                  include: { product: true },
+                },
+              },
+            },
+          },
+        },
+        payments: {
+          orderBy: { paidAt: 'desc' },
+          include: {
+            cashier: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    if (!debt) {
+      return res.status(404).json({ status: 'error', message: 'Data piutang tidak ditemukan' });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: debt,
+    });
+  } catch (error: any) {
+    console.error('Error in getCustomerDebtDetail:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat detail piutang', error: error.message });
+  }
+};
+
+/**
+ * Controller: Mencatat pembayaran cicilan / pelunasan piutang pelanggan
+ * @route POST /api/customers/debts/:debtId/payments
+ */
+export const payCustomerDebt = async (req: Request, res: Response) => {
+  try {
+    const { debtId } = req.params;
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+    const cashierId = user?.id;
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const paySchema = z.object({
+      amount: z.number().positive('Jumlah pembayaran harus lebih dari 0'),
+      paymentMethod: z.nativeEnum(PaymentMethod).optional().default(PaymentMethod.CASH),
+      shiftId: z.string().uuid().optional().nullable(),
+      notes: z.string().max(500).optional().nullable(),
+      referenceNumber: z.string().max(100).optional().nullable(),
+    });
+
+    const { amount, paymentMethod, shiftId, notes, referenceNumber } = paySchema.parse(req.body);
+
+    const debt = await prisma.customerDebt.findFirst({
+      where: { id: debtId, tenantId },
+      include: {
+        customer: true,
+        order: true,
+      },
+    });
+
+    if (!debt) {
+      return res.status(404).json({ status: 'error', message: 'Data piutang tidak ditemukan' });
+    }
+
+    const currentRemaining = Number(debt.remainingAmount);
+    if (currentRemaining <= 0 || debt.status === 'PAID') {
+      return res.status(400).json({ status: 'error', message: 'Piutang ini sudah lunas sepenuhnya' });
+    }
+
+    if (amount > currentRemaining) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Jumlah pembayaran (Rp ${amount.toLocaleString('id-ID')}) melebihi sisa piutang (Rp ${currentRemaining.toLocaleString('id-ID')})`,
+      });
+    }
+
+    const newPaidAmount = Number(debt.paidAmount) + amount;
+    const newRemainingAmount = Math.max(0, currentRemaining - amount);
+    const newStatus: CustomerDebtStatus = newRemainingAmount === 0 ? 'PAID' : 'PARTIAL';
+
+    // Eksekusi transaksi atomik
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Buat catatan pembayaran piutang
+      const debtPayment = await tx.customerDebtPayment.create({
+        data: {
+          tenantId,
+          debtId: debt.id,
+          outletId: debt.outletId,
+          cashierId: cashierId || null,
+          shiftId: shiftId || null,
+          amount,
+          paymentMethod,
+          referenceNumber: referenceNumber || null,
+          notes: notes || `Pelunasan piutang ${debt.customer.name}`,
+        },
+      });
+
+      // 2. Update status & sisa saldo piutang
+      const updatedDebt = await tx.customerDebt.update({
+        where: { id: debt.id },
+        data: {
+          paidAmount: newPaidAmount,
+          remainingAmount: newRemainingAmount,
+          status: newStatus,
+        },
+      });
+
+      // 3. Update status pembayaran pada order terkait jika sudah lunas
+      if (newStatus === 'PAID') {
+        await tx.order.update({
+          where: { id: debt.orderId },
+          data: { paymentStatus: 'PAID' },
+        });
+      } else {
+        await tx.order.update({
+          where: { id: debt.orderId },
+          data: { paymentStatus: 'PARTIALLY_PAID' },
+        });
+      }
+
+      // 4. Catat PaymentTransaction agar transaksi pembayaran tercatat di riwayat order
+      await tx.paymentTransaction.create({
+        data: {
+          tenantId,
+          orderId: debt.orderId,
+          paymentMethod,
+          amount,
+          status: 'CAPTURED',
+          referenceNumber: referenceNumber || `DEBT-PAY-${debtPayment.id.slice(0, 8)}`,
+          metadata: {
+            debtPaymentId: debtPayment.id,
+            debtId: debt.id,
+            customerId: debt.customerId,
+            customerName: debt.customer.name,
+          },
+          paidAt: new Date(),
+        },
+      });
+
+      // 5. Jika metode CASH dan ada shift kasir aktif, catat CashMovement (CASH_IN) agar kas fisik laci seimbang
+      if (paymentMethod === PaymentMethod.CASH && shiftId) {
+        const activeShift = await tx.shift.findFirst({
+          where: { id: shiftId, tenantId, status: 'OPEN' },
+        });
+
+        if (activeShift) {
+          await tx.cashMovement.create({
+            data: {
+              tenantId,
+              outletId: debt.outletId,
+              shiftId,
+              userId: cashierId || activeShift.userId,
+              type: 'CASH_IN',
+              category: 'DEBT_REPAYMENT',
+              amount,
+              notes: `Pelunasan kasbon: ${debt.customer.name} (Inv: ${debt.order.invoiceNumber})`,
+            },
+          });
+
+          await tx.shift.update({
+            where: { id: shiftId },
+            data: {
+              expectedEnding: {
+                increment: amount,
+              },
+            },
+          });
+        }
+      }
+
+      return { debtPayment, updatedDebt };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: newStatus === 'PAID' ? 'Piutang berhasil dilunasi!' : 'Pembayaran cicilan piutang berhasil dicatat!',
+      data: result,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ status: 'error', message: error.errors[0].message, errors: error.errors });
+    }
+    console.error('Error in payCustomerDebt:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal memproses pembayaran piutang' });
+  }
+};
+
 

@@ -26,11 +26,13 @@ const orderItemSchema = z.object({
 // Skema validasi pembayaran tunggal
 const paymentItemSchema = z.object({
   method: z.nativeEnum(PaymentMethod, {
-    errorMap: () => ({ message: 'Metode pembayaran harus CASH atau QRIS' }),
+    errorMap: () => ({ message: 'Metode pembayaran tidak valid' }),
   }),
   amountPaid: z.number().min(0, 'Jumlah bayar tidak boleh negatif'),
   changeGiven: z.number().min(0).optional(),
   qrisReference: z.string().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
+  debtNotes: z.string().optional().nullable(),
 });
 
 // Skema validasi checkout lengkap (mendukung single payment maupun split payments)
@@ -56,6 +58,8 @@ const checkoutSchema = z.object({
   existingOrderId: z.string().uuid().optional().nullable(),
   shiftId: z.string().uuid().optional(),
   outletId: z.string().uuid().optional(),
+  dueDate: z.string().optional().nullable(),
+  debtNotes: z.string().optional().nullable(),
 });
 
 /**
@@ -132,6 +136,8 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       existingOrderId,
       shiftId,
       outletId: bodyOutletId,
+      dueDate: bodyDueDate,
+      debtNotes: bodyDebtNotes,
     } = parseResult.data;
 
     let tenantId = req.user?.tenantId || req.tenantId || (req.headers['x-tenant-id'] as string) || null;
@@ -154,7 +160,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
 
     const targetOutlet = await prisma.outlet.findUnique({
       where: { id: targetOutletId },
-      select: { tenantId: true, loyaltyConfig: true },
+      select: { tenantId: true, loyaltyConfig: true, paymentConfig: true },
     });
     if (!targetOutlet) {
       return res.status(400).json({ status: 'error', message: 'Outlet cabang tidak ditemukan' });
@@ -403,18 +409,23 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       changeGiven: number;
       qrisReference: string | null;
       status: PaymentTxStatus;
+      dueDate?: string | null;
+      debtNotes?: string | null;
     }> = [];
 
     if (payments && payments.length > 0) {
       let totalAmountPaid = 0;
       for (const p of payments) {
         totalAmountPaid += p.amountPaid;
+        const isDebt = p.method === PaymentMethod.CUSTOMER_DEBT;
         preparedPayments.push({
           method: p.method,
           amountPaid: p.amountPaid,
           changeGiven: p.changeGiven || 0,
           qrisReference: p.qrisReference || null,
-          status: PaymentTxStatus.CAPTURED,
+          status: isDebt ? PaymentTxStatus.PENDING : PaymentTxStatus.CAPTURED,
+          dueDate: p.dueDate || bodyDueDate || null,
+          debtNotes: p.debtNotes || bodyDebtNotes || null,
         });
       }
 
@@ -427,6 +438,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         });
       }
     } else if (payment) {
+      const isDebt = payment.method === PaymentMethod.CUSTOMER_DEBT;
       if (payment.method === PaymentMethod.CASH && payment.amountPaid < grandTotal) {
         return res.status(400).json({
           status: 'error',
@@ -441,16 +453,38 @@ export const checkoutOrder = async (req: Request, res: Response) => {
 
       preparedPayments.push({
         method: payment.method,
-        amountPaid: payment.amountPaid,
+        amountPaid: isDebt && payment.amountPaid === 0 ? grandTotal : payment.amountPaid,
         changeGiven: payment.changeGiven !== undefined ? payment.changeGiven : changeGiven,
         qrisReference: payment.qrisReference || null,
-        status: PaymentTxStatus.CAPTURED,
+        status: isDebt ? PaymentTxStatus.PENDING : PaymentTxStatus.CAPTURED,
+        dueDate: payment.dueDate || bodyDueDate || null,
+        debtNotes: payment.debtNotes || bodyDebtNotes || null,
       });
     } else {
       return res.status(400).json({
         status: 'error',
         message: 'Rincian pembayaran wajib disertakan',
       });
+    }
+
+    // Validasi Kasbon / Piutang Pelanggan
+    const hasDebtPayment = preparedPayments.some((p) => p.method === PaymentMethod.CUSTOMER_DEBT);
+    if (hasDebtPayment) {
+      if (!resolvedCustomerId) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Pembayaran kasbon / piutang wajib memilih data pelanggan terdaftar.',
+        });
+      }
+
+      const outletPaymentConfig = targetOutlet.paymentConfig as any;
+      const isCreditAllowed = outletPaymentConfig?.customerDebt?.allowCredit === true;
+      if (!isCreditAllowed) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Metode pembayaran kasbon / piutang belum diaktifkan oleh pemilik toko di Pengaturan Pembayaran.',
+        });
+      }
     }
 
     const invoiceNumber = await generateInvoiceNumber(targetOutletId);
@@ -553,6 +587,57 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         totalDiscount,
         orderId
       );
+
+      // 5. Catat kasbon pelanggan ke customer_debts jika transaksi menggunakan CUSTOMER_DEBT
+      if (hasDebtPayment && resolvedCustomerId) {
+        const debtItem = preparedPayments.find((p) => p.method === PaymentMethod.CUSTOMER_DEBT);
+        const debtAmount = debtItem ? debtItem.amountPaid : grandTotal;
+        const totalCashPaid = preparedPayments
+          .filter((p) => p.method !== PaymentMethod.CUSTOMER_DEBT)
+          .reduce((sum, p) => sum + Math.max(0, p.amountPaid - (p.changeGiven || 0)), 0);
+
+        const newPaymentStatus = totalCashPaid > 0 ? PaymentStatus.PARTIALLY_PAID : PaymentStatus.UNPAID;
+
+        await tx.$executeRawUnsafe(
+          `UPDATE "orders"
+           SET "payment_status" = $1::"PaymentStatus",
+               "paid_amount" = $2
+           WHERE "id" = $3;`,
+          newPaymentStatus,
+          totalCashPaid,
+          orderId
+        );
+
+        let resolvedDueDate: Date | null = null;
+        const rawDueDate = debtItem?.dueDate || bodyDueDate;
+        if (rawDueDate) {
+          resolvedDueDate = new Date(rawDueDate);
+        } else {
+          const defaultDueDays = (targetOutlet?.paymentConfig as any)?.customerDebt?.defaultDueDays || 7;
+          resolvedDueDate = new Date();
+          resolvedDueDate.setDate(resolvedDueDate.getDate() + defaultDueDays);
+        }
+
+        const debtNotesText =
+          debtItem?.debtNotes ||
+          bodyDebtNotes ||
+          (notes ? `Kasbon: ${notes}` : `Kasbon transaksi ${invoiceNumber}`);
+
+        await tx.customerDebt.create({
+          data: {
+            tenantId: tenantId!,
+            outletId: targetOutletId!,
+            customerId: resolvedCustomerId,
+            orderId,
+            totalAmount: debtAmount,
+            paidAmount: 0,
+            remainingAmount: debtAmount,
+            dueDate: resolvedDueDate,
+            status: 'UNPAID',
+            notes: debtNotesText,
+          },
+        });
+      }
 
       // Query order with relations for exact legacy shape
       const [orderRows, itemRows, paymentRows, outletRows, cashierRows, customerRows] = await Promise.all([

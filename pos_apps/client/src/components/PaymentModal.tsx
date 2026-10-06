@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Banknote, QrCode, Split, CheckCircle, AlertCircle, ArrowRight, Lock, UserCheck, Users } from 'lucide-react';
+import { X, Banknote, QrCode, Split, CheckCircle, AlertCircle, ArrowRight, Lock, UserCheck, Users, Calendar, AlertTriangle } from 'lucide-react';
 import type { PaymentPayload, PaymentMethodType } from '../types/order';
 import type { Customer } from '../types/customer';
 import type { Outlet } from '../types/outlet';
@@ -41,6 +41,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [splitQrisPaid, setSplitQrisPaid] = useState(false);
   const [splitQrisRef, setSplitQrisRef] = useState('');
   const qrisConfig = outlet?.paymentConfig?.qris;
+  const isCreditAllowed = outlet?.paymentConfig?.customerDebt?.allowCredit === true;
+  const defaultDueDays = outlet?.paymentConfig?.customerDebt?.defaultDueDays || 7;
+
+  // State Kasbon / Piutang
+  const [debtDueDate, setDebtDueDate] = useState<string>('');
+  const [debtNotes, setDebtNotes] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -53,8 +59,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setSplitCashTendered(half);
       setSplitQrisPaid(false);
       setSplitQrisRef('');
+
+      // Inisialisasi tanggal jatuh tempo default
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + defaultDueDays);
+      setDebtDueDate(defaultDate.toISOString().slice(0, 10));
+      setDebtNotes('');
     }
-  }, [isOpen, grandTotal]);
+  }, [isOpen, grandTotal, defaultDueDays]);
 
   const changeGiven = Math.max(0, amountPaid - grandTotal);
   const isCashInsufficient = method === 'CASH' && amountPaid < grandTotal;
@@ -104,6 +116,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         },
       ];
       onCheckout(payments[0], payments);
+    } else if (method === 'DEBT') {
+      if (!selectedCustomer) return;
+      onCheckout({
+        method: 'DEBT',
+        amountPaid: grandTotal,
+        changeGiven: 0,
+        dueDate: debtDueDate || undefined,
+        debtNotes: debtNotes.trim() || undefined,
+      });
     }
   };
 
@@ -211,8 +232,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             )}
           </div>
 
-          {/* Tab Metode Pembayaran (3 Tab: Tunai, QRIS, Split) */}
-          <div className="grid grid-cols-3 p-1 bg-slate-100 border border-slate-200 rounded-2xl gap-1">
+          {/* Tab Metode Pembayaran (Tunai, QRIS, Split, Kasbon) */}
+          <div className={`grid ${isCreditAllowed ? 'grid-cols-4' : 'grid-cols-3'} p-1 bg-slate-100 border border-slate-200 rounded-2xl gap-1`}>
             <button
               type="button"
               onClick={() => setMethod('CASH')}
@@ -257,7 +278,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               }`}
             >
               <Split className="w-4 h-4" />
-              <span>Split (Campuran)</span>
+              <span>Split</span>
               {isFree && (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 text-[10px] font-black">
                   <Lock className="w-2.5 h-2.5" />
@@ -265,6 +286,24 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </span>
               )}
             </button>
+
+            {isCreditAllowed && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMethod('DEBT');
+                  setAmountPaid(grandTotal);
+                }}
+                className={`py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  method === 'DEBT'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-amber-800'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Kasbon</span>
+              </button>
+            )}
           </div>
 
           {/* KONTEN TAB TUNAI */}
@@ -577,6 +616,112 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
             )
           )}
+          {/* KONTEN TAB KASBON / PIUTANG */}
+          {method === 'DEBT' && (
+            <div className="space-y-4">
+              {!selectedCustomer ? (
+                <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-3">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-900">
+                        Wajib Memilih Pelanggan Terdaftar
+                      </h4>
+                      <p className="text-[11px] text-amber-800 mt-1 leading-relaxed">
+                        Pembayaran kasbon tidak dapat diproses untuk pembeli umum/anonim. Silakan pilih pelanggan terlebih dahulu agar tagihan tercatat di buku piutang.
+                      </p>
+                    </div>
+                  </div>
+
+                  {onOpenCustomerPicker && (
+                    <button
+                      type="button"
+                      onClick={onOpenCustomerPicker}
+                      className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Pilih Pelanggan Sekarang</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Info Pelanggan Kasbon */}
+                  <div className="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-xs">
+                        {selectedCustomer.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">{selectedCustomer.name}</div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          {selectedCustomer.phone || selectedCustomer.code || 'Pelanggan Terdaftar'}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-lg">
+                      Kasbon
+                    </span>
+                  </div>
+
+                  {/* Jatuh Tempo */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Batas Jatuh Tempo Pelunasan:
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[7, 14, 30].map((days) => {
+                        const targetDate = new Date();
+                        targetDate.setDate(targetDate.getDate() + days);
+                        const dateStr = targetDate.toISOString().slice(0, 10);
+                        return (
+                          <button
+                            key={days}
+                            type="button"
+                            onClick={() => setDebtDueDate(dateStr)}
+                            className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${
+                              debtDueDate === dateStr
+                                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                : 'bg-slate-50 hover:bg-amber-50/60 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            +{days} Hari
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="relative pt-1">
+                      <input
+                        type="date"
+                        value={debtDueDate}
+                        onChange={(e) => setDebtDueDate(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Catatan Kasbon */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Catatan Kasbon (Opsional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Janji bayar akhir bulan / setelah gajian"
+                      value={debtNotes}
+                      onChange={(e) => setDebtNotes(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  {/* Keterangan Operasional */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 leading-relaxed">
+                    Stok barang/bahan tetap terpotong otomatis saat transaksi kasbon ini selesai. Saat pelanggan membayar tunai kelak, catat di menu Piutang agar uang fisik laci kasir bertambah.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Fixed Sticky Action Footer (Prime Thumb Zone) */}
@@ -596,15 +741,25 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               (method === 'SPLIT' && isFree) ||
               (method === 'CASH' && isCashInsufficient) ||
               (method === 'QRIS' && !qrisPaid) ||
-              (method === 'SPLIT' && (isSplitCashInsufficient || !splitQrisPaid))
+              (method === 'SPLIT' && (isSplitCashInsufficient || !splitQrisPaid)) ||
+              (method === 'DEBT' && !selectedCustomer)
             }
             onClick={handlePay}
-            className="flex-1 py-3 px-4 sm:px-5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 tracking-wide min-h-[46px]"
+            className={`flex-1 py-3 px-4 sm:px-5 rounded-xl active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white text-xs sm:text-sm font-extrabold shadow-lg transition-all flex items-center justify-center gap-2 tracking-wide min-h-[46px] ${
+              method === 'DEBT'
+                ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
+                : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'
+            }`}
           >
             {loading ? (
               'Memproses Transaksi...'
             ) : method === 'SPLIT' && isFree ? (
               <span>Pilih Tunai / QRIS untuk Lanjut</span>
+            ) : method === 'DEBT' ? (
+              <>
+                <span>Catat Kasbon Pelanggan</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
             ) : (
               <>
                 <span>Selesaikan & Cetak (Enter)</span>

@@ -5,6 +5,8 @@ import {
   getProductPerformance,
   getDeadStockReport,
   exportReport,
+  getCashFlowSummary,
+  getSalesPerformanceTrend,
 } from '../controllers/report.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
@@ -14,6 +16,8 @@ export const reportRouter = Router();
 reportRouter.use(authenticate);
 
 reportRouter.get('/financial', getFinancialSummary);
+reportRouter.get('/cash-flow', getCashFlowSummary);
+reportRouter.get('/sales-performance', getSalesPerformanceTrend);
 reportRouter.get('/shifts', getShiftDiscrepancies);
 reportRouter.get('/product-performance', getProductPerformance);
 reportRouter.get('/dead-stock', getDeadStockReport);

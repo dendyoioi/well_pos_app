@@ -642,7 +642,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             }}
           />
         ) : activeTab === 'customers' ? (
-          <CustomersView />
+          <CustomersView activeOutlet={activeOutlet} />
         ) : activeTab === 'shifts' ? (
           <ShiftsAuditView activeOutlet={activeOutlet} />
         ) : activeTab === 'reports' ? (

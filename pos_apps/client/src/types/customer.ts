@@ -70,3 +70,65 @@ export interface CustomerFormData {
   notes?: string;
   code?: string;
 }
+
+export type CustomerDebtStatus = 'UNPAID' | 'PARTIAL' | 'PAID' | 'CANCELLED';
+
+export interface CustomerDebtPayment {
+  id: string;
+  tenantId: string;
+  debtId: string;
+  outletId: string;
+  cashierId?: string | null;
+  shiftId?: string | null;
+  amount: number;
+  paymentMethod: string;
+  referenceNumber?: string | null;
+  notes?: string | null;
+  paidAt: string;
+  createdAt: string;
+  cashier?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface CustomerDebt {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  customerId: string;
+  orderId: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  dueDate?: string | null;
+  status: CustomerDebtStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+    code?: string | null;
+  };
+  outlet?: {
+    id: string;
+    name: string;
+  };
+  order?: {
+    id: string;
+    invoiceNumber: string;
+    totalAmount?: number;
+    createdAt: string;
+  };
+  payments?: CustomerDebtPayment[];
+}
+
+export interface CustomerDebtSummaryStats {
+  totalDebt: number;
+  totalPaid: number;
+  totalRemaining: number;
+  unpaidCount: number;
+}
+
