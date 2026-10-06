@@ -600,6 +600,18 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
       AND created_at <= ($param AT TIME ZONE 'UTC')
       ```
       Pola ini dievaluasi oleh PostgreSQL pada *query planning phase* menjadi konstanta `timestamp without time zone` yang SARGable (100% ramah index tanpa sequence scan) dan menjamin transaksi dari jam 00:00 hingga 23:59 WIB tercakup secara sempurna.
+26. **Standar iOS Safe-Area Inset PWA & Akses Mandiri Printer Bluetooth Kasir**:
+    - **Safe-Area Insets pada iOS Standalone PWA**:
+      Saat dibuka sebagai aplikasi PWA di iPhone (iOS WebKit standalone mode) dengan notch atau Dynamic Island, status bar sistem (jam, wifi, sinyal, baterai) menutupi bagian atas layar (`env(safe-area-inset-top)` berkisar 47–54px). Seluruh sticky top header (`<PosMobileView />`, `<DashboardPage />`, `<BackofficeLayout />`), mobile navigation drawer, dan floating cart/action bar wajib menerapkan padding dinamis:
+      `paddingTop: max(10px, env(safe-area-inset-top, 0px))` serta `paddingBottom: max(14px, env(safe-area-inset-bottom, 0px))` untuk home indicator bar bawah. Mencegah tombol hamburger menu dan identitas outlet terdorong ke atas atau tertutup notch.
+    - **Akses Mandiri Printer Bluetooth untuk Kasir (`<BluetoothSettingsModal />`)**:
+      Peran Kasir (`CASHIER`) memiliki akses langsung ke pengaturan printer thermal Bluetooth tanpa bergantung pada akun Admin/Owner. Tombol pintas cepat tersedia di header mobile, drawer kasir, dan header desktop POS. Fitur mencakup:
+      - Indikator status live (Terhubung / Sedang Menghubungkan / Terputus).
+      - Tombol Scan & Hubungkan BLE 1-klik (`navigator.bluetooth.requestDevice`).
+      - Tombol Putuskan Koneksi manual jika terjadi pergantian printer.
+      - Uji Cetak Struk Contoh (pilihan ukuran kertas 58mm atau 80mm).
+      - Uji Buka Laci Kasir (*Drawer Kick Pulse*).
+      - Panduan troubleshooting mandiri (kendala izin Web Bluetooth di Safari iOS via Bluefy Browser / WebBLE, Chrome Android, Chrome Desktop).
 
 ---
 

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ArrowDownCircle,
   Smartphone,
+  Bluetooth,
 } from 'lucide-react';
 import type { Outlet, SalesChannelConfig } from '../../types/outlet';
 import { normalizeSalesChannels } from '../../types/outlet';
@@ -21,6 +22,7 @@ import type { Shift } from '../../types/shift';
 import type { OrderChannel } from '../../types/order';
 import { Button, Badge } from '../ui';
 import { PwaInstallButton } from '../PwaInstallBanner';
+import { BluetoothSettingsModal } from './BluetoothSettingsModal';
 
 export interface PosHeaderProps {
   activeOutlet?: Outlet | null;
@@ -64,6 +66,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   onToggleHandheldMode,
 }) => {
   const [onlineDropdownOpen, setOnlineDropdownOpen] = useState(false);
+  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -301,6 +304,18 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           </Button>
         )}
 
+        {/* Tombol Pengaturan Printer Bluetooth Kasir */}
+        <Button
+          variant="outline"
+          size="sm"
+          icon={<Bluetooth className="w-3.5 h-3.5 text-blue-900" />}
+          onClick={() => setBluetoothModalOpen(true)}
+          className="text-xs"
+          title="Pengaturan & Tes Koneksi Printer Bluetooth Thermal"
+        >
+          <span className="hidden sm:inline">Printer BT</span>
+        </Button>
+
         {/* Tombol Pasang Aplikasi PWA */}
         <PwaInstallButton />
 
@@ -364,6 +379,12 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           </Button>
         )}
       </div>
+
+      {/* Modal Pengaturan & Tes Printer Bluetooth Kasir */}
+      <BluetoothSettingsModal
+        isOpen={bluetoothModalOpen}
+        onClose={() => setBluetoothModalOpen(false)}
+      />
     </div>
   );
 };

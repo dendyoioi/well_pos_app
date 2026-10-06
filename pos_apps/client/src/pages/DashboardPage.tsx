@@ -30,6 +30,7 @@ import {
   Ticket,
   FileText,
   ArrowLeftRight,
+  Bluetooth,
 } from 'lucide-react';
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
@@ -69,6 +70,7 @@ import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
 import { BillingTokensView } from './BillingTokensView';
 import { UserGuideView } from './UserGuideView';
 import { PwaInstallButton } from '../components/PwaInstallBanner';
+import { BluetoothSettingsModal } from '../components/pos/BluetoothSettingsModal';
 import { api } from '../services/api';
 
 interface DashboardPageProps {
@@ -263,6 +265,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
   const [productCount, setProductCount] = useState<number>(8);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
 
   // Multi-Outlet Management State (PRO Multi-Branch Architecture)
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -723,7 +726,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       {/* Mobile Navigation Drawer (Burger Menu Kasir & Gudang di Smartphone) */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex justify-start bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150 md:hidden">
-          <div className="bg-white w-[290px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-left duration-200">
+          <div
+            className="bg-white w-[290px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-left duration-200"
+            style={{
+              paddingTop: 'max(14px, env(safe-area-inset-top, 0px))',
+              paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))',
+            }}
+          >
             <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
               {/* Header Drawer */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1009,8 +1018,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               </div>
             </div>
 
-            {/* Bottom Actions Drawer: Pasang PWA, PIN Lock & Logout */}
+            {/* Bottom Actions Drawer: Printer Bluetooth, Pasang PWA, PIN Lock & Logout */}
             <div className="pt-3 border-t border-slate-100 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setBluetoothModalOpen(true);
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-blue-50/80 hover:bg-blue-100 text-blue-900 border border-blue-200/80 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+              >
+                <Bluetooth className="w-4 h-4 text-blue-700" />
+                <span>Pengaturan Printer Bluetooth</span>
+              </button>
+
               <PwaInstallButton className="w-full justify-center" />
 
               <button
@@ -1043,7 +1064,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       )}
 
       {/* Top Header Navigation */}
-      <header className={`border-b border-slate-200 bg-white sticky top-0 z-20 px-3 sm:px-8 py-2.5 sm:py-3 items-center justify-between shadow-xs ${activeTab === 'pos' ? 'hidden md:flex' : 'flex'}`}>
+      <header
+        className={`border-b border-slate-200 bg-white sticky top-0 z-20 px-3 sm:px-8 py-2.5 sm:py-3 items-center justify-between shadow-xs ${activeTab === 'pos' ? 'hidden md:flex' : 'flex'}`}
+        style={{ paddingTop: 'max(10px, env(safe-area-inset-top, 0px))' }}
+      >
         <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2">
           {/* Tombol Hamburger Menu Mobile untuk Navigasi */}
           <button
@@ -1106,6 +1130,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
         {/* User Profile & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {/* Tombol Pengaturan Printer Bluetooth Kasir */}
+          <button
+            type="button"
+            onClick={() => setBluetoothModalOpen(true)}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+            title="Pengaturan & Tes Printer Bluetooth Thermal"
+          >
+            <Bluetooth className="w-3.5 h-3.5 text-blue-700" />
+            <span className="hidden md:inline">Printer BT</span>
+          </button>
+
           <PwaInstallButton />
 
           <div className="hidden sm:flex flex-col text-right">
@@ -1911,6 +1946,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             }}
           />
         )}
+
+        {/* Modal Pengaturan Printer Bluetooth Kasir */}
+        <BluetoothSettingsModal
+          isOpen={bluetoothModalOpen}
+          onClose={() => setBluetoothModalOpen(false)}
+        />
       </main>
     </div>
   );

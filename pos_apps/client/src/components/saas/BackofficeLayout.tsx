@@ -694,7 +694,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
       {/* =========================================================================
           TOP HEADER BAR (WELL POS ENTERPRISE MULTI-STORE NAV)
           ========================================================================= */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs h-14 sm:h-16 shrink-0 px-3 sm:px-6 flex items-center justify-between">
+      <header
+        className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs min-h-[3.5rem] sm:min-h-[4rem] shrink-0 px-3 sm:px-6 flex items-center justify-between"
+        style={{ paddingTop: 'max(0px, env(safe-area-inset-top, 0px))' }}
+      >
         {/* Left: Mobile Hamburger & Brand & Store Selector */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 mr-2">
           {/* Hamburger Menu Trigger for 6.8" Smartphone Portrait */}
@@ -1179,7 +1182,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           }`}
         >
           {/* Drawer Top Header */}
-          <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 shrink-0">
+          <div
+            className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 shrink-0"
+            style={{ paddingTop: 'max(14px, env(safe-area-inset-top, 0px))' }}
+          >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-blue-950 text-white flex items-center justify-center font-black shadow-xs shrink-0">
                 <Store className="w-4 h-4" />
@@ -1231,7 +1237,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           </div>
 
           {/* Drawer Footer User Profile & Actions */}
-          <div className="p-3 border-t border-slate-200 bg-slate-50/90 shrink-0 space-y-2">
+          <div
+            className="p-3 border-t border-slate-200 bg-slate-50/90 shrink-0 space-y-2"
+            style={{ paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))' }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-7 h-7 rounded-full bg-blue-900 text-white flex items-center justify-center text-[10px] font-black shrink-0">
@@ -1271,7 +1280,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
         {/* Ergonomic Mobile Bottom Navigation Bar (Prime Thumb Zone) - Hidden when in POS */}
         {activeTab !== 'pos' && (
-          <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 px-3 py-1.5 flex items-center justify-around shadow-lg md:hidden">
+          <nav
+            className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 px-3 py-1.5 flex items-center justify-around shadow-lg md:hidden"
+            style={{ paddingBottom: 'max(6px, env(safe-area-inset-bottom, 0px))' }}
+          >
             {activeOutlet?.isWarehouse ? (
               /* Bottom Nav: Mode Gudang */
               <>

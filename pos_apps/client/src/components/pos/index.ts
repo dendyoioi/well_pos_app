@@ -5,3 +5,4 @@ export * from './OrderCartSidebar';
 export * from './HoldOrdersModal';
 export * from './OpenTabsModal';
 export * from './PosMobileView';
+export * from './BluetoothSettingsModal';

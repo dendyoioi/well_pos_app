@@ -24,6 +24,7 @@ import {
   LogOut,
   Users,
   Bike,
+  Bluetooth,
 } from 'lucide-react';
 import type { Product, Category } from '../../types/product';
 import type { CartItem, OrderChannel } from '../../types/order';
@@ -35,6 +36,8 @@ import type { Promotion } from '../../types/promotion';
 import type { Shift } from '../../types/shift';
 import type { QrTable } from '../../types/qr_menu';
 import { PwaInstallButton } from '../PwaInstallBanner';
+import { BluetoothSettingsModal } from './BluetoothSettingsModal';
+import { useBluetoothPrinter } from '../../hooks/useBluetoothPrinter';
 
 export interface PosMobileViewProps {
   activeOutlet: Outlet | null | undefined;
@@ -171,6 +174,8 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [showCustomerInputs, setShowCustomerInputs] = useState(false);
+  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
+  const btPrinter = useBluetoothPrinter();
 
   // Daftar saluran aktif outlet
   const activeChannels = useMemo(() => {
@@ -216,8 +221,11 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
   return (
     <div className="flex flex-col flex-1 h-full bg-slate-100 select-none font-sans overflow-hidden relative">
-      {/* 1. Mobile Sticky Top Header */}
-      <header className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3.5 py-2.5 shrink-0 shadow-md z-20 flex items-center justify-between gap-2">
+      {/* 1. Mobile Sticky Top Header with Safe Area Inset Support */}
+      <header
+        style={{ paddingTop: 'max(10px, env(safe-area-inset-top, 0px))' }}
+        className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3.5 pb-2.5 shrink-0 shadow-md z-20 flex items-center justify-between gap-2"
+      >
         {/* Left: Mobile Hamburger & Outlet & Shift Status */}
         <div className="flex items-center gap-2 min-w-0">
           {/* Unified Left Hamburger Menu Button */}
@@ -260,6 +268,21 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
         {/* Right: Quick Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Quick Bluetooth Settings Button */}
+          <button
+            type="button"
+            onClick={() => setBluetoothModalOpen(true)}
+            className={`p-1.5 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+              btPrinter.isConnected
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30'
+                : 'bg-blue-800/80 text-blue-300 border-blue-700/70 hover:bg-blue-700'
+            }`}
+            title={btPrinter.isConnected ? `Printer Bluetooth: ${btPrinter.deviceName || 'Terhubung'}` : 'Hubungkan Printer Bluetooth'}
+            aria-label="Pengaturan Printer Bluetooth"
+          >
+            <Bluetooth className="w-3.5 h-3.5" />
+          </button>
+
           {/* Channel selector badge */}
           <button
             type="button"
@@ -453,9 +476,12 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         )}
       </div>
 
-      {/* 4. Floating Action Cart Bar (Sticky Bottom) */}
+      {/* 4. Floating Action Cart Bar (Sticky Bottom with Safe Area) */}
       {cart.length > 0 && (
-        <div className="absolute bottom-3 left-3 right-3 z-30 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div
+          style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          className="absolute left-3 right-3 z-30 animate-in fade-in slide-in-from-bottom-3 duration-200"
+        >
           <div
             onClick={() => setCartDrawerOpen(true)}
             className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white rounded-2xl p-3 shadow-xl border border-blue-800/80 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
@@ -491,7 +517,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
           {/* Backdrop click to close */}
           <div className="flex-1" onClick={() => setCartDrawerOpen(false)} />
 
-          <div className="bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 flex flex-col max-h-[88vh] animate-in slide-in-from-bottom duration-200">
+          <div
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
+            className="bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 flex flex-col max-h-[88vh] animate-in slide-in-from-bottom duration-200"
+          >
             {/* Sheet Handle */}
             <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 shrink-0" />
 
@@ -940,10 +969,16 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         </div>
       )}
 
-      {/* 6. Quick Menu Drawer (Hamburger Menu Kasir Lengkap - Unified Left Slide) */}
+      {/* 6. Quick Menu Drawer (Hamburger Menu Kasir Lengkap - Unified Left Slide with Safe Area) */}
       {quickMenuOpen && (
         <div className="fixed inset-0 z-50 flex justify-start bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="bg-white w-[300px] h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-left duration-200">
+          <div
+            style={{
+              paddingTop: 'max(14px, env(safe-area-inset-top, 0px))',
+              paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))',
+            }}
+            className="bg-white w-[300px] h-full shadow-2xl flex flex-col justify-between px-4 animate-in slide-in-from-left duration-200"
+          >
             <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-135px)] pr-1">
               {/* Header Drawer */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1180,9 +1215,39 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* 4. Perangkat & Printer Kasir Bluetooth */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Perangkat &amp; Printer
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMenuOpen(false);
+                    setBluetoothModalOpen(true);
+                  }}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-900 text-slate-800 font-bold text-xs flex items-center justify-between transition-colors border border-slate-200 text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Bluetooth className={`w-4 h-4 ${btPrinter.isConnected ? 'text-emerald-600' : 'text-blue-900'}`} />
+                    <span>Printer Bluetooth</span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      btPrinter.isConnected
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {btPrinter.isConnected ? '● Terhubung' : 'Terputus'}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {/* 4. Bottom Controls: Pasang PWA, Desktop Switcher & Kunci / Logout */}
+            {/* 5. Bottom Controls: Pasang PWA, Desktop Switcher & Kunci / Logout */}
             <div className="pt-3 border-t border-slate-100 space-y-2 shrink-0">
               <PwaInstallButton className="w-full justify-center" />
 
@@ -1232,6 +1297,13 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
           <div className="flex-1" onClick={() => setQuickMenuOpen(false)} />
         </div>
       )}
+
+      {/* 7. Modal Pengaturan Printer Bluetooth Kasir */}
+      <BluetoothSettingsModal
+        isOpen={bluetoothModalOpen}
+        onClose={() => setBluetoothModalOpen(false)}
+        defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
+      />
     </div>
   );
 };
