@@ -1064,10 +1064,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       )}
 
       {/* Top Header Navigation */}
-      <header
-        className={`border-b border-slate-200 bg-white sticky top-0 z-20 px-3 sm:px-8 py-2.5 sm:py-3 items-center justify-between shadow-xs ${activeTab === 'pos' ? 'hidden md:flex' : 'flex'}`}
-        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 48px) + 8px)' }}
-      >
+      <header className={`border-b border-slate-200 bg-white sticky top-0 z-20 px-3 sm:px-8 py-2.5 sm:py-3 items-center justify-between shadow-xs ${activeTab === 'pos' ? 'hidden md:flex' : 'flex'}`}>
         <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2">
           {/* Tombol Hamburger Menu Mobile untuk Navigasi */}
           <button

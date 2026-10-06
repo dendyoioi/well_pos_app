@@ -9,8 +9,8 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* iOS Safe Area Inset Support (PWA Standalone & Safari Notch / Dynamic Island) */
-@media all and (display-mode: standalone), (max-width: 768px) {
+/* iOS Safe Area Inset Support HANYA untuk PWA Standalone pada smartphone */
+@media all and (display-mode: standalone) and (max-width: 768px) {
   .ios-safe-header {
     padding-top: calc(max(env(safe-area-inset-top, 0px), 48px) + 8px) !important;
   }

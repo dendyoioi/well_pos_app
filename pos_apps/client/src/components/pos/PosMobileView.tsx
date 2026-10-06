@@ -177,6 +177,15 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
   const btPrinter = useBluetoothPrinter();
 
+  // Deteksi khusus apakah sedang berjalan sebagai PWA Standalone di iPhone / Handheld
+  const isPwaStandalone = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const isStandalone =
+      (window.navigator as any).standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    return isStandalone;
+  }, []);
+
   // Daftar saluran aktif outlet
   const activeChannels = useMemo(() => {
     return normalizeSalesChannels(
@@ -223,7 +232,11 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
     <div className="flex flex-col flex-1 h-full bg-slate-100 select-none font-sans overflow-hidden relative">
       {/* 1. Mobile Sticky Top Header with Realistic Safe Area Inset Support */}
       <header
-        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 48px) + 8px)' }}
+        style={{
+          paddingTop: isPwaStandalone
+            ? 'calc(max(env(safe-area-inset-top, 0px), 48px) + 8px)'
+            : 'max(10px, env(safe-area-inset-top, 0px))',
+        }}
         className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3.5 pb-2.5 shrink-0 shadow-md z-20 flex items-center justify-between gap-2"
       >
         {/* Left: Mobile Hamburger & Outlet & Shift Status */}

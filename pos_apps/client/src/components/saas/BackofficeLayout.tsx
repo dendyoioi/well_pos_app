@@ -694,10 +694,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
       {/* =========================================================================
           TOP HEADER BAR (WELL POS ENTERPRISE MULTI-STORE NAV)
           ========================================================================= */}
-      <header
-        className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs min-h-[3.5rem] sm:min-h-[4rem] shrink-0 px-3 sm:px-6 flex items-center justify-between"
-        style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 48px) + 8px)' }}
-      >
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs h-14 sm:h-16 shrink-0 px-3 sm:px-6 flex items-center justify-between">
         {/* Left: Mobile Hamburger & Brand & Store Selector */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 mr-2">
           {/* Hamburger Menu Trigger for 6.8" Smartphone Portrait */}
