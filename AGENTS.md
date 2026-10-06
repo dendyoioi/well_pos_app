@@ -89,6 +89,13 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
    - **Supabase 7-Day Inactivity Warning**: Jika proyek Supabase free tier tidak menerima request selama 7 hari, database akan tidur (*paused*). Jika API throw `Connection refused`, ingatkan User untuk me-restore proyek di Dashboard Supabase (`izzcirbofftkprrtpqae`).
    - **Render 750h Limit & Cold Start**: Render Free Tier memiliki batas 750 jam/bulan per akun dan dapat mengalami cold start (~50 detik) jika pinger cron GitHub Actions tertunda. Dilarang menambah web service gratis lain di akun Render yang sama agar kuota tidak habis di pertengahan bulan.
    - **Vercel Production Deployment Rule**: Domain utama `well-pos-app.vercel.app` terikat secara ketat ke branch `main`. Push ke branch `dev` TIDAK mengupdate website produksi. Fitur baru baru aktif di produksi setelah di-merge ke `main`.
+10. 📱 **WAJIB Menggunakan Pola Kanonikal Modal Form Responsif & PWA (Anti-Unscrollable & Sticky Footer)**:
+    - Seluruh modal input/form wajib menggunakan bottom-sheet mobile: `items-end sm:items-center p-0 sm:p-4`, `rounded-t-3xl sm:rounded-3xl`, dan `max-h-[92dvh] sm:max-h-[90vh]`.
+    - Container form wajib `flex flex-col flex-1 min-h-0 overflow-hidden` dengan scrollable body `overflow-y-auto overscroll-contain flex-1`.
+    - DILARANG menaruh tombol submit/batal di dalam body scrollable. Seluruh tombol aksi wajib diletakkan di **Sticky Action Footer** terpisah di bagian bawah dengan bantalan safe-area iPhone: `p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]`.
+11. 🤫 **KEBIJAKAN OPTIMASI FOTO BACKGROUND (ZERO TECHNICAL JARGON TO TENANT)**:
+    - Utilitas `imageCompressor.ts` wajib berjalan 100% hening di background tanpa membebani tenant.
+    - DILARANG menampilkan badge/angka statistik teknis kompresi ("Terkompresi otomatis: X KB -> Y KB (-Z%)") pada form katalog atau pengaturan QRIS. Cukup gunakan status netral "Memproses..." dan toast ramah "Foto produk berhasil diunggah".
 
 ---
 

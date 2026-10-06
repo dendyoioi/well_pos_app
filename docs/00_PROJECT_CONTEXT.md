@@ -612,6 +612,14 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
       - Uji Cetak Struk Contoh (pilihan ukuran kertas 58mm atau 80mm).
       - Uji Buka Laci Kasir (*Drawer Kick Pulse*).
       - Panduan troubleshooting mandiri (kendala izin Web Bluetooth di Safari iOS via Bluefy Browser / WebBLE, Chrome Android, Chrome Desktop).
+27. **Pola Kanonikal Form Modal Responsif & PWA (Anti-Unscrollable & Sticky Footer)**:
+    - Seluruh modal input data/form di aplikasi wajib menggunakan bottom-sheet mobile: `items-end sm:items-center p-0 sm:p-4`, `rounded-t-3xl sm:rounded-3xl`, dan batas dinamis `max-h-[92dvh] sm:max-h-[90vh]` (menggunakan unit `dvh` agar adaptif terhadap toolbar Safari iOS).
+    - Container `<form>` wajib berupa `flex flex-col flex-1 min-h-0 overflow-hidden`.
+    - Area form body wajib diisolasi dengan `overflow-y-auto overscroll-contain flex-1`.
+    - **Sticky Action Footer**: Tombol aksi (Batal & Simpan) DILARANG ditaruh di dalam body form scrollable. Tombol wajib berada di footer bar terpisah di bagian bawah dengan bantalan safe-area iPhone: `p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]`.
+28. **Kebijakan Optimasi Foto di Background (Zero Technical Jargon)**:
+    - Mesin kompresi gambar client-side (`imageCompressor.ts`) berjalan 100% hening di background.
+    - Dilarang menampilkan angka/badge statistik teknis kompresi pada antarmuka tenant/kasir. Label status menggunakan teks netral "Memproses..." dan toast ramah "Foto produk berhasil diunggah".
 
 ---
 

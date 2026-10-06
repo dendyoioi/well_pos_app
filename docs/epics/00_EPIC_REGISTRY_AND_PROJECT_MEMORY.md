@@ -1353,6 +1353,50 @@ Status: FASE 1, FASE 2, FASE 3, & FASE 4 SELESAI (100% BUILD SUCCESS ✅)
 • Hasil Uji Verifikasi Sistem:
   - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
 ===============================================================================
+[2026-10-06] POLA KANONIKAL FORM MODAL RESPONSIVE PWA & BACKGROUND PHOTO COMPRESSION
+===============================================================================
+• Bug 1: Eliminasi Jargon & Statistik Teknis Kompresi Foto dari UI Tenant:
+  - Latar Belakang: Tenant/kasir tidak perlu tahu detail teknis kompresi ukuran berkas (misal: "Terkompresi otomatis: 1.2 MB -> 120 KB (-90%)").
+  - Keputusan & Penegakan:
+    1. Mesin kompresi client-side (`imageCompressor.ts`) TETAP bekerja hening 100% di latar belakang (background) agar database hemat kuota dan terminal kasir cepat memuat katalog.
+    2. Seluruh badge persentase/rasio kompresi dihapus dari UI (`ProductModal.tsx`, `PaymentSettingsView.tsx`).
+    3. Label status loader disederhanakan dari "Mengompres..." menjadi "Memproses...".
+    4. Pesan toast sukses diringkas menjadi "Foto produk / barcode berhasil diunggah" tanpa angka kompresi teknis.
+
+• Bug 2: Pola Kanonikal Modal Form Responsif & Anti-Unscrollable di Mobile / Safari / PWA:
+  - Latar Belakang: Form modal seperti Stok Masuk (`StockMovementModal.tsx`), Tutup Shift (`CloseShiftModal.tsx`), dan form lainnya tidak bisa di-scroll di layar HP iPhone / PWA atau tombol submit terdorong ke bawah layar.
+  - Akar Masalah:
+    1. Tombol Batal & Simpan berada di dalam container scrollable form sehingga terdorong keluar layar saat form panjang.
+    2. Modal desktop `items-center` dengan `max-h-[90vh]` tidak adaptif terhadap dynamic viewport (`dvh`) Safari iOS.
+    3. Tidak adanya safe-area padding di footer menyebabkan tombol tertutup swipe-bar navigasi iPhone.
+  - Aturan Arsitektur UI Wajib (The Modal Canonical Pattern):
+    ```tsx
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+        {/* 1. Header (Sticky Top) */}
+        <div className="... shrink-0">...</div>
+
+        {/* 2. Form Container */}
+        <form onSubmit={...} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Body */}
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto overscroll-contain flex-1">
+            {/* Input Fields */}
+          </div>
+
+          {/* 3. Sticky Action Footer */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button type="button" onClick={onClose}>Batal</button>
+            <button type="submit">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    ```
+  - Telah Diimplementasikan & Divalidasi di 22 Komponen Modal:
+    `StockMovementModal.tsx`, `ProductModal.tsx`, `CloseShiftModal.tsx`, `StartShiftModal.tsx`, `CashExpenseModal.tsx`, `VoidOrderItemModal.tsx`, `VoidOrderModal.tsx`, `OrderDetailModal.tsx`, `PaymentModal.tsx`, `StockTransferModal.tsx`, `CreateIngredientModal.tsx`, `CategoryModal.tsx`, `ProductModifierModal.tsx`, `ProductBarcodeLabelsModal.tsx`, `AssignCatalogProductModal.tsx`, `OpenTabsModal.tsx`, `SplitBillModal.tsx`, `BarcodeCameraScannerModal.tsx`, serta basis generik `Modal.tsx`.
+• Hasil Uji Verifikasi Sistem:
+  - Exit code 0 pada `npm run build` di `pos_apps/client` dan `pos_apps/server`.
+===============================================================================
 ```
 
 
