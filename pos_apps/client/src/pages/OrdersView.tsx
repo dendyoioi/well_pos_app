@@ -16,6 +16,11 @@ import {
   CheckCircle2,
   Eye,
   UtensilsCrossed,
+  Clock,
+  CreditCard,
+  Building2,
+  BookOpen,
+  Layers,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import type { Outlet } from '../types/outlet';
@@ -183,11 +188,154 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
     setModalOpen(true);
   };
 
-  // Ringkasan metrik hari ini
-  const totalOmset = orders.reduce((sum, o) => sum + Number(o.grandTotal), 0);
+  // Helper Render Badge Metode Pembayaran Akurat (Anti-Falsifikasi QRIS pada Order Unpaid)
+  const renderPaymentMethodBadge = (order: Order, isCompact = false) => {
+    if (order.orderStatus === 'VOIDED') {
+      return (
+        <span
+          className={`inline-flex items-center gap-1 ${
+            isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+          } rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold shrink-0`}
+        >
+          <Ban className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+          <span>Batal (Void)</span>
+        </span>
+      );
+    }
+
+    if (order.paymentStatus === 'UNPAID' || !order.payments || order.payments.length === 0) {
+      return (
+        <span
+          className={`inline-flex items-center gap-1 ${
+            isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+          } rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold shrink-0`}
+        >
+          <Clock className={isCompact ? 'w-2.5 h-2.5 text-amber-600' : 'w-3 h-3 text-amber-600'} />
+          <span>Belum Bayar</span>
+        </span>
+      );
+    }
+
+    if (order.paymentStatus === 'PARTIAL') {
+      return (
+        <span
+          className={`inline-flex items-center gap-1 ${
+            isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+          } rounded-full bg-orange-50 text-orange-800 border border-orange-200 font-bold shrink-0`}
+        >
+          <Clock className={isCompact ? 'w-2.5 h-2.5 text-orange-600' : 'w-3 h-3 text-orange-600'} />
+          <span>Sebagian</span>
+        </span>
+      );
+    }
+
+    if (order.payments.length > 1) {
+      return (
+        <span
+          className={`inline-flex items-center gap-1 ${
+            isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+          } rounded-full bg-purple-50 text-purple-800 border border-purple-200 font-bold shrink-0`}
+        >
+          <Layers className={isCompact ? 'w-2.5 h-2.5 text-purple-600' : 'w-3 h-3 text-purple-600'} />
+          <span>Split ({order.payments.length})</span>
+        </span>
+      );
+    }
+
+    const primaryPayment = order.payments[0];
+    const method = (primaryPayment?.method || (primaryPayment as any)?.paymentMethod || '').toUpperCase();
+
+    switch (method) {
+      case 'CASH':
+        return (
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+            } rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold shrink-0`}
+          >
+            <Banknote className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+            <span>Tunai</span>
+          </span>
+        );
+      case 'QRIS':
+        return (
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+            } rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold shrink-0`}
+          >
+            <QrCode className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+            <span>QRIS</span>
+          </span>
+        );
+      case 'CUSTOMER_DEBT':
+      case 'DEBT':
+        return (
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+            } rounded-full bg-amber-50 text-amber-900 border border-amber-300 font-bold shrink-0`}
+          >
+            <BookOpen className={isCompact ? 'w-2.5 h-2.5 text-amber-700' : 'w-3 h-3 text-amber-700'} />
+            <span>Kasbon</span>
+          </span>
+        );
+      case 'BANK_TRANSFER':
+      case 'TRANSFER':
+        return (
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+            } rounded-full bg-sky-50 text-sky-800 border border-sky-200 font-bold shrink-0`}
+          >
+            <Building2 className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+            <span>Transfer</span>
+          </span>
+        );
+      case 'DEBIT':
+      case 'DEBIT_CARD':
+      case 'CREDIT':
+      case 'CREDIT_CARD':
+        return (
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+            } rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-bold shrink-0`}
+          >
+            <CreditCard className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+            <span>Kartu EDC</span>
+          </span>
+        );
+      default:
+        return (
+          <span
+            className={`inline-flex items-center gap-1 ${
+              isCompact ? 'px-1.5 py-0.2 text-[10px]' : 'px-2.5 py-1 text-xs'
+            } rounded-full bg-slate-100 text-slate-800 border border-slate-200 font-bold shrink-0`}
+          >
+            <span>{method || 'Lainnya'}</span>
+          </span>
+        );
+    }
+  };
+
+  // Ringkasan metrik akurat
+  const nonVoidOrders = orders.filter((o) => o.orderStatus !== 'VOIDED');
+  const paidOrders = nonVoidOrders.filter((o) => o.paymentStatus !== 'UNPAID');
+
   const totalTransaksi = orders.length;
-  const cashTransaksi = orders.filter((o) => o.payments?.[0]?.method === 'CASH').length;
-  const qrisTransaksi = orders.filter((o) => o.payments?.[0]?.method === 'QRIS').length;
+  // Total Omset Kasir: Akumulasi penerimaan riil (hanya transaksi yang sudah lunas dan bukan VOID)
+  const totalOmset = paidOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
+
+  // Transaksi Tunai: pesanan lunas dengan pembayaran CASH
+  const cashTransaksi = paidOrders.filter((o) =>
+    o.payments?.some((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() === 'CASH')
+  ).length;
+
+  // Transaksi QRIS: pesanan lunas dengan pembayaran QRIS
+  const qrisTransaksi = paidOrders.filter((o) =>
+    o.payments?.some((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() === 'QRIS')
+  ).length;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -457,7 +605,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedOrders.map((order) => {
-                    const payment = order.payments?.[0];
                     const chKey = (order.channel || 'DINE_IN') as OrderChannel;
                     const chInfo = ORDER_CHANNEL_LABELS[chKey] || {
                       label: order.channel || 'Dine In',
@@ -506,17 +653,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          {payment?.method === 'CASH' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                              <Banknote className="w-3 h-3" />
-                              <span>Tunai</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-bold">
-                              <QrCode className="w-3 h-3" />
-                              <span>QRIS</span>
-                            </span>
-                          )}
+                          {renderPaymentMethodBadge(order, false)}
                         </td>
                         <td className="py-3.5 px-4 text-right text-slate-600">
                           Rp {Number(order.subtotal).toLocaleString('id-ID')}
@@ -603,7 +740,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
             {/* Mobile Card List View (Visible on Smartphone 6.8") */}
             <div className="block md:hidden divide-y divide-slate-100">
               {paginatedOrders.map((order) => {
-                const payment = order.payments?.[0];
                 const chKey = (order.channel || 'DINE_IN') as OrderChannel;
                 const chInfo = ORDER_CHANNEL_LABELS[chKey] || {
                   label: order.channel || 'Dine In',
@@ -647,17 +783,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                           {order.customerName || 'Umum (Walk-in)'}
                         </span>
                         <span className="text-slate-300">•</span>
-                        {payment?.method === 'CASH' ? (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold shrink-0">
-                            <Banknote className="w-3 h-3" />
-                            <span>Tunai</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-800 text-[10px] font-bold shrink-0">
-                            <QrCode className="w-3 h-3" />
-                            <span>QRIS</span>
-                          </span>
-                        )}
+                        {renderPaymentMethodBadge(order, true)}
                       </div>
 
                       <div className="text-right shrink-0">

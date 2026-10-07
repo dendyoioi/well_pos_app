@@ -11,6 +11,7 @@ import {
   Copy,
   AlertTriangle,
   PackageX,
+  Clock,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
@@ -52,8 +53,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     bg: '#dbeafe',
   };
 
+  const isUnpaid = order.paymentStatus === 'UNPAID' || !order.payments || order.payments.length === 0;
   const payment = order.payments?.[0];
-  const paymentMethod = payment?.method || (payment as any)?.paymentMethod || 'CASH';
+  const paymentMethod = isUnpaid ? 'BELUM BAYAR' : (payment?.method || (payment as any)?.paymentMethod || 'CASH');
 
   const handleCopyInvoice = () => {
     if (order.invoiceNumber) {
@@ -296,7 +298,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             {/* Payment Method Details */}
             <div className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-2xl space-y-2">
               <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                {paymentMethod === 'CASH' ? (
+                {isUnpaid ? (
+                  <Clock className="w-4 h-4 text-amber-600" />
+                ) : paymentMethod === 'CASH' ? (
                   <Banknote className="w-4 h-4 text-emerald-600" />
                 ) : (
                   <QrCode className="w-4 h-4 text-indigo-600" />
@@ -307,8 +311,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <div className="space-y-1.5 text-xs text-slate-700">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Metode:</span>
-                  <span className="font-bold text-slate-900 uppercase">{paymentMethod}</span>
+                  <span className={`font-bold uppercase ${isUnpaid ? 'text-amber-700' : 'text-slate-900'}`}>{paymentMethod}</span>
                 </div>
+                {isUnpaid && (
+                  <div className="text-[11px] font-semibold text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200 mt-1">
+                    Pesanan ini belum diselesaikan pembayarannya (Meja Aktif / Open Bill).
+                  </div>
+                )}
 
                 {order.payments?.map((p: any, idx) => {
                   const m = p.method || p.paymentMethod || 'CASH';

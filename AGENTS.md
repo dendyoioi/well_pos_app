@@ -105,6 +105,12 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
     - **Prinsip Desain**: Slip X/Z adalah dokumen **rekapitulasi finansial murni** (Posisi Kas Drawer, Mutasi Petty Cash, Rekap Omset per Metode Pembayaran Tunai/QRIS, Pelunasan Kasbon, Total Faktur, dan Rekonsiliasi Selisih Kas).
     - **Lokasi Rincian Transaksi**: Daftar transaksi lengkap per nota selama shift **hanya boleh diakses** melalui menu **Rekap Shift Kasir (Audit Shift Backoffice)**. Jika ada kebutuhan operasional untuk mencetak detail transaksi secara utuh, cetak diarahkan ke format kertas besar (**A4 / F4**) melalui printer dokumen kantor atau ekspor spreadsheet Excel/CSV.
     - **Mandatory Regression Check**: Setiap sesi regression testing wajib memverifikasi bahwa slip X-Report dan Z-Report tidak merender daftar item transaksi per nota.
+14. 💳 **INTEGRITAS METODE PEMBAYARAN & SINKRONISASI METRIK TRANSAKSI (ANTI-FALSIFIKASI STATUS QRIS)**:
+    - **DILARANG KERAS** menggunakan ternary biner seperti `payment?.method === 'CASH' ? 'Tunai' : 'QRIS'` yang secara keliru mengasumsikan seluruh transaksi non-tunai (termasuk pesanan `UNPAID` / Belum Bayar, Kasbon, Transfer, EDC, dan Split) sebagai **QRIS**.
+    - Jika pesanan berstatus `paymentStatus === 'UNPAID'` atau belum memiliki record pembayaran, badge tabel **WAJIB** menampilkan **"Belum Bayar"** (`<Clock />` warna amber).
+    - Metrik **Total Omset Kasir (Akumulasi Penerimaan)** hanya mengakumulasikan pesanan yang berstatus lunas (`paymentStatus !== 'UNPAID'` dan bukan `VOIDED`).
+    - Kartu metrik transaksi **Tunai (Cash)** dan **QRIS Non-Tunai** wajib sinkron 1:1 dengan jumlah baris yang berstatus pembayaran tersebut pada tabel transaksi.
+    - **Mandatory Automation Check**: Setiap sesi regression testing (`npm run test:smoke` Step 3.5) wajib memverifikasi konsistensi metrik dan anti-falsifikasi metode pembayaran ini.
 
 ---
 

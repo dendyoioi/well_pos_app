@@ -44,6 +44,39 @@ class OrdersPage {
       await this.page.waitForTimeout(300);
     }
   }
+
+  async getMetricStats() {
+    // Ambil teks dari 4 kartu metrik utama
+    const cards = this.page.locator('.grid.grid-cols-2.lg\\:grid-cols-4 > div');
+    const totalTransactionsText = await cards.nth(0).locator('.text-2xl').innerText().catch(() => '0');
+    const totalOmsetText = await cards.nth(1).locator('.text-2xl').innerText().catch(() => '0');
+    const cashTransactionsText = await cards.nth(2).locator('.text-2xl').innerText().catch(() => '0');
+    const qrisTransactionsText = await cards.nth(3).locator('.text-2xl').innerText().catch(() => '0');
+
+    return {
+      total: parseInt(totalTransactionsText) || 0,
+      omset: totalOmsetText,
+      cash: parseInt(cashTransactionsText) || 0,
+      qris: parseInt(qrisTransactionsText) || 0,
+    };
+  }
+
+  async verifyMetricConsistency() {
+    const stats = await this.getMetricStats();
+    // Hitung badge di tabel
+    const cashBadges = await this.page.locator('tbody tr').filter({ hasText: 'Tunai' }).count();
+    const qrisBadges = await this.page.locator('tbody tr').filter({ hasText: 'QRIS' }).count();
+    const unpaidBadges = await this.page.locator('tbody tr').filter({ hasText: 'Belum Bayar' }).count();
+
+    const isQrisMatched = stats.qris === qrisBadges;
+    const isCashMatched = stats.cash === cashBadges;
+
+    return {
+      stats,
+      badges: { cashBadges, qrisBadges, unpaidBadges },
+      isConsistent: isQrisMatched && isCashMatched,
+    };
+  }
 }
 
 module.exports = { OrdersPage };

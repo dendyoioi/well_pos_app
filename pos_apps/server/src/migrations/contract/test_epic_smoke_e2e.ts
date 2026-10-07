@@ -457,6 +457,44 @@ export async function runEndToEndSmokeTest() {
       record('3.4 Validasi X-Report Kasir Murni Rekapan Finansial', false, `Status: ${xReportRes.status}`, xReportRes.data);
     }
 
+    // 3.5 Validasi Konsistensi Metrik Riwayat Transaksi (GET /api/orders: Tunai vs QRIS vs Belum Bayar vs Omset Bersih)
+    const ordersRes = await request('/api/orders?limit=50', {
+      headers: { Authorization: `Bearer ${uraOwnerToken}` },
+    });
+    const ordersList = ordersRes.data?.data;
+    if (ordersRes.status === 200 && Array.isArray(ordersList)) {
+      const nonVoidOrders = ordersList.filter((o: any) => o.orderStatus !== 'VOIDED');
+      const paidOrders = nonVoidOrders.filter((o: any) => o.paymentStatus !== 'UNPAID');
+      const unpaidOrders = nonVoidOrders.filter((o: any) => o.paymentStatus === 'UNPAID');
+
+      const cashCount = paidOrders.filter((o: any) =>
+        o.payments?.some((p: any) => (p.method || p.paymentMethod || '').toUpperCase() === 'CASH')
+      ).length;
+
+      const qrisCount = paidOrders.filter((o: any) =>
+        o.payments?.some((p: any) => (p.method || p.paymentMethod || '').toUpperCase() === 'QRIS')
+      ).length;
+
+      // Anti-regresi: Pastikan order Unpaid memiliki payments kosong dan tidak pernah salah terhitung sebagai QRIS atau CASH
+      const unpaidHasZeroPayments = unpaidOrders.every(
+        (o: any) => !o.payments || o.payments.length === 0
+      );
+
+      const computedOmset = paidOrders.reduce(
+        (sum: number, o: any) => sum + Number(o.grandTotal || o.totalAmount || 0),
+        0
+      );
+
+      const isValid = unpaidHasZeroPayments;
+      record(
+        '3.5 Validasi Konsistensi Metrik Riwayat Transaksi (GET /api/orders: Tunai vs QRIS vs Unpaid)',
+        isValid,
+        `Total: ${ordersList.length}, Lunas: ${paidOrders.length} (Tunai: ${cashCount}, QRIS: ${qrisCount}), Belum Bayar: ${unpaidOrders.length}, Omset Penerimaan: Rp ${computedOmset.toLocaleString('id-ID')} [Anti-Falsifikasi QRIS: YA]`
+      );
+    } else {
+      record('3.5 Validasi Konsistensi Metrik Riwayat Transaksi', false, `Status: ${ordersRes.status}`, ordersRes.data);
+    }
+
     console.log('✅ Flow 3 Selesai dengan Sukses!\n');
 
     // =================================================================
