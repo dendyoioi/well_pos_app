@@ -308,25 +308,6 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                 )}
               </div>
 
-              {/* Daftar Transaksi Terakhir di Slip */}
-              {data.recentOrders && data.recentOrders.length > 0 && (
-                <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
-                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
-                    TRANSAKSI TERBARU ({data.recentOrders.length})
-                  </div>
-                  {data.recentOrders.map((ord, idx) => (
-                    <div key={idx} className="flex justify-between text-slate-700 py-0.5">
-                      <span className="truncate max-w-[190px]">
-                        {ord.invoiceNumber} ({ord.paymentMethod})
-                      </span>
-                      <span className="font-mono font-semibold">
-                        Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               {/* Footer */}
               <div className="text-center pt-1 text-[10px] text-slate-400">
                 <p>Dokumen ini adalah laporan sementara (X-Report).</p>

@@ -101,15 +101,30 @@ const generateInvoiceNumber = async (outletId: string): Promise<string> => {
         .toUpperCase()
     : 'OUT';
 
-  // Hitung jumlah transaksi hari ini untuk prefix tersebut secara global
+  // Hitung sequence unik hari ini untuk prefix tersebut dengan proteksi anti-tabrakan
   const prefix = `INV/${dateStr}/${outletCode}/`;
-  const existingWithPrefix = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT count(*)::int as cnt FROM "orders" WHERE invoice_number LIKE $1;`,
-    `${prefix}%`
-  );
-  const sequenceNum = (existingWithPrefix[0]?.cnt || 0) + 1;
-  const sequence = String(sequenceNum).padStart(4, '0');
-  return `${prefix}${sequence}`;
+  const latestOrder = await prisma.order.findFirst({
+    where: { invoiceNumber: { startsWith: prefix } },
+    orderBy: { invoiceNumber: 'desc' },
+    select: { invoiceNumber: true },
+  });
+
+  let nextSeq = 1;
+  if (latestOrder?.invoiceNumber) {
+    const parts = latestOrder.invoiceNumber.split('/');
+    const lastSeqStr = parts[parts.length - 1];
+    const parsed = parseInt(lastSeqStr, 10);
+    if (!isNaN(parsed)) {
+      nextSeq = parsed + 1;
+    }
+  }
+
+  let candidate = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  while (await prisma.order.findFirst({ where: { invoiceNumber: candidate }, select: { id: true } })) {
+    nextSeq++;
+    candidate = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  }
+  return candidate;
 };
 
 /**

@@ -628,6 +628,11 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
 29. **Standar Kanonikal Terminologi Toko & Outlet (Zero Ambiguity - Anti-Istilah 'Gerai' / 'Cabang')**:
     - **Pemberantasan Istilah Ambigu**: DILARANG KERAS menggunakan kata **"Gerai"** atau **"Cabang"** di seluruh antarmuka pengguna (UI Backoffice, Superadmin, Kasir POS Mobile, Onboarding Wizard), pesan error/toast, seeder, maupun respons API.
     - **Terminologi Kanonikal Wajib**: Seluruh representasi unit fisik/operasional (model Prisma `Outlet`) WAJIB secara seragam menggunakan kata **"Toko"**, **"Outlet"**, atau kombinasi **"Toko / Outlet"** (misal: *"Kelola Toko"*, *"Daftar Toko / Outlet"*, *"Toko Aktif"*, *"Toko Kasir F&B"*).
+28. **Standar Rekapan Murni Slip X-Report & Z-Report (Pure Summary Slip - Zero Transaction List)**:
+    - **Kebijakan Cetak & Pratinjau Slip**: Struk thermal cetak dan modal pratinjau slip **X-Report (Laporan Berjalan Kasir)** maupun **Z-Report (Laporan Tutup Shift)** murni memuat **rekapan kalkulasi keuangan**: Posisi Kas Drawer (Modal Awal, Penjualan Tunai, Kas Masuk/Keluar, Estimasi Kas di Laci), Rekap Omset Penjualan per Metode Pembayaran (Tunai vs QRIS), Pelunasan Kasbon, Total Faktur Berhasil, dan Rekonsiliasi Selisih Kas (Pas/Over/Short).
+    - **Larangan Keras**: Dilarang mencantumkan daftar transaksi per nota individual (`recentOrders` / *"TRANSAKSI TERBARU"*) pada slip thermal atau modal cetak X/Z karena memboroskan kertas kasir, rawan kebocoran data nota transaksi antar-shift, dan memperlambat pencetakan kasir.
+    - **Akses Detail Transaksi Shift**: Rincian transaksi lengkap per nota selama shift dialokasikan secara eksklusif pada **Menu Rekap Shift Kasir (Audit Shift Backoffice)** (`ShiftsAuditView.tsx`).
+    - **Verifikasi Regression Testing Wajib**: Setiap pengujian regresi shift kasir wajib memverifikasi bahwa slip X/Z bersih dari rincian order per nota.
 
 ---
 

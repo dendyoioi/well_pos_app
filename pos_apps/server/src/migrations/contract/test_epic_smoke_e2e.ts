@@ -442,6 +442,21 @@ export async function runEndToEndSmokeTest() {
       record('3.3 Laporan Rekapitulasi Shift Kasir', false, `Status: ${shiftReportRes.status}`, shiftReportRes.data);
     }
 
+    // 3.4 Validasi Slip X-Report Kasir Murni Rekapan Finansial (GET /api/shifts/x-report)
+    const xReportRes = await request('/api/shifts/x-report', {
+      headers: { Authorization: `Bearer ${cashierToken}` },
+    });
+    const xReportData = xReportRes.data?.data;
+    if (xReportRes.status === 200 && xReportData?.cashDrawer && xReportData?.paymentSummary) {
+      record(
+        '3.4 Validasi X-Report Kasir Murni Rekapan Finansial (GET /api/shifts/x-report)',
+        true,
+        `Estimasi Kas: Rp ${Number(xReportData.cashDrawer.expectedCashInDrawer).toLocaleString('id-ID')}, Omset Bersih: Rp ${Number(xReportData.paymentSummary.netRevenue).toLocaleString('id-ID')} [Slip Pure Summary: YA]`
+      );
+    } else {
+      record('3.4 Validasi X-Report Kasir Murni Rekapan Finansial', false, `Status: ${xReportRes.status}`, xReportRes.data);
+    }
+
     console.log('✅ Flow 3 Selesai dengan Sukses!\n');
 
     // =================================================================

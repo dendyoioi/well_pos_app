@@ -1786,6 +1786,23 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
   4. `package.json` (Root & Server):
      - Pendaftaran script kanonikal `npm run test:offline`.
 ===============================================================================
+[07 OKTOBER 2026] PURE FINANCIAL SUMMARY POLICY ON X/Z SLIPS & MEMORY GOVERNANCE
+===============================================================================
+• Konteks & Driver:
+  - User feedback & audit: Slip X-Report ("Laporan Berjalan Kasir") sebelumnya menampilkan rincian "TRANSAKSI TERBARU (10)" yang memboroskan kertas thermal kasir dan menampilkan daftar transaksi yang seharusnya hanya berada di menu audit.
+  - Penegakan prinsip arsitektural: Slip X-Report dan Z-Report kasir adalah "Pure Financial Summary" (Rekapitulasi Finansial Murni).
+  - Detail transaksi per nota dialokasikan secara eksklusif pada Menu Rekap Shift Kasir (Audit Shift Backoffice) (`ShiftsAuditView.tsx`).
+• Tindakan & Perubahan:
+  1. `pos_apps/client/src/components/XReportModal.tsx`:
+     - Menghapus rendering daftar transaksi terbaru (`recentOrders`) dari slip cetak thermal & modal pratinjau.
+     - Slip X-Report kini bersih, ringkas, dan fokus pada posisi laci kas, petty cash, omset penjualan, dan metrik faktur.
+  2. `AGENTS.md`:
+     - Penambahan Aturan 13 pada Daftar Pantangan Keras (The Anti-Patterns & Gotchas Wall): Kebijakan Rekapan Murni Slip X/Z Report (Pure Summary - Zero Transaction List on Slip).
+  3. `docs/00_PROJECT_CONTEXT.md`:
+     - Penambahan Aturan 28 pada Standar Koding & UI Kasir.
+  4. `pos_apps/server/src/migrations/contract/test_epic_smoke_e2e.ts`:
+     - Penambahan verifikasi 3.4 pada alur smoke test untuk menguji endpoint `/api/shifts/x-report` dan menegakkan kontrak pure summary.
+===============================================================================
 ```
 
 

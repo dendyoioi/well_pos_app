@@ -99,6 +99,12 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
 12. 🏪 **STANDAR KANONIKAL TERMINOLOGI TOKO & OUTLET (ZERO AMBIGUITY - ANTI-ISTILAH 'GERAI' / 'CABANG')**:
     - **DILARANG KERAS** menggunakan kata **"Gerai"** atau **"Cabang"** di seluruh antarmuka pengguna (UI), notifikasi, form, seeder, maupun respons API.
     - Seluruh representasi unit fisik/operasional (model Prisma `Outlet`) **WAJIB** secara seragam menggunakan terminologi kanonikal: **"Toko"**, **"Outlet"**, atau **"Toko / Outlet"** (contoh: *"Kelola Toko"*, *"Daftar Outlet"*, *"Toko Aktif"*, *"Toko / Outlet F&B"*).
+13. 🧾 **KEBIJAKAN REKAPAN MURNI SLIP X-REPORT & Z-REPORT (PURE SUMMARY - ZERO TRANSACTION LIST ON SLIP)**:
+    - **DILARANG KERAS** menampilkan daftar rincian transaksi per nota (`recentOrders` / *"TRANSAKSI TERBARU"*) pada struk cetak thermal maupun modal pratinjau slip **X-Report (Laporan Berjalan Kasir)** dan **Z-Report (Laporan Tutup Shift)**.
+    - **Alasan Operasional**: Mencetak rincian invoice per nota memboroskan kertas gulung thermal kasir, memperlambat proses cetak, dan rawan kebocoran data transaksi antar-shift.
+    - **Prinsip Desain**: Slip X/Z adalah dokumen **rekapitulasi finansial murni** (Posisi Kas Drawer, Mutasi Petty Cash, Rekap Omset per Metode Pembayaran Tunai/QRIS, Pelunasan Kasbon, Total Faktur, dan Rekonsiliasi Selisih Kas).
+    - **Lokasi Rincian Transaksi**: Daftar transaksi lengkap per nota selama shift **hanya boleh diakses** melalui menu **Rekap Shift Kasir (Audit Shift Backoffice)**.
+    - **Mandatory Regression Check**: Setiap sesi regression testing wajib memverifikasi bahwa slip X-Report dan Z-Report tidak merender daftar item transaksi per nota.
 
 ---
 

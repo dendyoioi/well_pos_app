@@ -300,5 +300,19 @@
     "showEstimatedTime": true,
     "estimatedPrepMinutes": 15,
     "updatedAt": "2026-10-07T15:19:22.291Z"
+  },
+  {
+    "tenantId": "fb4438b5-7541-4a2e-869c-63ad5b1ada67",
+    "outletId": "138781e4-5fde-43bb-9e2b-35aa42dac22b",
+    "selfOrderingEnabled": true,
+    "welcomeTitle": "Selamat Datang di Buku Menu Digital!",
+    "welcomeSubtitle": "Pesan makanan & minuman langsung dari meja Anda tanpa perlu antri.",
+    "wifiEnabled": true,
+    "wifiName": "KedaiKopi_Guest",
+    "wifiPassword": "ngopidulu",
+    "paymentPolicy": "PAY_AT_CASHIER",
+    "showEstimatedTime": true,
+    "estimatedPrepMinutes": 15,
+    "updatedAt": "2026-10-07T15:41:19.448Z"
   }
 ]

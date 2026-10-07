@@ -596,12 +596,28 @@ export const qrMenuService = {
       .slice(0, 3)
       .toUpperCase();
 
-    const seqCount = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT count(*)::int as cnt FROM "orders" WHERE invoice_number LIKE $1;`,
-      `QR/${dateStr}/${outletCode}/%`
-    );
-    const seq = String((seqCount[0]?.cnt || 0) + 1).padStart(4, '0');
-    const invoiceNumber = `QR/${dateStr}/${outletCode}/${seq}`;
+    const qrPrefix = `QR/${dateStr}/${outletCode}/`;
+    const latestQrOrder = await prisma.order.findFirst({
+      where: { invoiceNumber: { startsWith: qrPrefix } },
+      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
+    });
+
+    let nextQrSeq = 1;
+    if (latestQrOrder?.invoiceNumber) {
+      const parts = latestQrOrder.invoiceNumber.split('/');
+      const lastSeqStr = parts[parts.length - 1];
+      const parsed = parseInt(lastSeqStr, 10);
+      if (!isNaN(parsed)) {
+        nextQrSeq = parsed + 1;
+      }
+    }
+
+    let invoiceNumber = `${qrPrefix}${String(nextQrSeq).padStart(4, '0')}`;
+    while (await prisma.order.findFirst({ where: { invoiceNumber }, select: { id: true } })) {
+      nextQrSeq++;
+      invoiceNumber = `${qrPrefix}${String(nextQrSeq).padStart(4, '0')}`;
+    }
 
     const orderId = crypto.randomUUID();
     const cleanTable = data.tableNumber.trim();
