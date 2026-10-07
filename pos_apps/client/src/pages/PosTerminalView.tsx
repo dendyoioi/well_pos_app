@@ -668,6 +668,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     }
   };
 
+  const handleOpenCloseShift = () => {
+    loadCurrentShift();
+    setCloseShiftModalOpen(true);
+  };
+
   const loadHoldOrders = async (targetOutletId?: string) => {
     try {
       const res = await api.getHoldOrders(targetOutletId || activeOutlet?.id);
@@ -1357,6 +1362,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         setActivePulledOrder(null);
         setActiveOpenTab(null);
         loadTablesAndOrders();
+        loadCurrentShift();
         setScanMessage(successMsg);
         dialog.toast(successMsg, 'success');
       } else {
@@ -1856,7 +1862,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           qrOrdersCount={unpaidQrOrders.length}
           onOpenQrOrders={() => setQrOrdersModalOpen(true)}
           onOpenStartShift={() => setStartShiftModalOpen(true)}
-          onOpenCloseShift={() => setCloseShiftModalOpen(true)}
+          onOpenCloseShift={handleOpenCloseShift}
           onOpenXReport={() => setXReportModalOpen(true)}
           onOpenCashExpense={canCashOut ? () => setCashExpenseModalOpen(true) : undefined}
           onToggleDesktopMode={() => setHandheldModeOverride(false)}
@@ -1899,7 +1905,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             qrOrdersCount={unpaidQrOrders.length}
             onOpenQrOrders={() => setQrOrdersModalOpen(true)}
             onOpenStartShift={() => setStartShiftModalOpen(true)}
-            onOpenCloseShift={() => setCloseShiftModalOpen(true)}
+            onOpenCloseShift={handleOpenCloseShift}
             onOpenXReport={() => setXReportModalOpen(true)}
             onOpenCashExpense={canCashOut ? () => setCashExpenseModalOpen(true) : undefined}
             onOpenSupervisorFees={() => {

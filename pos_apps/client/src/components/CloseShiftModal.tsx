@@ -68,24 +68,45 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
     100: 0,
   });
 
+  const [activeShift, setActiveShift] = useState<Shift | null>(currentShift);
+
+  useEffect(() => {
+    setActiveShift(currentShift);
+  }, [currentShift]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Selalu refresh data shift terkini dari server untuk menjamin integritas (anti-stale state)
+      api.getCurrentShift().then((res) => {
+        if (res.status === 'success' && res.data) {
+          setActiveShift(res.data);
+        }
+      }).catch((err) => {
+        console.error('Gagal memuat data shift terkini:', err);
+      });
+    }
+  }, [isOpen]);
+
+  const effectiveShift = activeShift || currentShift;
+
   // Kalkulasi data kasir saat ini
-  const startingCash = currentShift ? Number(currentShift.startingCash) : 0;
-  const cashSales = currentShift?.stats?.cashSalesTotal || 0;
-  const totalCashOut = currentShift?.stats?.totalCashOut || 0;
-  const totalCashIn = currentShift?.stats?.totalCashIn || 0;
+  const startingCash = effectiveShift ? Number(effectiveShift.startingCash) : 0;
+  const cashSales = effectiveShift?.stats?.cashSalesTotal || 0;
+  const totalCashOut = effectiveShift?.stats?.totalCashOut || 0;
+  const totalCashIn = effectiveShift?.stats?.totalCashIn || 0;
   const totalDebtCashIn =
-    currentShift?.totalDebtCashIn ||
-    currentShift?.stats?.totalDebtCashIn ||
+    effectiveShift?.totalDebtCashIn ||
+    effectiveShift?.stats?.totalDebtCashIn ||
     0;
 
   const expectedCash =
-    currentShift?.stats?.expectedCash !== undefined
-      ? currentShift.stats.expectedCash
+    effectiveShift?.stats?.expectedCash !== undefined
+      ? effectiveShift.stats.expectedCash
       : (startingCash + cashSales + totalCashIn + totalDebtCashIn - totalCashOut);
 
   const difference = actualCash - expectedCash;
-  const shiftOrders = currentShift?.orders || [];
-  const shiftDebtPayments = currentShift?.debtPayments || [];
+  const shiftOrders = effectiveShift?.orders || [];
+  const shiftDebtPayments = effectiveShift?.debtPayments || [];
 
   // Validasi Integritas Operasional: Kasir dilarang tutup shift jika masih ada tagihan belum lunas
   const unpaidOrdersInShift = shiftOrders.filter(
