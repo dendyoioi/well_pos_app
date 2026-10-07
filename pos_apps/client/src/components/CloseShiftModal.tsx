@@ -752,25 +752,6 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                   </div>
                 )}
 
-                {/* Rincian Daftar Transaksi di Struk Cetak Z-Report */}
-                {zReportData.orders && zReportData.orders.length > 0 && (
-                  <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">
-                    <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">
-                      RINCIAN TRANSAKSI ({zReportData.orders.length})
-                    </div>
-                    {zReportData.orders.map((ord) => (
-                      <div key={ord.id} className="flex justify-between text-slate-700 py-0.5">
-                        <span className="truncate max-w-[190px]">
-                          {ord.invoiceNumber} ({ord.paymentMethod})
-                        </span>
-                        <span className="font-mono font-semibold">
-                          Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {/* Rincian Pelunasan Kasbon di Struk Cetak jika ada */}
                 {zReportData.debtPayments && zReportData.debtPayments.length > 0 && (
                   <div className="space-y-1 text-[10px] border-b border-dashed border-slate-300 pb-3">

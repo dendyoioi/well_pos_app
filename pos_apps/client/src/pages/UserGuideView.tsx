@@ -381,7 +381,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Sistem otomatis membandingkan uang fisik vs kalkulasi transaksi. Jika ada selisih lebih (+Over) atau kurang (-Short), sistem menandai untuk diaudit oleh Supervisor.',
       },
     ],
-    tips: 'Cetak X-Report untuk melihat rekap sementara tanpa menutup shift; cetak Z-Report untuk penutupan resmi dan final shift.',
+    tips: 'Slip cetak X-Report dan Z-Report kasir dirancang murni sebagai ringkasan finansial (Pure Summary) tanpa mencetak nota transaksi individual guna menghemat kertas thermal roll 58mm/80mm. Jika membutuhkan audit detail per nota, gunakan menu Rekap Shift Kasir di Backoffice untuk dicetak dalam format kertas besar (A4/F4) atau diekspor ke file Excel/CSV.',
   },
   {
     id: 'void',

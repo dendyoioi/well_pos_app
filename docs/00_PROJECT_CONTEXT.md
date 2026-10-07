@@ -630,9 +630,9 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
     - **Terminologi Kanonikal Wajib**: Seluruh representasi unit fisik/operasional (model Prisma `Outlet`) WAJIB secara seragam menggunakan kata **"Toko"**, **"Outlet"**, atau kombinasi **"Toko / Outlet"** (misal: *"Kelola Toko"*, *"Daftar Toko / Outlet"*, *"Toko Aktif"*, *"Toko Kasir F&B"*).
 28. **Standar Rekapan Murni Slip X-Report & Z-Report (Pure Summary Slip - Zero Transaction List)**:
     - **Kebijakan Cetak & Pratinjau Slip**: Struk thermal cetak dan modal pratinjau slip **X-Report (Laporan Berjalan Kasir)** maupun **Z-Report (Laporan Tutup Shift)** murni memuat **rekapan kalkulasi keuangan**: Posisi Kas Drawer (Modal Awal, Penjualan Tunai, Kas Masuk/Keluar, Estimasi Kas di Laci), Rekap Omset Penjualan per Metode Pembayaran (Tunai vs QRIS), Pelunasan Kasbon, Total Faktur Berhasil, dan Rekonsiliasi Selisih Kas (Pas/Over/Short).
-    - **Larangan Keras**: Dilarang mencantumkan daftar transaksi per nota individual (`recentOrders` / *"TRANSAKSI TERBARU"*) pada slip thermal atau modal cetak X/Z karena memboroskan kertas kasir, rawan kebocoran data nota transaksi antar-shift, dan memperlambat pencetakan kasir.
-    - **Akses Detail Transaksi Shift**: Rincian transaksi lengkap per nota selama shift dialokasikan secara eksklusif pada **Menu Rekap Shift Kasir (Audit Shift Backoffice)** (`ShiftsAuditView.tsx`).
-    - **Verifikasi Regression Testing Wajib**: Setiap pengujian regresi shift kasir wajib memverifikasi bahwa slip X/Z bersih dari rincian order per nota.
+    - **Efisiensi Bahan & Larangan Keras**: Dilarang mencantumkan daftar transaksi per nota individual (`recentOrders` / `zReportData.orders` / *"TRANSAKSI TERBARU"*) pada slip thermal atau modal cetak X/Z. Mencetak 100+ baris transaksi ke kertas gulung kasir 58mm/80mm sangat tidak efisien, memperlambat antrean kasir, dan menghabiskan kertas thermal (*paper waste*).
+    - **Akses Detail Transaksi Shift**: Rincian transaksi lengkap per nota selama shift dialokasikan secara eksklusif pada **Menu Rekap Shift Kasir (Audit Shift Backoffice)** (`ShiftsAuditView.tsx`). Jika pemilik toko membutuhkan cetak fisik seluruh transaksi shift, pencetakan diarahkan langsung ke printer dokumen format besar (**A4 / F4**) atau diekspor ke spreadsheet Excel/CSV.
+    - **Verifikasi Regression Testing Wajib**: Setiap sesi regression testing shift kasir wajib memverifikasi bahwa slip X-Report dan Z-Report tidak merender daftar item transaksi per nota.
 
 ---
 
