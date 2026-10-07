@@ -193,7 +193,14 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
   const currentContext = TAB_CONTEXT_MAP[activeTab];
 
   return (
-    <div ref={containerRef} className="fixed bottom-14 md:bottom-6 right-4 z-40">
+    <div
+      ref={containerRef}
+      className={`fixed ${
+        activeTab === 'pos'
+          ? 'bottom-[max(1rem,env(safe-area-inset-bottom,0px))] md:bottom-6'
+          : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6'
+      } right-4 z-40 transition-all duration-200`}
+    >
       {/* Popover Menu Bantuan */}
       {isOpen && (
         <div className="mb-2 w-72 sm:w-80 bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-fade-in text-slate-800">
