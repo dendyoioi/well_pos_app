@@ -17,7 +17,16 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<any>(null);
 
-  const [_hasPermission, setHasPermission] = useState<boolean | null>(null);
+  // Simpan onScan dalam Ref agar tidak memicu re-render atau re-initialization kamera (Anti-Blink)
+  const onScanRef = useRef(onScan);
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
+  // Anti-Spam / Throttling scan cooldown
+  const lastScanTimestampRef = useRef<number>(0);
+  const lastScannedCodeRef = useRef<string>('');
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastScannedResult, setLastScannedResult] = useState<{
     code: string;
@@ -72,27 +81,61 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
     }
   }, []);
 
-  // Mulai Scanning Kamera
+  // Hentikan Stream Kamera & ZXing Reader secara Bersih
+  const stopScanner = useCallback(() => {
+    if (controlsRef.current) {
+      try {
+        controlsRef.current.stop();
+      } catch (e) {
+        console.warn('[BarcodeScanner] Error stopping controls:', e);
+      }
+      controlsRef.current = null;
+    }
+
+    if (videoRef.current && videoRef.current.srcObject) {
+      try {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch {
+            // Ignore track stop error
+          }
+        });
+        videoRef.current.srcObject = null;
+      } catch (e) {
+        console.warn('[BarcodeScanner] Error stopping media tracks:', e);
+      }
+    }
+
+    setIsTorchOn(false);
+    setHasTorch(false);
+  }, []);
+
+  // Mulai Scanning Kamera dengan Proteksi Orientasi iOS Safari & Anti-Blink
   const startScanner = useCallback(async () => {
     if (!videoRef.current) return;
     setErrorMessage(null);
+
+    // Hentikan stream lama terlebih dahulu sebelum membuka stream baru
+    stopScanner();
 
     try {
       if (!readerRef.current) {
         readerRef.current = new BrowserMultiFormatReader();
       }
 
-      // Hentikan stream sebelumnya jika ada
-      if (controlsRef.current) {
-        controlsRef.current.stop();
-        controlsRef.current = null;
-      }
+      // Deteksi orientasi mobile (Portrait vs Landscape) agar iPhone tidak flip orientation terus menerus
+      const isPortrait =
+        typeof window !== 'undefined' && window.innerHeight >= window.innerWidth;
 
       const constraints: MediaStreamConstraints = {
+        audio: false,
         video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          facingMode: facingMode === 'environment' ? { ideal: 'environment' } : 'user',
+          // Fleksibel adaptif: portrait mengutamakan tinggi > lebar, landscape mengutamakan lebar > tinggi
+          width: { min: 480, ideal: isPortrait ? 720 : 1280, max: 1920 },
+          height: { min: 480, ideal: isPortrait ? 1280 : 720, max: 1920 },
         },
       };
 
@@ -103,7 +146,23 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
           if (result) {
             const rawCode = result.getText().trim();
             if (rawCode) {
-              const scanOutcome = onScan(rawCode);
+              const now = Date.now();
+              // Anti-Spam: Beri jeda 1500ms untuk kode yang sama, atau 600ms untuk kode berbeda
+              if (
+                rawCode === lastScannedCodeRef.current &&
+                now - lastScanTimestampRef.current < 1500
+              ) {
+                return;
+              }
+              if (now - lastScanTimestampRef.current < 600) {
+                return;
+              }
+
+              lastScanTimestampRef.current = now;
+              lastScannedCodeRef.current = rawCode;
+
+              // Panggil handler dari Ref tanpa merusak lifecycle scanner
+              const scanOutcome = onScanRef.current(rawCode);
               playBeep(scanOutcome.success);
               triggerVibrate(scanOutcome.success);
 
@@ -118,9 +177,8 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
       );
 
       controlsRef.current = controls;
-      setHasPermission(true);
 
-      // Cek apakah kamera memiliki kapabilitas Senter (Torch)
+      // Cek apakah kamera memiliki kapabilitas Senter (Torch) di Safari iOS / Android
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         const track = stream.getVideoTracks()[0];
@@ -131,14 +189,13 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
       }
     } catch (err: any) {
       console.error('[BarcodeScanner] Error accessing camera:', err);
-      setHasPermission(false);
       setErrorMessage(
         err.name === 'NotAllowedError'
-          ? 'Izin kamera ditolak. Silakan izinkan akses kamera di pengaturan browser.'
-          : 'Gagal mengakses kamera perangkat. Pastikan kamera tidak digunakan aplikasi lain.'
+          ? 'Izin kamera ditolak. Silakan izinkan akses kamera di Pengaturan Browser iPhone Anda (Safari -> Akses Kamera: Izinkan).'
+          : 'Gagal mengakses kamera perangkat. Pastikan kamera tidak sedang digunakan oleh aplikasi lain.'
       );
     }
-  }, [facingMode, onScan, playBeep, triggerVibrate]);
+  }, [facingMode, playBeep, triggerVibrate, stopScanner]);
 
   // Toggle Senter (Flash/Torch)
   const toggleTorch = async () => {
@@ -158,25 +215,19 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
     }
   };
 
+  // Efek Lifecycle Kamera: HANYA aktif saat modal buka/tutup atau ganti kamera depan/belakang
   useEffect(() => {
     if (isOpen) {
       startScanner();
     } else {
-      if (controlsRef.current) {
-        controlsRef.current.stop();
-        controlsRef.current = null;
-      }
-      setIsTorchOn(false);
+      stopScanner();
       setLastScannedResult(null);
     }
 
     return () => {
-      if (controlsRef.current) {
-        controlsRef.current.stop();
-        controlsRef.current = null;
-      }
+      stopScanner();
     };
-  }, [isOpen, startScanner]);
+  }, [isOpen, facingMode, startScanner, stopScanner]);
 
   if (!isOpen) return null;
 
@@ -207,18 +258,22 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
           </button>
         </div>
 
-        {/* Viewfinder Kamera Live */}
-        <div className="relative bg-black flex items-center justify-center min-h-[300px] sm:min-h-[340px] overflow-hidden select-none">
+        {/* Viewfinder Kamera Live dengan Dimensi Stabil (Anti-Blink & Anti-Flip) */}
+        <div className="relative bg-black flex items-center justify-center h-[340px] sm:h-[380px] overflow-hidden select-none">
           <video
             ref={videoRef}
-            className="w-full h-full object-cover min-h-[300px] sm:min-h-[340px]"
+            autoPlay
             playsInline
             muted
+            className="w-full h-full object-cover select-none pointer-events-none"
+            style={{
+              transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+            }}
           />
 
           {/* Overlay Bingkai Kotak Bidik (Target Box) */}
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="w-[72%] max-w-[280px] aspect-[4/3] border-2 border-blue-400/80 rounded-2xl relative shadow-2xl shadow-blue-500/20 overflow-hidden">
+            <div className="w-[75%] max-w-[280px] aspect-[4/3] border-2 border-blue-400/80 rounded-2xl relative shadow-2xl shadow-blue-500/20 overflow-hidden">
               {/* Garis Laser Animasi Pemindai */}
               <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-rose-500 to-transparent shadow-xs shadow-rose-500 animate-[bounce_2s_infinite]" />
 
@@ -261,7 +316,7 @@ export const BarcodeCameraScannerModal: React.FC<BarcodeCameraScannerModalProps>
 
           {/* Pesan Kesalahan Akses Kamera */}
           {errorMessage && (
-            <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center space-y-3">
+            <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center space-y-3 z-10">
               <AlertCircle className="w-10 h-10 text-rose-500" />
               <p className="text-xs text-rose-200 font-semibold max-w-[280px]">
                 {errorMessage}
