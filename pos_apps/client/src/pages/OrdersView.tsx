@@ -320,11 +320,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
     }
   };
 
-  // Ringkasan metrik akurat
+  // Ringkasan metrik akurat yang merefleksikan uang masuk riil (audit-safe)
+  const voidOrders = orders.filter((o) => o.orderStatus === 'VOIDED');
   const nonVoidOrders = orders.filter((o) => o.orderStatus !== 'VOIDED');
   const paidOrders = nonVoidOrders.filter((o) => o.paymentStatus !== 'UNPAID');
+  const unpaidOrders = nonVoidOrders.filter((o) => o.paymentStatus === 'UNPAID');
 
-  const totalTransaksi = orders.length;
+  // Faktur Lunas (Masuk Uang): Hanya faktur yang benar-benar dibayar dan bukan VOID
+  const totalFakturLunas = paidOrders.length;
   // Total Omset Kasir: Akumulasi penerimaan riil (hanya transaksi yang sudah lunas dan bukan VOID)
   const totalOmset = paidOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
 
@@ -393,14 +396,31 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Faktur Lunas (Uang Masuk) */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-            Total Transaksi
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+            <span>Faktur Lunas (Masuk Uang)</span>
+            {voidOrders.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-extrabold">
+                {voidOrders.length} Void
+              </span>
+            )}
           </div>
-          <div className="text-2xl font-black text-blue-950">{totalTransaksi} Faktur</div>
-          <div className="text-[11px] text-slate-400 mt-1">Hari ini / periode aktif</div>
+          <div className="text-2xl font-black text-blue-950">{totalFakturLunas} Faktur</div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            {voidOrders.length > 0 || unpaidOrders.length > 0 ? (
+              <span>
+                Dari {orders.length} nota ({voidOrders.length > 0 ? `${voidOrders.length} Void` : ''}
+                {voidOrders.length > 0 && unpaidOrders.length > 0 ? ', ' : ''}
+                {unpaidOrders.length > 0 ? `${unpaidOrders.length} Belum Bayar` : ''})
+              </span>
+            ) : (
+              <span>100% penerimaan kas riil</span>
+            )}
+          </div>
         </div>
 
+        {/* Card 2: Total Omset Kasir */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
             Total Omset Kasir
@@ -408,25 +428,27 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
           <div className="text-2xl font-black text-blue-900">
             Rp {totalOmset.toLocaleString('id-ID')}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">Akumulasi penerimaan</div>
+          <div className="text-[11px] text-slate-500 mt-1">Akumulasi penerimaan riil</div>
         </div>
 
+        {/* Card 3: Tunai (Cash) */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <Banknote className="w-3.5 h-3.5 text-emerald-600" />
             <span>Tunai (Cash)</span>
           </div>
           <div className="text-2xl font-black text-emerald-700">{cashTransaksi} Transaksi</div>
-          <div className="text-[11px] text-slate-400 mt-1">Uang fisik laci kasir</div>
+          <div className="text-[11px] text-slate-500 mt-1">Uang fisik laci kasir</div>
         </div>
 
+        {/* Card 4: QRIS Non-Tunai */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <QrCode className="w-3.5 h-3.5 text-indigo-600" />
             <span>QRIS Non-Tunai</span>
           </div>
           <div className="text-2xl font-black text-indigo-700">{qrisTransaksi} Transaksi</div>
-          <div className="text-[11px] text-slate-400 mt-1">Settlement digital QR</div>
+          <div className="text-[11px] text-slate-500 mt-1">Settlement digital QR</div>
         </div>
       </div>
 
