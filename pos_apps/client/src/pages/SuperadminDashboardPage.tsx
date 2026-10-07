@@ -1694,7 +1694,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       id: 'MERCHANTS' as const,
       label: 'Merchant & Kuota',
       fullLabel: 'Manajemen Merchant & Kuota Token',
-      description: 'Onboarding akun pemilik gerai & sirkulasi kuota order F&B',
+      description: 'Onboarding akun pemilik toko & sirkulasi kuota order F&B',
       category: 'OPERASIONAL',
       icon: Store,
       badge: `${tenants.length}`,
@@ -1850,7 +1850,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <span className="text-[11px] font-semibold text-emerald-400">Sistem Normal</span>
             </div>
             <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
-              {activeOutletsCount} Gerai
+              {activeOutletsCount} Toko
             </span>
           </div>
         </div>
@@ -2197,7 +2197,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     Control Tower Kuota Fleksibel &amp; Merchant F&amp;B
                   </h2>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Skema Pay-As-You-Go khusus gerai F&amp;B: biaya registrasi awal Rp 99.000 (+100 Bonus Token) saat pendaftaran disetujui, dipadukan sistem token transaksi yang berlaku selamanya tanpa masa kedaluwarsa.
+                    Skema Pay-As-You-Go khusus toko F&amp;B: biaya registrasi awal Rp 99.000 (+100 Bonus Token) saat pendaftaran disetujui, dipadukan sistem token transaksi yang berlaku selamanya tanpa masa kedaluwarsa.
                   </p>
                 </div>
 
@@ -2280,13 +2280,13 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <p className="text-[10px] text-slate-400 mt-1">Total order diproses</p>
               </div>
 
-              {/* KPI 4: Gerai F&B Beroperasi */}
+              {/* KPI 4: Toko F&B Beroperasi */}
               <div className="p-4 bg-slate-900/90 border border-sky-900/40 rounded-2xl relative overflow-hidden backdrop-blur-sm hover:border-sky-700/60 transition-all">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-bold text-sky-400">Gerai F&amp;B Aktif</span>
+                  <span className="text-[11px] font-bold text-sky-400">Toko F&amp;B Aktif</span>
                   <Store className="w-4 h-4 text-sky-400" />
                 </div>
-                <p className="text-lg sm:text-xl font-black text-sky-300">{activeOutletsCount} Gerai</p>
+                <p className="text-lg sm:text-xl font-black text-sky-300">{activeOutletsCount} Toko</p>
                 <p className="text-[10px] text-slate-400 mt-1">Toko fisik beroperasi</p>
               </div>
 
@@ -2330,7 +2330,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h3 className="text-base font-bold text-white">Persetujuan &amp; Monitoring Saldo Kuota Merchant</h3>
-                  <p className="text-xs text-slate-400">Verifikasi pendaftaran akun pemilik, pantau status saldo token transaksi tanpa hangus, dan kelola gerai fisik klien.</p>
+                  <p className="text-xs text-slate-400">Verifikasi pendaftaran akun pemilik, pantau status saldo token transaksi tanpa hangus, dan kelola toko fisik klien.</p>
                 </div>
 
             <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
@@ -2488,7 +2488,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   <th className="py-3.5 px-4">Nama Pemilik &amp; Usaha</th>
                   <th className="py-3.5 px-4">Kontak (Email &amp; WA)</th>
                   <th className="py-3.5 px-4 min-w-[220px]">Saldo Kuota Token (Pay-As-You-Go)</th>
-                  <th className="py-3.5 px-4">Gerai Fisik F&amp;B</th>
+                  <th className="py-3.5 px-4">Toko / Outlet F&amp;B</th>
                   <th className="py-3.5 px-4">Status Akun</th>
                   <th className="py-3.5 px-4 text-right">Aksi Operasional</th>
                 </tr>
@@ -2663,7 +2663,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                 title={expandedOwnerId === t.id ? 'Tutup Rincian Toko' : 'Klik untuk melihat rincian toko fisik di bawah baris ini'}
                               >
                                 <Store className="w-3 h-3 text-indigo-400" />
-                                <span>{outletsCount} Gerai F&amp;B</span>
+                                <span>{outletsCount} Toko F&amp;B</span>
                                 {expandedOwnerId === t.id ? (
                                   <ChevronUp className="w-3 h-3 text-indigo-200" />
                                 ) : (
@@ -2675,7 +2675,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                               </p>
                               {outletsCount > 1 && (
                                 <p className="text-[10px] text-indigo-400 font-semibold">
-                                  +{outletsCount - 1} Gerai Lainnya
+                                  +{outletsCount - 1} Toko Lainnya
                                 </p>
                               )}
                             </div>
@@ -2698,7 +2698,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                 <XCircle className="w-3 h-3 text-rose-400" />
                                 <span>INACTIVE</span>
                               </span>
-                              <p className="text-[10px] text-rose-400/80 font-medium">Semua gerai inaktif</p>
+                              <p className="text-[10px] text-rose-400/80 font-medium">Semua toko inaktif</p>
                             </div>
                           ) : (
                             <div className="space-y-0.5">
@@ -2807,7 +2807,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                         ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
                                         : 'bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border-indigo-800'
                                     }`}
-                                    title={expandedOwnerId === t.id ? 'Tutup Daftar Toko' : `Lihat & Kelola ${outletsCount} Gerai F&B (Inline)`}
+                                    title={expandedOwnerId === t.id ? 'Tutup Daftar Toko' : `Lihat & Kelola ${outletsCount} Toko F&B (Inline)`}
                                   >
                                     <Store className="w-3.5 h-3.5 text-indigo-400" />
                                     {outletsCount > 0 && (
@@ -2817,7 +2817,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                     )}
                                   </button>
                                   <div className="absolute bottom-full mb-1.5 right-0 hidden group-hover:flex items-center px-2 py-1 rounded bg-slate-950 text-[10px] font-bold text-white whitespace-nowrap shadow-2xl border border-slate-700 pointer-events-none z-30">
-                                    {expandedOwnerId === t.id ? 'Tutup Daftar Gerai' : `Lihat & Kelola ${outletsCount} Gerai F&B (Inline)`}
+                                    {expandedOwnerId === t.id ? 'Tutup Daftar Toko' : `Lihat & Kelola ${outletsCount} Toko F&B (Inline)`}
                                   </div>
                                 </div>
 
@@ -2882,7 +2882,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <h4 className="text-sm font-black text-white">
-                                        Daftar Gerai Fisik F&amp;B Milik: {t.ownerName || t.name}
+                                        Daftar Toko / Outlet F&amp;B Milik: {t.ownerName || t.name}
                                       </h4>
                                       {isSuspended ? (
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1">
@@ -2897,7 +2897,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                       )}
                                     </div>
                                     <p className="text-xs text-slate-400 mt-0.5">
-                                      Badan Usaha / Merchant: <span className="text-slate-200 font-semibold">{t.businessName || t.name}</span> &bull; {outletsCount} unit gerai terdaftar &bull; Kontak: {t.email} ({t.phone})
+                                      Badan Usaha / Merchant: <span className="text-slate-200 font-semibold">{t.businessName || t.name}</span> &bull; {outletsCount} unit toko terdaftar &bull; Kontak: {t.email} ({t.phone})
                                     </p>
                                   </div>
                                 </div>
@@ -2918,7 +2918,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
                                   <div>
                                     <strong className="font-bold block">Peringatan Kaskade Inaktif:</strong>
-                                    <span>Akun pemilik sedang dibekukan (inaktif). Seluruh operasional gerai fisik di bawah akun ini otomatis dinonaktifkan dan transaksi kasir diblokir. Aktifkan akun pemilik di tabel utama untuk mengaktifkan kembali operasional gerai.</span>
+                                    <span>Akun pemilik sedang dibekukan (inaktif). Seluruh operasional toko fisik di bawah akun ini otomatis dinonaktifkan dan transaksi kasir diblokir. Aktifkan akun pemilik di tabel utama untuk mengaktifkan kembali operasional toko.</span>
                                   </div>
                                 </div>
                               )}
@@ -2929,9 +2929,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                   <div className="w-10 h-10 rounded-xl bg-slate-800/50 flex items-center justify-center mx-auto mb-2 text-slate-500">
                                     <Store className="w-5 h-5" />
                                   </div>
-                                  <h5 className="text-xs font-bold text-white">Belum Ada Unit Gerai Fisik</h5>
+                                  <h5 className="text-xs font-bold text-white">Belum Ada Toko Terdaftar</h5>
                                   <p className="text-[11px] text-slate-400 mt-0.5">
-                                    Pemilik ini belum menyelesaikan wizard setup gerai fisik pertamanya. Gerai akan muncul otomatis setelah pemilik login dan mengisi wizard.
+                                    Pemilik ini belum menyelesaikan wizard setup toko pertamanya. Toko akan muncul otomatis setelah pemilik login dan mengisi wizard.
                                   </p>
                                 </div>
                               ) : (
@@ -2968,7 +2968,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                                 </span>
                                               ) : (
                                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-950/80 text-indigo-300 border border-indigo-700/60">
-                                                  🍽️ Gerai Kasir F&amp;B
+                                                  🍽️ Toko Kasir F&amp;B
                                                 </span>
                                               )}
                                             </div>
@@ -3014,18 +3014,18 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
                                             {/* Action Buttons per store */}
                                             <div className="flex items-center gap-1.5 pt-1">
-                                              {/* 1. Kelola Paket / Token Gerai */}
+                                              {/* 1. Kelola Paket / Token Toko */}
                                               <div className="relative group">
                                                 <button
                                                   type="button"
                                                   onClick={() => handleOpenSubModal(t, outlet)}
                                                   className="p-1.5 bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-800 rounded-lg transition-colors cursor-pointer"
-                                                  title="Kelola Saldo & Paket Gerai Ini"
+                                                  title="Kelola Saldo & Paket Toko Ini"
                                                 >
                                                   <Coins className="w-3.5 h-3.5 text-amber-400" />
                                                 </button>
                                                 <div className="absolute bottom-full mb-1.5 right-0 hidden group-hover:flex items-center px-2 py-1 rounded bg-slate-950 text-[10px] font-bold text-white whitespace-nowrap shadow-2xl border border-slate-700 pointer-events-none z-30">
-                                                  Kelola Saldo &amp; Paket Gerai Ini
+                                                  Kelola Saldo &amp; Paket Toko Ini
                                                 </div>
                                               </div>
 
@@ -3167,18 +3167,18 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                           onClick={() => handleToggleExpandStores(t.id)}
                           className="text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span>{outletsCount} Gerai Fisik</span>
+                          <span>{outletsCount} Toko Fisik</span>
                           {expandedOwnerId === t.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                         </button>
                       </div>
                     </div>
 
-                    {/* Accordion Gerai di Mobile */}
+                    {/* Accordion Toko di Mobile */}
                     {expandedOwnerId === t.id && (
                       <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs">
-                        <span className="text-[10px] font-bold text-indigo-300 uppercase block">Daftar Gerai Toko:</span>
+                        <span className="text-[10px] font-bold text-indigo-300 uppercase block">Daftar Toko / Outlet:</span>
                         {(!t.outlets || t.outlets.length === 0) ? (
-                          <p className="text-[11px] text-slate-500 italic">Belum ada gerai fisik terdaftar.</p>
+                          <p className="text-[11px] text-slate-500 italic">Belum ada toko fisik terdaftar.</p>
                         ) : (
                           <div className="space-y-2">
                             {t.outlets.map((out: any) => (
@@ -3380,7 +3380,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </div>
                 <h4 className="text-xs font-bold text-white mb-1">Setup Fee Rp 99.000 (+100 Token)</h4>
                 <p className="text-[11px] text-slate-400 leading-normal">
-                  Satu kali bayar di awal untuk provisioning database tenant, pairing printer thermal, aktivasi gerai perdana, dan bonus 100 token transaksi.
+                  Satu kali bayar di awal untuk provisioning database tenant, pairing printer thermal, aktivasi toko perdana, dan bonus 100 token transaksi.
                 </p>
               </div>
 
@@ -4844,7 +4844,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     {selectedTenantDetail.tenant.status === 'PENDING'
                       ? 'Pendaftaran Akun Pemilik • Belum Memiliki Toko Fisik'
                       : selectedTenantDetail.outlets && selectedTenantDetail.outlets.length > 0
-                      ? `${selectedTenantDetail.outlets[0].name} • ${selectedTenantDetail.outlets.length} Gerai Fisik Terdaftar`
+                      ? `${selectedTenantDetail.outlets[0].name} • ${selectedTenantDetail.outlets.length} Toko Terdaftar`
                       : 'Akun Disetujui • Menunggu Penyelesaian Setup Toko'}
                   </p>
                 </div>
@@ -4997,7 +4997,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Store className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Daftar Gerai / Toko Fisik ({selectedTenantDetail.outlets.length})</span>
+                      <span>Daftar Toko / Outlet Fisik ({selectedTenantDetail.outlets.length})</span>
                     </div>
                     {selectedTenantDetail.outlets.length === 0 && (
                       <span className="text-[10px] font-bold text-amber-400 bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-800/60">
@@ -5220,7 +5220,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <h3 className="text-lg sm:text-xl font-black text-white">Top-Up Saldo Kuota Token Transaksi</h3>
                 <p className="text-xs text-slate-400 mt-0.5 truncate">
                   Merchant: <strong className="text-white">{subTenantTarget.businessName || subTenantTarget.name}</strong>
-                  {subOutletTarget && <span className="text-indigo-300 font-bold ml-1">• Gerai: {subOutletTarget.name}</span>}
+                  {subOutletTarget && <span className="text-indigo-300 font-bold ml-1">• Toko: {subOutletTarget.name}</span>}
                 </p>
               </div>
 

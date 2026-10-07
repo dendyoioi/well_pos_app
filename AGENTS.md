@@ -96,6 +96,9 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
 11. 🤫 **KEBIJAKAN OPTIMASI FOTO BACKGROUND (ZERO TECHNICAL JARGON TO TENANT)**:
     - Utilitas `imageCompressor.ts` wajib berjalan 100% hening di background tanpa membebani tenant.
     - DILARANG menampilkan badge/angka statistik teknis kompresi ("Terkompresi otomatis: X KB -> Y KB (-Z%)") pada form katalog atau pengaturan QRIS. Cukup gunakan status netral "Memproses..." dan toast ramah "Foto produk berhasil diunggah".
+12. 🏪 **STANDAR KANONIKAL TERMINOLOGI TOKO & OUTLET (ZERO AMBIGUITY - ANTI-ISTILAH 'GERAI' / 'CABANG')**:
+    - **DILARANG KERAS** menggunakan kata **"Gerai"** atau **"Cabang"** di seluruh antarmuka pengguna (UI), notifikasi, form, seeder, maupun respons API.
+    - Seluruh representasi unit fisik/operasional (model Prisma `Outlet`) **WAJIB** secara seragam menggunakan terminologi kanonikal: **"Toko"**, **"Outlet"**, atau **"Toko / Outlet"** (contoh: *"Kelola Toko"*, *"Daftar Outlet"*, *"Toko Aktif"*, *"Toko / Outlet F&B"*).
 
 ---
 

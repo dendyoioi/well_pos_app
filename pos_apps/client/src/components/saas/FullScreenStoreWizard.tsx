@@ -236,7 +236,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                   required
                 />
                 <span className="block mt-1 text-xs text-slate-500 font-medium">
-                  Nama gerai fisik tertera di struk kasir
+                  Nama toko / outlet tertera di struk kasir
                 </span>
               </div>
 
@@ -251,7 +251,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                   }}
                   placeholder="81234567890"
                   required
-                  helperText="Kontak resmi gerai untuk cetak struk kasir"
+                  helperText="Kontak resmi toko untuk cetak struk kasir"
                 />
               </div>
             </div>
@@ -265,7 +265,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                   <span className="text-rose-500">*</span>
                 </span>
                 <span className="text-[11px] font-normal normal-case text-slate-400">
-                  Lokasi operasional gerai fisik
+                  Lokasi operasional toko fisik
                 </span>
               </label>
               <textarea

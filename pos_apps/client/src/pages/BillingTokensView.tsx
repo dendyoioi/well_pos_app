@@ -417,10 +417,10 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
               </div>
             </div>
 
-            {/* Outlet Consumption Breakdown (Hanya Gerai Kasir Penjualan, Gudang Dikecualikan) */}
+            {/* Outlet Consumption Breakdown (Hanya Toko Kasir Penjualan, Gudang Dikecualikan) */}
             <div className="space-y-2">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Penggunaan Token per Gerai
+                Penggunaan Token per Toko
               </span>
               {(() => {
                 const storeOutlets = (quota.outletUsage || []).filter(
@@ -449,7 +449,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                   </div>
                 ) : (
                   <div className="p-3 bg-slate-50 rounded-xl text-center text-xs text-slate-400">
-                    Belum ada transaksi gerai
+                    Belum ada transaksi toko
                   </div>
                 );
               })()}

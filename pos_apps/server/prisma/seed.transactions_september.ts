@@ -411,7 +411,7 @@ async function main() {
           }
 
           // Simpan Pembayaran (Payment Transaction)
-          // Murni CASH & QRIS (Nol EDC/Bank Transfer sesuai operasional aktif gerai)
+          // Murni CASH & QRIS (Nol EDC/Bank Transfer sesuai operasional aktif outlet/toko)
           // 48% CASH, 52% QRIS
           const pRand = Math.random();
           const method = pRand < 0.48 ? PaymentMethod.CASH : PaymentMethod.QRIS;

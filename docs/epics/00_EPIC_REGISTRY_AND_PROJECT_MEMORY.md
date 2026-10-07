@@ -299,6 +299,17 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Indikator total modul terupdate presisi: "Buka Seluruh Panduan (23 Bab Lengkap)".
   └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
+[2026-10-07] STANDARISASI TERMINOLOGI TOKO & OUTLET (ZERO AMBIGUITY - PEMBERANTASAN ISTILAH GERAI/CABANG)
+  ├── 1. Harmonisasi UI & Teks Antarmuka Multi-Modul:
+  │   - Eliminasi 100% istilah "gerai" di Superadmin Dashboard, Merchant Backoffice, Wizard Toko, Kasir, dan Seeder.
+  │   - Superadmin Dashboard: Penyeragaman label metrik "Toko F&B Aktif", header tabel "Toko / Outlet F&B", tooltip "Lihat & Kelola Toko F&B", serta modal manajemen unit bisnis.
+  │   - Merchant Backoffice: Penyeragaman status "Toko Aktif" (OutletsView), "Penggunaan Token per Toko" (BillingTokensView), "Toko Ini" (CategoriesView), dan helper form onboarding "Nama toko / outlet fisik" (FullScreenStoreWizard).
+  ├── 2. Pengikatan Aturan Dasar & Project Memory:
+  │   - Pencatatan Pantangan Keras #12 di AGENTS.md (Larangan mutlak istilah "gerai" dan "cabang").
+  │   - Pencatatan Standar Kanonikal #29 di docs/00_PROJECT_CONTEXT.md.
+  │   - Istilah resmi yang sah di platform: "Toko", "Outlet", atau "Toko / Outlet".
+  └── 3. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
 ```
 
 ---

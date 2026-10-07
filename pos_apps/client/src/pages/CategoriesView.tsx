@@ -38,7 +38,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Scoping Mode: 'outlet' (hanya menu gerai ini) atau 'all' (semua kategori tenant)
+  // Scoping Mode: 'outlet' (hanya menu toko / outlet ini) atau 'all' (semua kategori tenant)
   const [scopeMode, setScopeMode] = useState<'outlet' | 'all'>(activeOutlet ? 'outlet' : 'all');
 
   // Form State (In-Page Form, Zero Stacked Modals)
@@ -393,7 +393,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              🏪 Gerai Ini ({activeOutlet.name})
+              🏪 Toko Ini ({activeOutlet.name})
             </button>
             <button
               type="button"

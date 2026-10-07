@@ -292,7 +292,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <Store className="w-4 h-4 text-blue-900" />
           </div>
           <div className="text-2xl font-black text-blue-950">
-            {storeOutlets.filter((o) => o.isActive).length} Gerai Toko
+            {storeOutlets.filter((o) => o.isActive).length} Toko Aktif
           </div>
           <p className="text-xs text-slate-500 mt-1">
             Kuota Paket PRO: Hingga 5 Toko Terintegrasi

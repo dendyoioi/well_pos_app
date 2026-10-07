@@ -717,7 +717,7 @@ async function seedUraCorporation() {
       });
     }
 
-    console.log(`   🏪 Saldo Operasional Toko: Terisi presisi per spesialisasi gerai masing-masing.`);
+    console.log(`   🏪 Saldo Operasional Toko: Terisi presisi per spesialisasi toko masing-masing.`);
     console.log('\n🎉 PENYIAPAN TENANT URA CORPORATION (FASE 2) SELESAI DENGAN SUKSES!\n');
   } catch (err) {
     console.error('❌ Gagal menyiapkan Ura Corporation:', err);

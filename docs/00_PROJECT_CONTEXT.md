@@ -620,6 +620,9 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
 28. **Kebijakan Optimasi Foto di Background (Zero Technical Jargon)**:
     - Mesin kompresi gambar client-side (`imageCompressor.ts`) berjalan 100% hening di background.
     - Dilarang menampilkan angka/badge statistik teknis kompresi pada antarmuka tenant/kasir. Label status menggunakan teks netral "Memproses..." dan toast ramah "Foto produk berhasil diunggah".
+29. **Standar Kanonikal Terminologi Toko & Outlet (Zero Ambiguity - Anti-Istilah 'Gerai' / 'Cabang')**:
+    - **Pemberantasan Istilah Ambigu**: DILARANG KERAS menggunakan kata **"Gerai"** atau **"Cabang"** di seluruh antarmuka pengguna (UI Backoffice, Superadmin, Kasir POS Mobile, Onboarding Wizard), pesan error/toast, seeder, maupun respons API.
+    - **Terminologi Kanonikal Wajib**: Seluruh representasi unit fisik/operasional (model Prisma `Outlet`) WAJIB secara seragam menggunakan kata **"Toko"**, **"Outlet"**, atau kombinasi **"Toko / Outlet"** (misal: *"Kelola Toko"*, *"Daftar Toko / Outlet"*, *"Toko Aktif"*, *"Toko Kasir F&B"*).
 
 ---
 
