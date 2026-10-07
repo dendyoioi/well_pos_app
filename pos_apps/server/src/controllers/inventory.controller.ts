@@ -45,7 +45,7 @@ const bulkAdjustmentItemSchema = z
   });
 
 const bulkStockAdjustmentSchema = z.object({
-  outletId: z.string().uuid('ID Cabang tidak valid').optional(),
+  outletId: z.string().uuid('ID Toko / Outlet tidak valid').optional(),
   generalNotes: z.string().optional(),
   items: z.array(bulkAdjustmentItemSchema).min(1, 'Minimal 1 item untuk stock opname massal'),
 });
@@ -63,7 +63,7 @@ const bulkStockInItemSchema = z
   });
 
 const bulkStockInSchema = z.object({
-  outletId: z.string().uuid('ID Cabang tidak valid').optional(),
+  outletId: z.string().uuid('ID Toko / Outlet tidak valid').optional(),
   supplierName: z.string().optional(),
   poNumber: z.string().optional(),
   generalNotes: z.string().optional(),
@@ -83,7 +83,7 @@ const bulkStockOutItemSchema = z
   });
 
 const bulkStockOutSchema = z.object({
-  outletId: z.string().uuid('ID Cabang tidak valid').optional(),
+  outletId: z.string().uuid('ID Toko / Outlet tidak valid').optional(),
   generalReason: z.string().optional(),
   generalNotes: z.string().optional(),
   items: z.array(bulkStockOutItemSchema).min(1, 'Minimal 1 item untuk stok keluar massal'),
@@ -102,21 +102,21 @@ const bulkTransferItemSchema = z
 
 const bulkTransferSchema = z
   .object({
-    sourceOutletId: z.string().uuid('ID Cabang Asal tidak valid'),
-    targetOutletId: z.string().uuid('ID Cabang Tujuan tidak valid'),
+    sourceOutletId: z.string().uuid('ID Toko / Outlet Asal tidak valid'),
+    targetOutletId: z.string().uuid('ID Toko / Outlet Tujuan tidak valid'),
     transferNumber: z.string().optional(),
     generalNotes: z.string().optional(),
     items: z.array(bulkTransferItemSchema).min(1, 'Minimal 1 item untuk transfer massal'),
   })
   .refine((data) => data.sourceOutletId !== data.targetOutletId, {
-    message: 'Cabang asal dan cabang tujuan tidak boleh sama',
+    message: 'Toko / Outlet asal dan tujuan tidak boleh sama',
   });
 
 const transferStockSchema = z.object({
   productId: z.string().uuid('ID Produk tidak valid').optional(),
   inventoryItemId: z.string().uuid('ID Bahan Baku / Item tidak valid').optional(),
-  sourceOutletId: z.string().uuid('ID Cabang/Gudang Asal tidak valid'),
-  targetOutletId: z.string().uuid('ID Cabang/Gudang Tujuan tidak valid'),
+  sourceOutletId: z.string().uuid('ID Toko/Gudang Asal tidak valid'),
+  targetOutletId: z.string().uuid('ID Toko/Gudang Tujuan tidak valid'),
   quantity: z.number().positive('Jumlah transfer harus berupa angka positif'),
   notes: z.string().optional(),
 }).refine((data) => data.productId || data.inventoryItemId, {
@@ -791,7 +791,7 @@ export const transferStock = async (req: Request, res: Response) => {
     if (sourceOutletId === targetOutletId) {
       return res.status(400).json({
         status: 'error',
-        message: 'Cabang asal dan cabang tujuan tidak boleh sama',
+        message: 'Toko / Outlet asal dan tujuan tidak boleh sama',
       });
     }
 
@@ -819,7 +819,7 @@ export const transferStock = async (req: Request, res: Response) => {
     const targetOutlet = targetRows[0];
 
     if (!sourceOutlet || !targetOutlet) {
-      return res.status(404).json({ status: 'error', message: 'Data cabang/gudang tidak ditemukan atau bukan milik tenant Anda' });
+      return res.status(404).json({ status: 'error', message: 'Data toko/gudang tidak ditemukan atau bukan milik tenant Anda' });
     }
 
     let itemName = '';
@@ -1636,7 +1636,7 @@ export const recordBulkTransfer = async (req: Request, res: Response) => {
     if (!sourceOutlet || !targetOutlet) {
       return res.status(403).json({
         status: 'error',
-        message: 'Akses ditolak: Cabang/gudang asal atau tujuan tidak ditemukan atau bukan milik tenant Anda',
+        message: 'Akses ditolak: Toko/gudang asal atau tujuan tidak ditemukan atau bukan milik tenant Anda',
       });
     }
 

@@ -892,17 +892,17 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 </div>
               </div>
 
-              {/* Manfaat 6: Buka Cabang Baru & Manajemen Multi-Outlet */}
+              {/* Manfaat 6: Buka Toko Baru & Manajemen Multi-Outlet */}
               <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
                     <Store className="w-5 h-5" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Buka Cabang Baru &amp; Manajemen Multi-Outlet
+                    Buka Toko Baru &amp; Manajemen Multi-Outlet
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Ingin ekspansi ke cabang ke-2 atau gudang pasokan? Anda bisa menyalin ratusan master produk tanpa perlu mengetik ulang dari awal. Mutasi pengiriman stok barang antar cabang terpantau rapi dan real-time.
+                    Ingin ekspansi ke toko ke-2 atau gudang pasokan? Anda bisa menyalin ratusan master produk tanpa perlu mengetik ulang dari awal. Mutasi pengiriman stok barang antar toko terpantau rapi dan real-time.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
@@ -1375,8 +1375,8 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   a: 'Ya, sangat bisa. Well POS mendukung hampir seluruh printer struk Bluetooth thermal ukuran 58mm maupun 80mm, printer kabel USB/LAN, serta laci kasir otomatis (cash drawer) yang terhubung ke printer struk.',
                 },
                 {
-                  q: 'Apakah saya bisa mengelola lebih dari satu cabang toko atau gudang pasokan?',
-                  a: 'Tentu saja. Anda dapat menambah cabang baru kapan saja dari dashboard pemilik. Pengaturan menu dan harga bisa disamakan atau dibedakan antar cabang, serta mutasi stok bahan/barang dari gudang pusat ke cabang tercatat rapi secara real-time.',
+                  q: 'Apakah saya bisa mengelola lebih dari satu outlet toko atau gudang pasokan?',
+                  a: 'Tentu saja. Anda dapat menambah toko baru kapan saja dari dashboard pemilik. Pengaturan menu dan harga bisa disamakan atau dibedakan antar toko, serta mutasi stok bahan/barang dari gudang pusat ke toko tercatat rapi secara real-time.',
                 },
                 {
                   q: 'Bagaimana jika kasir salah input transaksi atau ada pelanggan yang membatalkan pesanan?',

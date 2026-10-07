@@ -79,7 +79,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
       } else {
         dialog.alert({
           title: 'Gagal Menyimpan',
-          message: res.message || 'Gagal menyimpan pengaturan loyalitas cabang.',
+          message: res.message || 'Gagal menyimpan pengaturan loyalitas toko.',
           variant: 'danger',
         });
       }
@@ -118,7 +118,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                Atur aktivasi program poin, aturan perolehan belanja, dan penukaran diskon khusus untuk cabang ini
+                Atur aktivasi program poin, aturan perolehan belanja, dan penukaran diskon khusus untuk toko ini
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
         {/* Current Active Outlet Badge */}
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs shrink-0 self-start sm:self-auto">
           <Store className="w-4 h-4 text-blue-900" />
-          <span className="text-slate-500">Cabang Terpilih:</span>
+          <span className="text-slate-500">Toko Terpilih:</span>
           <span className="font-bold text-slate-900">{activeOutlet?.name || 'Belum Dipilih'}</span>
         </div>
       </div>
@@ -144,7 +144,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="font-black text-base text-slate-900">
-                  Status Program Loyalitas di {activeOutlet?.name || 'Cabang Ini'}
+                  Status Program Loyalitas di {activeOutlet?.name || 'Toko Ini'}
                 </span>
                 <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                   isActive ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
@@ -154,8 +154,8 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
               </div>
               <p className="text-xs text-slate-600">
                 {isActive
-                  ? 'Pelanggan dapat mengumpulkan poin reward saat belanja dan kasir dapat menukarkan poin untuk potongan harga di cabang ini.'
-                  : 'Program loyalitas dinonaktifkan di cabang ini. Transaksi kasir tidak akan menambah atau menukar poin member.'}
+                  ? 'Pelanggan dapat mengumpulkan poin reward saat belanja dan kasir dapat menukarkan poin untuk potongan harga di toko ini.'
+                  : 'Program loyalitas dinonaktifkan di toko ini. Transaksi kasir tidak akan menambah atau menukar poin member.'}
               </p>
             </div>
 
@@ -266,9 +266,9 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
           <div className="p-6 rounded-2xl bg-slate-100/70 border border-slate-200 text-slate-600 text-xs flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-slate-800 block text-sm">Cabang Ini Menjalankan Mode Kasir Standar</span>
+              <span className="font-bold text-slate-800 block text-sm">Toko Ini Menjalankan Mode Kasir Standar</span>
               <p className="mt-1 leading-relaxed">
-                Ketika fitur ini dinonaktifkan, kasir di cabang <b>{activeOutlet?.name}</b> tetap dapat memilih pelanggan untuk mencatat profil dan riwayat order CRM, namun opsi penukaran poin tidak akan ditampilkan di layar kasir, dan order tidak akan memicu kalkulasi perolehan poin.
+                Ketika fitur ini dinonaktifkan, kasir di toko <b>{activeOutlet?.name}</b> tetap dapat memilih pelanggan untuk mencatat profil dan riwayat order CRM, namun opsi penukaran poin tidak akan ditampilkan di layar kasir, dan order tidak akan memicu kalkulasi perolehan poin.
               </p>
             </div>
           </div>
@@ -282,7 +282,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-sm shadow-sm hover:shadow transition-all active:scale-95 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Loyalitas Cabang'}</span>
+            <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Loyalitas Toko'}</span>
           </button>
         </div>
       </form>

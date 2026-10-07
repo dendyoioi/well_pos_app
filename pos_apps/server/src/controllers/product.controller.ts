@@ -73,7 +73,7 @@ export const getProducts = async (req: Request, res: Response) => {
       if (!outletBelongsToTenant) {
         return res.status(403).json({
           status: 'error',
-          message: 'Akses outlet ditolak: Cabang toko tidak terdaftar di bawah akun bisnis Anda',
+          message: 'Akses outlet ditolak: Toko / outlet tidak terdaftar di bawah akun bisnis Anda',
         });
       }
     }
@@ -124,7 +124,7 @@ export const getProductById = async (req: Request, res: Response) => {
       if (!outletBelongsToTenant) {
         return res.status(403).json({
           status: 'error',
-          message: 'Akses outlet ditolak: Cabang toko tidak terdaftar di bawah akun bisnis Anda',
+          message: 'Akses outlet ditolak: Toko / outlet tidak terdaftar di bawah akun bisnis Anda',
         });
       }
     }
@@ -233,7 +233,7 @@ export const createProduct = async (req: Request, res: Response) => {
     if (!targetOutletId) {
       return res.status(400).json({
         status: 'error',
-        message: 'Outlet cabang tidak ditemukan untuk alokasi stok produk',
+        message: 'Toko / outlet tidak ditemukan untuk alokasi stok produk',
       });
     }
 
@@ -602,7 +602,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
 
       return res.status(200).json({
         status: 'success',
-        message: `Produk "${existing.name}" berhasil dilepas dari ${outlet?.name || 'cabang ini'}. Riwayat transaksi masa lalu tetap aman.`,
+        message: `Produk "${existing.name}" berhasil dilepas dari ${outlet?.name || 'toko / outlet ini'}. Riwayat transaksi masa lalu tetap aman.`,
       });
     }
 
@@ -672,7 +672,7 @@ export const bulkProductAction = async (req: Request, res: Response) => {
 
         return res.status(200).json({
           status: 'success',
-          message: `Berhasil melepas ${deletedBalances.length} produk dari cabang ini. Riwayat transaksi masa lalu tetap aman.`,
+          message: `Berhasil melepas ${deletedBalances.length} produk dari toko / outlet ini. Riwayat transaksi masa lalu tetap aman.`,
         });
       }
 
@@ -817,7 +817,7 @@ export const getAvailableProductsForOutlet = async (req: Request, res: Response)
 };
 
 const assignProductsSchema = z.object({
-  outletId: z.string().uuid('ID Cabang tidak valid'),
+  outletId: z.string().uuid('ID Toko / Outlet tidak valid'),
   assignments: z.array(
     z.object({
       productId: z.string().uuid('ID Produk tidak valid'),
@@ -909,13 +909,13 @@ export const assignProductsToOutlet = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       status: 'success',
-      message: `Berhasil menambahkan ${assignments.length} produk ke cabang ini`,
+      message: `Berhasil menambahkan ${assignments.length} produk ke toko / outlet ini`,
     });
   } catch (error) {
     console.error('Error saat menghubungkan produk ke outlet:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Gagal menghubungkan produk ke cabang',
+      message: 'Gagal menghubungkan produk ke toko / outlet',
     });
   }
 };
@@ -971,7 +971,7 @@ export const bulkImportProducts = async (req: Request, res: Response) => {
     }
 
     if (!targetOutletId) {
-      return res.status(400).json({ status: 'error', message: 'Outlet cabang tidak ditemukan untuk alokasi produk' });
+      return res.status(400).json({ status: 'error', message: 'Toko / outlet tidak ditemukan untuk alokasi produk' });
     }
 
     // Cache kategori yang ada untuk tenant ini

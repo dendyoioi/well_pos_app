@@ -65,8 +65,8 @@ const TAB_CONTEXT_MAP: Record<
   },
   outlets: {
     sectionId: 'onboarding',
-    title: 'Panduan Kelola Outlet & Cabang',
-    subtitle: 'Setup multi cabang toko dan penetapan mode gudang.',
+    title: 'Panduan Kelola Toko & Outlet',
+    subtitle: 'Setup multi outlet toko dan penetapan mode gudang.',
   },
   products: {
     sectionId: 'products',

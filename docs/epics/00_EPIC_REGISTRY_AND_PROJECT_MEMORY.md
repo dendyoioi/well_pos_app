@@ -308,7 +308,80 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Pencatatan Pantangan Keras #12 di AGENTS.md (Larangan mutlak istilah "gerai" dan "cabang").
   │   - Pencatatan Standar Kanonikal #29 di docs/00_PROJECT_CONTEXT.md.
   │   - Istilah resmi yang sah di platform: "Toko", "Outlet", atau "Toko / Outlet".
-  └── 3. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+[2026-10-07] AUTOMATION VISUAL REGRESSION TESTING (LANGKAH 1: RESEP F&B BOM & PEMOTONGAN STOK OTOMATIS)
+  ├── 1. Perancangan Tri-Path Suite & Page Object Model (POM):
+  │   - scripts/pom/RecipesPage.js: Modul formula resep, pencarian menu, filter status, form in-page, live HPP card calculation, tambah takaran bahan, dan hapus resep.
+  │   - scripts/pom/InventoryPage.js: Modul bahan baku mentah (UOM GRAM/ML/PCS), pendaftaran bahan baru via CreateIngredientModal, dan inspeksi saldo fisik toko.
+  │   - scripts/pom/PosTerminalPage.js: Penyempurnaan addProductByName (penanganan otomatis modal modifier) dan checkoutCash (tunai pas + transaksi baru).
+  ├── 2. Eksekusi 3 Jalur Pengujian Visual (test_fnb_recipes_deduction_visual.js):
+  │   - 🟢 Happy Path: Pendaftaran bahan baku baru (Biji Kopi Gayo 1.000g) -> Hubungkan resep ke Kopi Susu Aren Ura (18g/cup) -> Transaksi kasir 2 cup di tablet -> Verifikasi matematika stok 100% presisi (1.000 - 36 = 964g).
+  │   - 🟡 Sad Path: Empty state pencarian menu tanpa resep & penolakan validasi input takaran resep non-positif (0 atau negatif) via HTML5 min="0.001".
+  │   - 🔴 Bad Path: Proteksi integritas relasi foreign key (pencegahan penghapusan bahan baku mentah aktif yang terikat resep menu).
+  ├── 3. Perbaikan Kritis Mesin Transaksi:
+  │   - order.controller.ts: Menghilangkan bug validasi kuantitas produk ganda di keranjang kasir (menggunakan uniqueProductIds dan DISTINCT ON (p.id)).
+  │   - PosTerminalPage.js: Mengisolasi input modal awal shift kasir ke form StartShiftModal agar tidak bocor ke field diskon keranjang.
+  ├── 4. Verifikasi Stabilitas & Zero Flakiness:
+  │   - Eksekusi 5 kali berturut-turut (Run 1 s.d Run 5): LULUS 100% (Exit code 0).
+  │   - Artefak visual screenshot tersimpan di: docs/artifacts/visual_fnb_recipes/ (happy_path, sad_path, bad_path).
+  │   - Skrip npm kanonikal terdaftar: "npm run test:visual:recipes".
+  └── 5. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
+[2026-10-07] OTOMASI PENGUJIAN VISUAL SIKLUS HIDUP SPLIT BILL & KASBON PIUTANG (LANGKAH 2 - POM E2E)
+  ├── 1. Desain Page Object Model (POM) Kanonikal:
+  │   - scripts/pom/PaymentModalPage.js: Pengendalian modal pembayaran kasir, tab metode, input porsi split tunai + QRIS, konfirmasi QRIS, pemilihan jatuh tempo kasbon (+7 Hari), dan scoped modal dialog selector.
+  │   - scripts/pom/CustomerDebtsPage.js: Pengendalian modul Buku Kasbon & Piutang di Backoffice CRM (?tab=customers&subtab=debts), pencarian piutang pelanggan, pembukaan modal pelunasan, input nominal cicilan/metode bayar, dan verifikasi status baris tabel (Dicicil/Lunas).
+  │   - scripts/pom/PosTerminalPage.js: Penambahan method selectCustomer(customerName) untuk menghubungkan member CRM walk-in langsung ke keranjang kasir.
+  ├── 2. Eksekusi 3 Jalur Pengujian Visual (test_split_debt_lifecycle_visual.js):
+  │   - 🟢 Happy Path:
+  │     1) Transaksi SPLIT BILL: Pembayaran gabungan Tunai (Rp 20.000) + QRIS Dinamis (Rp 30.600) pada pesanan Kopi Susu Aren Ura -> Konfirmasi QRIS sukses.
+  │     2) Transaksi KASBON (CUSTOMER_DEBT): Pesanan Americano Signature (Rp 20.700) dicatat atas nama member "Budi Santoso" dengan jatuh tempo +7 hari.
+  │     3) Pelunasan Bertahap di Backoffice: Cicilan pertama Rp 10.000 via Tunai (status berubah PARTIAL/Dicicil, sisa Rp 10.700) -> Pelunasan sisa Rp 10.700 (status berubah PAID/Lunas).
+  │   - 🟡 Sad Path: Validasi tombol transaksi Split Bill terkunci (disabled) jika QRIS belum dikonfirmasi kasir; Tombol Catat Kasbon terkunci otomatis jika kasir belum memilih member terdaftar.
+  │   - 🔴 Bad Path: Proteksi penolakan request pelunasan piutang dengan nominal 0 atau ID piutang tidak valid (HTTP 401/400).
+  ├── 3. Perbaikan Kritis Mesin Transaksi & Sinkronisasi Kasbon:
+  │   - order.controller.ts: Menambahkan z.preprocess pada Zod paymentItemSchema untuk normalisasi alias frontend ('DEBT' -> 'CUSTOMER_DEBT', 'TRANSFER' -> 'BANK_TRANSFER'), sehingga transaksi kasbon sukses tersimpan dan terhubung ke buku piutang.
+  │   - PosTerminalView.tsx: Meneruskan prop selectedCustomer dan customerName ke komponen <PaymentModal />.
+  │   - PaymentModal.tsx & CustomerDebtsTab.tsx: Penyelarasan selector semantik tombol submit, form cicilan, dan status badge.
+  ├── 4. Verifikasi Stabilitas & Zero Flakiness (5x Berturut-Turut):
+  │   - Eksekusi Run 1 s.d Run 5 berturut-turut: LULUS 100% (Exit code 0).
+  │   - Skrip npm kanonikal terdaftar: "npm run test:visual:split-debt".
+  │   - Seluruh artefak visual screenshot tersimpan di: docs/artifacts/visual_split_debt/ (happy_path, sad_path, bad_path).
+  └── 5. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
+[2026-10-07] FORMAL BDD GHERKIN AUTOMATION: SPLIT BILL, MULTI-TENDER & SIKLUS PIUTANG KASBON (LANGKAH 4)
+  ├── 1. Spesifikasi Formal BDD Gherkin Dwibahasa:
+  │   - features/split_bill_and_customer_debt.feature: Bahasa Indonesia formal (Fitur, Skenario, Dengan, Ketika, Maka, Dan).
+  │   - features/split_bill_and_customer_debt.en.feature: Standard English formal (Feature, Scenario, Given, When, Then, And).
+  │   - 3 Skenario Kanonikal:
+  │       • 🟢 Happy Path: Pecah tagihan meja (SplitBillModal equal vs by-item) & pelunasan Multi-Tender (Tunai + QRIS Dinamis) berstatus PAID.
+  │       • 🟡 Sad Path: Validasi pelanggan wajib saat memilih Kasbon (DEBT), checkout kasbon UNPAID dengan jatuh tempo +7 hari, dan pelunasan penuh di Backoffice Buku Piutang menjadi PAID.
+  │       • 🔴 Bad Path: Validasi underpaid split payment (uang tunai Rp 10.000 < porsi Rp 25.000) memblokir submit dengan warning merah "- Rp 15.000".
+  ├── 2. Integrasi UI/UX & Perbaikan Penanganan Pointer:
+  │   - PosTerminalView.tsx: Memperbaiki handleSplitBill agar membuka setSplitBillModalOpen(true) (sebelumnya langsung ke PaymentModal).
+  │   - BackofficeLayout.tsx: Menyembunyikan FloatingGuideWidget secara otomatis saat kasir POS aktif (activeTab !== 'pos') agar tidak memblokir tombol keranjang & Split Bill.
+  │   - CustomerDebtsPage.js: Memperbaiki amount input overwrite agar tombol bayar lunas 100% tidak ter-reset ke 0.
+  │   - PosTerminalPage.js: Ditambahkan method dismissSuccessModal dan clearCart untuk isolasi state antar skenario.
+  ├── 3. Verifikasi Stabilitas & Zero Flakiness (5x Berturut-Turut):
+  │   - Eksekusi Run 1 s.d Run 5 berturut-turut: LULUS 100% (Exit code 0).
+  │   - Skrip npm kanonikal terdaftar: "npm run test:visual:split-debt".
+  │   - Seluruh artefak visual screenshot tersimpan di: docs/artifacts/visual_split_debt/ (happy_path [01-05], sad_path [01-06], bad_path [01]).
+  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
+[2026-10-07] BDD GHERKIN AUTOMATION: END OF SHIFT, Z-REPORT & AUDIT SELISIH KAS (LANGKAH 5) & MARKETING KIT PLAYBOOK
+  ├── 1. Spesifikasi Formal BDD Gherkin Dwibahasa:
+  │   - features/end_of_shift_and_financial_audit.feature: Bahasa Indonesia formal (Fitur, Skenario, Dengan, Ketika, Maka, Dan).
+  │   - features/end_of_shift_and_financial_audit.en.feature: Standard English formal (Feature, Scenario, Given, When, Then, And).
+  │   - 3 Skenario Kanonikal:
+  │       • 🟢 Happy Path: Tutup shift kasir dengan kas fisik pas (Expected = Actual), terbit Z-Report termal, status audit SEIMBANG (Rp 0).
+  │       • 🟡 Sad Path: Deteksi defisit kas (-Rp 20.000), input catatan wajib serah terima, terbit Z-Report defisit, status audit KURANG (SHORT).
+  │       • 🔴 Bad Path: Proteksi penolakan uang fisik negatif (-50000) via HTTP 400 Bad Request ("Validasi uang fisik gagal").
+  ├── 2. Publikasi Panduan Marketing Kit & Sales Playbook Komprehensif:
+  │   - docs/MARKETING_KIT_SALES_PLAYBOOK.md: Dokumen utuh pegangan materi promosi, 5 Core USPs, pitch scripts, komparasi kompetitor, dan demo sandbox 3 menit.
+  ├── 3. Verifikasi Stabilitas & Zero Flakiness (5x Berturut-Turut):
+  │   - Eksekusi Run 1 s.d Run 5 berturut-turut: LULUS 100% (Exit code 0).
+  │   - Skrip npm kanonikal terdaftar: "npm run test:visual:shift-audit".
+  │   - Seluruh artefak visual screenshot tersimpan di: docs/artifacts/visual_shift_audit/ (happy_path [01-05], sad_path [01-03], bad_path [01]).
+  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
 ```
 
@@ -1548,7 +1621,150 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
   - Exit code 0 pada `npm run build` di `pos_apps/server` dan `pos_apps/client`.
   - Uji otomatisasi Playwright lokal: Desktop nav, mobile drawer, floating back-to-top, dan auto-fill promo modal pendaftaran berhasil diverifikasi 100%.
 ===============================================================================
+[07 OKTOBER 2026] TENANT ONBOARDING TESTING PLAYBOOK, FINITE STATE MACHINE (FSM) ARCHITECTURE & 3-PATH VISUAL REGRESSION SUITE (POM)
+===============================================================================
+• Konteks & Driver:
+  - Standardisasi panduan pengujian manual end-to-end 8 fase dan skrip demo marketing/sales untuk calon tenant baru (Registrasi, Setup Toko & Struk, Katalog Produk & BOM, Kelola Kasir, Terminal POS & Struk WA, Fitur Khusus QR Meja & Void PIN Spv, Tutup Shift Blind Count, dan Laporan Finansial).
+  - Pemetaan kanonikal Finite State Machine (FSM) platform Well POS yang mengklasifikasikan 3 jalur keadaan:
+    1. Happy Path: Alur ideal sukses tanpa hambatan (Registrasi -> Approval -> Store Wizard -> POS Shift -> Checkout -> Tutup Shift Seimbang).
+    2. Sad Path: Empty states (STORE_EMPTY, CATALOG_EMPTY, SHIFT_CLOSED, CART_EMPTY) dan soft/recoverable errors (Email duplikat, stok habis, uang tunai kurang, selisih kas fisik/discrepancy tutup shift).
+    3. Bad Path: Hard rejections (Superadmin tolak pendaftaran status SUSPENDED), security block (Void dengan PIN Supervisor salah), dan auth failure (Password salah).
+  - Pembuatan visualizer diagram interaktif mandiri yang dapat dibuka langsung di browser dengan live simulator event.
+  - Implementasi automasi Visual Regression Testing berbasis Playwright lokal menggunakan pola Page Object Model (POM), selector semantik, dan matriks responsif UMKM Indonesia (Android Smartphone 360x800, Android Tablet 1280x800, Desktop 1440x900).
+• Rincian Artefak & Implementasi:
+  1. Dokumentasi Panduan & Arsitektur FSM:
+     - `docs/TENANT_ONBOARDING_AND_TESTING_GUIDE.md`: SOP 8 fase pengujian, 4 USP marketing pitch, dan panduan Playwright.
+     - `docs/STATE_MACHINE_JOURNEY_SPEC.md`: Matriks FSM 7 sub-machine, diagram Mermaid lengkap, serta tabel referensi kanonikal notifikasi dialog alert dan toast.
+     - `docs/artifacts/state_machine_interactive.html`: Visualizer interaktif berbasis HTML/CSS modern (Google Font Inter, glassmorphism, path filter switcher, state inspector drawer, dan live transition simulator).
+     - `docs/README.md`: Pendaftaran dokumen baru ke indeks Segitiga Emas (Golden Triangle).
+  2. Arsitektur Page Object Model (POM) (`scripts/pom/`):
+     - `LandingPage.js`: Formulir 5-field registrasi dan penanganan warning email duplikat.
+     - `LoginPage.js`: Dual-tab login (Kasir vs Owner) dan penanganan login invalid.
+     - `SuperadminPage.js`: Triage pendaftar, approval, dan penolakan akun (reject tenant) dengan modal-scoped click selector.
+     - `StoreWizardPage.js`: Layar penuh FullScreenStoreWizard, input WhatsApp, alamat, dan chips industri.
+     - `BackofficePage.js`: Dashboard owner, navigasi tab menu, dan pintasan kasir.
+     - `PosTerminalPage.js`: Buka shift modal awal, cart item, checkout tunai/QRIS, tutup shift seimbang & selisih kas fisik.
+     - `CustomerQrPage.js`: Self-ordering digital menu meja tamu restoran.
+     - `OrdersPage.js`: Riwayat pesanan dan pengujian keamanan void order dengan validasi PIN supervisor.
+  3. Master Test Runner & Package Script:
+     - `scripts/test_tenant_journey_visual_paths.js`: Runner terpadu mengeksekusi Happy Path, Sad Path, dan Bad Path secara otomatis.
+     - `package.json`: Didaftarkan ke perintah `"test:visual"`.
+  4. Artefak Tangkapan Layar Visual (`docs/artifacts/visual_journey/`):
+     - `happy_path/`: 9 screenshot (Phone, Tablet, Desktop).
+     - `sad_path/`: 5 screenshot (Empty states, duplicate email, shift locked, empty cart, insufficient cash, discrepancy).
+     - `bad_path/`: 3 screenshot (Superadmin reject, void wrong PIN, auth failure).
+• Investigasi & Resolusi Flakiness:
+  - Error Awal: Timeout saat Superadmin klik konfirmasi tolak akun karena selector `|Tolak/i` bentrok dengan tombol di baris tabel yang tertutup backdrop modal.
+  - Perbaikan: Selector di-scope spesifik ke tombol konfirmasi di dalam modal aktif `modal.getByRole('button', { name: /Ya, Tolak Pendaftaran/i })`.
+  - Verifikasi Kestabilan: Pengujian dijalankan ulang sebanyak 5 kali berturut-turut (Run 1 s.d Run 5) dan berhasil 100% tanpa error (Exit code 0 berturut-turut).
+• Status Build:
+  - `npm run build:client` (tsc -b && vite build) = Exit code 0.
+  - `npm run build:server` (tsc) = Exit code 0.
+===============================================================================
+[07 OKTOBER 2026] BDD / GHERKIN AUTOMATION FRAMEWORK & CASH DENOMINATION COUNTER (CALCULATOR PECAHAN UANG LACI KASIR) IMPLEMENTATION (OPSI A / LANGKAH 3)
+===============================================================================
+• Konteks & Driver:
+  - Permintaan penegasan dan adopsi resmi BDD / Gherkin Syntax (`Feature`, `Scenario`, `Given`, `When`, `Then`, `And`) untuk automation testing sistem Well POS.
+  - Eksekusi Roadmap Langkah 3 (Opsi A): Pengujian komprehensif siklus pergantian shift kasir, pencatatan kas masuk / kas keluar (*petty cash*), dan rekonsiliasi kas laci Z-Report.
+  - Usulan Solusi Produk (*High-Value Feature*): Penyediaan Kalkulator Denominasi Uang Fisik (*Cash Denomination Counter*) langsung pada modal Tutup Shift (`CloseShiftModal.tsx`) agar kasir tidak perlu menghitung manual di kertas atau kalkulator eksternal.
+• Rincian Implementasi Fitur Produk:
+  1. Komponen Kalkulator Pecahan Uang Kertas & Koin (`CloseShiftModal.tsx`):
+     - Accordion interaktif (*collapsible*) beraksen hijau lembut dengan ringkasan live lembar/keping uang terhitung.
+     - 10 Denominasi standar Rupiah Indonesia:
+       * Uang Kertas: Rp 100.000, Rp 50.000, Rp 20.000, Rp 10.000, Rp 5.000, Rp 2.000, Rp 1.000.
+       * Uang Koin: Rp 500, Rp 200, Rp 100.
+     - Kontrol kuantitas instan (+ / - stepper, input langsung angka), tombol cepat (+5 / +10), dan kalkulasi otomatis subtotal per pecahan.
+     - Tombol "Reset Hitungan" dan akumulasi nilai rupiah otomatis tersinkronisasi 100% ke input "Total Kas Fisik Sebenarnya".
+  2. Perbaikan Penanganan Angka 0 pada `<CurrencyInput />` (`CurrencyInput.tsx`):
+     - Mengatasi kendala di mana nilai 0 dianggap string kosong sehingga memicu HTML5 native validation block.
+     - Menjamin nominal 0 ditampilkan sebagai angka `"0"` yang sah dan dapat disubmit tanpa error.
+  3. Spesifikasi BDD Gherkin Formal (`features/`):
+     - `features/shift_reconciliation.feature` (Bahasa Indonesia):
+       * Skenario 1 (Happy Path): Pembukaan shift, transaksi tunai, mutasi kas, hitung pecahan uang, rekonsiliasi cocok (selisih Rp 0).
+       * Skenario 2 (Sad Path): Toleransi selisih fisik kurang (shortage) / lebih (overage) dengan catatan wajib supervisor.
+       * Skenario 3 (Bad Path): Pencegahan transaksi saat shift terkunci (status SHIFT_CLOSED).
+     - `features/shift_reconciliation.en.feature` (Standard English Gherkin).
+  4. Page Object Model (POM) Modular (`scripts/pom/`):
+     - `ShiftModalPage.js`: Abstraksi pembukaan shift, pencatatan kas masuk/keluar, kalkulator pecahan uang, submit Z-report, dan verifikasi status ringkasan laci.
+     - `PosTerminalPage.js`: Penambahan metode `dismissSuccessModal` deterministik berbasis `waitFor({ state: 'hidden' })`.
+  5. Master Test Runner BDD Visual (`scripts/test_shift_reconciliation_bdd_visual.js`):
+     - Didaftarkan ke perintah `"test:visual:shift"` pada `package.json`.
+     - Menangkap bukti visual langkah demi langkah di `docs/artifacts/visual_shift_reconciliation/`:
+       * `happy_path/`: 8 screenshot (Buka shift -> Kas masuk -> Kas keluar -> Order POS -> Accordion pecahan uang -> Z-Report cocok -> Status shift selesai).
+       * `sad_path/`: 4 screenshot (Buka shift -> Uang fisik 0 -> Alert selisih fisik -> Submit dengan catatan investigasi).
+       * `bad_path/`: 2 screenshot (Shift terkunci modal awal -> Percobaan klik order diblokir dialog peringatan).
+• Verifikasi Kestabilan Zero-Flakiness:
+  - Eksekusi pengujian loop otomatis 5 kali berturut-turut:
+    `for i in {1..5}; do echo "=== RUN $i ===" && npm run test:visual:shift || exit 1; done`
+  - Hasil: RUN 1 s.d RUN 5 LULUS 100% (5/5 PASS, Exit code 0).
+===============================================================================
+[07 OKTOBER 2026] OFFLINE-FIRST PWA POS CHECKOUT QUEUE & IDEMPOTENCY ENGINE IMPLEMENTATION
+===============================================================================
+• Konteks & Driver:
+  - Mengatasi risiko downtime kasir saat koneksi internet toko mati / tidak stabil (network outage).
+  - Kasir POS wajib tetap dapat memproses transaksi checkout tunai (CASH), menerbitkan invoice offline sementara (`INV/OFFLINE/YYYYMMDD/XXXX`), dan mencetak struk fisik thermal langsung ke printer tanpa blocking dialog error.
+  - Saat koneksi online pulih kembali, antrean transaksi offline wajib disinkronkan secara otomatis (FIFO background sync) ke server tanpa intervensi manual yang rumit.
+  - Perlindungan mutlak dari duplikasi transaksi di server (idempotency guard) jika terjadi retry atau koneksi putus-nyambung.
+• Rincian Implementasi Fitur:
+  1. Client IndexedDB Storage Engine (`pos_apps/client/src/utils/offlineQueue.ts`):
+     - Zero third-party dependency (murni browser native IndexedDB `well_pos_offline_db` versi 1, object store `order_queue`).
+     - Menyimpan payload transaksi lengkap: `id` (UUID offline), `invoiceNumber`, `payload` (items, payment, customer, shift, outlet), `offlineReferenceId`, `status` ('PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED'), `retryCount`, `createdAt`.
+     - Fungsi utilitas kanonikal: `saveOfflineOrder`, `getPendingOfflineOrders`, `getOfflineQueueCount`, `markOfflineOrderSyncing`, `markOfflineOrderSuccess`, `markOfflineOrderFailed`, `clearSyncedOfflineOrders`.
+  2. Backend Idempotency Protection (`pos_apps/server/src/controllers/order.controller.ts`):
+     - Skema validasi Zod `checkoutSchema` mendukung `offlineReferenceId: z.string().optional()`.
+     - Sebelum membuka Prisma transaction atomik, backend memeriksa apakah pesanan dengan referensi offline tersebut sudah pernah tersimpan sebelumnya (`contains: [OFFLINE_REF:${offlineReferenceId}]`).
+     - Jika sudah ada, backend mengembalikan pesanan yang sudah ada (HTTP 200/201) secara idempoten tanpa mengurangi stok berulang atau menduplikasi saldo ledger.
+     - Tag idempotensi disematkan aman pada field `notes` dan diekspos pada respon `fullOrder`.
+  3. POS Terminal Integration & Status UI Banner (`PosTerminalView.tsx` & `PosMobileView.tsx`):
+     - State reaktif: `isOnline`, `pendingOfflineCount`, `isSyncingQueue`.
+     - Event listener browser (`window.addEventListener('online')` / `'offline'`) + background timer interval pemantauan 30 detik.
+     - Fallback otomatis saat checkout gagal karena network error / offline: menyimpan transaksi ke IndexedDB dan membuka modal sukses struk kasir dengan invoice darurat untuk cetak fisik.
+     - Banner indikator visual:
+       * Mode Offline: Banner oranye / kuning dengan ikon WiFi Off (`WifiOff`) dan jumlah antrean tertunda.
+       * Mode Online dengan Antrean Tertunda: Banner biru / hijau dengan tombol aksi manual "Sinkronkan Sekarang" (`handleSyncOfflineQueue`) dan animasi sinkronisasi background.
+  4. Pengujian & Verifikasi Kestabilan:
+     - Script verifikasi idempotensi backend: `pos_apps/server/src/scripts/test_offline_idempotency.ts` (PASS, 0 order duplikat saat multiple retry).
+     - Verifikasi Smoke Test Suite: 27/27 test suites PASS (100%).
+     - Kompilasi TypeScript:
+       * `npm run build:client` (tsc -b && vite build) = Exit code 0.
+       * `npm run build:server` (tsc) = Exit code 0.
+===============================================================================
+[07 OKTOBER 2026] COMPREHENSIVE END-TO-END REGRESSION TESTING SUITE (100% PASS)
+===============================================================================
+• Konteks & Driver:
+  - Pelaksanaan audit regresi menyeluruh (*full-spectrum regression testing*) pasca-implementasi Offline-First PWA Queue.
+  - Memastikan seluruh modul fungsional, integritas basis data, alur onboarding tenant, F&B BOM, siklus kasbon, dan rekonsiliasi kas shift tidak mengalami regresi.
+• Rincian Hasil Eksekusi Regression Test:
+  1. Backend API & Core Flows Smoke Test (`npm run test:smoke`):
+     - 5 Alur Utama (Registrasi -> Kasir BOM -> Laporan WIB -> Multi-Outlet -> QR Menu).
+     - Hasil: 27/27 Test Suites LULUS 100% (PASS).
+  2. Epic-12 Local Pre-Release Sandbox Validation (`npm run test:sandbox`):
+     - Penyempurnaan urutan cleanup pada `seed.sandbox.ts` untuk relasi `customerDebtPayment`, `customerDebt`, `attendance`, `refundItem`, `refund`, dan `outletProduct`.
+     - Konfigurasi default `paymentConfig.customerDebt` pada outlet sandbox.
+     - Hasil: 5/5 Modul Sandbox LULUS 100% (PASS).
+  3. Offline Checkout Idempotency Verification (`test_offline_idempotency.ts`):
+     - Verifikasi pencegahan duplikasi order dan saldo ledger saat sinkronisasi ulang.
+     - Hasil: 100% LULUS (PASS).
+  4. Visual BDD Regression - Shift Reconciliation & Calculator (`npm run test:visual:shift`):
+     - Happy Path (Z-Report Seimbang) + Sad Path (Defisit Kas Fisik) + Bad Path (Validasi Uang Negatif).
+     - Hasil: 100% LULUS (PASS).
+  5. Visual BDD Regression - F&B Recipes / BOM (`npm run test:visual:recipes`):
+     - Happy Path (Formula Resep & Pemotongan Gramasi 100% Presisi) + Sad Path (Empty State) + Bad Path (Foreign Key Integrity).
+     - Hasil: 100% LULUS (PASS).
+  6. Visual BDD Regression - Split Bill, Multi-Tender & Debt (`npm run test:visual:split-debt`):
+     - Happy Path (Pecah Tagihan Meja & Tunai + QRIS) + Sad Path (Kasbon Pelanggan & Pelunasan Backoffice) + Bad Path (Guard Underpaid).
+     - Hasil: 100% LULUS (PASS).
+  7. Visual BDD Regression - Tenant Journey Lifecycle (`npm run test:visual`):
+     - Happy Path (Pendaftaran -> Approval Superadmin -> Store Wizard -> Kasir Tablet -> Z-Report -> Laporan Finansial).
+     - Sad Path (6 skenario: email duplikat, empty wizard, shift terkunci, keranjang kosong, uang kurang, selisih shift).
+     - Bad Path (3 skenario: reject akun spam, PIN void salah, password salah).
+     - Hasil: 3/3 Suite (18 skenario) LULUS 100% (PASS).
+  8. Status Kompilasi TypeScript Produksi:
+     - `npm run build:client` (tsc -b && vite build) = Exit code 0.
+     - `npm run build:server` (tsc) = Exit code 0.
+===============================================================================
 ```
+
 
 
 

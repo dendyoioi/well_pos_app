@@ -714,12 +714,12 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
         }
       } else if (operation === 'TRANSFER') {
         if (!sourceOutletId || !targetOutletId) {
-          setErrorMsg('Silakan pilih cabang asal dan cabang tujuan pengiriman transfer.');
+          setErrorMsg('Silakan pilih outlet asal dan outlet tujuan pengiriman transfer.');
           setSubmitting(false);
           return;
         }
         if (sourceOutletId === targetOutletId) {
-          setErrorMsg('Cabang asal dan cabang tujuan pengiriman tidak boleh sama!');
+          setErrorMsg('Outlet asal dan outlet tujuan pengiriman tidak boleh sama!');
           setSubmitting(false);
           return;
         }
@@ -732,7 +732,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
         // Cek peringatan jika transfer melebihi stok asal
         const overStock = transferActiveRows.find((r) => r.qtyTransfer > r.systemStock);
         if (overStock) {
-          setErrorMsg(`Stok "${overStock.name}" di cabang asal tidak mencukupi! Tersedia: ${overStock.systemStock} ${overStock.unit}, diminta transfer: ${overStock.qtyTransfer}.`);
+          setErrorMsg(`Stok "${overStock.name}" di outlet asal tidak mencukupi! Tersedia: ${overStock.systemStock} ${overStock.unit}, diminta transfer: ${overStock.qtyTransfer}.`);
           setSubmitting(false);
           return;
         }
@@ -809,7 +809,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                 {operation === 'OPNAME' && 'Hitung dan sesuaikan seluruh stok fisik dalam 1 sesi audit yang aman & atomik'}
                 {operation === 'STOCK_IN' && 'Pencatatan barang datang dari supplier / belanja stok masuk secara kolektif'}
                 {operation === 'STOCK_OUT' && 'Pencatatan pembersihan barang rusak, kadaluarsa, basi, atau operasional internal'}
-                {operation === 'TRANSFER' && 'Mutasi distribusi stok antar cabang toko atau gudang dalam 1 manifest pengiriman'}
+                {operation === 'TRANSFER' && 'Mutasi distribusi stok antar toko atau gudang dalam 1 manifest pengiriman'}
               </p>
             </div>
           </div>
@@ -2107,7 +2107,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                 ? 'Catatan umum stok masuk (misal: Kiriman batch 1)'
                 : operation === 'STOCK_OUT'
                 ? 'Catatan umum stok keluar (misal: Kerusakan akibat mati lampu freezer)'
-                : 'Catatan umum transfer stok (misal: Pengiriman stok mingguan antar cabang)'
+                : 'Catatan umum transfer stok (misal: Pengiriman stok mingguan antar toko)'
             }
             className="w-full sm:flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 font-medium"
           />

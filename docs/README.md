@@ -11,6 +11,8 @@ docs/
 ├── README.md                                  # Index navigasi & panduan penggunaan dokumentasi (file ini)
 ├── 00_PROJECT_CONTEXT.md                      # [LIVING] Master context, tech stack, skema DB, & coding standards
 ├── SANDBOX_PLAYBOOK.md                        # [LIVING] Panduan operasional & skenario QA Sandbox lokal
+├── TENANT_ONBOARDING_AND_TESTING_GUIDE.md     # [LIVING] Panduan alur pengujian manual & sales/marketing demo
+├── STATE_MACHINE_JOURNEY_SPEC.md              # [LIVING] Arsitektur State Machine (Happy, Sad, Bad Path & Empty State)
 │
 ├── epics/                                     # [LIVING] Spesifikasi fitur, checklist acceptance criteria, & roadmap
 │   ├── 00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md # Master registry seluruh EPIC-01 s.d EPIC-21 & changelog
@@ -52,6 +54,8 @@ docs/
 | :--- | :--- | :--- |
 | **Memahami Tech Stack, Aturan Coding & Arsitektur Sistem** | [`00_PROJECT_CONTEXT.md`](./00_PROJECT_CONTEXT.md) | Buka dokumen ini untuk melihat konfigurasi Express/Prisma/Postgres/Redis/React 19, aturan komponen UI (`<CurrencyInput />`, `<WhatsAppInput />`), relasi model database, dan security RLS. |
 | **Menjalankan / Menguji Sandbox Lokal** | [`SANDBOX_PLAYBOOK.md`](./SANDBOX_PLAYBOOK.md) | Berisi cara menjalankan sandbox via Docker, akun demo multi-role (Owner, Kasir, Gudang, Spv), dan skenario pengujian transaksi. |
+| **Alur Uji Manual End-to-End & Demo Marketing Tenant** | [`TENANT_ONBOARDING_AND_TESTING_GUIDE.md`](./TENANT_ONBOARDING_AND_TESTING_GUIDE.md) | Panduan langkah demi langkah pengujian semua fitur dari registrasi, setup toko, operasional kasir, hingga analisis bisnis untuk user guide dan presentasi calon tenant. |
+| **Arsitektur State Machine, Happy/Sad/Bad Path & Error Checks** | [`STATE_MACHINE_JOURNEY_SPEC.md`](./STATE_MACHINE_JOURNEY_SPEC.md) & [Visualizer Interaktif](./artifacts/state_machine_interactive.html) | Pemetaan lengkap transisi keadaan sistem, penanganan empty state, pengecekan dialog alert/toast, serta visualizer interaktif dengan simulasi event. |
 | **Mengecek Status Fitur & Rencana Modul Baru** | [`epics/00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md`](./epics/00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md) | Buka registry ini untuk melihat fitur yang sudah selesai (EPIC-01 s.d EPIC-21) dan tahapan selanjutnya (WhatsApp Gateway, Midtrans QRIS, Thermal Printer). |
 | **Mempelajari Kontrak Fitur Tertentu (cth: F&B Resep, CRM)** | `epics/EPIC-XX_*.md` | Spesifikasi fungsional detail, skema data terkait, dan acceptance criteria per modul. |
 | **Mengetahui Alasan Keputusan Desain Tertentu** | `decisions/ADR-*.md` | Membaca riwayat pertimbangan arsitektur teknis (ADR). |

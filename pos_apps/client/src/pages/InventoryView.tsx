@@ -1906,7 +1906,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <Warehouse className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h5 className="font-bold text-slate-700 text-base">Belum Ada Fasilitas Gudang Terdaftar</h5>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  Buat gudang utama untuk mulai menerima stok pasokan dari supplier dan mendistribusikannya ke outlet toko cabang.
+                  Buat gudang utama untuk mulai menerima stok pasokan dari supplier dan mendistribusikannya ke seluruh toko / outlet.
                 </p>
                 <button
                   type="button"

@@ -147,7 +147,7 @@ export const qrMenuService = {
       (t) => t.tenantId === tenantId && t.outletId === data.outletId && t.tableNumber === data.tableNumber.trim()
     );
     if (existing) {
-      throw new Error(`Nomor meja ${data.tableNumber} sudah terdaftar di cabang ini.`);
+      throw new Error(`Nomor meja ${data.tableNumber} sudah terdaftar di toko / outlet ini.`);
     }
 
     const now = new Date().toISOString();

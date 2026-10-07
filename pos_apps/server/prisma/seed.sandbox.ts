@@ -102,6 +102,12 @@ export async function runSandboxSeed() {
   if (existingTenant) {
     console.log('   Menghapus data transaksi dan relasi sandbox sebelumnya...');
     const tId = existingTenant.id;
+    await prisma.customerDebtPayment.deleteMany({ where: { tenantId: tId } });
+    await prisma.customerDebt.deleteMany({ where: { tenantId: tId } });
+    await prisma.attendance.deleteMany({ where: { tenantId: tId } });
+    await prisma.refundItem.deleteMany({ where: { tenantId: tId } });
+    await prisma.refund.deleteMany({ where: { tenantId: tId } });
+    await prisma.outletProduct.deleteMany({ where: { tenantId: tId } });
     await prisma.promotionUsage.deleteMany({ where: { tenantId: tId } });
     await prisma.customerPointLedger.deleteMany({ where: { tenantId: tId } });
     await prisma.promotion.deleteMany({ where: { tenantId: tId } });
@@ -264,6 +270,12 @@ export async function runSandboxSeed() {
       phone: '021-7198888',
       isActive: true,
       feesConfig: kemangFeesConfig,
+      paymentConfig: {
+        customerDebt: {
+          allowCredit: true,
+          defaultDueDays: 14,
+        },
+      },
     },
   });
 

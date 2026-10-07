@@ -50,17 +50,23 @@ Untuk memastikan seluruh modul sandbox berfungsi 100% tanpa regresi:
 npm run test:sandbox
 ```
 
-#### E. Smoke Test End-to-End 5 Alur Utama Produksi (Prioritas 3)
-Untuk memvalidasi integritas 5 alur bisnis kritis secara end-to-end (27 test case) sebelum rilis ke production:
+#### F. Visual Regression Testing — Tenant Onboarding & POS Lifecycle (3 Jalur FSM)
+Untuk memvalidasi antarmuka visual onboarding tenant, approval superadmin, pairing kasir, dan PWA:
 ```bash
-npm run test:smoke
+npm run test:visual
 ```
-Cakupan pengujian otomatis:
-1. **Flow 1**: Registrasi Mandiri Owner $\rightarrow$ Guard Tolak Login PENDING $\rightarrow$ Approval SuperAdmin $\rightarrow$ Login Owner $\rightarrow$ Pembuatan Toko Perdana $\rightarrow$ Pendaftaran Staf Kasir $\rightarrow$ Pairing Tablet/PC Kasir.
-2. **Flow 2**: Kasir PIN Login $\rightarrow$ Checkout Tunai (Cash) $\rightarrow$ Pemotongan Otomatis Bahan Baku Resep BOM (Biji Kopi) $\rightarrow$ Checkout QRIS (Non-Tunai).
-3. **Flow 3**: Verifikasi Laporan Finansial Real-Time di Backoffice Owner dengan format tanggal WIB konsisten (`toWibDateStr()`) serta Laporan Rekapitulasi Shift Kasir.
-4. **Flow 4**: Multi-Outlet & Cross-Tenant Security Isolation (Guard pembatalan open tab khusus SPV HTTP 403, penolakan akses outlet lintas-tenant HTTP 403).
-5. **Flow 5**: Self-Ordering QR Menu Pelanggan (Tanpa Login) $\rightarrow$ Live QR Orders Feed Kasir $\rightarrow$ Dapur update status `IN_PROGRESS` $\rightarrow$ Pelunasan di Terminal Kasir POS $\rightarrow$ Integritas status database `PAID`.
+
+#### G. Visual Regression Testing — Resep F&B (BOM) & Pemotongan Stok Otomatis (3 Jalur FSM)
+Untuk memvalidasi racik formula resep bahan baku, live HPP, order kasir tablet, verifikasi matematika saldo stok terpotong, empty state, dan validasi takaran:
+```bash
+npm run test:visual:recipes
+```
+
+#### H. BDD Visual Regression Testing — Siklus Shift Kasir, Petty Cash & Rekonsiliasi Z-Report (Gherkin Syntax)
+Untuk memvalidasi pembukaan shift modal awal, pencatatan kas masuk / kas keluar petty cash, kalkulator pecahan uang kertas/koin (*cash denomination counter*), toleransi selisih fisik, dan proteksi shift terkunci:
+```bash
+npm run test:visual:shift
+```
 
 ---
 
@@ -501,6 +507,60 @@ Alur Transaksi:
    * Klik tombol **"Kelola QRIS & Rekening Platform"**:
      - Admin dapat memperbarui nama bank, nomor rekening, nama pemilik rekening, serta gambar/string QRIS Statis platform.
      - Klik **"Simpan Pengaturan Pembayaran"** ➔ Konfigurasi langsung terpropagasi ke seluruh tenant merchant saat mereka membuka modal top-up.
+
+---
+
+#### Skenario 11: Otomasi BDD Split Bill, Multi-Tender & Siklus Piutang Kasbon CRM (Langkah 4)
+**Tujuan**: Menguji implementasi formal BDD Gherkin (dwibahasa ID & EN) untuk fitur pemecahan tagihan meja (`SplitBillModal`), pelunasan multi-tender (Tunai + QRIS), pencatatan piutang kasbon pelanggan (`CUSTOMER_DEBT`), dan penagihan pelunasan di Backoffice CRM dengan proteksi 3 jalur pengujian (*Happy, Sad, Bad Path*).
+
+* **Berkas Spesifikasi BDD**:
+  - `features/split_bill_and_customer_debt.feature` (Bahasa Indonesia)
+  - `features/split_bill_and_customer_debt.en.feature` (English)
+
+1. **Jalankan Otomasi E2E Visual Playwright**:
+   ```bash
+   npm run test:visual:split-debt
+   ```
+2. **Cakupan 3 Jalur Pengujian BDD Gherkin**:
+   * 🟢 **Happy Path**:
+     - Kasir membuka modal pecah tagihan meja (`SplitBillModal`), memilih mode Bagi Rata (2 orang), lalu menyelesaikan pembayaran porsi pertama dengan metode **Multi-Tender** (Tunai Rp 25.000 + QRIS Dinamis Rp 25.600) -> Transaksi sukses berstatus `PAID`.
+   * 🟡 **Sad Path**:
+     - Kasir memilih metode **Kasbon (DEBT)** tanpa memilih pelanggan -> Tombol submit terkunci (*disabled*) dengan tooltip peringatan.
+     - Kasir memilih pelanggan **Budi Santoso**, mengatur jatuh tempo +7 hari -> Checkout sukses berstatus `UNPAID`.
+     - Owner membuka Backoffice CRM **Buku Kasbon & Piutang** (`?tab=customers&subtab=debts`), membuka modal pelunasan, memilih bayar lunas 100% -> Status piutang berhasil diperbarui menjadi `LUNAS / PAID`.
+   * 🔴 **Bad Path**:
+     - Kasir memilih metode **Multi-Tender**, memasukkan porsi tunai Rp 25.000, namun nominal uang fisik yang diterima kasir hanya Rp 10.000 (< Rp 25.000) -> Sistem menampilkan warning merah selisih `- Rp 15.000` dan mengunci tombol bayar untuk mencegah manipulasi selisih kas.
+3. **Artefak Screenshot Visual Tersimpan**:
+   * Seluruh bukti tangkapan layar responsif otomatis tersimpan rapi di:  
+     `docs/artifacts/visual_split_debt/` (`happy_path/01-05`, `sad_path/01-06`, `bad_path/01`).
+
+---
+
+#### Skenario 12: Otomasi BDD End of Shift, Z-Report & Audit Selisih Kas Laci (Langkah 5)
+**Tujuan**: Menguji siklus penutupan shift kasir (*CloseShiftModal*), kalkulator pecahan uang, rekonsiliasi kas fisik buta (*Blind Cash Count*), penerbitan struk resmi Z-Report, serta pencatatan audit log selisih kasir di Backoffice Owner (`?tab=shifts`).
+
+* **Berkas Spesifikasi BDD**:
+  - `features/end_of_shift_and_financial_audit.feature` (Bahasa Indonesia)
+  - `features/end_of_shift_and_financial_audit.en.feature` (English)
+* **Panduan Sales/Marketing Terkait**:
+  - `docs/MARKETING_KIT_SALES_PLAYBOOK.md` (Pilar 5: Rekonsiliasi Finansial Laci Kas & Audit Kasir).
+
+1. **Jalankan Otomasi E2E Visual Playwright**:
+   ```bash
+   npm run test:visual:shift-audit
+   ```
+2. **Cakupan 3 Jalur Pengujian BDD Gherkin**:
+   * 🟢 **Happy Path**:
+     - Kasir membuka modal tutup shift, memasukkan uang fisik laci pas dengan nilai sistem (Expected Cash).
+     - Status selisih menampilkan badge hijau *"Status Kas: COCOK (PAS)"*, menekan tombol kunci shift, slip Z-Report resmi terbit, dan sesi shift di Backoffice Shifts Audit tercatat berstatus `SEIMBANG (Rp 0)`.
+   * 🟡 **Sad Path**:
+     - Kasir memasukkan uang fisik kurang Rp 20.000 dari ekspektasi sistem.
+     - Sistem menampilkan peringatan merah *"Status Kas: KURANG (DEFISIT)"* sebesar `-Rp 20.000`, kasir mengisi catatan serah terima wajib, slip Z-Report mencatat defisit beserta catatan, dan Backoffice Shifts Audit menandai baris sesi dengan status `KURANG (SHORT)`.
+   * 🔴 **Bad Path**:
+     - Pengujian proteksi terhadap request uang fisik negatif (`actualCash: -50000`) ditolak tegas oleh sistem dengan status HTTP 400 Bad Request (*"Validasi uang fisik gagal"*).
+3. **Artefak Screenshot Visual Tersimpan**:
+   * Seluruh bukti tangkapan layar responsif otomatis tersimpan rapi di:  
+     `docs/artifacts/visual_shift_audit/` (`happy_path/01-05`, `sad_path/01-06`, `bad_path/01`).
 
 ---
 

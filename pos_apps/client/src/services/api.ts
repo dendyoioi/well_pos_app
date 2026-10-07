@@ -2233,7 +2233,7 @@ export const api = {
   },
 
   // ==========================================
-  // STOCK TRANSFERS (TRANSFER ANTAR CABANG)
+  // STOCK TRANSFERS (TRANSFER ANTAR TOKO / OUTLET)
   // ==========================================
   getStockTransfers: async (params?: {
     sourceOutletId?: string;

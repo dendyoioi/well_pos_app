@@ -46,7 +46,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   const displayValue = value === '' || value === undefined || value === null
     ? ''
-    : (Number(value) === 0 && placeholder ? '' : formatThousands(value));
+    : (Number(value) === 0 ? '0' : formatThousands(value));
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawDigits = e.target.value.replace(/\D/g, '');

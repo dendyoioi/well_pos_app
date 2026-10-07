@@ -43,7 +43,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     category: 'OWNER_ADMIN',
     categoryLabel: 'Setup & Konfigurasi',
     targetRoles: ['OWNER', 'ADMIN'],
-    shortDesc: 'Alur pendaftaran akun merchant dan panduan 5-langkah wizard untuk mendirikan toko cabang pertama.',
+    shortDesc: 'Alur pendaftaran akun merchant dan panduan 5-langkah wizard untuk mendirikan toko perdana.',
     actionTab: 'outlets',
     actionLabel: 'Buka Kelola Outlet',
     image: '/guide/onboarding-profil-toko.png',
@@ -54,7 +54,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         title: 'Registrasi Akun Pemilik (Owner)',
         description:
           'Buka landing page resmi Well POS, klik "Coba Gratis" atau "Buka Toko", lalu isi nama pemilik, email bisnis, dan kata sandi.',
-        highlight: 'Email terdaftar menjadi kredensial super-tenant untuk seluruh cabang.',
+        highlight: 'Email terdaftar menjadi kredensial super-tenant untuk seluruh toko / outlet.',
       },
       {
         number: 2,
@@ -70,7 +70,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Selesai wizard, toko Anda langsung aktif dengan status siap operasional. Anda dapat langsung membuka Mesin Kasir (POS) atau melengkapi data produk.',
       },
     ],
-    tips: 'Jika Anda memiliki lebih dari 1 outlet cabang, tambahkan outlet baru kapan saja melalui menu Pengaturan Resto > Profil & Outlet Toko.',
+    tips: 'Jika Anda memiliki lebih dari 1 unit toko fisik, tambahkan outlet baru kapan saja melalui menu Pengaturan Resto > Profil & Outlet Toko.',
   },
   {
     id: 'products',
@@ -113,9 +113,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         number: 5,
-        title: 'Fitur "Ambil dari Master Katalog" untuk Cabang Baru',
+        title: 'Fitur "Ambil dari Master Katalog" untuk Toko Baru',
         description:
-          'Saat membuka cabang toko baru, Anda tidak perlu mengetik ulang katalog produk. Cukup klik tombol "Ambil dari Master Katalog" di cabang baru untuk menyalin seluruh menu pusat dengan 1-klik.',
+          'Saat membuka toko baru, Anda tidak perlu mengetik ulang katalog produk. Cukup klik tombol "Ambil dari Master Katalog" di toko baru untuk menyalin seluruh menu pusat dengan 1-klik.',
       },
     ],
     tips: 'Selalu lengkapi estimasi HPP (modal bahan baku). Laporan Analisis Produk & Menu (EPIC-09) otomatis menampilkan persentase margin laba bersih dan mengklasifikasikan menu Pareto terlaris Anda.',
@@ -127,7 +127,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     category: 'WAREHOUSE',
     categoryLabel: 'Gudang & Logistik',
     targetRoles: ['OWNER', 'ADMIN', 'WAREHOUSE'],
-    shortDesc: 'Tata kelola pusat pasokan dan segregasi operasional antara gudang pusat logistik dengan toko cabang penjualan.',
+    shortDesc: 'Tata kelola pusat pasokan dan segregasi operasional antara gudang pusat logistik dengan toko fisik penjualan.',
     actionTab: 'transfers',
     actionLabel: 'Buka Mutasi & Transfer Stok',
     image: '/guide/onboarding-mode-gudang.png',
@@ -148,10 +148,10 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         number: 3,
-        title: 'Transfer Pasokan Antar Cabang',
+        title: 'Transfer Pasokan Antar Toko & Gudang',
         description:
-          'Gudang menerima permintaan barang dari toko cabang, mengirimkan pasokan (Dispatch), dan sistem mencatat mutasi stok secara otomatis pada buku besar persediaan (Ledger).',
-        highlight: 'Sistem mencatat audit trail permanen: asal barang, tujuan cabang, dan staf penanggung jawab.',
+          'Gudang menerima permintaan barang dari toko fisik, mengirimkan pasokan (Dispatch), dan sistem mencatat mutasi stok secara otomatis pada buku besar persediaan (Ledger).',
+        highlight: 'Sistem mencatat audit trail permanen: asal barang, tujuan toko, dan staf penanggung jawab.',
       },
     ],
     tips: 'Sesuai ADR-002, pencatatan mutasi stok di Well POS menjamin integritas riwayat ledger permanen (immutable audit trail).',
@@ -170,7 +170,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       {
         number: 1,
-        title: 'Pilih Toko Cabang yang Dikonfigurasi',
+        title: 'Pilih Toko yang Dikonfigurasi',
         description:
           'Buka Pengaturan Resto > Pajak (PB1) & Biaya Layanan. Pastikan outlet aktif yang dipilih sudah sesuai dengan lokasi toko Anda.',
       },
@@ -419,13 +419,13 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     actionTab: 'stock_movements',
     actionLabel: 'Buka Mutasi Stok',
     image: '/guide/transfer-mutasi-stok.png',
-    imageCaption: 'Form Mutasi & Transfer Stok: Pemindahan bahan baku dari Gudang Pusat ke Toko Cabang.',
+    imageCaption: 'Form Mutasi & Transfer Stok: Pemindahan bahan baku dari Gudang Pusat ke Toko Tujuan.',
     steps: [
       {
         number: 1,
         title: 'Buat Dokumen Permintaan Pasokan',
         description:
-          'Toko cabang yang kekurangan bahan baku (misal biji kopi atau susu kemasan) membuat form transfer stok dengan menentukan gudang sumber dan kuantitas.',
+          'Toko fisik yang kekurangan bahan baku (misal biji kopi atau susu kemasan) membuat form transfer stok dengan menentukan gudang sumber dan kuantitas.',
       },
       {
         number: 2,
@@ -435,9 +435,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         number: 3,
-        title: 'Konfirmasi Penerimaan di Cabang Tujuan',
+        title: 'Konfirmasi Penerimaan di Toko Tujuan',
         description:
-          'Toko cabang menerima barang, menghitung jumlah fisik, lalu menekan tombol "Konfirmasi Penerimaan". Saldo stok kedua cabang otomatis disesuaikan di ledger.',
+          'Toko penerima menerima barang, menghitung jumlah fisik, lalu menekan tombol "Konfirmasi Penerimaan". Saldo stok kedua outlet otomatis disesuaikan di ledger.',
       },
     ],
     tips: 'Sesuai aturan Well POS, stok bahan baku dapur ditoleransi bernilai negatif secara kontekstual di service layer (ADR-002) agar pelayanan pesanan pelanggan tidak macet saat operasional puncak.',
@@ -483,27 +483,27 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   },
   {
     id: 'staff_roles',
-    title: '13. Manajemen Staf, Hak Akses & Multi-Cabang',
+    title: '13. Manajemen Staf, Hak Akses & Multi-Outlet',
     category: 'OWNER_ADMIN',
     categoryLabel: 'Setup & Konfigurasi',
     targetRoles: ['OWNER', 'ADMIN'],
-    shortDesc: 'Pengaturan hierarki pengguna, pembatasan wewenang kasir/gudang, dan isolasi data per cabang toko.',
+    shortDesc: 'Pengaturan hierarki pengguna, pembatasan wewenang kasir/gudang, dan isolasi data per toko / outlet.',
     actionTab: 'staff_users',
     actionLabel: 'Buka Kelola Staf',
     image: '/guide/kelola-staf-hak-akses.png',
-    imageCaption: 'Daftar Staf Toko: Penugasan peran, PIN kasir, dan penguncian cabang kerja.',
+    imageCaption: 'Daftar Staf Toko: Penugasan peran, PIN kasir, dan penguncian toko tempat bertugas.',
     steps: [
       {
         number: 1,
         title: 'Pahami Hierarki Peran Well POS',
         description:
-          '• OWNER: Hak mutlak penuh atas seluruh cabang, paket langganan, dan laporan keuangan.\n• ADMIN: Akses konfigurasi backoffice dan kelola master produk.\n• SUPERVISOR: Akses pos terminal, otorisasi PIN void, audit shift, dan laporan operasional.\n• CASHIER: Terkunci pada terminal mesin kasir dan shift harian cabang bertugas.\n• WAREHOUSE: Terkunci pada modul gudang logistik, kartu stok, PO, dan vendor.',
+          '• OWNER: Hak mutlak penuh atas seluruh toko / outlet, paket langganan, dan laporan keuangan.\n• ADMIN: Akses konfigurasi backoffice dan kelola master produk.\n• SUPERVISOR: Akses pos terminal, otorisasi PIN void, audit shift, dan laporan operasional.\n• CASHIER: Terkunci pada terminal mesin kasir dan shift harian outlet bertugas.\n• WAREHOUSE: Terkunci pada modul gudang logistik, kartu stok, PO, dan vendor.',
       },
       {
         number: 2,
         title: 'Tambah Staf Baru & Berikan PIN',
         description:
-          'Buka Manajemen Staf > Kelola Staf > Tambah Staf. Masukkan nama lengkap, email, nomor WhatsApp (+62), peran, cabang penugasan, dan 6 digit PIN kasir.',
+          'Buka Manajemen Staf > Kelola Staf > Tambah Staf. Masukkan nama lengkap, email, nomor WhatsApp (+62), peran, outlet penugasan, dan 6 digit PIN kasir.',
       },
       {
         number: 3,
@@ -918,7 +918,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         number: 1,
         title: 'Konfigurasi Jadwal Jam Kerja & Toleransi Menit Outlet',
         description:
-          'Owner atau Admin dapat menentukan jam operasional masuk toko (misal 08:00) dan "Toleransi Keterlambatan" (misal 15 menit) di pengaturan cabang. Karyawan yang absen hingga 08:15 tetap berstatus Tepat Waktu (PRESENT), sedangkan absen lewat dari 08:15 otomatis tercatat Terlambat (LATE).',
+          'Owner atau Admin dapat menentukan jam operasional masuk toko (misal 08:00) dan "Toleransi Keterlambatan" (misal 15 menit) di pengaturan outlet. Karyawan yang absen hingga 08:15 tetap berstatus Tepat Waktu (PRESENT), sedangkan absen lewat dari 08:15 otomatis tercatat Terlambat (LATE).',
         highlight: 'Toleransi dinamis memberikan fleksibilitas operasional tanpa mengorbankan ketertiban kerja.',
       },
       {
@@ -965,14 +965,14 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         number: 1,
         title: 'Memahami 5 Tingkatan Peran Baku (Standard RBAC)',
         description:
-          'Well POS menerapkan pembagian wewenang ketat: (1) OWNER memiliki akses penuh 100% termasuk langganan & hapus cabang, (2) ADMIN mengelola operasional katalog, promo, dan staf, (3) SUPERVISOR mengawasi kasir dan otorisasi PIN void/diskon, (4) CASHIER terisolasi pada penjualan dan pembayaran, dan (5) WAREHOUSE terisolasi pada persediaan barang, PO, dan transfer.',
+          'Well POS menerapkan pembagian wewenang ketat: (1) OWNER memiliki akses penuh 100% termasuk langganan & hapus outlet, (2) ADMIN mengelola operasional katalog, promo, dan staf, (3) SUPERVISOR mengawasi kasir dan otorisasi PIN void/diskon, (4) CASHIER terisolasi pada penjualan dan pembayaran, dan (5) WAREHOUSE terisolasi pada persediaan barang, PO, dan transfer.',
         highlight: 'Isolasi wewenang mencegah kebocoran informasi margin laba dan membatasi manipulasi data operasional.',
       },
       {
         number: 2,
         title: 'Pendaftaran Akun Karyawan & Penugasan Peran',
         description:
-          'Buka menu Staf & Pengguna > Tambah Staf. Masukkan nama, email/username, tentukan peran yang sesuai tanggung jawab kerja, pilih cabang outlet tugas, dan buat 6-digit PIN login untuk kasir/supervisor.',
+          'Buka menu Staf & Pengguna > Tambah Staf. Masukkan nama, email/username, tentukan peran yang sesuai tanggung jawab kerja, pilih outlet tugas, dan buat 6-digit PIN login untuk kasir/supervisor.',
       },
       {
         number: 3,

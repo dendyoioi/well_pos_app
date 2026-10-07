@@ -339,7 +339,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     { id: 'pkg-starter-250', name: 'Starter 250', tokens: 250, price: 0, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
     { id: 'pkg-basic-1000', name: 'Basic 1.000', tokens: 1000, price: 0, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
     { id: 'pkg-pro-2500', name: 'Pro 2.500', tokens: 2500, price: 0, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
-    { id: 'pkg-enterprise-5000', name: 'Enterprise 5.000', tokens: 5000, price: 0, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
+    { id: 'pkg-enterprise-5000', name: 'Enterprise 5.000', tokens: 5000, price: 0, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-toko / outlet dengan volume transaksi masif' },
   ]);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const isPackageModalOpenRef = useRef(false);

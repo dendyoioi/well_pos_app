@@ -120,7 +120,7 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
   {
     id: 'stock_view',
     label: 'Lihat Saldo Stok Bahan Baku',
-    description: 'Melihat sisa persediaan fisik di gudang utama maupun cabang toko',
+    description: 'Melihat sisa persediaan fisik di gudang utama maupun toko / outlet',
     category: 'INVENTORY_STOCK',
   },
   {
@@ -137,8 +137,8 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
   },
   {
     id: 'stock_transfer',
-    label: 'Transfer Stok Antar Cabang',
-    description: 'Mengirim dan menerima mutasi bahan baku antar lokasi cabang',
+    label: 'Transfer Stok Antar Toko / Outlet',
+    description: 'Mengirim dan menerima mutasi bahan baku antar lokasi outlet',
     category: 'INVENTORY_STOCK',
   },
 
@@ -184,7 +184,7 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
   {
     id: 'settings_staff',
     label: 'Kelola Akun Pegawai & PIN Staf',
-    description: 'Menambah staf baru, mengatur PIN kasir, dan penugasan cabang',
+    description: 'Menambah staf baru, mengatur PIN kasir, dan penugasan outlet',
     category: 'SETTINGS_GOVERNANCE',
   },
   {
@@ -255,7 +255,7 @@ export const DEFAULT_FNB_ROLES: RolePermissions[] = [
   {
     id: 'role-supervisor',
     name: 'Supervisor / Manajer Toko',
-    description: 'Mengelola operasional harian cabang, otorisasi void/diskon kasir, absensi, dan laporan shift',
+    description: 'Mengelola operasional harian toko, otorisasi void/diskon kasir, absensi, dan laporan shift',
     status: true,
     isDefault: true,
     permissions: [

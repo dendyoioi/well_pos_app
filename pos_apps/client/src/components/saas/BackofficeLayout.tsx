@@ -481,7 +481,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   activeTab === 'transfers' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Transfer Antar Cabang
+                Transfer Antar Toko
               </button>
               <button
                 onClick={() => handleSelectTab('stock_movements')}
@@ -1155,7 +1155,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               </p>
               <p>
                 {activeOutlet?.isWarehouse
-                  ? 'Terhubung langsung dengan alokasi pasokan seluruh toko cabang.'
+                  ? 'Terhubung langsung dengan alokasi pasokan seluruh toko / outlet.'
                   : 'Customer Support 24/7 aktif mendampingi operasional toko Anda.'}
               </p>
               <button
@@ -1416,8 +1416,8 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             )}
           </nav>
         )}
-        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) — Khusus Owner & Supervisor */}
-        {canViewGuide && (
+        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) — Khusus Owner & Supervisor (Sembunyikan di tab POS agar tidak menutupi cart) */}
+        {canViewGuide && activeTab !== 'pos' && (
           <FloatingGuideWidget
             activeTab={activeTab}
             onOpenGuide={(sec) => {

@@ -299,7 +299,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
 
       const res = await api.createStockTransfer(payload);
       if (res.status === 'success') {
-        dialog.toast('Draf transfer persediaan antar cabang berhasil dibuat', 'success');
+        dialog.toast('Draf transfer persediaan antar toko berhasil dibuat', 'success');
         setCreateModalOpen(false);
         fetchTransfers();
       } else {
@@ -338,7 +338,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
     }
   };
 
-  // Confirm Receive Transfer (Terima Barang di Cabang Tujuan)
+  // Confirm Receive Transfer (Terima Barang di Toko Tujuan)
   const handleConfirmReceive = async () => {
     if (!receivingTransfer) return;
     setSubmittingReceive(true);
@@ -348,7 +348,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
         dialog.toast(`Transfer #${receivingTransfer.transferNumber} berhasil diterima di ${receivingTransfer.targetOutlet?.name}!`, 'success');
         dialog.alert({
           title: 'Penerimaan Berhasil',
-          message: `Transfer #${receivingTransfer.transferNumber} berhasil diterima! Stok persediaan telah otomatis ditambahkan ke cabang tujuan (${receivingTransfer.targetOutlet?.name}).`,
+          message: `Transfer #${receivingTransfer.transferNumber} berhasil diterima! Stok persediaan telah otomatis ditambahkan ke toko tujuan (${receivingTransfer.targetOutlet?.name}).`,
           variant: 'success',
         });
         setReceiveModalOpen(false);
@@ -373,10 +373,10 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
             <span className="p-2 rounded-xl bg-blue-50 text-blue-900 border border-blue-100">
               <ArrowLeftRight className="w-5 h-5 text-blue-900" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900">Transfer Antar Cabang &amp; Gudang</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900">Transfer Antar Toko &amp; Gudang</h1>
           </div>
           <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
-            Pantau pengiriman persediaan antar toko dan gudang, alokasi stok dalam perjalanan (In-Transit), dan verifikasi penerimaan di cabang tujuan.
+            Pantau pengiriman persediaan antar toko dan gudang, alokasi stok dalam perjalanan (In-Transit), dan verifikasi penerimaan di toko tujuan.
           </p>
         </div>
 
@@ -476,7 +476,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nomor transfer, nama cabang asal atau tujuan..."
+            placeholder="Cari nomor transfer, nama toko asal atau tujuan..."
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all"
           />
         </div>
@@ -676,9 +676,9 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                   <ArrowLeftRight className="w-5 h-5 text-blue-900" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-blue-950 text-base">Buat Transfer Antar Cabang</h3>
+                  <h3 className="font-extrabold text-blue-950 text-base">Buat Transfer Antar Toko</h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Alokasikan stok persediaan dari gudang/toko asal ke cabang tujuan
+                    Alokasikan stok persediaan dari gudang/toko asal ke toko tujuan
                   </p>
                 </div>
               </div>
@@ -903,7 +903,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
               <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex items-center justify-between text-xs">
                 <div>
                   <span className="text-slate-400 font-semibold block uppercase text-[10px]">
-                    Cabang Asal (Pengirim)
+                    Toko / Outlet Asal (Pengirim)
                   </span>
                   <span className="font-bold text-slate-900 text-sm">
                     {selectedTransfer.sourceOutlet?.name}
@@ -915,7 +915,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                 </div>
                 <div className="text-right">
                   <span className="text-slate-400 font-semibold block uppercase text-[10px]">
-                    Cabang Tujuan (Penerima)
+                    Toko / Outlet Tujuan (Penerima)
                   </span>
                   <span className="font-bold text-slate-900 text-sm">
                     {selectedTransfer.targetOutlet?.name}
@@ -1024,7 +1024,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
       <ConfirmModal
         isOpen={receiveModalOpen}
         title="Konfirmasi Penerimaan Transfer"
-        message={`Konfirmasi penerimaan barang untuk transfer #${receivingTransfer?.transferNumber}? Stok akan langsung ditambahkan ke cabang penerima (${receivingTransfer?.targetOutlet?.name}) dan transfer selesai.`}
+        message={`Konfirmasi penerimaan barang untuk transfer #${receivingTransfer?.transferNumber}? Stok akan langsung ditambahkan ke toko penerima (${receivingTransfer?.targetOutlet?.name}) dan transfer selesai.`}
         confirmText="Ya, Terima Barang"
         cancelText="Kembali"
         variant="success"

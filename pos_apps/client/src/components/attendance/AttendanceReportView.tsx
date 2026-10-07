@@ -345,7 +345,7 @@ export const AttendanceReportView: React.FC = () => {
         {/* Filter Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 text-xs">
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Pilih Cabang (Outlet):</label>
+            <label className="block font-bold text-slate-700 mb-1">Pilih Toko / Outlet:</label>
             <select
               value={selectedOutletId}
               onChange={(e) => handleOutletChange(e.target.value)}

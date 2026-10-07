@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { QrCode, ArrowRight, X, Clock, UtensilsCrossed } from 'lucide-react';
+import { QrCode, ArrowRight, X, Clock, UtensilsCrossed, WifiOff, CloudUpload, RefreshCw } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import type { CartItem, PaymentPayload, Order, HoldOrder, OrderChannel, OpenTabOrder, OpenTabPayload } from '../types/order';
 import type { Shift } from '../types/shift';
@@ -38,6 +38,15 @@ import { usePlan } from '../hooks/usePlan';
 import { useDialog } from '../context/DialogContext';
 import { api, customerApi, authStorage, attendanceApi } from '../services/api';
 import type { User } from '../types/auth';
+import {
+  saveOfflineOrder,
+  getPendingOfflineOrders,
+  getOfflineQueueCount,
+  markOfflineOrderSyncing,
+  markOfflineOrderSuccess,
+  markOfflineOrderFailed,
+  clearSyncedOfflineOrders,
+} from '../utils/offlineQueue';
 
 interface PosTerminalViewProps {
   activeOutlet?: Outlet | null;
@@ -588,6 +597,20 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
+  // Offline-First PWA Sync State
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [pendingOfflineCount, setPendingOfflineCount] = useState<number>(0);
+  const [isSyncingQueue, setIsSyncingQueue] = useState<boolean>(false);
+
+  const refreshOfflineQueueCount = useCallback(async () => {
+    try {
+      const stats = await getOfflineQueueCount(activeOutlet?.id);
+      setPendingOfflineCount(stats.pending);
+    } catch {
+      // Ignored
+    }
+  }, [activeOutlet?.id]);
+
   // Kitchen Ticket (KDS) Modal State
   const [kitchenTicketOpen, setKitchenTicketOpen] = useState(false);
   const [kitchenTicketData, setKitchenTicketData] = useState<KitchenTicketData | null>(null);
@@ -765,6 +788,90 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart, currentShift, products, paymentModalOpen, xReportModalOpen, closeShiftModalOpen]);
+
+  // Handler Sinkronisasi Antrean Offline PWA
+  const handleSyncOfflineQueue = useCallback(async () => {
+    if (isSyncingQueue || !navigator.onLine) return;
+    setIsSyncingQueue(true);
+    try {
+      const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id);
+      if (pendingOrders.length === 0) {
+        await refreshOfflineQueueCount();
+        setIsSyncingQueue(false);
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const offlineOrder of pendingOrders) {
+        try {
+          await markOfflineOrderSyncing(offlineOrder.offlineId);
+          const res = await api.checkoutOrder(offlineOrder.payload);
+          if (res.status === 'success' && res.data) {
+            await markOfflineOrderSuccess(offlineOrder.offlineId, res.data);
+            successCount++;
+          } else {
+            await markOfflineOrderFailed(offlineOrder.offlineId, res.message || 'Gagal sinkron');
+            failCount++;
+          }
+        } catch (syncErr: any) {
+          await markOfflineOrderFailed(offlineOrder.offlineId, syncErr.message || 'Network error');
+          failCount++;
+        }
+      }
+
+      await clearSyncedOfflineOrders();
+      await refreshOfflineQueueCount();
+
+      if (successCount > 0) {
+        dialog.toast(`${successCount} transaksi offline berhasil disinkronkan ke server.`, 'success');
+        if (activeOutlet?.id) {
+          loadProducts(activeOutlet.id);
+        }
+        loadCurrentShift();
+        loadTablesAndOrders();
+      }
+      if (failCount > 0) {
+        dialog.toast(`${failCount} transaksi offline belum berhasil disinkronkan. Akan dicoba kembali otomatis.`, 'error');
+      }
+    } catch (err: any) {
+      console.error('Error saat menyinkronkan antrean offline:', err);
+    } finally {
+      setIsSyncingQueue(false);
+    }
+  }, [isSyncingQueue, activeOutlet?.id, dialog, loadProducts, loadCurrentShift, loadTablesAndOrders, refreshOfflineQueueCount]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      refreshOfflineQueueCount();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    refreshOfflineQueueCount();
+
+    const syncInterval = setInterval(() => {
+      if (navigator.onLine) {
+        getOfflineQueueCount(activeOutlet?.id).then((stats) => {
+          setPendingOfflineCount(stats.pending);
+          if (stats.pending > 0 && !isSyncingQueue) {
+            handleSyncOfflineQueue();
+          }
+        });
+      }
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(syncInterval);
+    };
+  }, [activeOutlet?.id, handleSyncOfflineQueue, isSyncingQueue, refreshOfflineQueueCount]);
 
   const handleScanBarcode = (code: string): { success: boolean; productName?: string } => {
     const cleanCode = code.trim().toLowerCase();
@@ -1375,7 +1482,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       triggerProUpgrade('Bagi Tagihan (Split Bill)');
       return;
     }
-    setPaymentModalOpen(true);
+    setSplitBillModalOpen(true);
   };
 
   // Checkout Execution
@@ -1436,10 +1543,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       checkoutServiceCharge += onDemandFeesTotal;
 
       const targetOrderId = activePulledOrder?.id || activeOpenTab?.id || undefined;
-
       const susulanNote = activeOpenTab?.notes || (activePulledOrder?.invoiceNumber ? `Ref Faktur #${activePulledOrder.invoiceNumber}` : undefined);
+      const grandTotal = discountedSubtotal + checkoutTaxAmount + checkoutServiceCharge;
 
-      const res = await api.checkoutOrder({
+      const checkoutPayload = {
         items: cart.map((i) => ({
           productId: i.product.id,
           quantity: i.quantity,
@@ -1461,29 +1568,163 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         existingOrderId: targetOrderId,
         payment,
         payments: payments && payments.length > 0 ? payments : undefined,
-      });
+      };
 
-      if (res.status === 'success' && res.data) {
-        setLastOrder(res.data);
+      const allPayments: PaymentPayload[] = payments && payments.length > 0 ? payments : (payment ? [payment] : []);
+      const requiresInternet = allPayments.some((p) => p.method === 'QRIS');
+
+      if (!navigator.onLine && requiresInternet) {
+        dialog.alert({
+          title: 'Koneksi Offline',
+          message: 'Pembayaran QRIS memerlukan koneksi internet aktif untuk verifikasi gateway. Silakan gunakan metode pembayaran Tunai (Cash) saat offline.',
+          variant: 'warning',
+        });
+        setCheckoutLoading(false);
+        return;
+      }
+
+      const completeOfflineOrder = async () => {
+        const offlineRefId = `OFFLINE-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const randomSeq = Math.floor(1000 + Math.random() * 9000);
+        const tempInvoice = `INV/OFFLINE/${yyyy}${mm}${dd}/${randomSeq}`;
+
+        const tempOrderData: Order = {
+          id: offlineRefId,
+          invoiceNumber: tempInvoice,
+          channel: targetChannel as any,
+          orderType: targetChannel as any,
+          tableNumber: tableNumber ? tableNumber.trim() : null,
+          subtotal,
+          totalAmount: subtotal,
+          grandTotal,
+          discountAmount: totalDiscount,
+          taxAmount: checkoutTaxAmount,
+          serviceCharge: checkoutServiceCharge,
+          paymentStatus: 'PAID',
+          status: 'PAID',
+          cashierId: activeUser?.id || '',
+          notes: susulanNote ? `${susulanNote} [OFFLINE]` : '[OFFLINE]',
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+          outletId: activeOutlet?.id || '',
+          outlet: activeOutlet
+            ? {
+                name: activeOutlet.name,
+                address: activeOutlet.address || null,
+                phone: activeOutlet.phone || null,
+                receiptConfig: (activeOutlet as any).receiptConfig,
+              }
+            : undefined,
+          cashier: {
+            name: activeUser?.name || 'Kasir',
+          },
+          user: {
+            id: activeUser?.id || '',
+            name: activeUser?.name || 'Kasir',
+            role: (currentUserRole || 'CASHIER') as any,
+          },
+          orderItems: cart.map((i, idx) => {
+            const unitPrice = i.customPrice || i.product.price || i.product.basePrice || 0;
+            return {
+              id: `item-${offlineRefId}-${idx}`,
+              productId: i.product.id,
+              quantity: i.quantity,
+              unitPrice,
+              subtotal: (unitPrice - (i.discountAmount || 0)) * i.quantity,
+              discountAmount: i.discountAmount || 0,
+              costPrice: Number(i.product.costPrice || 0),
+              product: {
+                name: i.product.name,
+                sku: i.product.sku,
+                barcode: i.product.barcode,
+                unit: i.product.unit || 'Pcs',
+              },
+            };
+          }),
+          payments: allPayments.map((p, pIdx) => ({
+            id: `pay-${offlineRefId}-${pIdx}`,
+            method: p.method,
+            paymentMethod: p.method,
+            amountPaid: p.amountPaid,
+            amount: p.amountPaid,
+            changeGiven: p.changeGiven || 0,
+            qrisReference: p.qrisReference || null,
+            status: 'CAPTURED',
+            createdAt: now.toISOString(),
+          })),
+        };
+
+        await saveOfflineOrder({
+          offlineId: offlineRefId,
+          createdAt: now.toISOString(),
+          outletId: activeOutlet?.id,
+          shiftId: currentShift?.id,
+          cashierName: activeUser?.name || 'Kasir',
+          payload: {
+            ...checkoutPayload,
+            offlineReferenceId: offlineRefId,
+          },
+          tempOrder: tempOrderData,
+          status: 'PENDING',
+          retryCount: 0,
+        });
+
+        setLastOrder(tempOrderData);
         setPaymentModalOpen(false);
         setSuccessModalOpen(true);
         resetTransactionState();
-        loadProducts(activeOutlet?.id);
-        loadCurrentShift();
-        loadTablesAndOrders();
-      } else {
-        dialog.alert({
-          title: 'Transaksi Gagal',
-          message: res.message || 'Transaksi gagal diproses.',
-          variant: 'danger',
-        });
+        await refreshOfflineQueueCount();
+
+        dialog.toast(
+          `Faktur #${tempInvoice} tersimpan di antrean offline. Struk siap dicetak!`,
+          'info'
+        );
+      };
+
+      if (!navigator.onLine) {
+        await completeOfflineOrder();
+        return;
       }
-    } catch (err: any) {
-      dialog.alert({
-        title: 'Kesalahan Sistem',
-        message: err.message || 'Terjadi kesalahan sistem saat checkout.',
-        variant: 'danger',
-      });
+
+      try {
+        const res = await api.checkoutOrder(checkoutPayload);
+
+        if (res.status === 'success' && res.data) {
+          setLastOrder(res.data);
+          setPaymentModalOpen(false);
+          setSuccessModalOpen(true);
+          resetTransactionState();
+          loadProducts(activeOutlet?.id);
+          loadCurrentShift();
+          loadTablesAndOrders();
+        } else {
+          dialog.alert({
+            title: 'Transaksi Gagal',
+            message: res.message || 'Transaksi gagal diproses.',
+            variant: 'danger',
+          });
+        }
+      } catch (networkErr: any) {
+        const isNetworkFailure =
+          !navigator.onLine ||
+          networkErr?.name === 'TypeError' ||
+          String(networkErr?.message || '').toLowerCase().includes('fetch') ||
+          String(networkErr?.message || '').toLowerCase().includes('network');
+
+        if (isNetworkFailure && !requiresInternet) {
+          await completeOfflineOrder();
+        } else {
+          dialog.alert({
+            title: 'Kesalahan Sistem',
+            message: networkErr.message || 'Terjadi kesalahan sistem saat checkout.',
+            variant: 'danger',
+          });
+        }
+      }
     } finally {
       setCheckoutLoading(false);
     }
@@ -1638,6 +1879,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           allowedTabs={allowedTabs}
           currentUser={currentUser}
           onOpenBarcodeScanner={() => setCameraScannerOpen(true)}
+          isOnline={isOnline}
+          pendingOfflineCount={pendingOfflineCount}
+          isSyncingQueue={isSyncingQueue}
+          onSyncOfflineQueue={handleSyncOfflineQueue}
         />
       ) : (
         <>
@@ -1666,6 +1911,53 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             onToggleHandheldMode={() => setHandheldModeOverride(true)}
             onOpenAttendance={() => setStaffAttendanceModalOpen(true)}
           />
+
+          {/* Banner Status Offline / Antrean Offline PWA (Desktop/Tablet) */}
+          {(!isOnline || pendingOfflineCount > 0) && (
+            <div
+              className={`px-4 py-2.5 border-b flex items-center justify-between gap-3 text-xs shrink-0 transition-colors ${
+                !isOnline
+                  ? 'bg-rose-50 border-rose-200 text-rose-950'
+                  : 'bg-amber-50 border-amber-200 text-amber-950'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                {!isOnline ? (
+                  <WifiOff className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+                ) : (
+                  <CloudUpload className="w-4 h-4 text-amber-600 shrink-0" />
+                )}
+                <div className="truncate">
+                  <span className="font-extrabold">
+                    {!isOnline ? 'Koneksi Terputus (Mode Kasir Offline Aktif)' : 'Penyelarasan Data Lokal PWA'}
+                  </span>
+                  <span className="ml-2 font-medium">
+                    {!isOnline
+                      ? 'Kasir tetap dapat memproses pembayaran Tunai dan mencetak struk fisik lokal.'
+                      : `${pendingOfflineCount} transaksi offline tersimpan di perangkat ini.`}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {pendingOfflineCount > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-amber-200 text-amber-900">
+                    {pendingOfflineCount} antrean offline
+                  </span>
+                )}
+                {isOnline && pendingOfflineCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSyncOfflineQueue}
+                    disabled={isSyncingQueue}
+                    className="px-3 py-1 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingQueue ? 'animate-spin' : ''}`} />
+                    {isSyncingQueue ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Banner Mode Pesanan Susulan */}
           {appendOrderData && (
@@ -1816,6 +2108,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         onCheckout={handleExecuteCheckout}
         loading={checkoutLoading}
         outlet={activeOutlet}
+        selectedCustomer={selectedCustomer}
+        customerName={customerName}
       />
 
       {/* Order Success & Thermal Receipt Modal */}

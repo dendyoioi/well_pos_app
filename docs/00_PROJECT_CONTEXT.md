@@ -254,6 +254,11 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `services/bluetoothPrinter.service.ts` & `hooks/useBluetoothPrinter.ts`: Driver Web Bluetooth Thermal ESC/POS (58mm/80mm), 1-klik cetak langsung tanpa pop-up dialog print browser, dan pemicu sinyal laci kasir otomatis (pulse ESC/POS 24V).
   - `services/pwa.service.ts` & `hooks/usePwaInstall.ts`: Progressive Web App (PWA) installation lifecycle, Service Worker caching (`sw.js`), Web App Manifest (`manifest.webmanifest`), dan instalasi banner kontekstual di sidebar Backoffice.
   - `utils/escpos.ts`: Encoder binary ESC/POS untuk feed, align, bold, font size, cut paper, dan cash drawer pulse.
+- **Otomasi Pengujian, Arsitektur POM & Visual Regression (`scripts/`)**:
+  - `scripts/pom/`: Arsitektur Page Object Model kanonikal untuk pengujian E2E (`LandingPage`, `LoginPage`, `SuperadminPage`, `StoreWizardPage`, `BackofficePage`, `PosTerminalPage`, `CustomerQrPage`, `OrdersPage`).
+  - `scripts/test_tenant_journey_visual_paths.js`: Test runner visual regression 3 jalur FSM (Happy, Sad, Bad Path) pada matriks viewport UMKM Indonesia (Android Phone 360x800, Tablet 1280x800, Desktop 1440x900) via Playwright lokal (`npm run test:visual`).
+  - `docs/artifacts/visual_journey/`: Direktori penyimpanan tangkapan layar otomatis per-jalur (`happy_path/`, `sad_path/`, `bad_path/`).
+  - `docs/artifacts/state_machine_interactive.html`: Visualizer interaktif Finite State Machine dengan simulator transisi dan error notification live.
 
 ## 7. ARSITEKTUR AUTENTIKASI, ONBOARDING & TATA KELOLA MULTI-TOKO
 
@@ -452,7 +457,7 @@ Berikut adalah catatan hal-hal yang **masih disimulasikan / belum terhubung ke p
 | **Email SMTP** | Mock transporter nodemailer (output terminal). | Perlu koneksi ke relay SMTP produksi (Resend, SendGrid, Mailgun, atau AWS SES) untuk notifikasi tagihan dan invoice. |
 | **UI Resep & KDS** | UI Resep (`RecipesView.tsx`) & Live Orders Dapur (`QrLiveOrdersView.tsx`) telah aktif di Backoffice. | Opsional: Penambahan mode layar sentuh terisolasi khusus *Station KDS Dapur* (Kitchen Display Station) tanpa akses navigasi backoffice. |
 | **UI Purchasing PO** | Modul Pemasok (`SuppliersView.tsx`) aktif; Backend API PO & Transfer siap. | Perlu tab formulir Purchase Order supplier dan penerimaan surat jalan barang masuk langsung di UI. |
-| **Offline-First** | Kasir membutuhkan koneksi HTTP server aktif. | Perlu IndexedDB queue + Service Worker (PWA) agar kasir tetap bisa checkout saat internet toko offline dan auto-sync saat online. |
+| **Offline-First** | **SELESAI ✅**: Antrean lokal IndexedDB (`offlineQueue.ts`), proteksi idempotensi backend (`order.controller.ts`), auto-sync background saat koneksi pulih, dan cetak invoice lokal darurat. | Siap beroperasi saat internet toko putus / offline checkout tunai. |
 | **Infrastruktur Cloud** | Redis berjalan dengan fallback in-memory Map. | Memerlukan dedicated managed Redis cluster saat horizontal scaling multi-container. |
 
 ---

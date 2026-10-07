@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Well POS — State Machine Visualizer & Flow Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b1120;
+      --bg-secondary: #111b2e;
+      --bg-card: rgba(18, 29, 51, 0.75);
+      --border-card: rgba(56, 189, 248, 0.15);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --brand-blue: #0284c7;
+      --brand-blue-hover: #0369a1;
+      --accent-cyan: #38bdf8;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.15);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --shadow-glow: 0 0 25px rgba(2, 132, 199, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(2, 132, 199, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.1) 0%, transparent 45%);
+    }
+
+    /* Header Nav */
+    header {
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border-card);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 17, 32, 0.85);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: white;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+
+    .brand-title h1 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title span {
+      color: var(--accent-cyan);
+      font-weight: 500;
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(17, 27, 46, 0.8);
+      padding: 0.3rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .pill-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.45rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pill-btn:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .pill-btn.active {
+      background: var(--brand-blue);
+      color: white;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5);
+    }
+
+    .pill-btn.active.happy {
+      background: #059669;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+    }
+
+    .pill-btn.active.sad {
+      background: #d97706;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
+    }
+
+    .pill-btn.active.bad {
+      background: #dc2626;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Main Container */
+    main {
+      padding: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Diagram Canvas / Visual Tree */
+    .flow-canvas {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .phase-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      transition: border-color 0.3s;
+    }
+
+    .phase-block:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+
+    .phase-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .phase-badge {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.12);
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .phase-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .nodes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      position: relative;
+    }
+
+    /* State Card Node */
+    .state-node {
+      background: rgba(17, 27, 46, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .state-node:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      border-color: var(--accent-cyan);
+    }
+
+    .state-node.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(2, 132, 199, 0.2);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+
+    .state-node.dimmed {
+      opacity: 0.3;
+      filter: grayscale(80%);
+    }
+
+    .node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .node-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .node-dot.happy { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .node-dot.sad { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+    .node-dot.bad { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+    .node-type-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .tag-happy { background: var(--success-bg); color: var(--success); }
+    .tag-sad { background: var(--warning-bg); color: var(--warning); }
+    .tag-bad { background: var(--danger-bg); color: var(--danger); }
+    .tag-neutral { background: rgba(255, 255, 255, 0.08); color: var(--text-muted); }
+
+    .node-name {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.35rem;
+      line-height: 1.3;
+    }
+
+    .node-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Transition Arrow Indicator */
+    .transition-tag {
+      margin-top: 0.75rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed rgba(255, 255, 255, 0.08);
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* Side Inspector Panel */
+    .inspector-panel {
+      position: sticky;
+      top: 5.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .inspector-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .meta-card {
+      background: rgba(11, 17, 32, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+
+    .meta-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-value {
+      font-size: 0.86rem;
+      color: white;
+      line-height: 1.45;
+    }
+
+    .meta-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.08);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    /* Interactive Simulation Box */
+    .sim-box {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      background: rgba(17, 27, 46, 0.8);
+    }
+
+    .sim-header {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sim-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .sim-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sim-btn:hover {
+      background: rgba(2, 132, 199, 0.25);
+      border-color: var(--accent-cyan);
+      transform: translateX(3px);
+    }
+
+    .sim-btn.sad-sim:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--warning);
+    }
+
+    .sim-btn.bad-sim:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--danger);
+    }
+
+    /* Live Toast Simulator View */
+    .toast-preview-container {
+      margin-top: 0.5rem;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0f172a;
+    }
+
+    .live-toast {
+      padding: 0.85rem 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      border-left: 4px solid var(--brand-blue);
+      background: rgba(30, 41, 59, 0.9);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .live-toast.warning {
+      border-left-color: var(--warning);
+      background: rgba(69, 26, 3, 0.4);
+    }
+
+    .live-toast.danger {
+      border-left-color: var(--danger);
+      background: rgba(69, 10, 10, 0.4);
+    }
+
+    .live-toast.success {
+      border-left-color: var(--success);
+      background: rgba(6, 78, 59, 0.4);
+    }
+
+    .toast-icon {
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .toast-content h4 {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.2rem;
+    }
+
+    .toast-content p {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      line-height: 1.35;
+    }
+
+    /* Empty state live preview */
+    .empty-state-preview {
+      padding: 1.5rem;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+    }
+
+    .empty-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.7;
+    }
+
+    .empty-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.3rem;
+    }
+
+    .empty-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
+    }
+
+    .empty-cta-btn {
+      background: var(--brand-blue);
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-title">
+      <div class="logo-badge">W</div>
+      <div>
+        <h1>Well POS — State Machine Visualizer</h1>
+      </div>
+      <span>v2.1 Architecture</span>
+    </div>
+
+    <div class="filter-pills">
+      <button class="pill-btn active" onclick="filterPath('all', this)">🌐 Semua Alur</button>
+      <button class="pill-btn happy" onclick="filterPath('happy', this)">🟢 Happy Path</button>
+      <button class="pill-btn sad" onclick="filterPath('sad', this)">🟡 Sad Path (Empty & Soft)</button>
+      <button class="pill-btn bad" onclick="filterPath('bad', this)">🔴 Bad Path (Hard & Security)</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: Canvas / Flow Grid -->
+    <div class="flow-canvas" id="canvasContainer">
+
+      <!-- FASE 1: ONBOARDING -->
+      <section class="phase-block" data-phase="1">
+        <div class="phase-header">
+          <div class="phase-badge">Fase 1</div>
+          <div class="phase-title">Tenant Onboarding & Superadmin Approval</div>
+        </div>
+        <div class="nodes-grid">
+          <div class="state-node selected" data-id="UNREGISTERED" data-type="happy" onclick="selectNode('UNREGISTERED')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">UNREGISTERED</div>
+            <div class="node-desc">Calon tenant mengakses Landing Page dan membuka modal registrasi 5-field.</div>
+            <div class="transition-tag">➔ SUBMIT_REGISTRATION</div>
+          </div>
+
+          <div class="state-node" data-id="REGISTRATION_SUBMITTED" data-type="happy" onclick="selectNode('REGISTRATION_SUBMITTED')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">REGISTRATION_SUBMITTED</div>
+            <div class="node-desc">Data tersimpan di Postgres. Status tenant PENDING menunggu triage admin.</div>
+            <div class="transition-tag">➔ SUPERADMIN_APPROVAL</div>
+          </div>
+
+          <div class="state-node" data-id="SAD_EMAIL_DUPLICATE" data-type="sad" onclick="selectNode('SAD_EMAIL_DUPLICATE')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Sad Path</span>
+            </div>
+            <div class="node-name">EMAIL_DUPLICATE_ERROR</div>
+            <div class="node-desc">Email bisnis sudah terdaftar di sistem. Dialog alert muncul, form tetap terisi.</div>
+            <div class="transition-tag">➔ USER_RETRY_EMAIL</div>
+          </div>
+
+          <div class="state-node" data-id="BAD_REGISTRATION_REJECTED" data-type="bad" onclick="selectNode('BAD_REGISTRATION_REJECTED')">
+            <div class="node-header">
+              <span class="node-dot bad"></span>
+              <span class="node-type-tag tag-bad">Bad Path</span>
+            </div>
+            <div class="node-name">REGISTRATION_REJECTED</div>
+            <div class="node-desc">Superadmin menolak pendaftaran akun (spam/ilegal). Status SUSPENDED.</div>
+            <div class="transition-tag">➔ ACCOUNT_LOCKED</div>
+          </div>
+
+          <div class="state-node" data-id="ACTIVE_APPROVED" data-type="happy" onclick="selectNode('ACTIVE_APPROVED')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">ACTIVE_APPROVED</div>
+            <div class="node-desc">Superadmin menyetujui akun. Status ACTIVE, kuota token awal ditambahkan.</div>
+            <div class="transition-tag">➔ OWNER_LOGIN</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 2: STORE WIZARD -->
+      <section class="phase-block" data-phase="2">
+        <div class="phase-header">
+          <div class="phase-badge">Fase 2</div>
+          <div class="phase-title">Setup Toko Perdana (FullScreenStoreWizard)</div>
+        </div>
+        <div class="nodes-grid">
+          <div class="state-node" data-id="STORE_EMPTY" data-type="sad" onclick="selectNode('STORE_EMPTY')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Empty State</span>
+            </div>
+            <div class="node-name">STORE_EMPTY (outlets = 0)</div>
+            <div class="node-desc">Owner baru belum memiliki toko fisik. Sistem auto-launch FullScreenStoreWizard.</div>
+            <div class="transition-tag">➔ LAUNCH_WIZARD</div>
+          </div>
+
+          <div class="state-node" data-id="STORE_WIZARD_ACTIVE" data-type="happy" onclick="selectNode('STORE_WIZARD_ACTIVE')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">STORE_WIZARD_ACTIVE</div>
+            <div class="node-desc">Owner mengisi nama brand, nama toko pertama, WhatsApp, alamat, dan chips industri.</div>
+            <div class="transition-tag">➔ SUBMIT_STORE</div>
+          </div>
+
+          <div class="state-node" data-id="SAD_STORE_FIELD_MISSING" data-type="sad" onclick="selectNode('SAD_STORE_FIELD_MISSING')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Sad Path</span>
+            </div>
+            <div class="node-name">STORE_FIELD_MISSING</div>
+            <div class="node-desc">Owner belum memilih kategori industri atau nama toko kosong. Alert oranye muncul.</div>
+            <div class="transition-tag">➔ INLINE_VALIDATION</div>
+          </div>
+
+          <div class="state-node" data-id="STORE_READY" data-type="happy" onclick="selectNode('STORE_READY')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">STORE_READY</div>
+            <div class="node-desc">Toko perdana berhasil dibuat. Redirect instan ke Backoffice Dashboard.</div>
+            <div class="transition-tag">➔ GO_TO_BACKOFFICE</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 3: KATALOG MASTER -->
+      <section class="phase-block" data-phase="3">
+        <div class="phase-header">
+          <div class="phase-badge">Fase 3</div>
+          <div class="phase-title">Manajemen Katalog & Persediaan</div>
+        </div>
+        <div class="nodes-grid">
+          <div class="state-node" data-id="CATALOG_EMPTY" data-type="sad" onclick="selectNode('CATALOG_EMPTY')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Empty State</span>
+            </div>
+            <div class="node-name">CATALOG_EMPTY (products = 0)</div>
+            <div class="node-desc">Toko baru belum memiliki produk. Menampilkan ilustrasi dan CTA 'Tambah Produk'.</div>
+            <div class="transition-tag">➔ CREATE_PRODUCT_CLICK</div>
+          </div>
+
+          <div class="state-node" data-id="CATALOG_POPULATED" data-type="happy" onclick="selectNode('CATALOG_POPULATED')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">CATALOG_POPULATED</div>
+            <div class="node-desc">Kategori & produk terdaftar dengan harga, stok, foto, dan status ACTIVE.</div>
+            <div class="transition-tag">➔ READY_FOR_POS</div>
+          </div>
+
+          <div class="state-node" data-id="SAD_OUT_OF_STOCK" data-type="sad" onclick="selectNode('SAD_OUT_OF_STOCK')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Sad Path</span>
+            </div>
+            <div class="node-name">PRODUCT_OUT_OF_STOCK</div>
+            <div class="node-desc">Stok produk habis (0). Kasir diperingatkan dengan dialog alert stok habis.</div>
+            <div class="transition-tag">➔ BLOCK_ADD_CART</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 4: SHIFT KASIR -->
+      <section class="phase-block" data-phase="4">
+        <div class="phase-header">
+          <div class="phase-badge">Fase 4</div>
+          <div class="phase-title">Manajemen Shift Kasir (Terminal POS)</div>
+        </div>
+        <div class="nodes-grid">
+          <div class="state-node" data-id="SHIFT_CLOSED" data-type="sad" onclick="selectNode('SHIFT_CLOSED')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Empty State</span>
+            </div>
+            <div class="node-name">SHIFT_CLOSED</div>
+            <div class="node-desc">Kasir membuka terminal tetapi shift belum dimulai. Transaksi dikunci.</div>
+            <div class="transition-tag">➔ OPEN_START_SHIFT</div>
+          </div>
+
+          <div class="state-node" data-id="SHIFT_ACTIVE" data-type="happy" onclick="selectNode('SHIFT_ACTIVE')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">SHIFT_ACTIVE</div>
+            <div class="node-desc">Modal awal diinput (misal Rp 200.000). Kasir siap melayani transaksi.</div>
+            <div class="transition-tag">➔ ACCEPT_ORDERS</div>
+          </div>
+
+          <div class="state-node" data-id="SHIFT_DISCREPANCY" data-type="sad" onclick="selectNode('SHIFT_DISCREPANCY')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Sad Path</span>
+            </div>
+            <div class="node-name">SHIFT_DISCREPANCY (Selisih Kas)</div>
+            <div class="node-desc">Hasil blind drop tidak klop (+Over / -Short). Wajib isi catatan audit.</div>
+            <div class="transition-tag">➔ AUDIT_NOTE_REQUIRED</div>
+          </div>
+
+          <div class="state-node" data-id="SHIFT_SETTLED_BALANCED" data-type="happy" onclick="selectNode('SHIFT_SETTLED_BALANCED')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">SHIFT_SETTLED_BALANCED</div>
+            <div class="node-desc">Uang fisik cocok 100% (Selisih Rp 0). Z-Report dicetak via printer thermal.</div>
+            <div class="transition-tag">➔ PRINT_Z_REPORT</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 5: TRANSAKSI & CHECKOUT -->
+      <section class="phase-block" data-phase="5">
+        <div class="phase-header">
+          <div class="phase-badge">Fase 5</div>
+          <div class="phase-title">Keranjang Kasir & Pembayaran Multi-Metode</div>
+        </div>
+        <div class="nodes-grid">
+          <div class="state-node" data-id="CART_EMPTY" data-type="sad" onclick="selectNode('CART_EMPTY')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Empty State</span>
+            </div>
+            <div class="node-name">CART_EMPTY</div>
+            <div class="node-desc">Keranjang belanja belum berisi item. Tombol bayar di-disable.</div>
+            <div class="transition-tag">➔ ADD_PRODUCT_ITEM</div>
+          </div>
+
+          <div class="state-node" data-id="CART_HOLDING_ITEMS" data-type="happy" onclick="selectNode('CART_HOLDING_ITEMS')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">CART_HOLDING_ITEMS</div>
+            <div class="node-desc">Item ditambahkan, kalkulasi subtotal, diskon promo, dan pajak berjalan real-time.</div>
+            <div class="transition-tag">➔ OPEN_PAYMENT</div>
+          </div>
+
+          <div class="state-node" data-id="SAD_CASH_INSUFFICIENT" data-type="sad" onclick="selectNode('SAD_CASH_INSUFFICIENT')">
+            <div class="node-header">
+              <span class="node-dot sad"></span>
+              <span class="node-type-tag tag-sad">Sad Path</span>
+            </div>
+            <div class="node-name">CASH_INSUFFICIENT</div>
+            <div class="node-desc">Nominal uang tunai kurang dari total belanja. Tombol bayar disabled.</div>
+            <div class="transition-tag">➔ FIX_CASH_TENDERED</div>
+          </div>
+
+          <div class="state-node" data-id="BAD_VOID_UNAUTHORIZED" data-type="bad" onclick="selectNode('BAD_VOID_UNAUTHORIZED')">
+            <div class="node-header">
+              <span class="node-dot bad"></span>
+              <span class="node-type-tag tag-bad">Bad Path</span>
+            </div>
+            <div class="node-name">VOID_WRONG_SPV_PIN</div>
+            <div class="node-desc">Kasir mencoba membatalkan nota tanpa izin atau PIN salah. Akses ditolak.</div>
+            <div class="transition-tag">➔ REJECT_VOID</div>
+          </div>
+
+          <div class="state-node" data-id="ORDER_COMPLETED" data-type="happy" onclick="selectNode('ORDER_COMPLETED')">
+            <div class="node-header">
+              <span class="node-dot happy"></span>
+              <span class="node-type-tag tag-happy">Happy</span>
+            </div>
+            <div class="node-name">ORDER_COMPLETED (PAID)</div>
+            <div class="node-desc">Pembayaran tunai / QRIS lunas. Struk thermal dicetak & struk WA siap kirim.</div>
+            <div class="transition-tag">➔ SUCCESS_MODAL</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right: State Inspector & Live Simulator -->
+    <aside class="inspector-panel" id="inspectorPanel">
+      <div class="inspector-header">
+        <div class="inspector-title">
+          <span>🔍</span>
+          <span id="inspTitle">UNREGISTERED</span>
+        </div>
+        <span class="node-type-tag tag-happy" id="inspBadge">Happy Path</span>
+      </div>
+
+      <div class="meta-card">
+        <div class="meta-label">Prisma Model / Local Context</div>
+        <div class="meta-value" id="inspModel">Prisma: Tenant, User (status: PENDING)</div>
+      </div>
+
+      <div class="meta-card">
+        <div class="meta-label">Trigger Events & Guards</div>
+        <div class="meta-value" id="inspTrigger">Event: SUBMIT_REGISTRATION<br>Guard: 5-Field valid && password_match</div>
+      </div>
+
+      <!-- Live Notification Simulation Preview -->
+      <div class="meta-card">
+        <div class="meta-label">UI Notification / Empty State Preview</div>
+        <div id="inspUiPreview">
+          <div class="live-toast success">
+            <div class="toast-icon">✅</div>
+            <div class="toast-content">
+              <h4>Pendaftaran Berhasil</h4>
+              <p>Akun pemilik Anda telah dicatat dan sedang menunggu verifikasi Superadmin.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Event Simulator -->
+      <div class="sim-box">
+        <div class="sim-header">
+          <span>🧪 Uji Coba Simulasi Transisi</span>
+          <span style="font-size: 0.7rem; color: var(--accent-cyan);">Klik untuk test</span>
+        </div>
+        <div class="sim-btn-group">
+          <button class="sim-btn" onclick="simulateEvent('happy_register')">
+            <span>🟢 Registrasi Normal (Happy)</span>
+            <span>➔</span>
+          </button>
+          <button class="sim-btn sad-sim" onclick="simulateEvent('sad_email_duplicate')">
+            <span>🟡 Submit Email Kembar (Sad)</span>
+            <span>➔</span>
+          </button>
+          <button class="sim-btn bad-sim" onclick="simulateEvent('bad_void_pin')">
+            <span>🔴 Void PIN Kasir Salah (Bad)</span>
+            <span>➔</span>
+          </button>
+          <button class="sim-btn sad-sim" onclick="simulateEvent('sad_shift_discrepancy')">
+            <span>🟡 Tutup Shift Selisih Kas (Sad)</span>
+            <span>➔</span>
+          </button>
+          <button class="sim-btn sad-sim" onclick="simulateEvent('sad_empty_cart')">
+            <span>🟡 Checkout Keranjang Kosong (Sad)</span>
+            <span>➔</span>
+          </button>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <script>
+    // State Registry Database
+    const STATES_DATA = {
+      UNREGISTERED: {
+        title: "UNREGISTERED",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Belum ada record (Anonim)",
+        trigger: "Akses http://localhost:5173/#landing ➔ Buka Modal Registrasi",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">👋</div>
+            <div class="toast-content">
+              <h4>Selamat Datang di Well POS</h4>
+              <p>Silakan isi 5 field data pemilik untuk mendaftarkan bisnis Anda.</p>
+            </div>
+          </div>
+        `
+      },
+      REGISTRATION_SUBMITTED: {
+        title: "REGISTRATION_SUBMITTED",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Tenant (status: PENDING), User (role: OWNER)",
+        trigger: "Event: SUBMIT_REGISTRATION ➔ Validasi formulir lengkap",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">⏳</div>
+            <div class="toast-content">
+              <h4>Pendaftaran Berhasil Dikirim</h4>
+              <p>Menunggu verifikasi SuperAdmin Well POS. Hubungi CS untuk aktivasi instan.</p>
+            </div>
+          </div>
+        `
+      },
+      SAD_EMAIL_DUPLICATE: {
+        title: "EMAIL_DUPLICATE_ERROR",
+        type: "sad",
+        badge: "Sad Path (Soft Error)",
+        model: "Prisma: Unique Constraint Error (User.email)",
+        trigger: "Event: SUBMIT_REGISTRATION ➔ Email sudah ada di database",
+        preview: `
+          <div class="live-toast warning">
+            <div class="toast-icon">⚠️</div>
+            <div class="toast-content">
+              <h4>Email Sudah Terdaftar</h4>
+              <p>Email bisnis ini sudah digunakan akun lain. Silakan gunakan email berbeda atau masuk ke akun Anda.</p>
+            </div>
+          </div>
+        `
+      },
+      BAD_REGISTRATION_REJECTED: {
+        title: "REGISTRATION_REJECTED",
+        type: "bad",
+        badge: "Bad Path (Rejection)",
+        model: "Prisma: Tenant (status: SUSPENDED)",
+        trigger: "Superadmin klik 'Tolak Pendaftaran' dengan alasan penolakan",
+        preview: `
+          <div class="live-toast danger">
+            <div class="toast-icon">🚫</div>
+            <div class="toast-content">
+              <h4>Akses Pendaftaran Ditolak</h4>
+              <p>Pendaftaran akun Anda ditolak oleh Admin. Hubungi dukungan WhatsApp Well POS.</p>
+            </div>
+          </div>
+        `
+      },
+      ACTIVE_APPROVED: {
+        title: "ACTIVE_APPROVED",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Tenant (status: ACTIVE, tokenBalance: 50)",
+        trigger: "Superadmin klik 'Setujui / Approval' pada Backoffice Superadmin",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">🎉</div>
+            <div class="toast-content">
+              <h4>Akun Aktif Sepenuhnya</h4>
+              <p>Tenant telah disetujui. Pemilik kini dapat login via Portal Pemilik.</p>
+            </div>
+          </div>
+        `
+      },
+      STORE_EMPTY: {
+        title: "STORE_EMPTY",
+        type: "sad",
+        badge: "Empty State",
+        model: "Prisma: Outlet[] (length === 0)",
+        trigger: "Owner login pertama kali ➔ outles.length === 0 terdeteksi",
+        preview: `
+          <div class="empty-state-preview">
+            <div class="empty-icon">🏪</div>
+            <div class="empty-title">Belum Ada Toko Terdaftar</div>
+            <div class="empty-desc">Akun Anda belum memiliki toko fisik. Siapkan profil toko perdana Anda sekarang.</div>
+            <button class="empty-cta-btn">Luncurkan FullScreenStoreWizard</button>
+          </div>
+        `
+      },
+      STORE_WIZARD_ACTIVE: {
+        title: "STORE_WIZARD_ACTIVE",
+        type: "happy",
+        badge: "Happy Path",
+        model: "State: FullScreenStoreWizard (form input aktif)",
+        trigger: "Owner mengisi nama toko, WhatsApp, alamat, dan chips industri",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">📝</div>
+            <div class="toast-content">
+              <h4>Form Setup Toko Siap</h4>
+              <p>Semua kolom identitas toko telah terisi lengkap dan siap disimpan.</p>
+            </div>
+          </div>
+        `
+      },
+      SAD_STORE_FIELD_MISSING: {
+        title: "STORE_FIELD_MISSING",
+        type: "sad",
+        badge: "Sad Path",
+        model: "Validation: Nama Toko || Kategori Industri is empty",
+        trigger: "Klik simpan saat form belum memilih kategori industri",
+        preview: `
+          <div class="live-toast warning">
+            <div class="toast-icon">⚠️</div>
+            <div class="toast-content">
+              <h4>Lengkapi Data Toko</h4>
+              <p>Harap isi nama toko dan pilih minimal 1 kategori industri bisnis Anda.</p>
+            </div>
+          </div>
+        `
+      },
+      STORE_READY: {
+        title: "STORE_READY",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Outlet (id: ..., name: 'Kopi Nusantara Malioboro')",
+        trigger: "POST /api/outlets sukses ➔ Redirect ke Backoffice",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">✨</div>
+            <div class="toast-content">
+              <h4>Toko Perdana Berhasil Dibuat</h4>
+              <p>Selamat datang di Backoffice Pemilik Well POS!</p>
+            </div>
+          </div>
+        `
+      },
+      CATALOG_EMPTY: {
+        title: "CATALOG_EMPTY",
+        type: "sad",
+        badge: "Empty State",
+        model: "Prisma: Product[] (count === 0)",
+        trigger: "Owner membuka menu Katalog Produk sebelum ada data diinput",
+        preview: `
+          <div class="empty-state-preview">
+            <div class="empty-icon">☕</div>
+            <div class="empty-title">Belum Ada Produk Terdaftar</div>
+            <div class="empty-desc">Katalog toko masih kosong. Tambahkan kategori menu dan daftarkan produk pertama Anda.</div>
+            <button class="empty-cta-btn">+ Tambah Produk Pertama</button>
+          </div>
+        `
+      },
+      CATALOG_POPULATED: {
+        title: "CATALOG_POPULATED",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Category (1+), Product (1+, isActive: true, stock > 0)",
+        trigger: "Produk & Kategori tersimpan dengan foto & harga jual",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">📦</div>
+            <div class="toast-content">
+              <h4>Katalog Siap Dijual</h4>
+              <p>Produk aktif otomatis tampil pada Terminal Kasir dan Menu Tamu QR.</p>
+            </div>
+          </div>
+        `
+      },
+      SAD_OUT_OF_STOCK: {
+        title: "PRODUCT_OUT_OF_STOCK",
+        type: "sad",
+        badge: "Sad Path",
+        model: "Prisma: Product (stock === 0, hasStock === true)",
+        trigger: "Kasir mengklik produk dengan sisa stok 0",
+        preview: `
+          <div class="live-toast warning">
+            <div class="toast-icon">⚠️</div>
+            <div class="toast-content">
+              <h4>Stok Produk Habis</h4>
+              <p>Stok 'Kopi Susu Aren' saat ini habis (0)! Tidak dapat ditambahkan ke keranjang.</p>
+            </div>
+          </div>
+        `
+      },
+      SHIFT_CLOSED: {
+        title: "SHIFT_CLOSED",
+        type: "sad",
+        badge: "Empty State (Locked)",
+        model: "Prisma: Shift (currentShift === null)",
+        trigger: "Kasir masuk POS Terminal tanpa shift aktif",
+        preview: `
+          <div class="live-toast warning">
+            <div class="toast-icon">🔒</div>
+            <div class="toast-content">
+              <h4>Shift Kasir Belum Dibuka</h4>
+              <p>⚠️ Shift kasir belum dibuka! Buka shift kasir terlebih dahulu untuk mulai transaksi.</p>
+            </div>
+          </div>
+        `
+      },
+      SHIFT_ACTIVE: {
+        title: "SHIFT_ACTIVE",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Shift (status: OPEN, startingCash: 200000)",
+        trigger: "Kasir input modal awal Rp 200.000 ➔ POST /api/shifts/start",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">🔓</div>
+            <div class="toast-content">
+              <h4>Shift Kasir Aktif</h4>
+              <p>Laci kasir dibuka dengan modal awal Rp 200.000. Siap melayani pelanggan.</p>
+            </div>
+          </div>
+        `
+      },
+      SHIFT_DISCREPANCY: {
+        title: "SHIFT_DISCREPANCY",
+        type: "sad",
+        badge: "Sad Path (Audit Required)",
+        model: "Calculated: actualCash !== expectedCash (Selisih Fisik Kasir)",
+        trigger: "Blind count tutup kasir: Uang fisik tidak sesuai kalkulasi sistem",
+        preview: `
+          <div class="live-toast warning">
+            <div class="toast-icon">⚠️</div>
+            <div class="toast-content">
+              <h4>Perhatian: Selisih Kas Terdeteksi</h4>
+              <p>Terdapat selisih kas sebesar -Rp 15.000 (-Short). Wajib isi catatan penjelasan sebelum tutup shift.</p>
+            </div>
+          </div>
+        `
+      },
+      SHIFT_SETTLED_BALANCED: {
+        title: "SHIFT_SETTLED_BALANCED",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Shift (status: CLOSED, difference: 0)",
+        trigger: "Blind count uang fisik cocok Rp 0 ➔ Cetak Z-Report",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">🧾</div>
+            <div class="toast-content">
+              <h4>Shift Ditutup Sempurna (Klop)</h4>
+              <p>Selisih Rp 0. Z-Report tercetak otomatis pada printer thermal 80mm.</p>
+            </div>
+          </div>
+        `
+      },
+      CART_EMPTY: {
+        title: "CART_EMPTY",
+        type: "sad",
+        badge: "Empty State",
+        model: "State: cart.length === 0",
+        trigger: "Terminal siap jual tapi kasir belum klik produk",
+        preview: `
+          <div class="empty-state-preview">
+            <div class="empty-icon">🛒</div>
+            <div class="empty-title">Keranjang Masih Kosong</div>
+            <div class="empty-desc">Pilih produk di katalog atau scan barcode untuk menambahkan pesanan.</div>
+            <button class="empty-cta-btn" disabled style="opacity: 0.5;">Bayar (F9) Disabled</button>
+          </div>
+        `
+      },
+      CART_HOLDING_ITEMS: {
+        title: "CART_HOLDING_ITEMS",
+        type: "happy",
+        badge: "Happy Path",
+        model: "State: cart (items count > 0, grandTotal dihitung)",
+        trigger: "Kasir menambah 2x Kopi Susu Aren ➔ Subtotal Rp 44.000",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">☕</div>
+            <div class="toast-content">
+              <h4>Item Masuk Keranjang</h4>
+              <p>2x Kopi Susu Aren Spesial (Rp 44.000). Siap tekan tombol Bayar.</p>
+            </div>
+          </div>
+        `
+      },
+      SAD_CASH_INSUFFICIENT: {
+        title: "CASH_INSUFFICIENT",
+        type: "sad",
+        badge: "Sad Path",
+        model: "Validation: amountPaid < grandTotal",
+        trigger: "Kasir ketik uang tunai Rp 40.000 padahal total Rp 44.000",
+        preview: `
+          <div class="live-toast warning">
+            <div class="toast-icon">⚠️</div>
+            <div class="toast-content">
+              <h4>Uang Diterima Kurang</h4>
+              <p>Uang yang diterima kurang Rp 4.000 dari total belanja. Tombol bayar dikunci.</p>
+            </div>
+          </div>
+        `
+      },
+      BAD_VOID_UNAUTHORIZED: {
+        title: "VOID_WRONG_SPV_PIN",
+        type: "bad",
+        badge: "Bad Path (Security Block)",
+        model: "Audit: Unauthorized Void Attempt by Cashier",
+        trigger: "Kasir mencoba membatalkan nota tanpa izin atau PIN SPV salah",
+        preview: `
+          <div class="live-toast danger">
+            <div class="toast-icon">🔒</div>
+            <div class="toast-content">
+              <h4>PIN Supervisor Salah!</h4>
+              <p>PIN Supervisor salah atau tidak memiliki wewenang pembatalan transaksi. Akses ditolak.</p>
+            </div>
+          </div>
+        `
+      },
+      ORDER_COMPLETED: {
+        title: "ORDER_COMPLETED (PAID)",
+        type: "happy",
+        badge: "Happy Path",
+        model: "Prisma: Order (status: PAID), OrderItem[], StockMovement[]",
+        trigger: "Pembayaran tunai / QRIS sukses ➔ Modal struk muncul",
+        preview: `
+          <div class="live-toast success">
+            <div class="toast-icon">✅</div>
+            <div class="toast-content">
+              <h4>Transaksi Berhasil Disimpan</h4>
+              <p>Kembalian: Rp 6.000. Struk thermal dicetak & struk WhatsApp siap dikirim.</p>
+            </div>
+          </div>
+        `
+      }
+    };
+
+    function selectNode(nodeId) {
+      const data = STATES_DATA[nodeId];
+      if (!data) return;
+
+      // Update Inspector
+      document.getElementById('inspTitle').textContent = data.title;
+      document.getElementById('inspModel').textContent = data.model;
+      document.getElementById('inspTrigger').innerHTML = data.trigger;
+      document.getElementById('inspUiPreview').innerHTML = data.preview;
+
+      const badge = document.getElementById('inspBadge');
+      badge.textContent = data.badge;
+      badge.className = `node-type-tag tag-${data.type}`;
+
+      // Update active card visual
+      document.querySelectorAll('.state-node').forEach(node => {
+        if (node.getAttribute('data-id') === nodeId) {
+          node.classList.add('selected');
+        } else {
+          node.classList.remove('selected');
+        }
+      });
+    }
+
+    function filterPath(pathType, btn) {
+      document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.querySelectorAll('.state-node').forEach(node => {
+        const nodeType = node.getAttribute('data-type');
+        if (pathType === 'all') {
+          node.classList.remove('dimmed');
+        } else if (pathType === nodeType) {
+          node.classList.remove('dimmed');
+        } else {
+          node.classList.add('dimmed');
+        }
+      });
+    }
+
+    function simulateEvent(eventType) {
+      if (eventType === 'happy_register') {
+        selectNode('REGISTRATION_SUBMITTED');
+      } else if (eventType === 'sad_email_duplicate') {
+        selectNode('SAD_EMAIL_DUPLICATE');
+      } else if (eventType === 'bad_void_pin') {
+        selectNode('BAD_VOID_UNAUTHORIZED');
+      } else if (eventType === 'sad_shift_discrepancy') {
+        selectNode('SHIFT_DISCREPANCY');
+      } else if (eventType === 'sad_empty_cart') {
+        selectNode('CART_EMPTY');
+      }
+    }
+  </script>
+</body>
+</html>

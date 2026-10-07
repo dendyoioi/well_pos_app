@@ -657,7 +657,7 @@ export class InventoryDualWriteService extends BaseDualWriteService {
         const allowNegative = await this.checkNegativeStockAllowed(tx, tenantId, sourceLocId, inventoryItemId);
         if (!allowNegative) {
           throw new Error(
-            `Stok cabang asal tidak mencukupi untuk transfer. Tersedia: ${srcBefore}, transfer: ${dto.quantity}.`
+            `Stok toko / outlet asal tidak mencukupi untuk transfer. Tersedia: ${srcBefore}, transfer: ${dto.quantity}.`
           );
         }
       }
@@ -704,7 +704,7 @@ export class InventoryDualWriteService extends BaseDualWriteService {
           dto.productId,
           actorUserId,
           -dto.quantity,
-          dto.notes || `Transfer Out ke cabang ${dto.targetOutletId}`
+          dto.notes || `Transfer Out ke outlet ${dto.targetOutletId}`
         );
 
         movInId = crypto.randomUUID();
@@ -720,7 +720,7 @@ export class InventoryDualWriteService extends BaseDualWriteService {
           dto.productId,
           actorUserId,
           dto.quantity,
-          dto.notes || `Transfer In dari cabang ${dto.sourceOutletId}`
+          dto.notes || `Transfer In dari outlet ${dto.sourceOutletId}`
         );
       }
 

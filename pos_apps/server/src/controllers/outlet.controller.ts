@@ -37,7 +37,7 @@ const updateFeesSchema = z.object({
 });
 
 const createOutletSchema = z.object({
-  name: z.string().min(2, 'Nama cabang minimal 2 karakter'),
+  name: z.string().min(2, 'Nama toko / outlet minimal 2 karakter'),
   address: z.string().optional(),
   phone: z.string().optional(),
   isWarehouse: z.boolean().optional(),
@@ -46,7 +46,7 @@ const createOutletSchema = z.object({
 });
 
 const updateOutletSchema = z.object({
-  name: z.string().min(2, 'Nama cabang minimal 2 karakter').optional(),
+  name: z.string().min(2, 'Nama toko / outlet minimal 2 karakter').optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
   isWarehouse: z.boolean().optional(),
@@ -165,7 +165,7 @@ export const createOutlet = async (req: Request, res: Response) => {
     if (userRole !== Role.ADMIN && userRole !== Role.OWNER) {
       return res.status(403).json({
         status: 'error',
-        message: 'Hanya pemilik usaha (Owner / Admin) yang dapat menambah cabang baru',
+        message: 'Hanya pemilik usaha (Owner / Admin) yang dapat menambah toko / outlet baru',
       });
     }
 
@@ -173,7 +173,7 @@ export const createOutlet = async (req: Request, res: Response) => {
     if (!parseResult.success) {
       return res.status(400).json({
         status: 'error',
-        message: 'Data cabang tidak valid',
+        message: 'Data toko / outlet tidak valid',
         errors: parseResult.error.flatten().fieldErrors,
       });
     }
@@ -205,7 +205,7 @@ export const createOutlet = async (req: Request, res: Response) => {
     if (currentOutletCount >= maxOutlets) {
       return res.status(403).json({
         status: 'error',
-        message: `Batas cabang untuk paket ${planName} telah tercapai (Maksimal ${maxOutlets} cabang). Silakan upgrade paket untuk menambah cabang.`,
+        message: `Batas toko / outlet untuk paket ${planName} telah tercapai (Maksimal ${maxOutlets} toko / outlet). Silakan upgrade paket untuk menambah toko / outlet.`,
       });
     }
 
@@ -301,12 +301,12 @@ export const createOutlet = async (req: Request, res: Response) => {
 
     return res.status(201).json({
       status: 'success',
-      message: `Cabang "${newOutlet.name}" berhasil dibuat`,
+      message: `Toko / Outlet "${newOutlet.name}" berhasil dibuat`,
       data: newOutlet,
     });
   } catch (error) {
-    console.error('Error saat membuat cabang baru:', error);
-    return res.status(500).json({ status: 'error', message: 'Gagal membuat cabang baru' });
+    console.error('Error saat membuat toko / outlet baru:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal membuat toko / outlet baru' });
   }
 };
 
@@ -323,7 +323,7 @@ export const updateOutlet = async (req: Request, res: Response) => {
     if (!parseResult.success) {
       return res.status(400).json({
         status: 'error',
-        message: 'Data update cabang tidak valid',
+        message: 'Data update toko / outlet tidak valid',
         errors: parseResult.error.flatten().fieldErrors,
       });
     }
@@ -335,7 +335,7 @@ export const updateOutlet = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       status: 'success',
-      message: 'Informasi cabang berhasil diperbarui',
+      message: 'Informasi toko / outlet berhasil diperbarui',
       data: updated,
     });
   } catch (error) {

@@ -905,7 +905,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                   </button>
                 )}
 
-                {/* Tab Transfer Antar Cabang */}
+                {/* Tab Transfer Antar Toko */}
                 {allowedTabs.includes('transfers') && (
                   <button
                     type="button"
@@ -920,7 +920,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                     }`}
                   >
                     <ArrowLeftRight className="w-4 h-4" />
-                    <span>Transfer Antar Cabang</span>
+                    <span>Transfer Antar Toko</span>
                   </button>
                 )}
 
@@ -1254,7 +1254,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             </button>
           )}
 
-          {/* Tab Transfer Cabang */}
+          {/* Tab Transfer Toko */}
           {allowedTabs.includes('transfers') && (
             <button
               onClick={() => setActiveTab('transfers')}
@@ -1265,7 +1265,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               }`}
             >
               <ArrowLeftRight className="w-4 h-4" />
-              <span>Transfer Cabang</span>
+              <span>Transfer Toko</span>
             </button>
           )}
 

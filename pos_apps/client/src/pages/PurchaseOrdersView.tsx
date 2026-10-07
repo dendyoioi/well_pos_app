@@ -635,7 +635,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             }}
             className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate"
           >
-            <option value="ALL">Semua Cabang / Gudang</option>
+            <option value="ALL">Semua Toko / Gudang</option>
             {outlets.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name} {o.isWarehouse ? '(Gudang)' : ''}

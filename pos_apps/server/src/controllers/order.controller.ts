@@ -25,9 +25,21 @@ const orderItemSchema = z.object({
 
 // Skema validasi pembayaran tunggal
 const paymentItemSchema = z.object({
-  method: z.nativeEnum(PaymentMethod, {
-    errorMap: () => ({ message: 'Metode pembayaran tidak valid' }),
-  }),
+  method: z.preprocess(
+    (val) => {
+      const s = String(val).toUpperCase();
+      if (s === 'DEBT' || s === 'CUSTOMER_DEBT') return PaymentMethod.CUSTOMER_DEBT;
+      if (s === 'TRANSFER' || s === 'BANK_TRANSFER') return PaymentMethod.BANK_TRANSFER;
+      if (s === 'DEBIT' || s === 'DEBIT_CARD') return PaymentMethod.DEBIT_CARD;
+      if (s === 'CREDIT' || s === 'CREDIT_CARD') return PaymentMethod.CREDIT_CARD;
+      if (s === 'QRIS') return PaymentMethod.QRIS;
+      if (s === 'CASH') return PaymentMethod.CASH;
+      return val;
+    },
+    z.nativeEnum(PaymentMethod, {
+      errorMap: () => ({ message: 'Metode pembayaran tidak valid' }),
+    })
+  ),
   amountPaid: z.number().min(0, 'Jumlah bayar tidak boleh negatif'),
   changeGiven: z.number().min(0).optional(),
   qrisReference: z.string().optional().nullable(),
@@ -60,6 +72,7 @@ const checkoutSchema = z.object({
   outletId: z.string().uuid().optional(),
   dueDate: z.string().optional().nullable(),
   debtNotes: z.string().optional().nullable(),
+  offlineReferenceId: z.string().optional().nullable(),
 });
 
 /**
@@ -138,6 +151,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       outletId: bodyOutletId,
       dueDate: bodyDueDate,
       debtNotes: bodyDebtNotes,
+      offlineReferenceId,
     } = parseResult.data;
 
     let tenantId = req.user?.tenantId || req.tenantId || (req.headers['x-tenant-id'] as string) || null;
@@ -155,7 +169,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     }
 
     if (!targetOutletId) {
-      return res.status(400).json({ status: 'error', message: 'Outlet cabang tidak ditemukan' });
+      return res.status(400).json({ status: 'error', message: 'Toko / outlet tidak ditemukan' });
     }
 
     const targetOutlet = await prisma.outlet.findUnique({
@@ -163,7 +177,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       select: { tenantId: true, loyaltyConfig: true, paymentConfig: true },
     });
     if (!targetOutlet) {
-      return res.status(400).json({ status: 'error', message: 'Outlet cabang tidak ditemukan' });
+      return res.status(400).json({ status: 'error', message: 'Toko / outlet tidak ditemukan' });
     }
 
     if (!tenantId) {
@@ -179,6 +193,33 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     const cashierId = req.user?.id;
     if (!cashierId) {
       return res.status(401).json({ status: 'error', message: 'Kasir belum terautentikasi' });
+    }
+
+    // ====================================================
+    // IDEMPOTENSI TRANSAKSI OFFLINE PWA (ANTI-DUPLIKASI)
+    // ====================================================
+    if (offlineReferenceId && offlineReferenceId.trim()) {
+      const cleanRef = offlineReferenceId.trim();
+      const existingOfflineOrder = await prisma.order.findFirst({
+        where: {
+          tenantId,
+          outletId: targetOutletId,
+          notes: { contains: `[OFFLINE_REF:${cleanRef}]` },
+        },
+        include: {
+          items: true,
+          payments: true,
+          outlet: true,
+          cashier: { select: { id: true, name: true } },
+        },
+      });
+      if (existingOfflineOrder) {
+        return res.status(200).json({
+          status: 'success',
+          message: 'Transaksi offline sudah berhasil disinkronkan sebelumnya',
+          data: existingOfflineOrder,
+        });
+      }
     }
 
     // Resolusi data pelanggan (Customer / CRM)
@@ -239,9 +280,9 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     }
 
     // Ambil data produk & stok riil dari target database (gabungan products, product_variants, storage_locations & inventory_balances)
-    const productIds = items.map((i) => i.productId);
+    const uniqueProductIds = Array.from(new Set(items.map((i) => i.productId)));
     const productsInDb = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT p.id, p.name, p.unit, p.type, COALESCE(ii.average_cost, 0) as "costPrice", COALESCE(pv.price, 0) as "basePrice",
+      `SELECT DISTINCT ON (p.id) p.id, p.name, p.unit, p.type, COALESCE(ii.average_cost, 0) as "costPrice", COALESCE(pv.price, 0) as "basePrice",
               COALESCE(ib.quantity_on_hand, 0) as stock,
               COALESCE(pv.price, 0) as "outletPrice",
               pv.id as "variantId",
@@ -254,11 +295,12 @@ export const checkoutOrder = async (req: Request, res: Response) => {
        LEFT JOIN "inventory_balances" ib ON ib.inventory_item_id = ii.id AND ib.storage_location_id = sl.id
        WHERE p.id = ANY($2::text[]) AND p.is_active = true AND ($3::text IS NULL OR p.tenant_id = $3);`,
       targetOutletId,
-      productIds,
+      uniqueProductIds,
       tenantId
     );
 
-    if (productsInDb.length !== productIds.length) {
+    const dbProductIds = new Set(productsInDb.map((p) => p.id));
+    if (uniqueProductIds.some((id) => !dbProductIds.has(id))) {
       return res.status(400).json({
         status: 'error',
         message: 'Beberapa produk di keranjang tidak aktif atau tidak ditemukan',
@@ -413,13 +455,25 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       debtNotes?: string | null;
     }> = [];
 
+    const normalizeMethod = (m: string | PaymentMethod): PaymentMethod => {
+      const raw = String(m).toUpperCase();
+      if (raw === 'DEBT' || raw === 'CUSTOMER_DEBT') return PaymentMethod.CUSTOMER_DEBT;
+      if (raw === 'TRANSFER' || raw === 'BANK_TRANSFER') return PaymentMethod.BANK_TRANSFER;
+      if (raw === 'DEBIT' || raw === 'DEBIT_CARD') return PaymentMethod.DEBIT_CARD;
+      if (raw === 'CREDIT' || raw === 'CREDIT_CARD') return PaymentMethod.CREDIT_CARD;
+      if (raw === 'QRIS') return PaymentMethod.QRIS;
+      if (raw === 'CASH') return PaymentMethod.CASH;
+      return m as PaymentMethod;
+    };
+
     if (payments && payments.length > 0) {
       let totalAmountPaid = 0;
       for (const p of payments) {
         totalAmountPaid += p.amountPaid;
-        const isDebt = p.method === PaymentMethod.CUSTOMER_DEBT;
+        const normMethod = normalizeMethod(p.method);
+        const isDebt = normMethod === PaymentMethod.CUSTOMER_DEBT;
         preparedPayments.push({
-          method: p.method,
+          method: normMethod,
           amountPaid: p.amountPaid,
           changeGiven: p.changeGiven || 0,
           qrisReference: p.qrisReference || null,
@@ -438,8 +492,9 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         });
       }
     } else if (payment) {
-      const isDebt = payment.method === PaymentMethod.CUSTOMER_DEBT;
-      if (payment.method === PaymentMethod.CASH && payment.amountPaid < grandTotal) {
+      const normMethod = normalizeMethod(payment.method);
+      const isDebt = normMethod === PaymentMethod.CUSTOMER_DEBT;
+      if (normMethod === PaymentMethod.CASH && payment.amountPaid < grandTotal) {
         return res.status(400).json({
           status: 'error',
           message: `Uang pembayaran tunai kurang! Tagihan: Rp ${grandTotal.toLocaleString(
@@ -449,10 +504,10 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       }
 
       const changeGiven =
-        payment.method === PaymentMethod.CASH ? Math.max(0, payment.amountPaid - grandTotal) : 0;
+        normMethod === PaymentMethod.CASH ? Math.max(0, payment.amountPaid - grandTotal) : 0;
 
       preparedPayments.push({
-        method: payment.method,
+        method: normMethod,
         amountPaid: isDebt && payment.amountPaid === 0 ? grandTotal : payment.amountPaid,
         changeGiven: payment.changeGiven !== undefined ? payment.changeGiven : changeGiven,
         qrisReference: payment.qrisReference || null,
@@ -507,9 +562,16 @@ export const checkoutOrder = async (req: Request, res: Response) => {
           channel: channel || 'DINE_IN',
           orderType: orderType || channel || 'DINE_IN',
           tableNumber: tableNumber || null,
-          notes: onlineOrderId && onlineOrderId.trim()
-            ? (notes && notes.trim() ? `[${channel} #${onlineOrderId.trim()}] ${notes.trim()}` : `[${channel} #${onlineOrderId.trim()}]`)
-            : (notes || (tableNumber ? `Meja ${tableNumber}` : null)),
+          notes: (() => {
+            const baseNotes = onlineOrderId && onlineOrderId.trim()
+              ? (notes && notes.trim() ? `[${channel} #${onlineOrderId.trim()}] ${notes.trim()}` : `[${channel} #${onlineOrderId.trim()}]`)
+              : (notes || (tableNumber ? `Meja ${tableNumber}` : null));
+            if (offlineReferenceId && offlineReferenceId.trim()) {
+              const tag = `[OFFLINE_REF:${offlineReferenceId.trim()}]`;
+              return baseNotes ? `${baseNotes} ${tag}` : tag;
+            }
+            return baseNotes;
+          })(),
           items: preparedOrderItems,
           payments: preparedPayments,
           subtotal,
@@ -695,6 +757,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         pointsRedeemed: Number(pointsToRedeem || o.points_redeemed || 0),
         pointDiscountAmount: Number(pointDiscount || o.point_discount_amount || 0),
         paymentStatus: o.payment_status || 'PAID',
+        notes: o.notes || null,
         createdAt: o.created_at || new Date(),
         updatedAt: o.updated_at || new Date(),
         orderItems: itemRows.map((it) => ({
@@ -1595,7 +1658,7 @@ export const createOpenTabOrder = async (req: Request, res: Response) => {
     }
 
     if (!targetOutletId) {
-      return res.status(400).json({ status: 'error', message: 'Outlet cabang tidak ditemukan' });
+      return res.status(400).json({ status: 'error', message: 'Toko / outlet tidak ditemukan' });
     }
 
     if (!tenantId && targetOutletId) {

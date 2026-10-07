@@ -60,6 +60,7 @@ export interface CheckoutPayload {
   pointsToRedeem?: number;
   dueDate?: string;
   debtNotes?: string;
+  offlineReferenceId?: string;
 }
 
 export interface OrderItem {
@@ -123,11 +124,19 @@ export interface Order {
   channel?: OrderChannel | string;
   orderType?: string;
   orderStatus?: string;
+  status?: string;
   paymentStatus: string;
   notes?: string | null;
   createdAt: string;
+  updatedAt?: string;
   orderItems: OrderItem[];
+  items?: OrderItem[];
   payments: Payment[];
+  user?: {
+    id: string;
+    name: string;
+    role?: string;
+  };
   outlet?: {
     name: string;
     address: string | null;

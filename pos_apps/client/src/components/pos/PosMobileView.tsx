@@ -26,6 +26,9 @@ import {
   Bike,
   Bluetooth,
   Camera,
+  WifiOff,
+  CloudUpload,
+  RefreshCw,
 } from 'lucide-react';
 import type { Product, Category } from '../../types/product';
 import type { CartItem, OrderChannel } from '../../types/order';
@@ -107,6 +110,10 @@ export interface PosMobileViewProps {
   onChangePointsToRedeem?: (points: number) => void;
   currentUser?: { name?: string; role?: string; email?: string } | null;
   onOpenBarcodeScanner?: () => void;
+  isOnline?: boolean;
+  pendingOfflineCount?: number;
+  isSyncingQueue?: boolean;
+  onSyncOfflineQueue?: () => void;
 }
 
 export const PosMobileView: React.FC<PosMobileViewProps> = ({
@@ -118,6 +125,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   canCashOut,
   orderChannel,
   onChangeOrderChannel,
+  isOnline = true,
+  pendingOfflineCount = 0,
+  isSyncingQueue = false,
+  onSyncOfflineQueue,
   onlineOrderId,
   onChangeOnlineOrderId,
   channelsConfig,
@@ -308,6 +319,53 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
           </button>
         </div>
       </header>
+
+      {/* Banner Status Offline / Antrean Offline PWA */}
+      {(!isOnline || pendingOfflineCount > 0) && (
+        <div
+          className={`px-3 py-2 border-b flex items-center justify-between gap-2 text-xs shrink-0 transition-colors ${
+            !isOnline
+              ? 'bg-rose-50 border-rose-200 text-rose-950'
+              : 'bg-amber-50 border-amber-200 text-amber-950'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {!isOnline ? (
+              <WifiOff className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+            ) : (
+              <CloudUpload className="w-4 h-4 text-amber-600 shrink-0" />
+            )}
+            <div className="truncate">
+              <span className="font-extrabold text-[11px]">
+                {!isOnline ? 'Mode Offline' : 'Data Lokal'}
+              </span>
+              <span className="ml-1 text-[11px] opacity-90">
+                {!isOnline
+                  ? 'Bisa transaksi tunai & cetak struk'
+                  : `${pendingOfflineCount} antrean offline`}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {pendingOfflineCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full font-bold text-[10px] bg-amber-200 text-amber-900">
+                {pendingOfflineCount}
+              </span>
+            )}
+            {isOnline && pendingOfflineCount > 0 && onSyncOfflineQueue && (
+              <button
+                type="button"
+                onClick={onSyncOfflineQueue}
+                disabled={isSyncingQueue}
+                className="px-2 py-1 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-bold text-[10px] flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncingQueue ? 'animate-spin' : ''}`} />
+                {isSyncingQueue ? 'Sync...' : 'Sinkron'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 2. Search Bar & Horizontal Category Carousel */}
       <div className="bg-white border-b border-slate-200 p-2.5 space-y-2 shrink-0 shadow-2xs">
