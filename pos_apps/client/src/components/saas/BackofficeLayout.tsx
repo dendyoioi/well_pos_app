@@ -60,6 +60,9 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   onLogout,
   children,
 }) => {
+  // Hak Akses Panduan: Hanya Owner dan Supervisor yang dapat mengakses SOP / Panduan
+  const canViewGuide = user && (user.role === 'OWNER' || user.role === 'ADMIN' || user.role === 'SUPERVISOR');
+
   // Accordion state for sidebar groups (F&B Centric)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     menu_produk: true,
@@ -1144,24 +1147,26 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         }`}>
           {renderNavContent()}
 
-          {/* Bottom Card / Support Hotline */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 space-y-1 mt-4">
-            <p className="font-bold text-slate-800">
-              {activeOutlet?.isWarehouse ? 'Mode Gudang Logistik' : 'Butuh Bantuan?'}
-            </p>
-            <p>
-              {activeOutlet?.isWarehouse
-                ? 'Terhubung langsung dengan alokasi pasokan seluruh toko cabang.'
-                : 'Customer Support 24/7 aktif mendampingi operasional toko Anda.'}
-            </p>
-            <button
-              onClick={() => onTabChange('guide')}
-              className="w-full mt-1.5 py-1 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
-            >
-              <BookOpen className="w-3 h-3 text-blue-800" />
-              <span>Buka Panduan Lengkap</span>
-            </button>
-          </div>
+          {/* Bottom Card / Support Hotline — Khusus Owner & Supervisor */}
+          {canViewGuide && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 space-y-1 mt-4">
+              <p className="font-bold text-slate-800">
+                {activeOutlet?.isWarehouse ? 'Mode Gudang Logistik' : 'Butuh Bantuan?'}
+              </p>
+              <p>
+                {activeOutlet?.isWarehouse
+                  ? 'Terhubung langsung dengan alokasi pasokan seluruh toko cabang.'
+                  : 'Customer Support 24/7 aktif mendampingi operasional toko Anda.'}
+              </p>
+              <button
+                onClick={() => onTabChange('guide')}
+                className="w-full mt-1.5 py-1 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              >
+                <BookOpen className="w-3 h-3 text-blue-800" />
+                <span>Buka Panduan Lengkap</span>
+              </button>
+            </div>
+          )}
         </aside>
 
         {/* Mobile Off-Canvas Drawer Backdrop */}
@@ -1411,14 +1416,16 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             )}
           </nav>
         )}
-        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) */}
-        <FloatingGuideWidget
-          activeTab={activeTab}
-          onOpenGuide={(sec) => {
-            if (onOpenGuide) onOpenGuide(sec);
-            else onTabChange('guide');
-          }}
-        />
+        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) — Khusus Owner & Supervisor */}
+        {canViewGuide && (
+          <FloatingGuideWidget
+            activeTab={activeTab}
+            onOpenGuide={(sec) => {
+              if (onOpenGuide) onOpenGuide(sec);
+              else onTabChange('guide');
+            }}
+          />
+        )}
       </div>
     </div>
   );

@@ -122,7 +122,7 @@ type TabKey =
   | 'guide';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
-  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders', 'guide'],
+  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders'],
   WAREHOUSE: [
     'inventory',
     'stock_movements',
@@ -132,7 +132,6 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'recipes',
     'products',
     'overview',
-    'guide',
   ],
   SUPERVISOR: [
     'overview',
@@ -231,8 +230,8 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'outlets',
     'guide',
   ],
-  KITCHEN: ['pos', 'recipes', 'guide'],
-  WAITER: ['pos', 'orders', 'qr_orders', 'guide'],
+  KITCHEN: ['pos', 'recipes'],
+  WAITER: ['pos', 'orders', 'qr_orders'],
 };
 
 const DEFAULT_TAB: Record<UserRole, TabKey> = {

@@ -262,8 +262,8 @@ export const App: React.FC = () => {
               />
             </div>
           )}
-          {/* Global Progressive Web App (PWA) Install Banner */}
-          <PwaInstallBanner />
+          {/* Global Progressive Web App (PWA) Install Banner — Hanya tampil saat pengguna telah login */}
+          {user && <PwaInstallBanner />}
         </div>
       </PullToRefresh>
     </DialogProvider>
