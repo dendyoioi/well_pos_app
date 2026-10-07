@@ -638,6 +638,10 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
     - **Akurasi Metrik Finansial**: Metrik **Total Omset Kasir (Akumulasi Penerimaan)** murni mengakumulasikan transaksi berstatus lunas (`paymentStatus !== 'UNPAID'` dan bukan `VOIDED`).
     - **Sinkronisasi 1:1 Kartu Metrik**: Kartu metrik transaksi **Tunai (Cash)** dan **QRIS Non-Tunai** wajib sinkron 1:1 dengan jumlah baris yang berstatus pembayaran tersebut pada tabel transaksi.
     - **Otomasi Pengujian Regresi**: Terverifikasi secara permanen dalam `npm run test:smoke` (Step 3.5).
+32. **Standar Integritas Penutupan Shift & Visibilitas Audit Kasir (Shift Lock on Unpaid Orders)**:
+    - **Kunci Penutupan Shift (Zero Unpaid Orders)**: Kasir DILARANG menutup shift jika masih terdapat pesanan berstatus `paymentStatus === 'UNPAID'` (Open Tab / Tagihan Meja Aktif). Backend wajib menolak penutupan dengan kode HTTP 400 `UNPAID_ORDERS_REMAINING`, dan frontend modal menampilkan daftar nomor invoice yang wajib diselesaikan atau dibatalkan (VOID) terlebih dahulu.
+    - **Visibilitas Akuntabilitas Kasir**: Riwayat transaksi kasir wajib memuat kolom **Kasir** (`order.cashier.name`) secara eksplisit di desktop dan mobile agar mempermudah proses audit dan investigasi selisih kas.
+    - **Otomasi Pengujian Regresi**: Terverifikasi secara permanen dalam `npm run test:smoke` (Step 3.6).
 
 ---
 

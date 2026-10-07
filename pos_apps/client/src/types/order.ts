@@ -156,6 +156,7 @@ export interface Order {
     } | null;
   };
   cashier?: {
+    id?: string;
     name: string;
   };
 }

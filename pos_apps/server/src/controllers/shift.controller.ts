@@ -515,6 +515,33 @@ export const closeShift = async (req: Request, res: Response) => {
       });
     }
 
+    // Validasi Integritas Operasional: Kasir DILARANG tutup shift jika masih ada tagihan belum lunas (Open Tab / UNPAID)
+    const unpaidOrders = await prisma.order.findMany({
+      where: {
+        shiftId: activeShift.id,
+        paymentStatus: 'UNPAID',
+        orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        tableNumber: true,
+        totalAmount: true,
+      },
+    });
+
+    if (unpaidOrders.length > 0) {
+      const invoiceList = unpaidOrders
+        .map((o) => o.invoiceNumber || o.id.slice(0, 8))
+        .join(', ');
+      return res.status(400).json({
+        status: 'error',
+        code: 'UNPAID_ORDERS_REMAINING',
+        message: `Tutup shift ditolak: Masih terdapat ${unpaidOrders.length} tagihan belum dibayar (${invoiceList}). Harap selesaikan pembayaran atau batalkan pesanan terlebih dahulu sebelum menutup shift.`,
+        data: { unpaidOrders },
+      });
+    }
+
     const { actualCash, notes } = parseResult.data;
 
     // Hitung rekap seluruh order pada shift ini

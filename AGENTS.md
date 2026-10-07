@@ -111,6 +111,10 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
     - Metrik **Total Omset Kasir (Akumulasi Penerimaan)** hanya mengakumulasikan pesanan yang berstatus lunas (`paymentStatus !== 'UNPAID'` dan bukan `VOIDED`).
     - Kartu metrik transaksi **Tunai (Cash)** dan **QRIS Non-Tunai** wajib sinkron 1:1 dengan jumlah baris yang berstatus pembayaran tersebut pada tabel transaksi.
     - **Mandatory Automation Check**: Setiap sesi regression testing (`npm run test:smoke` Step 3.5) wajib memverifikasi konsistensi metrik dan anti-falsifikasi metode pembayaran ini.
+15. 🔒 **INTEGRITAS TUTUP SHIFT (LOCK ON UNPAID ORDERS) & VISIBILITAS KASIR TRANSAKSI**:
+    - **Larangan Tutup Shift dengan Tagihan Menggantung**: Kasir **DILARANG KERAS** menutup shift jika masih terdapat tagihan berstatus `paymentStatus === 'UNPAID'` (Open Tab / Tagihan Meja Aktif). Sistem backend wajib menolak request `POST /api/shifts/close` dengan HTTP 400 `UNPAID_ORDERS_REMAINING`, dan antarmuka kasir wajib menampilkan daftar nomor invoice yang belum lunas.
+    - **Visibilitas Akuntabilitas Kasir**: Riwayat transaksi kasir wajib memuat kolom **Kasir** (`order.cashier.name`) secara eksplisit di desktop dan mobile agar mempermudah proses audit dan investigasi selisih kas.
+    - **Mandatory Automation Check**: Terverifikasi secara permanen pada `npm run test:smoke` (Step 3.6).
 
 ---
 

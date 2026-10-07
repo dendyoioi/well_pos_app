@@ -495,6 +495,23 @@ export async function runEndToEndSmokeTest() {
       record('3.5 Validasi Konsistensi Metrik Riwayat Transaksi', false, `Status: ${ordersRes.status}`, ordersRes.data);
     }
 
+    // 3.6 Guard Integritas Shift: Penolakan Tutup Shift Jika Masih Ada Tagihan Belum Bayar (Open Tab)
+    const attemptCloseRes = await request('/api/shifts/close', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${cashierToken}` },
+      body: JSON.stringify({ actualCash: 200000 }),
+    });
+
+    if (attemptCloseRes.status === 400 && attemptCloseRes.data?.code === 'UNPAID_ORDERS_REMAINING') {
+      record(
+        '3.6 Guard Tutup Shift: Ditolak Jika Ada Tagihan UNPAID (POST /api/shifts/close)',
+        true,
+        `Sistem berhasil memblokir tutup shift: ${attemptCloseRes.data.message}`
+      );
+    } else {
+      record('3.6 Guard Tutup Shift: Ditolak Jika Ada Tagihan UNPAID', false, `Status: ${attemptCloseRes.status}`, attemptCloseRes.data);
+    }
+
     console.log('✅ Flow 3 Selesai dengan Sukses!\n');
 
     // =================================================================

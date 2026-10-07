@@ -7,6 +7,7 @@ import {
   Banknote,
   QrCode,
   User,
+  UserCheck,
   FileSpreadsheet,
   FileText,
   Filter,
@@ -557,6 +558,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                   <tr>
                     <th className="py-3 px-4">No. Faktur</th>
                     <th className="py-3 px-4">Waktu</th>
+                    <th className="py-3 px-4">Kasir</th>
                     <th className="py-3 px-4">Saluran</th>
                     <th className="py-3 px-4">Pelanggan</th>
                     <th className="py-3 px-4">Metode Bayar</th>
@@ -566,7 +568,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  <TableSkeleton rows={5} columns={8} actionCol />
+                  <TableSkeleton rows={5} columns={9} actionCol />
                 </tbody>
               </table>
             </div>
@@ -595,6 +597,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                   <tr>
                     <th className="py-3 px-4">No. Faktur</th>
                     <th className="py-3 px-4">Waktu</th>
+                    <th className="py-3 px-4">Kasir</th>
                     <th className="py-3 px-4">Saluran</th>
                     <th className="py-3 px-4">Pelanggan</th>
                     <th className="py-3 px-4">Metode Bayar</th>
@@ -633,6 +636,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-700 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <UserCheck className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+                            <span className="truncate max-w-[130px]" title={order.cashier?.name || order.user?.name || 'Kasir'}>
+                              {order.cashier?.name || order.user?.name || 'Kasir'}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-3.5 px-4">
                           <span
@@ -801,6 +812,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
                             Rp {Number(order.grandTotal).toLocaleString('id-ID')}
                           </span>
                         )}
+                      </div>
+                    </div>
+
+                    {/* Kasir Sub-Row */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100/80">
+                      <div className="flex items-center gap-1 truncate">
+                        <UserCheck className="w-3 h-3 text-blue-900 shrink-0" />
+                        <span className="truncate">
+                          Kasir: <strong className="text-slate-800 font-bold">{order.cashier?.name || order.user?.name || 'Kasir'}</strong>
+                        </span>
+                      </div>
+                      <div className="text-slate-400 font-mono text-[10px]">
+                        Sub: Rp {Number(order.subtotal).toLocaleString('id-ID')}
                       </div>
                     </div>
 

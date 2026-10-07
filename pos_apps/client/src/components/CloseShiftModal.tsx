@@ -87,6 +87,11 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const shiftOrders = currentShift?.orders || [];
   const shiftDebtPayments = currentShift?.debtPayments || [];
 
+  // Validasi Integritas Operasional: Kasir dilarang tutup shift jika masih ada tagihan belum lunas
+  const unpaidOrdersInShift = shiftOrders.filter(
+    (o: any) => o.paymentStatus === 'UNPAID' && o.orderStatus !== 'VOIDED' && o.orderStatus !== 'CANCELLED'
+  );
+
   const totalDenomCount = Object.values(denominations).reduce((a, b) => a + b, 0);
   const totalDenomSum = Object.entries(denominations).reduce(
     (sum, [valStr, count]) => sum + Number(valStr) * (count || 0),
@@ -524,6 +529,28 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 </span>
               </div>
 
+              {/* Peringatan Keras Jika Ada Tagihan Belum Lunas (Open Tab) */}
+              {unpaidOrdersInShift.length > 0 && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-900">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="text-xs space-y-1">
+                    <div className="font-black text-rose-800">
+                      Tutup Shift Terkunci: Ada {unpaidOrdersInShift.length} Tagihan Belum Lunas (Open Tab)
+                    </div>
+                    <div className="text-rose-700 leading-relaxed">
+                      Kasir wajib menyelesaikan pembayaran atau membatalkan pesanan (VOID) berikut sebelum menutup shift:
+                    </div>
+                    <div className="font-mono font-bold text-rose-900 pt-0.5 flex flex-wrap gap-1.5">
+                      {unpaidOrdersInShift.map((o: any) => (
+                        <span key={o.id} className="px-2 py-0.5 bg-rose-100 rounded-md border border-rose-300">
+                          {o.invoiceNumber || o.id.slice(0, 8)} (Rp {Number(o.grandTotal || 0).toLocaleString('id-ID')})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Catatan Tutup Shift */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -550,8 +577,9 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                disabled={loading || unpaidOrdersInShift.length > 0}
+                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title={unpaidOrdersInShift.length > 0 ? 'Selesaikan tagihan belum bayar terlebih dahulu' : 'Kunci & Tutup Shift'}
               >
                 <Lock className="w-4 h-4 stroke-[2.5]" />
                 <span>{loading ? 'Menutup Shift...' : 'Kunci & Tutup Shift (Z-Report)'}</span>
