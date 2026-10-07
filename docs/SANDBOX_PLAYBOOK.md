@@ -68,6 +68,12 @@ Untuk memvalidasi pembukaan shift modal awal, pencatatan kas masuk / kas keluar 
 npm run test:visual:shift
 ```
 
+#### I. Validasi Idempotensi & Resilience Transaksi Offline (Offline-First Queue)
+Untuk memvalidasi ketahanan transaksi offline, penyimpanan queue lokal berpenanda `offlineReferenceId`, dan pencegahan duplikasi transaksi saat jaringan internet fluktuatif:
+```bash
+npm run test:offline
+```
+
 ---
 
 ### 3. DAFTAR KREDENSIAL LOGIN MULTI-ROLE
@@ -564,6 +570,26 @@ Alur Transaksi:
 
 ---
 
+#### Skenario 13: Offline-First Terminal Kasir, Local Queue & Idempotent Auto-Sync
+**Tujuan**: Menguji ketahanan terminal kasir saat koneksi internet terputus (offline), penyimpanan antrean transaksi ke IndexedDB/Local Queue dengan `offlineReferenceId`, modal pemantauan antrean offline, dan verifikasi sinkronisasi otomatis idempoten ke server saat koneksi internet pulih tanpa terjadi duplikasi invoice maupun pemotongan stok ganda.
+
+1. **Jalankan Verifikasi Idempotensi Backend**:
+   ```bash
+   npm run test:offline
+   ```
+2. **Cakupan Pengujian**:
+   * 🟢 **Idempotent Retry**: Request checkout kedua dengan `offlineReferenceId` yang identik tidak membuat order baru, melainkan mengembalikan pesanan yang sudah ada dengan pesan: *"Transaksi offline sudah berhasil disinkronkan sebelumnya"*.
+   * 🟢 **BOM Stock Integrity**: Bahan baku BOM hanya dipotong sekali pada transaksi awal.
+   * 🟢 **Audit Tagging**: Field `notes` order otomatis memuat tag kanonikal `[OFFLINE_REF:TEST-OFFLINE-...]`.
+3. **Simulasi Manual Kasir Offline**:
+   * Buka Terminal Kasir di `#pos`.
+   * Matikan jaringan Wi-Fi / aktifkan mode Offline pada DevTools Network tab.
+   * Banner kuning *"Mode Offline Aktif"* muncul di atas layar.
+   * Lakukan checkout pesanan Tunai ➔ Notifikasi transaksi disimpan ke antrean lokal dan badge antrean bertambah.
+   * Nyalakan kembali koneksi internet ➔ Sistem otomatis menyinkronkan transaksi ke server secara mulus.
+
+---
+
 ### 8. TROUBLESHOOTING & FAQ
 
 * **Q: Port 5001 atau 5173 bentrok/sedang digunakan aplikasi lain?**  
@@ -572,6 +598,8 @@ Alur Transaksi:
   *Solusi*: Jalankan `npm run seed:sandbox`. Seeder sandbox secara default otomatis membuka sesi shift kasir dengan modal Rp 200.000 siap checkout.
 * **Q: Ingin menambahkan menu produk baru dengan resep custom?**  
   *Solusi*: Masuk ke Backoffice Owner di menu *Katalog Produk* atau tambahkan definisi resep di `pos_apps/server/prisma/seed.sandbox.ts`.
+* **Q: Apa yang terjadi jika internet toko mati saat kasir sedang melayani pelanggan?**  
+  *Solusi*: Terminal kasir Well POS mendukung mode **Offline-First**. Kasir tetap dapat memproses pembayaran tunai. Transaksi disimpan aman di memori lokal (IndexedDB) dan disinkronkan otomatis saat online dengan jaminan anti-duplikasi (`offlineReferenceId`).
 * **Q: Database Supabase error 500 atau kolom tidak ditemukan setelah push kode baru?**  
   *Solusi*: Render hanya menjalankan `prisma generate`, bukan migrasi DDL otomatis. Jalankan patch DDL langsung ke Supabase via `DIRECT_URL` (Port 5432) atau `npx prisma db push`.
 * **Q: Server remote lambat saat pertama kali diakses setelah lama idle?**  

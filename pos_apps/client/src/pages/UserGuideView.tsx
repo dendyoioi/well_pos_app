@@ -357,18 +357,25 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         number: 2,
+        title: 'Kalkulator Pecahan Uang Tunai (Denomination Counter)',
+        description:
+          'Gunakan fitur Kalkulator Pecahan pada modal Buka/Tutup Shift. Cukup masukkan jumlah lembar uang kertas (Rp 100rb, 50rb, 20rb, 10rb, 5rb, 2rb, 1rb) dan koin di laci kasir; sistem otomatis menjumlahkan nominal secara akurat tanpa perlu kalkulator terpisah.',
+        highlight: 'Menghilangkan potensi salah hitung uang modal awal dan mempercepat proses audit kasir.',
+      },
+      {
+        number: 3,
         title: 'Catat Kas Keluar / Masuk (Petty Cash)',
         description:
           'Jika selama shift ada pengeluaran kas kecil (misal beli es batu, galon air, atau uang kembalian tambahan), catat segera melalui menu "Kas Masuk / Kas Keluar".',
       },
       {
-        number: 3,
+        number: 4,
         title: 'Akhir Hari: Tutup Shift & Hitung Uang Fisik',
         description:
-          'Saat pergantian shift atau tutup toko, kasir menghitung seluruh uang fisik di laci tanpa melihat kalkulasi sistem (Blind Drop). Masukkan nominal fisik aktual.',
+          'Saat pergantian shift atau tutup toko, kasir menghitung seluruh uang fisik di laci menggunakan Kalkulator Pecahan tanpa melihat kalkulasi sistem (Blind Drop). Masukkan nominal fisik aktual.',
       },
       {
-        number: 4,
+        number: 5,
         title: 'Audit Selisih & Cetak Z-Report',
         description:
           'Sistem otomatis membandingkan uang fisik vs kalkulasi transaksi. Jika ada selisih lebih (+Over) atau kurang (-Short), sistem menandai untuk diaudit oleh Supervisor.',
@@ -996,6 +1003,55 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     tips: 'Jangan pernah membagikan akun Owner kepada kasir atau pihak ketiga. Buatlah akun dengan peran Supervisor jika Anda menunjuk penanggung jawab harian di outlet.',
     warning: 'PIN Supervisor tidak boleh diinformasikan kepada Kasir. Jika terjadi pembatalan nota (void), Supervisor wajib datang langsung dan memasukkan PIN sendiri di depan mesin kasir.',
+  },
+  {
+    id: 'offline_first_queue',
+    title: '24. Operasional Kasir Offline-First & Antrean Sinkronisasi Otomatis',
+    category: 'CASHIER',
+    categoryLabel: 'Operasional Kasir',
+    targetRoles: ['CASHIER', 'SUPERVISOR', 'OWNER', 'ADMIN'],
+    shortDesc: 'Panduan keandalan terminal kasir saat jaringan internet mati: Checkout offline tetap berjalan lancar, penyimpanan antrean IndexedDB lokal, deteksi banner koneksi, dan sinkronisasi otomatis idempoten saat online kembali.',
+    actionTab: 'pos',
+    actionLabel: 'Buka Terminal Kasir (POS)',
+    image: '/guide/pos-terminal-transaksi.png',
+    imageCaption: 'Terminal Kasir dalam Mode Offline: Indikator status jaringan dan antrean sinkronisasi transaksi otomatis.',
+    steps: [
+      {
+        number: 1,
+        title: 'Deteksi Otomatis Koneksi Internet Terputus',
+        description:
+          'Saat jaringan Wi-Fi atau paket data toko terputus, terminal kasir mendeteksi status offline secara real-time. Banner status "Mode Offline Aktif" otomatis muncul di layar kasir.',
+        highlight: 'Kasir tidak perlu panik; transaksi pembayaran tunai tetap dapat dilayani tanpa kendala.',
+      },
+      {
+        number: 2,
+        title: 'Checkout Transaksi Tanpa Internet (Offline Queue)',
+        description:
+          'Kasir tetap memilih produk, menerima uang tunai, dan menekan tombol Bayar. Sistem mengamankan transaksi ke dalam antrean lokal (Local Storage / IndexedDB) perangkat kasir dengan nomor referensi acak offlineReferenceId.',
+        highlight: 'Struk kasir tetap dapat dicetak langsung ke printer thermal Bluetooth lokal.',
+      },
+      {
+        number: 3,
+        title: 'Pemantauan Antrean Pesanan Tertunda',
+        description:
+          'Kasir dapat memantau badge jumlah transaksi offline di pojok layar kasir. Mengklik badge tersebut akan membuka modal daftar transaksi tertunda lengkap dengan nomor invoice sementara dan nominalnya.',
+      },
+      {
+        number: 4,
+        title: 'Sinkronisasi Otomatis Saat Jaringan Pulih',
+        description:
+          'Begitu sinyal internet kembali online, sistem kasir otomatis mengirimkan seluruh antrean pesanan ke server backend di latar belakang secara tenang dan berurutan.',
+      },
+      {
+        number: 5,
+        title: 'Jaminan Idempotensi Anti-Duplikasi Transaksi',
+        description:
+          'Server Well POS dilengkapi pengaman idempotensi: jika koneksi sempat terputus di tengah proses sinkronisasi, transaksi dengan offlineReferenceId yang sama tidak akan pernah terduplikasi atau memotong stok ganda.',
+        highlight: 'Buku kas dan kartu stok bahan baku tetap 100% akurat tanpa selisih.',
+      },
+    ],
+    tips: 'Untuk transaksi offline, prioritaskan metode pembayaran Tunai (Cash). Metode QRIS dinamis memerlukan koneksi internet aktif untuk verifikasi pelunasan seketika.',
+    warning: 'Dilarang keras membersihkan cache/data browser perangkat kasir sebelum seluruh transaksi offline berhasil disinkronkan ke server cloud.',
   },
 ];
 

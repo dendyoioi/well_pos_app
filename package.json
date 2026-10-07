@@ -9,6 +9,7 @@
     "seed:testbed": "npm run seed:testbed --prefix pos_apps/server",
     "test:sandbox": "npm run test:sandbox --prefix pos_apps/server",
     "test:smoke": "npm run test:smoke --prefix pos_apps/server",
+    "test:offline": "npm run test:offline --prefix pos_apps/server",
     "test:visual": "NODE_PATH=./pos_apps/node_modules node scripts/test_tenant_journey_visual_paths.js",
     "test:visual:recipes": "NODE_PATH=./pos_apps/node_modules node scripts/test_fnb_recipes_deduction_visual.js",
     "test:visual:split-debt": "NODE_PATH=./pos_apps/node_modules node scripts/test_split_debt_bdd_visual.js",

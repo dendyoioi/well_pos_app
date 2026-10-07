@@ -14,6 +14,7 @@
     "seed:testbed": "tsx prisma/seed.testbed_statuses.ts",
     "test:sandbox": "tsx src/migrations/contract/test_epic12_sandbox_validation.ts",
     "test:smoke": "tsx src/migrations/contract/test_epic_smoke_e2e.ts",
+    "test:offline": "tsx src/scripts/test_offline_idempotency.ts",
     "db:clean": "tsx prisma/wipe_dummy.ts",
     "seed:transactions": "tsx prisma/seed.transactions_september.ts",
     "seed:transactions:clean": "tsx prisma/seed.transactions_september.ts --clean",

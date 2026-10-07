@@ -174,9 +174,10 @@ Dokumen ini adalah **panduan standar operasional (SOP) pengujian manual** sekali
 
 *Simulasi nyata transaksi penjualan kasir dari buka toko hingga cetak struk.*
 
-### 5.1 Buka Shift Kasir (Open Shift)
+### 5.1 Buka Shift Kasir (Open Shift) & Kalkulator Pecahan
 1. Di layar Terminal POS, kasir login dengan mengetik PIN Kasir: **`123456`**.
 2. Sistem mendeteksi belum ada shift aktif, lalu menampilkan modal **Buka Shift**:
+   * **Kalkulator Pecahan Uang (*Cash Denomination Counter*)**: Kasir dapat membuka tab kalkulator pecahan untuk menginput rincian lembaran/koin fisik di laci (misal: 1 lembar Rp 100.000, 2 lembar Rp 50.000, dst.). Sistem otomatis menjumlahkan nominal live sum secara presisi tanpa perlu kalkulator manual.
    * Masukkan **Modal Awal Kas (Cash Float)** di laci kasir: `Rp 100.000` (untuk uang kembalian).
    * Klik **Mulai Shift Kasir**.
 3. Layar katalog kasir siap melayani transaksi pelanggan.
@@ -205,6 +206,19 @@ Dokumen ini adalah **panduan standar operasional (SOP) pengujian manual** sekali
    * *Susu Fresh Milk*: berkurang otomatis `240 ML` (`10.000` ➔ `9.760 ML`).
    * *Paper Cup*: berkurang otomatis `2 PCS` (`500` ➔ `498 PCS`).
 4. **Hasil**: Bebas selisih stok, tidak perlu input manual, HPP tercatat otomatis!
+
+### 5.4 Mode Offline-First: Transaksi Tanpa Internet & Sinkronisasi Idempoten Otomatis
+*Keunggulan utama Well POS saat infrastruktur internet toko padam atau fluktuatif:*
+1. **Simulasi Jaringan Terputus**: Matikan Wi-Fi atau cabut koneksi internet pada perangkat kasir.
+2. **Deteksi Status Real-Time**: Terminal POS kasir seketika menampilkan banner penanda *"Mode Offline Aktif"* tanpa menutup antarmuka atau memblokir kerja kasir.
+3. **Checkout Transaksi Tetap Berjalan**:
+   * Kasir tetap dapat memasukkan pesanan dan memproses pembayaran tunai.
+   * Transaksi diamankan ke dalam **Antrean Lokal (IndexedDB / Local Storage)** dengan penanda unik `offlineReferenceId`.
+   * Struk kasir fisik tetap dapat dicetak langsung ke printer thermal Bluetooth.
+4. **Indikator & Badge Antrean**: Di bagian atas terminal kasir muncul badge antrean (misal: *"1 Transaksi Tersimpan Offline"*). Kasir dapat mengklik badge ini untuk melihat daftar invoice tertunda.
+5. **Auto-Sync Saat Internet Pulih**:
+   * Begitu jaringan internet tersambung kembali, sistem kasir secara otomatis mengirimkan seluruh pesanan yang tertunda ke backend cloud.
+   * **Jaminan Idempotensi API**: Jika koneksi terputus di tengah proses sinkronisasi dan request dikirim ulang, server mengenali `offlineReferenceId` yang sama dan mencegah duplikasi transaksi atau pengurangan stok ganda. Saldo buku kas dan kartu stok tetap 100% akurat!
 
 ---
 
@@ -246,6 +260,12 @@ Dokumen ini adalah **panduan standar operasional (SOP) pengujian manual** sekali
    * Tercetak slip bukti void fisik dengan kolom tanda tangan kasir dan supervisor.
    * Kasir nakal tidak bisa memanipulasi kas atau mencuri uang penjualan!
 
+### 6.5 Widget Panduan Interaktif Sistem Terintegrasi (`FloatingGuideWidget`)
+1. Di portal Backoffice Pemilik maupun Supervisor, terdapat tombol panduan mengambang (*floating guide widget*) di pojok kanan bawah.
+2. **Posisi Ergonomis & Responsif**: Pada tampilan smartphone, widget otomatis terangkat di atas bottom navigation bar (`bottom-20`) agar tidak saling menutupi.
+3. **Proteksi Hak Akses**: Widget panduan hanya tampil bagi pengguna yang telah terotentikasi (Owner/Admin/Supervisor) dan disembunyikan saat kasir bertugas di terminal POS agar antarmuka kasir tetap bersih dan fokus pada transaksi.
+4. **Cakupan 24 Modul Lengkap**: Menyajikan panduan operasional langkah-demi-langkah, tips pencegahan error, serta pintasan langsung (*direct action buttons*) ke modul terkait.
+
 ---
 
 ## 🔒 FASE 7: PENUTUPAN SHIFT & REKONSILIASI KAS (END OF DAY)
@@ -254,8 +274,8 @@ Dokumen ini adalah **panduan standar operasional (SOP) pengujian manual** sekali
 
 1. Kasir menyelesaikan jam kerja dan mengklik tombol **Tutup Shift** di terminal POS.
 2. Sistem menampilkan modal **Hitung Uang Kas Fisik di Laci**:
-   * Kasir menghitung lembaran uang fisik di laci tanpa diberitahu terlebih dahulu berapa angka di sistem (*Blind Close Shift Policy*).
-   * Kasir memasukkan jumlah uang fisik hasil hitungan, misalnya: `Rp 150.000`.
+   * **Kalkulator Pecahan Uang Kas (*Cash Denomination Counter*)**: Kasir menggunakan kalkulator pecahan terpadu untuk menghitung lembar uang Rp 100.000, Rp 50.000, Rp 20.000, dst., hingga koin receh. Sistem langsung mengkalkulasi nominal uang fisik secara otomatis.
+   * Kebijakan hitung kas buta (*Blind Close Shift Policy*): Kasir menghitung fisik laci tanpa melihat estimasi angka sistem terlebih dahulu guna mencegah manipulasi.
 3. Sistem membandingkan:
    * Modal Awal: `Rp 100.000`
    * Total Penjualan Tunai: `Rp 50.000`

@@ -1763,6 +1763,29 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
      - `npm run build:client` (tsc -b && vite build) = Exit code 0.
      - `npm run build:server` (tsc) = Exit code 0.
 ===============================================================================
+[07 OKTOBER 2026] SYNCHRONIZATION OF SYSTEM GUIDES & PLAYBOOKS WITH LATEST UPDATES
+===============================================================================
+• Konteks & Driver:
+  - Pemutakhiran seluruh panduan sistem (In-App Guide, Tenant Playbook, Sandbox Guide, dan Project Memory) agar selaras 100% dengan kapabilitas terbaru:
+    1. Offline-First PWA Queue & Auto-Sync Idempoten pada Terminal POS Kasir.
+    2. Kalkulator Pecahan Uang Tunai (Cash Denomination Counter) pada Modal Buka & Tutup Shift Kasir.
+    3. Floating Widget Panduan Sistem Responsif (FloatingGuideWidget) dengan isolasi otentikasi & penyesuaian posisi mobile di atas bottom navigation bar.
+    4. Penegakan terminologi kanonikal Toko / Outlet di seluruh panduan manual & otomasi.
+• Dokumen & Berkas yang Diselaraskan:
+  1. `pos_apps/client/src/pages/UserGuideView.tsx`:
+     - Pembaruan Section 9 (Pembukaan & Rekap Tutup Shift Kasir) dengan instruksi Kalkulator Pecahan Uang.
+     - Penambahan Section 24: "Operasional Kasir Offline-First & Antrean Sinkronisasi Otomatis" (IndexedDB queue, badge antrean, jaminan idempotensi).
+  2. `docs/TENANT_ONBOARDING_AND_TESTING_GUIDE.md`:
+     - Pembaruan Fase 5.1 (Buka Shift) & Fase 7 (Tutup Shift) dengan SOP Kalkulator Pecahan Uang.
+     - Penambahan Sub-Bab 5.4: Mode Offline-First (Transaksi Tanpa Internet & Sinkronisasi Idempoten Otomatis).
+     - Penambahan Sub-Bab 6.5: Widget Panduan Interaktif Sistem Terintegrasi (FloatingGuideWidget).
+  3. `docs/SANDBOX_PLAYBOOK.md`:
+     - Penambahan Perintah Uji: `npm run test:offline` (`test_offline_idempotency.ts`).
+     - Penambahan Skenario 13: Offline-First Terminal Kasir, Local Queue & Idempotent Auto-Sync.
+     - Penambahan FAQ terkait penanganan pemadaman internet kasir secara offline-first.
+  4. `package.json` (Root & Server):
+     - Pendaftaran script kanonikal `npm run test:offline`.
+===============================================================================
 ```
 
 
