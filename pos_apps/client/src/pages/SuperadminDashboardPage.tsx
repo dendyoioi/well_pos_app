@@ -454,10 +454,13 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     });
   };
 
-  // Fetch dashboard and tenants
-  const loadPlatformData = async () => {
-    setLoadingData(true);
-    setActionFeedback(null);
+  // Fetch dashboard and tenants (dukungan mode silent/background agar UI stabil tanpa flicker)
+  const loadPlatformData = async (isBackgroundOrEvent?: boolean | any) => {
+    const isSilent = typeof isBackgroundOrEvent === 'boolean' ? isBackgroundOrEvent : false;
+    if (!isSilent) {
+      setLoadingData(true);
+      setActionFeedback(null);
+    }
     try {
       const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes, notifsRes, waRes] = await Promise.all([
         api.getPlatformDashboard(),
@@ -532,7 +535,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     } catch (err: any) {
       console.error('Failed loading platform data:', err);
     } finally {
-      setLoadingData(false);
+      if (!isSilent) {
+        setLoadingData(false);
+      }
     }
   };
 
@@ -540,13 +545,13 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     if (isLoggedIn) {
       loadPlatformData();
 
-      // Auto-refresh data on window focus and every 5 seconds for real-time registrations
+      // Auto-refresh hening di latar belakang setiap 60 detik tanpa flicker/kedip UI
       const interval = setInterval(() => {
-        loadPlatformData();
-      }, 5000);
+        loadPlatformData(true);
+      }, 60000);
 
       const handleFocus = () => {
-        loadPlatformData();
+        loadPlatformData(true);
       };
       window.addEventListener('focus', handleFocus);
 
@@ -3282,7 +3287,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             )}
           </div>
 
-          {!loadingData && filteredTenants.length > 0 && (
+          {filteredTenants.length > 0 && (
             <TablePagination
               currentPage={safeTenantPage}
               pageSize={tenantPageSize}
