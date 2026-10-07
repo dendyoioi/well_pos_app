@@ -6,7 +6,6 @@ import {
   Zap,
   ShieldCheck,
   Clock,
-  Sparkles,
   X,
   ArrowRight,
 } from 'lucide-react';
@@ -44,7 +43,6 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 }) => {
   const [isPaid, setIsPaid] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [simulating, setSimulating] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Menunggu pembayaran Anda...');
 
   const formatRupiah = (num: number) => {
@@ -87,27 +85,6 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 
     return () => clearInterval(interval);
   }, [isOpen, isPaid, invoiceNumber]);
-
-  // Handler simulasi sandbox payment
-  const handleSimulatePayment = async () => {
-    if (!invoiceNumber || simulating || isPaid) return;
-    setSimulating(true);
-
-    try {
-      const res = await api.simulatePakasirSandboxPayment(invoiceNumber);
-      if (res.status === 'success') {
-        setIsPaid(true);
-        setStatusMessage('Simulasi pembayaran sandbox berhasil!');
-        if (onSuccess) onSuccess();
-      } else {
-        alert(res.message || 'Gagal simulasi sandbox');
-      }
-    } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem saat simulasi sandbox');
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -264,18 +241,6 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                 >
                   <RotateCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
                   <span>{checking ? 'Memeriksa...' : 'Cek Status Pembayaran Manual'}</span>
-                </button>
-
-                {/* Tombol Sandbox Simulator (Aktif untuk uji coba) */}
-                <button
-                  type="button"
-                  onClick={handleSimulatePayment}
-                  disabled={simulating}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all cursor-pointer disabled:opacity-50"
-                  title="Klik untuk mensimulasikan pembayaran lunas di mode Sandbox"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{simulating ? 'Memproses Simulasi...' : '⚡ Simulasi Bayar QRIS (Sandbox Test)'}</span>
                 </button>
               </div>
 

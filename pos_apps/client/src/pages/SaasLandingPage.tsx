@@ -13,7 +13,6 @@ import {
   Tablet,
   QrCode,
   RefreshCw,
-  Sparkles,
   ShieldCheck,
   CreditCard,
   MessageCircle,
@@ -99,7 +98,6 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
   const [paymentPaid, setPaymentPaid] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
-  const [simulatingPayment, setSimulatingPayment] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -203,21 +201,6 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       console.error('Gagal mengecek status pembayaran:', err);
     } finally {
       setCheckingPayment(false);
-    }
-  };
-
-  const handleSimulateSandboxPayment = async () => {
-    if (!registerSuccessData?.payment?.invoiceNumber) return;
-    setSimulatingPayment(true);
-    try {
-      const res = await api.simulatePakasirSandboxPayment(registerSuccessData.payment.invoiceNumber);
-      if (res.status === 'success') {
-        setPaymentPaid(true);
-      }
-    } catch (err: any) {
-      console.error('Gagal simulasi sandbox:', err);
-    } finally {
-      setSimulatingPayment(false);
     }
   };
 
@@ -1661,7 +1644,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 )}
               </div>
 
-              {/* Tombol Aksi: Cek Status & Sandbox Pay */}
+              {/* Tombol Aksi: Cek Status Pembayaran */}
               <div className="space-y-2 pt-1">
                 <button
                   type="button"
@@ -1672,18 +1655,6 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   <RefreshCw className={`w-3.5 h-3.5 ${checkingPayment ? 'animate-spin' : ''}`} />
                   <span>{checkingPayment ? 'Mengecek Status Pembayaran...' : 'Cek Status Pembayaran Sekarang'}</span>
                 </button>
-
-                {registerSuccessData.payment?.isSandbox && (
-                  <button
-                    type="button"
-                    onClick={handleSimulateSandboxPayment}
-                    disabled={simulatingPayment}
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 transition-all cursor-pointer border border-amber-400 shadow-sm disabled:opacity-50"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{simulatingPayment ? 'Memproses Simulasi...' : '⚡ Simulasikan Pembayaran Berhasil (Uji Coba Sandbox)'}</span>
-                  </button>
-                )}
               </div>
             </div>
           )

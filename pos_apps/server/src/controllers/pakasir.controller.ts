@@ -190,6 +190,14 @@ export const checkPakasirInvoiceStatus = async (req: Request, res: Response) => 
  */
 export const simulateSandboxPayment = async (req: Request, res: Response) => {
   try {
+    // Keamanan: Cegah eksploitasi simulasi pembayaran di lingkungan produksi
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Simulasi pembayaran sandbox dinonaktifkan di lingkungan produksi.',
+      });
+    }
+
     const { invoiceNumber } = req.body;
     if (!invoiceNumber) {
       return res.status(400).json({ status: 'error', message: 'Nomor invoice wajib disertakan' });
