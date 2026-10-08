@@ -2,29 +2,28 @@ import React, { useState, useEffect } from 'react';
 import {
   Store,
   Plus,
+  Edit2,
   MapPin,
   Phone,
-  Users,
   CheckCircle2,
   AlertCircle,
-  Edit2,
-  Sliders,
-  X,
-  Search,
-  RefreshCw,
-  Check,
-  Shield,
-  ArrowRight,
-  ShoppingBag,
-  Warehouse,
   Copy,
+  Check,
+  Search,
+  ArrowRight,
+  Shield,
+  Sliders,
+  Warehouse,
+  ShoppingBag,
   Smartphone,
+  X,
 } from 'lucide-react';
-import type { Outlet, OutletFee } from '../types/outlet';
-import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
 import { api, authStorage } from '../services/api';
-import { WhatsAppInput } from '../components/ui';
 import { useDialog } from '../context/DialogContext';
+import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
+import { WhatsAppInput } from '../components/ui';
+import { TablePagination } from '../components/TablePagination';
+import type { Outlet, OutletFee } from '../types/outlet';
 
 interface OutletsViewProps {
   activeOutletId?: string;
@@ -37,41 +36,37 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   onSelectActiveOutlet,
   onOutletsUpdated,
 }) => {
-  const [outlets, setOutlets] = useState<Outlet[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [copiedStoreId, setCopiedStoreId] = useState(false);
-
   const dialog = useDialog();
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedStoreId, setCopiedStoreId] = useState(false);
+  const [selectedFeeOutlet, setSelectedFeeOutlet] = useState<Outlet | null>(null);
+  const [previewOnDemandOutletId, setPreviewOnDemandOutletId] = useState<string | null>(null);
+
+  // Ambil storeId dari tenant aktif
   const currentUser = authStorage.getUser();
   const storeId = currentUser?.tenant?.slug || '';
 
-  const handleCopyStoreId = () => {
-    if (!storeId) return;
-    navigator.clipboard.writeText(storeId);
-    setCopiedStoreId(true);
-    dialog.toast('Store ID berhasil disalin ke clipboard!', 'success');
-    setTimeout(() => setCopiedStoreId(false), 2000);
-  };
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
-  const [selectedFeeOutlet, setSelectedFeeOutlet] = useState<Outlet | null>(null);
-  const [previewOnDemandOutletId, setPreviewOnDemandOutletId] = useState<string | null>(null);
 
-  // Form State
+  // Form State (Murni untuk Toko Penjualan POS)
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     phone: '',
-    isWarehouse: false,
     warehouseId: null as string | null,
     isActive: true,
   });
-  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchOutlets = async () => {
     setLoading(true);
@@ -91,13 +86,16 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
     fetchOutlets();
   }, []);
 
+  // Filter murni toko penjualan & daftar gudang logistik untuk pilihan pasokan
+  const stores = outlets.filter((o) => !o.isWarehouse);
+  const warehouses = outlets.filter((o) => !!o.isWarehouse);
+
   const handleOpenAdd = () => {
-    const defaultWh = outlets.find((o) => o.isWarehouse);
+    const defaultWh = warehouses.find((w) => w.isActive);
     setFormData({
       name: '',
       address: '',
       phone: '',
-      isWarehouse: false,
       warehouseId: defaultWh?.id || null,
       isActive: true,
     });
@@ -111,7 +109,6 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       name: outlet.name,
       address: outlet.address || '',
       phone: outlet.phone || '',
-      isWarehouse: !!outlet.isWarehouse,
       warehouseId: outlet.warehouseId || null,
       isActive: outlet.isActive,
     });
@@ -133,13 +130,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         name: formData.name.trim(),
         address: formData.address.trim() || undefined,
         phone: formData.phone.trim() || undefined,
-        isWarehouse: formData.isWarehouse,
-        warehouseId: formData.isWarehouse ? null : (formData.warehouseId || null),
+        isWarehouse: false,
+        warehouseId: formData.warehouseId || null,
       } as any);
 
       if (res.status === 'success') {
         setIsAddModalOpen(false);
-        fetchOutlets();
+        await fetchOutlets();
         if (onOutletsUpdated) onOutletsUpdated();
         dialog.toast('Toko baru berhasil dibuat!', 'success');
       } else {
@@ -167,15 +164,15 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         name: formData.name.trim(),
         address: formData.address.trim() || undefined,
         phone: formData.phone.trim() || undefined,
-        isWarehouse: formData.isWarehouse,
-        warehouseId: formData.isWarehouse ? null : (formData.warehouseId || null),
+        isWarehouse: false,
+        warehouseId: formData.warehouseId || null,
         isActive: formData.isActive,
       } as any);
 
       if (res.status === 'success') {
         setIsEditModalOpen(false);
         setEditingOutlet(null);
-        fetchOutlets();
+        await fetchOutlets();
         if (onOutletsUpdated) onOutletsUpdated();
         dialog.toast('Data toko berhasil diperbarui!', 'success');
       } else {
@@ -188,23 +185,38 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
     }
   };
 
-  const [outletTypeFilter, setOutletTypeFilter] = useState<'ALL' | 'STORE' | 'WAREHOUSE'>('ALL');
+  const handleCopyStoreId = () => {
+    if (!storeId) return;
+    navigator.clipboard.writeText(storeId);
+    setCopiedStoreId(true);
+    setTimeout(() => setCopiedStoreId(false), 2000);
+  };
 
-  const filteredOutlets = outlets.filter((o) => {
-    if (outletTypeFilter === 'STORE' && o.isWarehouse) return false;
-    if (outletTypeFilter === 'WAREHOUSE' && !o.isWarehouse) return false;
+  // Filter status aktif/nonaktif
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+
+  const filteredStores = stores.filter((s) => {
+    if (statusFilter === 'ACTIVE' && !s.isActive) return false;
+    if (statusFilter === 'INACTIVE' && s.isActive) return false;
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
-      o.name.toLowerCase().includes(q) ||
-      (o.address && o.address.toLowerCase().includes(q)) ||
-      (o.phone && o.phone.toLowerCase().includes(q))
+      s.name.toLowerCase().includes(q) ||
+      (s.address && s.address.toLowerCase().includes(q)) ||
+      (s.phone && s.phone.toLowerCase().includes(q))
     );
   });
 
+  const paginatedStores = filteredStores.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header Banner */}
+      {/* =========================================================================
+          HEADER BANNER
+          ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -219,7 +231,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 max-w-2xl">
-            Kelola seluruh outlet toko usaha Anda dalam 1 akun owner. Setiap outlet toko memiliki isolasi inventori stok, riwayat transaksi, staf kasir, serta aturan biaya dan pajak dinamis.
+            Kelola seluruh outlet toko kasir penjualan fisik &amp; meja makan Anda. Setiap outlet toko memiliki isolasi kasir POS, QR menu, dan pengaturan pasokan bahan baku.
           </p>
         </div>
 
@@ -235,7 +247,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         </div>
       </div>
 
-      {/* Kartu Informasi ID Toko untuk Mesin Kasir POS (Device Pairing) */}
+      {/* =========================================================================
+          KONEKSI MESIN KASIR POS (DEVICE PAIRING)
+          ========================================================================= */}
       <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-5 sm:p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
@@ -280,132 +294,152 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <span>Alur Sambung Kasir</span>
           </div>
           <p className="text-[11px] text-blue-200 leading-snug">
-            Buka menu <strong>Kasir POS</strong> $\rightarrow$ Masukkan <strong>ID Toko</strong> & <strong>PIN</strong> $\rightarrow$ Pilih Outlet Toko. Perangkat akan terhubung otomatis tanpa perlu input ID Toko lagi.
+            Buka menu <strong>Kasir POS</strong> $\rightarrow$ Masukkan <strong>ID Toko</strong> &amp; <strong>PIN</strong> $\rightarrow$ Pilih Outlet Toko. Perangkat akan terhubung otomatis tanpa perlu input ID Toko lagi.
           </p>
         </div>
       </div>
 
-      {/* Quota & Summary Stats Bar */}
+      {/* =========================================================================
+          RINGKASAN METRIK TOKO PENJUALAN
+          ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Card 1: Toko Aktif */}
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Toko Penjualan (POS)</span>
             <Store className="w-4 h-4 text-blue-900" />
           </div>
           <div className="text-2xl font-black text-blue-950">
-            {outlets.filter((o) => !o.isWarehouse && o.isActive).length} Toko Aktif
+            {stores.filter((s) => s.isActive).length} Toko Aktif
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Melayani transaksi kasir langsung
+            Dari total {stores.length} toko terdaftar
           </p>
         </div>
 
+        {/* Card 2: Toko Terhubung Gudang Pasokan */}
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Gudang Logistik / Pusat</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Disuplai Gudang Pusat</span>
             <Warehouse className="w-4 h-4 text-indigo-700" />
           </div>
           <div className="text-2xl font-black text-indigo-950">
-            {outlets.filter((o) => o.isWarehouse && o.isActive).length} Gudang Aktif
+            {stores.filter((s) => !!s.warehouseId).length} Toko
           </div>
-          <p className="text-xs text-slate-500 mt-1">Pusat stok bahan baku & rantai pasok</p>
+          <p className="text-xs text-slate-500 mt-1">Bahan baku otomatis potong ke gudang (backflush)</p>
         </div>
 
+        {/* Card 3: Toko Mandiri */}
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Staf Terdistribusi</span>
-            <Users className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold uppercase tracking-wider">Toko Mandiri (Lokal)</span>
+            <Store className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-emerald-700">
-            {outlets.reduce((acc, o) => acc + (o._count?.users || 0), 0)} Orang
+            {stores.filter((s) => !s.warehouseId).length} Toko
           </div>
-          <p className="text-xs text-slate-500 mt-1">Kasir, Gudang, & Supervisor terdistribusi</p>
+          <p className="text-xs text-slate-500 mt-1">Mengelola persediaan stok secara mandiri</p>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
+      {/* =========================================================================
+          FILTER & PENCARIAN
+          ========================================================================= */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Segmented Filter Tab */}
+        {/* Filter Status Aktif */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 overflow-x-auto">
           <button
             type="button"
-            onClick={() => setOutletTypeFilter('ALL')}
+            onClick={() => {
+              setStatusFilter('ALL');
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              outletTypeFilter === 'ALL'
+              statusFilter === 'ALL'
                 ? 'bg-white text-blue-950 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Semua ({outlets.length})
+            Semua ({stores.length})
           </button>
           <button
             type="button"
-            onClick={() => setOutletTypeFilter('STORE')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              outletTypeFilter === 'STORE'
-                ? 'bg-white text-blue-900 shadow-xs'
+            onClick={() => {
+              setStatusFilter('ACTIVE');
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              statusFilter === 'ACTIVE'
+                ? 'bg-white text-emerald-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Store className="w-3.5 h-3.5" />
-            <span>Toko ({outlets.filter((o) => !o.isWarehouse).length})</span>
+            ● Aktif ({stores.filter((s) => s.isActive).length})
           </button>
           <button
             type="button"
-            onClick={() => setOutletTypeFilter('WAREHOUSE')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              outletTypeFilter === 'WAREHOUSE'
-                ? 'bg-white text-indigo-900 shadow-xs'
+            onClick={() => {
+              setStatusFilter('INACTIVE');
+              setCurrentPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              statusFilter === 'INACTIVE'
+                ? 'bg-white text-rose-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Warehouse className="w-3.5 h-3.5" />
-            <span>Gudang ({outlets.filter((o) => o.isWarehouse).length})</span>
+            ○ Nonaktif ({stores.filter((s) => !s.isActive).length})
           </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 md:justify-end">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari toko / gudang..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={fetchOutlets}
-            title="Segarkan Data"
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0 cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
-          </button>
+        {/* Search Input */}
+        <div className="relative w-full md:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Cari nama toko, alamat, kontak..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none transition-all"
+          />
         </div>
       </div>
 
-      {/* Outlets Cards Grid */}
-      {loading && outlets.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-900 mb-2" />
-          <p className="text-xs font-semibold">Memuat daftar outlet toko...</p>
+      {/* =========================================================================
+          DAFTAR KARTU TOKO PENJUALAN
+          ========================================================================= */}
+      {loading ? (
+        <div className="p-12 text-center text-slate-500 bg-white rounded-3xl border border-slate-200 space-y-2">
+          <div className="w-8 h-8 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-bold">Memuat daftar outlet toko...</p>
         </div>
-      ) : filteredOutlets.length === 0 ? (
-        <div className="p-12 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
-          <Store className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm font-bold text-slate-700">Tidak ada outlet toko yang cocok</p>
-          <p className="text-xs text-slate-400 mt-1">Coba kata kunci pencarian lain atau buat toko baru.</p>
+      ) : filteredStores.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+          <Store className="w-12 h-12 text-slate-300 mx-auto" />
+          <p className="text-sm font-bold text-slate-700">Tidak ada toko yang ditemukan</p>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            {searchQuery
+              ? `Tidak ditemukan toko yang sesuai dengan pencarian "${searchQuery}".`
+              : 'Belum ada toko yang terdaftar. Tambahkan toko pertama Anda sekarang.'}
+          </p>
+          {!searchQuery && (
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="mt-2 px-4 py-2 rounded-xl bg-blue-900 text-white font-bold text-xs"
+            >
+              Tambah Toko Pertama
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredOutlets.map((outlet) => {
+          {paginatedStores.map((outlet) => {
             const isCurrentlyActive = outlet.id === activeOutletId;
             const fees = (outlet.feesConfig as OutletFee[]) || [];
-            
-            // Pisahkan biaya toko & pajak otomatis vs kemasan on-demand manual kasir
             const defaultTaxFees = fees.filter(
               (f) =>
                 f.category !== 'ON_DEMAND_PACKAGING' &&
@@ -415,7 +449,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 !f.name.toLowerCase().includes('plastik') &&
                 !f.name.toLowerCase().includes('paperbag')
             );
-            const onDemandFees = fees.filter(
+            const activeOnDemandFees = fees.filter(
               (f) =>
                 f.category === 'ON_DEMAND_PACKAGING' ||
                 f.id === 'fee_box' ||
@@ -424,55 +458,35 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 f.name.toLowerCase().includes('plastik') ||
                 f.name.toLowerCase().includes('paperbag')
             );
-
-            const activeTaxFees = defaultTaxFees.filter((f) => f.isActive);
-            const activeOnDemandFees = onDemandFees.filter((f) => f.isActive);
+            const parentWarehouse = warehouses.find((w) => w.id === outlet.warehouseId);
 
             return (
               <div
                 key={outlet.id}
-                className={`bg-white rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md ${
+                className={`bg-white rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
                   isCurrentlyActive
                     ? 'border-blue-900 ring-2 ring-blue-900/10'
-                    : 'border-slate-200 hover:border-blue-300'
+                    : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <div className="p-5 sm:p-6 space-y-4">
-                  {/* Card Header */}
+                {/* Header Card */}
+                <div className="p-5 sm:p-6 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-white shrink-0 shadow-sm ${
-                          outlet.isWarehouse
-                            ? isCurrentlyActive
-                              ? 'bg-indigo-700'
-                              : 'bg-indigo-950'
-                            : isCurrentlyActive
-                            ? 'bg-blue-900'
-                            : 'bg-slate-800'
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shrink-0 ${
+                          isCurrentlyActive ? 'bg-blue-900' : 'bg-slate-800'
                         }`}
                       >
-                        {outlet.isWarehouse ? (
-                          <Warehouse className="w-5 h-5 text-indigo-200" />
-                        ) : (
-                          <Store className="w-5 h-5" />
-                        )}
+                        <Store className="w-5 h-5" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-extrabold text-blue-950 text-base leading-tight">
-                            {outlet.name}
-                          </h3>
-                        </div>
+                        <h3 className="font-extrabold text-blue-950 text-base leading-tight">
+                          {outlet.name}
+                        </h3>
                         <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                          <span
-                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                              outlet.isWarehouse
-                                ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                                : 'bg-blue-50 text-blue-800 border-blue-200'
-                            }`}
-                          >
-                            {outlet.isWarehouse ? '🏭 Gudang Logistik' : '🏪 Toko Kasir'}
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-800 border-blue-200">
+                            🏪 Toko Kasir
                           </span>
                           <span
                             className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
@@ -489,17 +503,6 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                               <span>Sedang Digunakan</span>
                             </span>
                           )}
-                          {!outlet.isWarehouse && (
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                outlet.loyaltyConfig?.isActive
-                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200'
-                              }`}
-                            >
-                              {outlet.loyaltyConfig?.isActive ? '★ Poin ON' : '☆ Poin OFF'}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -508,50 +511,35 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       type="button"
                       onClick={() => handleOpenEdit(outlet)}
                       className="p-1.5 rounded-xl text-slate-400 hover:text-blue-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                      title={outlet.isWarehouse ? 'Edit Informasi Gudang' : 'Edit Informasi Toko'}
+                      title="Edit Informasi Toko"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Sumber Pasokan Gudang vs Hub Pasokan Toko Cabang */}
-                  {outlet.isWarehouse ? (
-                    <div className="flex items-center justify-between text-xs text-indigo-950 bg-indigo-50/80 p-2.5 rounded-2xl border border-indigo-200">
-                      <div className="flex items-center gap-2">
-                        <Store className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
-                        <span>
-                          Menyuplai:{' '}
-                          <strong className="text-indigo-950 font-bold">
-                            {outlets.filter((o) => o.warehouseId === outlet.id).length} Toko Cabang
-                          </strong>
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-md">
-                        Pusat Pasokan
+                  {/* Info Sumber Pasokan Bahan Baku */}
+                  <div className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span>
+                        Pasokan:{' '}
+                        <strong className="text-slate-900 font-bold">
+                          {parentWarehouse ? parentWarehouse.name : 'Toko Mandiri (Lokal)'}
+                        </strong>
                       </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between text-xs text-slate-600 bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100">
-                      <div className="flex items-center gap-2">
-                        <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
-                        <span>
-                          Pasokan:{' '}
-                          <strong className="text-indigo-950 font-bold">
-                            {outlet.warehouseId
-                              ? outlets.find((o) => o.id === outlet.warehouseId)?.name || 'Gudang Pusat'
-                              : 'Toko Mandiri (Lokal)'}
-                          </strong>
-                        </span>
-                      </div>
-                      {outlet.warehouseId && (
-                        <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
-                          Auto-Backflush
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    {parentWarehouse ? (
+                      <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-md">
+                        Auto-Backflush
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md">
+                        Stok Lokal
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Address & Phone */}
+                  {/* Alamat & Telepon */}
                   <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                     <div className="flex items-start gap-2">
                       <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
@@ -563,7 +551,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Quick Stat Counters */}
+                  {/* Counter Ringkas */}
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
                     <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
                       <span className="block text-xs font-black text-blue-950">
@@ -575,7 +563,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       <span className="block text-xs font-black text-blue-950">
                         {outlet._count?.outletProducts || 0}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">SKU Stok</span>
+                      <span className="text-[10px] text-slate-400 font-medium">SKU Menu</span>
                     </div>
                     <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
                       <span className="block text-xs font-black text-blue-950">
@@ -585,11 +573,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Active Fees Badge List: Khusus Pajak/Biaya Toko, On-Demand via Tooltip Preview */}
+                  {/* Pengaturan Pajak Toko */}
                   <div className="pt-2 border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Biaya & Pajak Toko ({activeTaxFees.length} Aktif)
+                        Biaya &amp; Pajak Toko ({defaultTaxFees.filter(f => f.isActive).length} Aktif)
                       </span>
                       <button
                         type="button"
@@ -613,14 +601,12 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : 'bg-slate-100 text-slate-400 border-slate-200 line-through'
                             }`}
-                            title={`${f.name} (${f.type === 'PERCENTAGE' ? f.rate + '%' : 'Rp ' + f.rate.toLocaleString('id-ID')})`}
                           >
                             {f.name.split(' ')[0]}: {f.type === 'PERCENTAGE' ? `${f.rate}%` : `Rp ${f.rate}`}
                           </span>
                         ))
                       )}
 
-                      {/* Tooltip Pill Button untuk Kemasan On-Demand */}
                       {activeOnDemandFees.length > 0 && (
                         <button
                           type="button"
@@ -629,87 +615,26 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                               previewOnDemandOutletId === outlet.id ? null : outlet.id
                             )
                           }
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 cursor-pointer transition-all shadow-2xs ${
-                            previewOnDemandOutletId === outlet.id
-                              ? 'bg-amber-600 text-white border-amber-700'
-                              : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
-                          }`}
-                          title="Klik untuk melihat preview daftar kemasan on-demand"
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 cursor-pointer transition-all bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
                         >
                           <ShoppingBag className="w-2.5 h-2.5" />
                           <span>+{activeOnDemandFees.length} On-Demand</span>
                         </button>
                       )}
                     </div>
-
-                    {/* Expandable Preview Box untuk Kemasan On-Demand */}
-                    {previewOnDemandOutletId === outlet.id && activeOnDemandFees.length > 0 && (
-                      <div className="mt-2.5 p-3 bg-slate-900 text-white rounded-2xl shadow-lg text-xs space-y-2 border border-slate-700 animate-fadeIn">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                          <span className="font-extrabold text-[11px] text-amber-400 flex items-center gap-1">
-                            🛍️ Kemasan On-Demand ({activeOnDemandFees.length})
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setPreviewOnDemandOutletId(null)}
-                            className="text-slate-400 hover:text-white cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-slate-400 leading-tight">
-                          Biaya kemasan ini tidak otomatis, hanya ditambahkan saat kasir memilihnya di keranjang POS.
-                        </p>
-                        <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                          {activeOnDemandFees.map((f) => (
-                            <div
-                              key={f.id}
-                              className="flex items-center justify-between text-[11px] py-0.5 border-b border-slate-800/60 last:border-0"
-                            >
-                              <span className="text-slate-300 truncate max-w-[170px]" title={f.name}>
-                                • {f.name}
-                              </span>
-                              <span className="font-extrabold text-amber-300 text-[10px] shrink-0">
-                                Rp {f.rate.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="pt-1.5 border-t border-slate-800 flex justify-between items-center text-[10px]">
-                          <span className="text-slate-500">Manual Kasir</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPreviewOnDemandOutletId(null);
-                              setSelectedFeeOutlet(outlet);
-                            }}
-                            className="text-blue-400 hover:text-blue-300 font-bold hover:underline cursor-pointer"
-                          >
-                            Kelola di SPV &rarr;
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    </div>
                   </div>
+                </div>
 
                 {/* Card Footer Action */}
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                  {!outlet.isWarehouse ? (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFeeOutlet(outlet)}
-                      className="px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Shield className="w-3.5 h-3.5 text-blue-900" />
-                      <span>Atur Biaya SPV</span>
-                    </button>
-                  ) : (
-                    <div className="text-[11px] font-bold text-indigo-900 px-2 py-1 flex items-center gap-1">
-                      <Warehouse className="w-3.5 h-3.5 text-indigo-700" />
-                      <span>Pusat Pasokan</span>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFeeOutlet(outlet)}
+                    className="px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-blue-900" />
+                    <span>Atur Biaya SPV</span>
+                  </button>
 
                   {!isCurrentlyActive ? (
                     <button
@@ -719,19 +644,15 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                           onSelectActiveOutlet(outlet.id);
                         }
                       }}
-                      className={`px-4 py-2 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                        outlet.isWarehouse
-                          ? 'bg-indigo-700 hover:bg-indigo-800'
-                          : 'bg-blue-900 hover:bg-blue-800'
-                      }`}
+                      className="px-4 py-2 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer bg-blue-900 hover:bg-blue-800"
                     >
-                      <span>{outlet.isWarehouse ? 'Buka Mode Gudang' : 'Pilih Toko Ini'}</span>
+                      <span>Pilih Toko Ini</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   ) : (
                     <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{outlet.isWarehouse ? 'Gudang Aktif' : 'Toko Aktif'}</span>
+                      <span>Toko Aktif</span>
                     </span>
                   )}
                 </div>
@@ -741,20 +662,33 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         </div>
       )}
 
-      {/* Modal: Tambah Toko Baru */}
+      {/* =========================================================================
+          PAGINATION
+          ========================================================================= */}
+      {filteredStores.length > 0 && (
+        <TablePagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={filteredStores.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize: number) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
+      )}
+
+      {/* =========================================================================
+          MODAL TAMBAH TOKO BARU (MURNI TOKO KASIR)
+          ========================================================================= */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-extrabold text-blue-950 text-base">
-                  {formData.isWarehouse ? 'Tambah Gudang Logistik' : 'Tambah Outlet Toko'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {formData.isWarehouse
-                    ? 'Pusat penyimpanan & pasokan bahan baku antar cabang'
-                    : 'Buka outlet toko penjualan baru pada bisnis Anda'}
-                </p>
+                <h3 className="font-extrabold text-blue-950 text-base">Tambah Outlet Toko</h3>
+                <p className="text-xs text-slate-500">Buka outlet toko penjualan baru pada bisnis Anda</p>
               </div>
               <button
                 type="button"
@@ -766,60 +700,22 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             </div>
 
             {formError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 shrink-0">
+              <div className="p-3 mx-4 mt-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             <form onSubmit={handleCreateOutlet} className="flex-1 flex flex-col overflow-hidden">
-              <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-2">
-                {/* Selector Tipe Unit Operasional */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Tipe Unit Operasional <span className="text-rose-600">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, isWarehouse: false })}
-                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        !formData.isWarehouse
-                          ? 'bg-white text-blue-950 shadow-xs border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Store className="w-4 h-4 text-blue-900" />
-                      <span>Toko Kasir (POS)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, isWarehouse: true, warehouseId: null })}
-                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        formData.isWarehouse
-                          ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Warehouse className="w-4 h-4 text-indigo-700" />
-                      <span>Gudang Logistik</span>
-                    </button>
-                  </div>
-                </div>
-
+              <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-6 space-y-3.5 pb-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {formData.isWarehouse ? 'Nama Gudang Logistik' : 'Nama Toko'}{' '}
-                    <span className="text-rose-600">*</span>
+                    Nama Toko <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder={
-                      formData.isWarehouse
-                        ? 'Contoh: Gudang Logistik Pusat Cilandak'
-                        : 'Contoh: Kopi Nusantara - Kemang'
-                    }
+                    placeholder="Contoh: Kopi Nusantara - Kemang"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
@@ -828,11 +724,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {formData.isWarehouse ? 'Alamat Gudang' : 'Alamat Lengkap Toko'}
+                    Alamat Lengkap Toko
                   </label>
                   <textarea
                     rows={2}
-                    placeholder="Contoh: Jl. Industri Raya Blok B No. 8, Jakarta Selatan"
+                    placeholder="Contoh: Jl. Kemang Raya No. 45, Jakarta Selatan"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
@@ -840,50 +736,37 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 </div>
 
                 <WhatsAppInput
-                  label={formData.isWarehouse ? 'Kontak PIC Gudang' : 'Nomor WhatsApp / Telepon Toko'}
+                  label="Nomor WhatsApp / Telepon Toko"
                   value={formData.phone}
                   onChange={(val) => setFormData({ ...formData, phone: val })}
                   placeholder="81234567890"
                 />
 
-                {!formData.isWarehouse ? (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Gudang Sumber Pasokan (Backflush Warehouse)
-                    </label>
-                    <select
-                      value={formData.warehouseId || ''}
-                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                    >
-                      <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
-                      {outlets
-                        .filter((o) => o.isWarehouse)
-                        .map((wh) => (
-                          <option key={wh.id} value={wh.id}>
-                            🏭 {wh.name}
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 space-y-1">
-                    <div className="font-extrabold flex items-center gap-1.5 text-indigo-900">
-                      <Warehouse className="w-4 h-4 text-indigo-700" />
-                      <span>Mode Gudang Logistik</span>
-                    </div>
-                    <p className="text-[11px] text-indigo-800 leading-relaxed">
-                      Gudang ini berfungsi sebagai pusat penyimpanan dan pasokan bahan baku/inventori. Toko-toko cabang dapat memilih gudang ini sebagai sumber pasokan otomatis (auto-backflush).
-                    </p>
-                  </div>
-                )}
+                {/* Dropdown Sumber Pasokan Stok */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Gudang Sumber Pasokan (Backflush Warehouse)
+                  </label>
+                  <select
+                    value={formData.warehouseId || ''}
+                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                  >
+                    <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                    {warehouses.map((wh) => (
+                      <option key={wh.id} value={wh.id}>
+                        🏭 {wh.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
+                  </p>
+                </div>
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="pt-3 border-t border-slate-100 shrink-0 flex items-center justify-end gap-2 bg-white">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
@@ -894,17 +777,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className={`px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-md disabled:opacity-50 cursor-pointer transition-all ${
-                    formData.isWarehouse
-                      ? 'bg-indigo-700 hover:bg-indigo-800 shadow-indigo-900/20'
-                      : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'
-                  }`}
+                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all"
                 >
-                  {submitting
-                    ? 'Menyimpan...'
-                    : formData.isWarehouse
-                    ? 'Buat Gudang Baru'
-                    : 'Buat Toko Baru'}
+                  {submitting ? 'Menyimpan...' : 'Buat Toko Baru'}
                 </button>
               </div>
             </form>
@@ -912,13 +787,16 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         </div>
       )}
 
-      {/* Modal: Edit Toko */}
+      {/* =========================================================================
+          MODAL EDIT TOKO (MURNI TOKO KASIR - LOCKED ENTITY TYPE)
+          ========================================================================= */}
       {isEditModalOpen && editingOutlet && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+          <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-extrabold text-blue-950 text-base">Edit Informasi Toko</h3>
+                <h3 className="font-extrabold text-blue-950 text-base">Edit Outlet Toko</h3>
                 <p className="text-xs text-slate-500">{editingOutlet.name}</p>
               </div>
               <button
@@ -927,58 +805,24 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   setIsEditModalOpen(false);
                   setEditingOutlet(null);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 shrink-0">
+              <div className="p-3 mx-4 mt-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             <form onSubmit={handleUpdateOutlet} className="flex-1 flex flex-col overflow-hidden">
-              <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-2">
-                {/* Selector Tipe Unit Operasional */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Tipe Unit Operasional <span className="text-rose-600">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, isWarehouse: false })}
-                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        !formData.isWarehouse
-                          ? 'bg-white text-blue-950 shadow-xs border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Store className="w-4 h-4 text-blue-900" />
-                      <span>Toko Kasir (POS)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, isWarehouse: true, warehouseId: null })}
-                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        formData.isWarehouse
-                          ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <Warehouse className="w-4 h-4 text-indigo-700" />
-                      <span>Gudang Logistik</span>
-                    </button>
-                  </div>
-                </div>
-
+              <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-6 space-y-3.5 pb-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {formData.isWarehouse ? 'Nama Gudang Logistik' : 'Nama Toko'}{' '}
-                    <span className="text-rose-600">*</span>
+                    Nama Toko <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -991,7 +835,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {formData.isWarehouse ? 'Alamat Gudang' : 'Alamat Lengkap Toko'}
+                    Alamat Lengkap Toko
                   </label>
                   <textarea
                     rows={2}
@@ -1002,46 +846,33 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 </div>
 
                 <WhatsAppInput
-                  label={formData.isWarehouse ? 'Kontak PIC Gudang' : 'Nomor WhatsApp / Telepon'}
+                  label="Nomor WhatsApp / Telepon"
                   value={formData.phone}
                   onChange={(val) => setFormData({ ...formData, phone: val })}
                   placeholder="81234567890"
                 />
 
-                {!formData.isWarehouse ? (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Gudang Sumber Pasokan (Backflush Warehouse)
-                    </label>
-                    <select
-                      value={formData.warehouseId || ''}
-                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                    >
-                      <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
-                      {outlets
-                        .filter((wh) => wh.isWarehouse && wh.id !== editingOutlet.id)
-                        .map((wh) => (
-                          <option key={wh.id} value={wh.id}>
-                            🏭 {wh.name}
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 space-y-1">
-                    <div className="font-extrabold flex items-center gap-1.5 text-indigo-900">
-                      <Warehouse className="w-4 h-4 text-indigo-700" />
-                      <span>Mode Gudang Logistik</span>
-                    </div>
-                    <p className="text-[11px] text-indigo-800 leading-relaxed">
-                      Gudang ini berfungsi sebagai pusat penyimpanan dan pasokan bahan baku/inventori. Toko-toko cabang dapat memilih gudang ini sebagai sumber pasokan otomatis (auto-backflush).
-                    </p>
-                  </div>
-                )}
+                {/* Dropdown Sumber Pasokan Gudang */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Gudang Sumber Pasokan (Backflush Warehouse)
+                  </label>
+                  <select
+                    value={formData.warehouseId || ''}
+                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                  >
+                    <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                    {warehouses.map((wh) => (
+                      <option key={wh.id} value={wh.id}>
+                        🏭 {wh.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
+                  </p>
+                </div>
 
                 <div>
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
@@ -1051,15 +882,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                       className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 cursor-pointer"
                     />
-                    <span>
-                      {formData.isWarehouse ? 'Gudang Aktif dan Beroperasi' : 'Toko Aktif dan Beroperasi'}
-                    </span>
+                    <span>Toko Aktif dan Beroperasi</span>
                   </label>
                 </div>
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="pt-3 border-t border-slate-100 shrink-0 flex items-center justify-end gap-2 bg-white">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => {
@@ -1073,17 +902,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className={`px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-md disabled:opacity-50 cursor-pointer transition-all ${
-                    formData.isWarehouse
-                      ? 'bg-indigo-700 hover:bg-indigo-800 shadow-indigo-900/20'
-                      : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'
-                  }`}
+                  className="px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-md bg-blue-900 hover:bg-blue-800 shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all"
                 >
-                  {submitting
-                    ? 'Menyimpan...'
-                    : formData.isWarehouse
-                    ? 'Simpan Perubahan Gudang'
-                    : 'Simpan Perubahan Toko'}
+                  {submitting ? 'Menyimpan...' : 'Simpan Perubahan Toko'}
                 </button>
               </div>
             </form>

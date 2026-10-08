@@ -26,7 +26,8 @@ docs/
 │   ├── ADR-005-services-module-boundary.md    # Penanganan produk tipe jasa/layanan
 │   ├── ADR-006-decoupled-saas-onboarding-and-store-wizard.md # Onboarding mandiri & store wizard
 │   ├── ADR-007-security-hardening-tenant-isolation.md # Pengerasan keamanan isolasi tenant
-│   └── ADR-008-free-tier-infrastructure-and-evolution-strategy.md # Arsitektur hybrid free-tier & upgrade strategy
+│   ├── ADR-008-free-tier-infrastructure-and-evolution-strategy.md # Arsitektur hybrid free-tier & upgrade strategy
+│   └── ADR-009-separation-of-storefront-and-warehouse-domains.md # Pemisahan domain toko penjualan dan gudang logistik
 │
 ├── architecture/                              # [REFERENCE] Spesifikasi teknis & perancangan arsitektur
 │   ├── 01_EXISTING_SYSTEM_AUDIT.md            # Hasil audit sistem lama sebelum migrasi

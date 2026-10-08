@@ -383,6 +383,25 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Seluruh artefak visual screenshot tersimpan di: docs/artifacts/visual_shift_audit/ (happy_path [01-05], sad_path [01-03], bad_path [01]).
   └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
+[2026-10-09] PEMISAHAN DOMAIN TOKO PENJUALAN (POS) DAN GUDANG LOGISTIK (INVENTORY) & ADR-009
+  ├── 1. Keputusan Arsitektur & Information Architecture (ADR-009):
+  │   - Pemisahan tegas domain Toko Penjualan (Frontline POS) dan Gudang Logistik (Backline Supply Chain).
+  │   - Eliminasi kebingungan kognitif toggle "Toko vs Gudang" dan risiko mutasi tipe entitas saat proses edit.
+  ├── 2. Halaman Mandiri Kelola Gudang (WarehousesView.tsx):
+  │   - Ditempatkan di bawah grup navigasi sidebar: Bahan Baku & Stok -> Kelola Gudang (?tab=warehouses).
+  │   - Menampilkan daftar fasilitas gudang logistik (isWarehouse: true), metrik toko cabang yang disuplai, tombol "Buka Mode Gudang", dan form tambah/edit gudang responsif.
+  ├── 3. Halaman Terisolasi Toko Penjualan (OutletsView.tsx):
+  │   - Ditempatkan murni di bawah: Pengaturan Resto & Outlet -> Profil & Outlet Toko (?tab=outlets).
+  │   - Murni untuk toko ritel/kasir (isWarehouse: false) dengan tipe entitas terkunci permanen.
+  │   - Form tambah & edit toko menyertakan dropdown sumber pasokan: "Gudang Sumber Pasokan (Backflush Warehouse): [Pilih Gudang / Toko Mandiri]".
+  ├── 4. Backend Guardrails & Integritas Rantai Pasok (outlet.controller.ts):
+  │   - Gudang logistik dipaksa warehouseId = null.
+  │   - Anti Self-Referencing Guard: Toko dilarang menunjuk dirinya sendiri sebagai gudang pasokan.
+  │   - Target Warehouse Validation: Memastikan target berstatus isWarehouse: true, aktif, dan milik tenant yang sama.
+  ├── 5. Suite Pengujian Regresi Otomatis (test_outlet_warehouse_regression.ts):
+  │   - 13/13 skenario uji regresi lulus 100% (Toko Mandiri, Toko Pasokan Gudang, Outlet Gudang, Pemotongan Resep BOM Backflush, Keamanan E.164, Tenant Isolation, Self-Referencing Guard).
+  └── 6. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
 ```
 
 ---

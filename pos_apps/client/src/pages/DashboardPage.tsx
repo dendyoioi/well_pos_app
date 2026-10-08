@@ -54,6 +54,7 @@ import { CategoriesView } from './CategoriesView';
 import { ModifiersView } from './ModifiersView';
 import { RecipesView } from './RecipesView';
 import { OutletsView } from './OutletsView';
+import { WarehousesView } from './WarehousesView';
 import { SuppliersView } from './SuppliersView';
 import { PromotionsView } from './PromotionsView';
 import { ReceiptSettingsView } from './ReceiptSettingsView';
@@ -95,6 +96,7 @@ type TabKey =
   | 'qr_guest_menu'
   // Bahan Baku & Stok
   | 'inventory'
+  | 'warehouses'
   | 'stock_movements'
   | 'purchase_orders'
   | 'transfers'
@@ -126,6 +128,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
   CASHIER: ['pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders'],
   WAREHOUSE: [
     'inventory',
+    'warehouses',
     'stock_movements',
     'purchase_orders',
     'transfers',
@@ -150,6 +153,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'qr_orders',
     'qr_guest_menu',
     'inventory',
+    'warehouses',
     'stock_movements',
     'purchase_orders',
     'transfers',
@@ -177,6 +181,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'qr_orders',
     'qr_guest_menu',
     'inventory',
+    'warehouses',
     'stock_movements',
     'purchase_orders',
     'transfers',
@@ -212,6 +217,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'qr_orders',
     'qr_guest_menu',
     'inventory',
+    'warehouses',
     'stock_movements',
     'purchase_orders',
     'transfers',
@@ -340,6 +346,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       if (selected.isWarehouse) {
         const allowedWarehouseTabs: TabKey[] = [
           'inventory',
+          'warehouses',
           'stock_movements',
           'purchase_orders',
           'transfers',
@@ -376,6 +383,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
     if (activeOutlet?.isWarehouse) {
       const allowedWarehouseTabs: TabKey[] = [
         'inventory',
+        'warehouses',
         'stock_movements',
         'purchase_orders',
         'transfers',
@@ -628,6 +636,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           </div>
         ) : activeTab === 'inventory' ? (
           <InventoryView activeOutlet={activeOutlet} />
+        ) : activeTab === 'warehouses' ? (
+          <WarehousesView
+            activeOutletId={activeOutlet?.id}
+            onSelectActiveOutlet={(id) => {
+              handleOutletSelect(id);
+            }}
+            onWarehousesUpdated={fetchOutlets}
+          />
         ) : activeTab === 'stock_movements' ? (
           <InventoryView
             activeOutlet={activeOutlet}
@@ -1925,6 +1941,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           <FinancialReportView activeOutlet={activeOutlet} />
         ) : activeTab === 'users' ? (
           <UsersView onNavigateToRoles={() => setActiveTab('staff_roles')} />
+        ) : activeTab === 'warehouses' ? (
+          <WarehousesView
+            activeOutletId={activeOutlet?.id}
+            onSelectActiveOutlet={(id) => {
+              handleOutletSelect(id);
+            }}
+            onWarehousesUpdated={fetchOutlets}
+          />
         ) : activeTab === 'outlets' ? (
           <OutletsView
             activeOutletId={activeOutlet?.id}

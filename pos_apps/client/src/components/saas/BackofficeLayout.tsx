@@ -279,15 +279,15 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <span>Tim Staf Gudang</span>
             </button>
             <button
-              onClick={() => handleSelectTab('outlets')}
+              onClick={() => handleSelectTab('warehouses')}
               className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
-                activeTab === 'outlets'
+                activeTab === 'warehouses'
                   ? 'bg-indigo-900 text-white shadow-xs'
                   : 'text-slate-700 hover:bg-indigo-50/60'
               }`}
             >
-              <Settings className="w-4 h-4 shrink-0" />
-              <span>Kelola Toko &amp; Gudang</span>
+              <Warehouse className="w-4 h-4 shrink-0" />
+              <span>Daftar Gudang Logistik</span>
             </button>
           </div>
 
@@ -466,6 +466,14 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 }`}
               >
                 Stok Bahan Baku
+              </button>
+              <button
+                onClick={() => handleSelectTab('warehouses')}
+                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
+                  activeTab === 'warehouses' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Kelola Gudang
               </button>
               <button
                 onClick={() => handleSelectTab('purchase_orders')}

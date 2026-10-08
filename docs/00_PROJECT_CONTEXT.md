@@ -224,7 +224,8 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
   - `pages/BillingTokensView.tsx`: Halaman monitoring kuota token Pay-As-You-Go mandiri milik Pemilik Toko (`ADMIN` & `OWNER`), live quota meter (order tersisa & progress bar), status paket lisensi, rincian konsumsi order per gerai fisik/gudang, modal top-up kuota dengan kupon promo diskon live, dan modal faktur digital resmi (Official Tax Invoice) ber-NITKU kanonikal.
 - **Modul Operasional & Backoffice Merchant**:
   - `pages/PosTerminalView.tsx`: Terminal Kasir POS modular (keranjang, multi-tender, cetak struk virtual, cash drawer kick).
-  - `pages/OutletsView.tsx`: Manajemen unit outlet toko & gudang pusat, alokasi pasokan `warehouseId`, konfigurasi pajak PB1 & kanal.
+  - `pages/OutletsView.tsx`: Manajemen unit outlet toko penjualan POS (frontline retail/resto), alokasi gudang pasokan `warehouseId`, konfigurasi pajak PB1 & kanal.
+  - `pages/WarehousesView.tsx`: Manajemen fasilitas gudang logistik (ADR-009, tab `warehouses`), monitoring pasokan toko cabang, mode operasional gudang terpadu.
   - `pages/ProductsView.tsx`: Manajemen katalog produk master, varian, tombol *"Ambil dari Master Katalog"* untuk cabang, ekspor CSV/Excel (UTF-8 BOM), dan wizard layar penuh `FullScreenProductImportModal.tsx` untuk impor massal ratusan produk sekaligus (`POST /api/products/bulk-import`).
   - `pages/CategoriesView.tsx`: Manajemen kategori produk hirarkis terisolasi per toko.
   - `pages/InventoryView.tsx`: Inventori terpadu (Tab Bahan Baku F&B, Tab Produk Jadi Retail, Tab Kelola Gudang & Kartu Riwayat Mutasi Stok, dan dialog alokasi transfer stok gudang).
