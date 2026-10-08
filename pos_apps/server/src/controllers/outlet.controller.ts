@@ -262,7 +262,7 @@ export const createOutlet = async (req: Request, res: Response) => {
       // Duplikasi master produk ke OutletProduct cabang baru (stok awal 0)
       // serta sinkronisasi inventory_balances (0) di default storage location
       const tenantProducts = await tx.$queryRawUnsafe<any[]>(
-        `SELECT p.id, p.base_price, ii.id as "inventoryItemId"
+        `SELECT p.id, ii.id as "inventoryItemId"
          FROM "products" p
          LEFT JOIN "product_variants" pv ON pv.product_id = p.id AND pv.tenant_id = $1
          LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id AND ii.tenant_id = $1
