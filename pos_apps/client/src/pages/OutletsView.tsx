@@ -5,7 +5,6 @@ import {
   MapPin,
   Phone,
   Users,
-  Receipt,
   CheckCircle2,
   AlertCircle,
   Edit2,
@@ -189,9 +188,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
     }
   };
 
-  const storeOutlets = outlets.filter((o) => !o.isWarehouse);
+  const [outletTypeFilter, setOutletTypeFilter] = useState<'ALL' | 'STORE' | 'WAREHOUSE'>('ALL');
 
-  const filteredOutlets = storeOutlets.filter((o) => {
+  const filteredOutlets = outlets.filter((o) => {
+    if (outletTypeFilter === 'STORE' && o.isWarehouse) return false;
+    if (outletTypeFilter === 'WAREHOUSE' && !o.isWarehouse) return false;
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -288,20 +289,31 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Toko Aktif</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Toko Penjualan (POS)</span>
             <Store className="w-4 h-4 text-blue-900" />
           </div>
           <div className="text-2xl font-black text-blue-950">
-            {storeOutlets.filter((o) => o.isActive).length} Toko Aktif
+            {outlets.filter((o) => !o.isWarehouse && o.isActive).length} Toko Aktif
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Kuota Paket PRO: Hingga 5 Toko Terintegrasi
+            Melayani transaksi kasir langsung
           </p>
         </div>
 
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Staf Seluruh Toko</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Gudang Logistik / Pusat</span>
+            <Warehouse className="w-4 h-4 text-indigo-700" />
+          </div>
+          <div className="text-2xl font-black text-indigo-950">
+            {outlets.filter((o) => o.isWarehouse && o.isActive).length} Gudang Aktif
+          </div>
+          <p className="text-xs text-slate-500 mt-1">Pusat stok bahan baku & rantai pasok</p>
+        </div>
+
+        <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Total Staf Terdistribusi</span>
             <Users className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-emerald-700">
@@ -309,40 +321,70 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           </div>
           <p className="text-xs text-slate-500 mt-1">Kasir, Gudang, & Supervisor terdistribusi</p>
         </div>
-
-        <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Akumulasi Transaksi</span>
-            <Receipt className="w-4 h-4 text-indigo-600" />
-          </div>
-          <div className="text-2xl font-black text-indigo-900">
-            {outlets.reduce((acc, o) => acc + (o._count?.orders || 0), 0)} Pesanan
-          </div>
-          <p className="text-xs text-slate-500 mt-1">Faktur riil di seluruh outlet</p>
-        </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Cari outlet toko berdasarkan nama, alamat, atau no telepon..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white"
-          />
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Segmented Filter Tab */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setOutletTypeFilter('ALL')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              outletTypeFilter === 'ALL'
+                ? 'bg-white text-blue-950 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Semua ({outlets.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setOutletTypeFilter('STORE')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              outletTypeFilter === 'STORE'
+                ? 'bg-white text-blue-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Store className="w-3.5 h-3.5" />
+            <span>Toko ({outlets.filter((o) => !o.isWarehouse).length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOutletTypeFilter('WAREHOUSE')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              outletTypeFilter === 'WAREHOUSE'
+                ? 'bg-white text-indigo-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Warehouse className="w-3.5 h-3.5" />
+            <span>Gudang ({outlets.filter((o) => o.isWarehouse).length})</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={fetchOutlets}
-          title="Segarkan Data"
-          className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2 flex-1 md:justify-end">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Cari toko / gudang..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchOutlets}
+            title="Segarkan Data"
+            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0 cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Outlets Cards Grid */}
@@ -401,10 +443,20 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-white shrink-0 shadow-sm ${
-                          isCurrentlyActive ? 'bg-blue-900' : 'bg-slate-800'
+                          outlet.isWarehouse
+                            ? isCurrentlyActive
+                              ? 'bg-indigo-700'
+                              : 'bg-indigo-950'
+                            : isCurrentlyActive
+                            ? 'bg-blue-900'
+                            : 'bg-slate-800'
                         }`}
                       >
-                        <Store className="w-5 h-5" />
+                        {outlet.isWarehouse ? (
+                          <Warehouse className="w-5 h-5 text-indigo-200" />
+                        ) : (
+                          <Store className="w-5 h-5" />
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -415,12 +467,21 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                         <div className="flex items-center gap-1.5 flex-wrap mt-1">
                           <span
                             className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                              outlet.isWarehouse
+                                ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                            }`}
+                          >
+                            {outlet.isWarehouse ? '🏭 Gudang Logistik' : '🏪 Toko Kasir'}
+                          </span>
+                          <span
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
                               outlet.isActive
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}
                           >
-                            {outlet.isActive ? '● Toko Aktif' : '○ Nonaktif'}
+                            {outlet.isActive ? '● Aktif' : '○ Nonaktif'}
                           </span>
                           {isCurrentlyActive && (
                             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
@@ -428,15 +489,17 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                               <span>Sedang Digunakan</span>
                             </span>
                           )}
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                              outlet.loyaltyConfig?.isActive
-                                ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                : 'bg-slate-50 text-slate-500 border-slate-200'
-                            }`}
-                          >
-                            {outlet.loyaltyConfig?.isActive ? '★ Poin Loyalitas ON' : '☆ Poin OFF'}
-                          </span>
+                          {!outlet.isWarehouse && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                outlet.loyaltyConfig?.isActive
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-slate-50 text-slate-500 border-slate-200'
+                              }`}
+                            >
+                              {outlet.loyaltyConfig?.isActive ? '★ Poin ON' : '☆ Poin OFF'}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -444,32 +507,49 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(outlet)}
-                      className="p-1.5 rounded-xl text-slate-400 hover:text-blue-900 hover:bg-slate-100 transition-colors"
-                      title="Edit Informasi Toko"
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-blue-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={outlet.isWarehouse ? 'Edit Informasi Gudang' : 'Edit Informasi Toko'}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Sumber Pasokan Gudang */}
-                  <div className="flex items-center justify-between text-xs text-slate-600 bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100">
-                    <div className="flex items-center gap-2">
-                      <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
-                      <span>
-                        Pasokan:{' '}
-                        <strong className="text-indigo-950 font-bold">
-                          {outlet.warehouseId
-                            ? outlets.find((o) => o.id === outlet.warehouseId)?.name || 'Gudang Pusat'
-                            : 'Toko Mandiri (Lokal)'}
-                        </strong>
+                  {/* Sumber Pasokan Gudang vs Hub Pasokan Toko Cabang */}
+                  {outlet.isWarehouse ? (
+                    <div className="flex items-center justify-between text-xs text-indigo-950 bg-indigo-50/80 p-2.5 rounded-2xl border border-indigo-200">
+                      <div className="flex items-center gap-2">
+                        <Store className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                        <span>
+                          Menyuplai:{' '}
+                          <strong className="text-indigo-950 font-bold">
+                            {outlets.filter((o) => o.warehouseId === outlet.id).length} Toko Cabang
+                          </strong>
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-md">
+                        Pusat Pasokan
                       </span>
                     </div>
-                    {outlet.warehouseId && (
-                      <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
-                        Auto-Backflush
-                      </span>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-xs text-slate-600 bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100">
+                      <div className="flex items-center gap-2">
+                        <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                        <span>
+                          Pasokan:{' '}
+                          <strong className="text-indigo-950 font-bold">
+                            {outlet.warehouseId
+                              ? outlets.find((o) => o.id === outlet.warehouseId)?.name || 'Gudang Pusat'
+                              : 'Toko Mandiri (Lokal)'}
+                          </strong>
+                        </span>
+                      </div>
+                      {outlet.warehouseId && (
+                        <span className="text-[10px] font-black uppercase text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                          Auto-Backflush
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Address & Phone */}
                   <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
@@ -615,14 +695,21 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
                 {/* Card Footer Action */}
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFeeOutlet(outlet)}
-                    className="px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-blue-900" />
-                    <span>Atur Biaya SPV</span>
-                  </button>
+                  {!outlet.isWarehouse ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFeeOutlet(outlet)}
+                      className="px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-blue-900" />
+                      <span>Atur Biaya SPV</span>
+                    </button>
+                  ) : (
+                    <div className="text-[11px] font-bold text-indigo-900 px-2 py-1 flex items-center gap-1">
+                      <Warehouse className="w-3.5 h-3.5 text-indigo-700" />
+                      <span>Pusat Pasokan</span>
+                    </div>
+                  )}
 
                   {!isCurrentlyActive ? (
                     <button
@@ -632,15 +719,19 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                           onSelectActiveOutlet(outlet.id);
                         }
                       }}
-                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      className={`px-4 py-2 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                        outlet.isWarehouse
+                          ? 'bg-indigo-700 hover:bg-indigo-800'
+                          : 'bg-blue-900 hover:bg-blue-800'
+                      }`}
                     >
-                      <span>Pilih Toko Ini</span>
+                      <span>{outlet.isWarehouse ? 'Buka Mode Gudang' : 'Pilih Toko Ini'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   ) : (
                     <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Toko Aktif</span>
+                      <span>{outlet.isWarehouse ? 'Gudang Aktif' : 'Toko Aktif'}</span>
                     </span>
                   )}
                 </div>
@@ -656,13 +747,19 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
               <div>
-                <h3 className="font-extrabold text-blue-950 text-base">Tambah Outlet Toko</h3>
-                <p className="text-xs text-slate-500">Buka outlet toko baru pada bisnis Anda</p>
+                <h3 className="font-extrabold text-blue-950 text-base">
+                  {formData.isWarehouse ? 'Tambah Gudang Logistik' : 'Tambah Outlet Toko'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {formData.isWarehouse
+                    ? 'Pusat penyimpanan & pasokan bahan baku antar cabang'
+                    : 'Buka outlet toko penjualan baru pada bisnis Anda'}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -677,14 +774,52 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
             <form onSubmit={handleCreateOutlet} className="flex-1 flex flex-col overflow-hidden">
               <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-2">
+                {/* Selector Tipe Unit Operasional */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Tipe Unit Operasional <span className="text-rose-600">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isWarehouse: false })}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        !formData.isWarehouse
+                          ? 'bg-white text-blue-950 shadow-xs border border-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Store className="w-4 h-4 text-blue-900" />
+                      <span>Toko Kasir (POS)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isWarehouse: true, warehouseId: null })}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        formData.isWarehouse
+                          ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Warehouse className="w-4 h-4 text-indigo-700" />
+                      <span>Gudang Logistik</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nama Toko <span className="text-rose-600">*</span>
+                    {formData.isWarehouse ? 'Nama Gudang Logistik' : 'Nama Toko'}{' '}
+                    <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Kopi Nusantara - Kemang"
+                    placeholder={
+                      formData.isWarehouse
+                        ? 'Contoh: Gudang Logistik Pusat Cilandak'
+                        : 'Contoh: Kopi Nusantara - Kemang'
+                    }
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
@@ -693,11 +828,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Alamat Lengkap Toko
+                    {formData.isWarehouse ? 'Alamat Gudang' : 'Alamat Lengkap Toko'}
                   </label>
                   <textarea
                     rows={2}
-                    placeholder="Contoh: Jl. Kemang Raya No. 12, Jakarta Selatan"
+                    placeholder="Contoh: Jl. Industri Raya Blok B No. 8, Jakarta Selatan"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
@@ -705,34 +840,46 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 </div>
 
                 <WhatsAppInput
-                  label="Nomor WhatsApp / Telepon Toko"
+                  label={formData.isWarehouse ? 'Kontak PIC Gudang' : 'Nomor WhatsApp / Telepon Toko'}
                   value={formData.phone}
                   onChange={(val) => setFormData({ ...formData, phone: val })}
                   placeholder="81234567890"
                 />
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Gudang Sumber Pasokan (Backflush Warehouse)
-                  </label>
-                  <select
-                    value={formData.warehouseId || ''}
-                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                  >
-                    <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
-                    {outlets
-                      .filter((o) => o.isWarehouse)
-                      .map((wh) => (
-                        <option key={wh.id} value={wh.id}>
-                          🏭 {wh.name}
-                        </option>
-                      ))}
-                  </select>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
-                  </p>
-                </div>
+                {!formData.isWarehouse ? (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Gudang Sumber Pasokan (Backflush Warehouse)
+                    </label>
+                    <select
+                      value={formData.warehouseId || ''}
+                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                    >
+                      <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                      {outlets
+                        .filter((o) => o.isWarehouse)
+                        .map((wh) => (
+                          <option key={wh.id} value={wh.id}>
+                            🏭 {wh.name}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 space-y-1">
+                    <div className="font-extrabold flex items-center gap-1.5 text-indigo-900">
+                      <Warehouse className="w-4 h-4 text-indigo-700" />
+                      <span>Mode Gudang Logistik</span>
+                    </div>
+                    <p className="text-[11px] text-indigo-800 leading-relaxed">
+                      Gudang ini berfungsi sebagai pusat penyimpanan dan pasokan bahan baku/inventori. Toko-toko cabang dapat memilih gudang ini sebagai sumber pasokan otomatis (auto-backflush).
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Sticky Action Footer */}
@@ -747,9 +894,17 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer"
+                  className={`px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-md disabled:opacity-50 cursor-pointer transition-all ${
+                    formData.isWarehouse
+                      ? 'bg-indigo-700 hover:bg-indigo-800 shadow-indigo-900/20'
+                      : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'
+                  }`}
                 >
-                  {submitting ? 'Menyimpan...' : 'Buat Toko Baru'}
+                  {submitting
+                    ? 'Menyimpan...'
+                    : formData.isWarehouse
+                    ? 'Buat Gudang Baru'
+                    : 'Buat Toko Baru'}
                 </button>
               </div>
             </form>
@@ -787,9 +942,43 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
             <form onSubmit={handleUpdateOutlet} className="flex-1 flex flex-col overflow-hidden">
               <div className="overflow-y-auto overscroll-contain flex-1 pr-1 space-y-3.5 pb-2">
+                {/* Selector Tipe Unit Operasional */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Tipe Unit Operasional <span className="text-rose-600">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isWarehouse: false })}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        !formData.isWarehouse
+                          ? 'bg-white text-blue-950 shadow-xs border border-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Store className="w-4 h-4 text-blue-900" />
+                      <span>Toko Kasir (POS)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isWarehouse: true, warehouseId: null })}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        formData.isWarehouse
+                          ? 'bg-white text-indigo-950 shadow-xs border border-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Warehouse className="w-4 h-4 text-indigo-700" />
+                      <span>Gudang Logistik</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nama Toko <span className="text-rose-600">*</span>
+                    {formData.isWarehouse ? 'Nama Gudang Logistik' : 'Nama Toko'}{' '}
+                    <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -802,7 +991,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Alamat Lengkap
+                    {formData.isWarehouse ? 'Alamat Gudang' : 'Alamat Lengkap Toko'}
                   </label>
                   <textarea
                     rows={2}
@@ -813,13 +1002,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 </div>
 
                 <WhatsAppInput
-                  label="Nomor WhatsApp / Telepon"
+                  label={formData.isWarehouse ? 'Kontak PIC Gudang' : 'Nomor WhatsApp / Telepon'}
                   value={formData.phone}
                   onChange={(val) => setFormData({ ...formData, phone: val })}
                   placeholder="81234567890"
                 />
 
-                {!formData.isWarehouse && (
+                {!formData.isWarehouse ? (
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Gudang Sumber Pasokan (Backflush Warehouse)
@@ -831,7 +1020,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     >
                       <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
                       {outlets
-                        .filter((o) => o.isWarehouse)
+                        .filter((wh) => wh.isWarehouse && wh.id !== editingOutlet.id)
                         .map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             🏭 {wh.name}
@@ -842,6 +1031,16 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
                     </p>
                   </div>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 space-y-1">
+                    <div className="font-extrabold flex items-center gap-1.5 text-indigo-900">
+                      <Warehouse className="w-4 h-4 text-indigo-700" />
+                      <span>Mode Gudang Logistik</span>
+                    </div>
+                    <p className="text-[11px] text-indigo-800 leading-relaxed">
+                      Gudang ini berfungsi sebagai pusat penyimpanan dan pasokan bahan baku/inventori. Toko-toko cabang dapat memilih gudang ini sebagai sumber pasokan otomatis (auto-backflush).
+                    </p>
+                  </div>
                 )}
 
                 <div>
@@ -850,9 +1049,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       type="checkbox"
                       checked={formData.isActive}
                       onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900"
+                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 cursor-pointer"
                     />
-                    <span>Toko Aktif dan Beroperasi</span>
+                    <span>
+                      {formData.isWarehouse ? 'Gudang Aktif dan Beroperasi' : 'Toko Aktif dan Beroperasi'}
+                    </span>
                   </label>
                 </div>
               </div>
@@ -872,9 +1073,17 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer"
+                  className={`px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-md disabled:opacity-50 cursor-pointer transition-all ${
+                    formData.isWarehouse
+                      ? 'bg-indigo-700 hover:bg-indigo-800 shadow-indigo-900/20'
+                      : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'
+                  }`}
                 >
-                  {submitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  {submitting
+                    ? 'Menyimpan...'
+                    : formData.isWarehouse
+                    ? 'Simpan Perubahan Gudang'
+                    : 'Simpan Perubahan Toko'}
                 </button>
               </div>
             </form>

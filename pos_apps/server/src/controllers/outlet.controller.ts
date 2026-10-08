@@ -180,6 +180,22 @@ export const createOutlet = async (req: Request, res: Response) => {
 
     const { name, address, phone, isWarehouse, warehouseId, feesConfig } = parseResult.data;
 
+    // Guardrail: Jika outlet adalah gudang, tidak boleh memiliki warehouseId
+    const effectiveWarehouseId = isWarehouse ? null : warehouseId;
+
+    // Guardrail: Validasi bahwa warehouseId merujuk ke Gudang Aktif milik tenant yang sama
+    if (effectiveWarehouseId) {
+      const targetWarehouse = await prisma.outlet.findFirst({
+        where: { id: effectiveWarehouseId, tenantId, isWarehouse: true, isActive: true },
+      });
+      if (!targetWarehouse) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Gudang sumber pasokan yang dipilih tidak valid atau bukan merupakan gudang aktif.',
+        });
+      }
+    }
+
     // Cek kuota outlet dari langganan aktif
     let maxOutlets = 100;
     let planName = 'Aktif';
@@ -251,12 +267,12 @@ export const createOutlet = async (req: Request, res: Response) => {
 
       const outlet = dwResult.legacyData;
 
-      if (warehouseId) {
+      if (effectiveWarehouseId) {
         await tx.outlet.update({
           where: { id: outlet.id },
-          data: { warehouseId },
+          data: { warehouseId: effectiveWarehouseId },
         });
-        outlet.warehouseId = warehouseId;
+        outlet.warehouseId = effectiveWarehouseId;
       }
 
       // Duplikasi master produk ke OutletProduct cabang baru (stok awal 0)
@@ -328,9 +344,46 @@ export const updateOutlet = async (req: Request, res: Response) => {
       });
     }
 
+    const updateData = { ...parseResult.data };
+
+    // Validasi kepemilikan tenant
+    const existingOutlet = await prisma.outlet.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existingOutlet) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Toko / outlet tidak ditemukan atau Anda tidak memiliki akses.',
+      });
+    }
+
+    // Guardrail: Mencegah self-referencing (toko menunjuk dirinya sendiri sebagai gudang)
+    if (updateData.warehouseId && updateData.warehouseId === id) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Toko / outlet tidak dapat menunjuk dirinya sendiri sebagai gudang sumber pasokan.',
+      });
+    }
+
+    // Guardrail: Jika tipe diubah menjadi gudang, tidak boleh memiliki warehouseId
+    if (updateData.isWarehouse) {
+      updateData.warehouseId = null;
+    } else if (updateData.warehouseId) {
+      // Guardrail: Validasi target warehouseId
+      const targetWarehouse = await prisma.outlet.findFirst({
+        where: { id: updateData.warehouseId, tenantId, isWarehouse: true, isActive: true },
+      });
+      if (!targetWarehouse) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Gudang sumber pasokan yang dipilih tidak valid atau bukan merupakan gudang aktif.',
+        });
+      }
+    }
+
     const updated = await prisma.outlet.update({
       where: { id },
-      data: parseResult.data as any,
+      data: updateData as any,
     });
 
     return res.status(200).json({
