@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Receipt,
   Search,
@@ -22,6 +22,9 @@ import {
   Building2,
   BookOpen,
   Layers,
+  Package,
+  MessageCircle,
+  Copy,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import type { Outlet } from '../types/outlet';
@@ -35,16 +38,22 @@ import { TablePagination } from '../components/TablePagination';
 import { generateSalesRecapPdf } from '../utils/salesRecapPdf';
 import { exportOrdersToCsv } from '../utils/salesExportCsv';
 import { EmptyState, TableSkeleton } from '../components/ui';
-import { api } from '../services/api';
+import { PaymentItemsAuditView } from './PaymentItemsAuditView';
+import { api, authStorage } from '../services/api';
+
+import type { User as AuthUser } from '../types/auth';
 
 interface OrdersViewProps {
   activeOutlet?: Outlet | null;
+  currentUser?: AuthUser | null;
   onAppendOrder?: (order: Order) => void;
+  initialSubTab?: 'invoices' | 'payment_items';
 }
 
-type DatePreset = 'all' | 'today' | '7days' | '30days' | 'thismonth' | 'custom';
+type DatePreset = 'all' | 'current_shift' | 'today' | '7days' | '30days' | 'thismonth' | 'custom';
 const PRESET_LABELS: Record<DatePreset, string> = {
   all: 'Semua Periode',
+  current_shift: '🕒 Shift Berjalan (Saat Ini)',
   today: 'Hari Ini',
   '7days': '7 Hari Terakhir',
   '30days': '30 Hari Terakhir',
@@ -52,15 +61,55 @@ const PRESET_LABELS: Record<DatePreset, string> = {
   custom: 'Kustom Tanggal',
 };
 
+type OrderStatusFilter = 'ALL' | 'PAID' | 'VOIDED' | 'UNPAID';
+
 import { toLocalDateStr, computePresetDateRange } from '../utils/date';
 
 function getPresetRange(preset: DatePreset): { start?: string; end?: string } {
-  if (preset === 'all') return {};
+  if (preset === 'all' || preset === 'current_shift') return {};
   const { startStr, endStr } = computePresetDateRange(preset as any);
   return { start: startStr, end: endStr };
 }
 
-export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOrder }) => {
+export const OrdersView: React.FC<OrdersViewProps> = ({
+  activeOutlet,
+  currentUser: propUser,
+  onAppendOrder,
+  initialSubTab,
+}) => {
+  const currentUser = useMemo(() => propUser || authStorage.getUser(), [propUser]);
+  const isCashierRole = currentUser?.role === 'CASHIER';
+
+  const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'payment_items'>(
+    initialSubTab || 'invoices'
+  );
+  const [selectedCashier, setSelectedCashier] = useState<string>(() => {
+    const user = propUser || authStorage.getUser();
+    return user?.role === 'CASHIER' && user?.name ? user.name : 'ALL';
+  });
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatusFilter>('ALL');
+  const [currentShift, setCurrentShift] = useState<any | null>(null);
+
+  const paymentItemsExportRef = useRef<{ exportCsv: () => void; exportPdf: () => void } | null>(null);
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  useEffect(() => {
+    api.getCurrentShift()
+      .then((res) => {
+        if (res && res.status === 'success' && res.data) {
+          setCurrentShift(res.data);
+        } else {
+          setCurrentShift(null);
+        }
+      })
+      .catch(() => setCurrentShift(null));
+  }, [activeOutlet?.id]);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -73,6 +122,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const [itemToVoid, setItemToVoid] = useState<any | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [orderForDetail, setOrderForDetail] = useState<Order | null>(null);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [copiedWaText, setCopiedWaText] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const handleViewDetail = (order: Order) => {
@@ -136,7 +187,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
 
       let sDate: string | undefined;
       let eDate: string | undefined;
-      if (currentPreset === 'custom') {
+      if (currentPreset === 'current_shift') {
+        if (currentShift?.startTime) {
+          sDate = toLocalDateStr(new Date(currentShift.startTime));
+          eDate = toLocalDateStr(new Date());
+        } else {
+          sDate = toLocalDateStr(new Date());
+          eDate = toLocalDateStr(new Date());
+        }
+      } else if (currentPreset === 'custom') {
         sDate = startD !== undefined ? startD : customStart;
         eDate = endD !== undefined ? endD : customEnd;
       } else {
@@ -167,14 +226,141 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
     loadOrders();
   }, [activeOutlet?.id]);
 
+  const [registeredCashiers, setRegisteredCashiers] = useState<string[]>([]);
+
+  useEffect(() => {
+    const tenantId = currentUser?.tenantId || (activeOutlet as any)?.tenantId;
+    if (tenantId && activeOutlet?.id) {
+      api
+        .getPairedOutletCashiers(tenantId, activeOutlet.id)
+        .then((res) => {
+          if (res.status === 'success' && Array.isArray(res.data)) {
+            // HANYA ambil staf dengan peran KASIR (role === 'CASHIER') di outlet aktif
+            const cashierNames = res.data
+              .filter((u) => u.role === 'CASHIER')
+              .map((u) => u.name.trim());
+            setRegisteredCashiers(cashierNames);
+          }
+        })
+        .catch((err) => console.error('Gagal memuat kasir outlet:', err));
+    }
+  }, [activeOutlet?.id, currentUser?.tenantId]);
+
+  const cashierOptions = useMemo(() => {
+    const set = new Set<string>();
+
+    // 1. Masukkan staf kasir resmi terdaftar di outlet aktif (role === 'CASHIER')
+    registeredCashiers.forEach((name) => {
+      if (name) set.add(name);
+    });
+
+    // 2. Jika user yang login adalah kasir, pastikan namanya selalu ada
+    if (isCashierRole && currentUser?.name) {
+      set.add(currentUser.name.trim());
+    }
+
+    // 3. Masukkan dari order jika user ber-role CASHIER (dan eliminasi tag non-kasir)
+    orders.forEach((o) => {
+      const cRole = (o.cashier as any)?.role || (o as any).user?.role;
+      // Lewati jika role non-kasir (OWNER, ADMIN, SUPERVISOR, WAREHOUSE)
+      if (cRole && cRole !== 'CASHIER') return;
+
+      const name = o.cashier?.name || (o as any).user?.name;
+      if (!name || !name.trim()) return;
+
+      const lower = name.toLowerCase();
+      if (
+        lower.includes('(owner)') ||
+        lower.includes('(admin)') ||
+        lower.includes('(supervisor)') ||
+        lower.includes('(gudang)')
+      ) {
+        return;
+      }
+      set.add(name.trim());
+    });
+
+    return Array.from(set).sort();
+  }, [registeredCashiers, orders, isCashierRole, currentUser?.name]);
+
+  // 1. Filter Kasir
+  const cashierFilteredOrders = useMemo(() => {
+    if (selectedCashier === 'ALL') return orders;
+    return orders.filter(
+      (o) => (o.cashier?.name || (o as any).user?.name) === selectedCashier
+    );
+  }, [orders, selectedCashier]);
+
+  // 2. Filter Shift Berjalan (jika preset active)
+  const shiftFilteredOrders = useMemo(() => {
+    if (datePreset === 'current_shift' && currentShift) {
+      return cashierFilteredOrders.filter((o) => {
+        if (o.shiftId && currentShift.id) {
+          return o.shiftId === currentShift.id;
+        }
+        return new Date(o.createdAt) >= new Date(currentShift.startTime);
+      });
+    }
+    return cashierFilteredOrders;
+  }, [cashierFilteredOrders, datePreset, currentShift]);
+
+  // 3. Hitung Jumlah Status untuk Pill Filter
+  const statusCounts = useMemo(() => {
+    const voidCount = shiftFilteredOrders.filter(
+      (o) => o.orderStatus === 'VOIDED' || o.status === 'CANCELLED'
+    ).length;
+    const nonVoid = shiftFilteredOrders.filter(
+      (o) => o.orderStatus !== 'VOIDED' && o.status !== 'CANCELLED'
+    );
+    const paidCount = nonVoid.filter((o) => o.paymentStatus !== 'UNPAID').length;
+    const unpaidCount = nonVoid.filter((o) => o.paymentStatus === 'UNPAID').length;
+    return {
+      all: shiftFilteredOrders.length,
+      paid: paidCount,
+      voided: voidCount,
+      unpaid: unpaidCount,
+    };
+  }, [shiftFilteredOrders]);
+
+  // 4. Filter Akhir berdasarkan Status Faktur yang dipilih
+  const filteredOrders = useMemo(() => {
+    if (selectedStatus === 'ALL') return shiftFilteredOrders;
+    if (selectedStatus === 'PAID') {
+      return shiftFilteredOrders.filter(
+        (o) => o.orderStatus !== 'VOIDED' && o.status !== 'CANCELLED' && o.paymentStatus !== 'UNPAID'
+      );
+    }
+    if (selectedStatus === 'VOIDED') {
+      return shiftFilteredOrders.filter(
+        (o) => o.orderStatus === 'VOIDED' || o.status === 'CANCELLED'
+      );
+    }
+    if (selectedStatus === 'UNPAID') {
+      return shiftFilteredOrders.filter(
+        (o) => o.paymentStatus === 'UNPAID' && o.orderStatus !== 'VOIDED' && o.status !== 'CANCELLED'
+      );
+    }
+    return shiftFilteredOrders;
+  }, [shiftFilteredOrders, selectedStatus]);
+
+  const dateRangeText = useMemo(() => {
+    if (datePreset === 'current_shift') return currentShift ? 'Shift Berjalan (Saat Ini)' : 'Shift Berjalan';
+    if (datePreset === 'today') return 'Hari Ini';
+    if (datePreset === '7days') return '7 Hari Terakhir';
+    if (datePreset === '30days') return '30 Hari Terakhir';
+    if (datePreset === 'thismonth') return 'Bulan Ini';
+    if (datePreset === 'custom') return `${customStart} s/d ${customEnd}`;
+    return 'Semua Periode';
+  }, [datePreset, currentShift, customStart, customEnd]);
+
   // Reset pagination ke halaman 1 saat filter atau pencarian berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedChannel, datePreset, customStart, customEnd]);
+  }, [search, selectedChannel, selectedCashier, selectedStatus, datePreset, customStart, customEnd]);
 
-  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const paginatedOrders = orders.slice(
+  const paginatedOrders = filteredOrders.slice(
     (safeCurrentPage - 1) * pageSize,
     safeCurrentPage * pageSize
   );
@@ -321,8 +507,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   };
 
   // Ringkasan metrik akurat yang merefleksikan uang masuk riil (audit-safe)
-  const voidOrders = orders.filter((o) => o.orderStatus === 'VOIDED');
-  const nonVoidOrders = orders.filter((o) => o.orderStatus !== 'VOIDED');
+  const voidOrders = shiftFilteredOrders.filter((o) => o.orderStatus === 'VOIDED' || o.status === 'CANCELLED');
+  const nonVoidOrders = shiftFilteredOrders.filter((o) => o.orderStatus !== 'VOIDED' && o.status !== 'CANCELLED');
   const paidOrders = nonVoidOrders.filter((o) => o.paymentStatus !== 'UNPAID');
   const unpaidOrders = nonVoidOrders.filter((o) => o.paymentStatus === 'UNPAID');
 
@@ -330,16 +516,64 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
   const totalFakturLunas = paidOrders.length;
   // Total Omset Kasir: Akumulasi penerimaan riil (hanya transaksi yang sudah lunas dan bukan VOID)
   const totalOmset = paidOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
+  // Average Order Value (AOV / Nilai Rata-rata per Nota)
+  const averageOrderValue = totalFakturLunas > 0 ? Math.round(totalOmset / totalFakturLunas) : 0;
 
   // Transaksi Tunai: pesanan lunas dengan pembayaran CASH
-  const cashTransaksi = paidOrders.filter((o) =>
+  const cashOrders = paidOrders.filter((o) =>
     o.payments?.some((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() === 'CASH')
-  ).length;
+  );
+  const cashTransaksi = cashOrders.length;
+  const cashTotalAmount = cashOrders.reduce((sum, o) => {
+    const cashPm = o.payments?.filter((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() === 'CASH');
+    const amt = cashPm?.reduce((s, p) => s + Number(p.amount || p.amountPaid || 0), 0) || 0;
+    return sum + (amt > 0 ? amt : Number(o.grandTotal || o.totalAmount || 0));
+  }, 0);
 
-  // Transaksi QRIS: pesanan lunas dengan pembayaran QRIS
-  const qrisTransaksi = paidOrders.filter((o) =>
-    o.payments?.some((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() === 'QRIS')
-  ).length;
+  // Transaksi Non-Tunai: pesanan lunas dengan pembayaran selain CASH (QRIS, Transfer, EDC, dll)
+  const nonCashOrders = paidOrders.filter((o) =>
+    o.payments?.some((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() !== 'CASH')
+  );
+  const nonCashTransaksi = nonCashOrders.length;
+  const nonCashTotalAmount = nonCashOrders.reduce((sum, o) => {
+    const nonCashPm = o.payments?.filter((p) => (p.method || (p as any).paymentMethod || '').toUpperCase() !== 'CASH');
+    const amt = nonCashPm?.reduce((s, p) => s + Number(p.amount || p.amountPaid || 0), 0) || 0;
+    return sum + (amt > 0 ? amt : Number(o.grandTotal || o.totalAmount || 0));
+  }, 0);
+
+  // Generator Teks Ringkasan Penjualan Format WhatsApp
+  const generateWhatsAppSummaryText = () => {
+    const outletName = filteredOrders[0]?.outlet?.name || activeOutlet?.name || 'Well POS';
+    const cashierLabel = selectedCashier && selectedCashier !== 'ALL' ? selectedCashier : 'Semua Kasir';
+    const nowStr = new Date().toLocaleString('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    const voidTotal = voidOrders.reduce((s, o) => s + Number(o.grandTotal || o.totalAmount || 0), 0);
+    const unpaidTotal = unpaidOrders.reduce((s, o) => s + Number(o.grandTotal || o.totalAmount || 0), 0);
+
+    return `*📊 RINGKASAN PENJUALAN — WELL POS*
+━━━━━━━━━━━━━━━━━━
+🏪 *Outlet*: ${outletName}
+📅 *Periode*: ${dateRangeText}
+👤 *Kasir*: ${cashierLabel}
+🕒 *Waktu Cetak*: ${nowStr}
+━━━━━━━━━━━━━━━━━━
+💰 *FINANSIAL PENJUALAN*
+• Total Omset Lunas : *Rp ${totalOmset.toLocaleString('id-ID')}*
+• Rata-rata per Nota (AOV) : *Rp ${averageOrderValue.toLocaleString('id-ID')}*
+• Faktur Selesai : *${totalFakturLunas} transaksi*
+
+💳 *METODE PEMBAYARAN*
+• Tunai (Cash) : *Rp ${cashTotalAmount.toLocaleString('id-ID')}* (${cashTransaksi} tx)
+• Non-Tunai / QRIS : *Rp ${nonCashTotalAmount.toLocaleString('id-ID')}* (${nonCashTransaksi} tx)
+
+⚠️ *STATUS OPERASIONAL*
+• Dibatalkan (Void) : *${voidOrders.length} transaksi* (Rp ${voidTotal.toLocaleString('id-ID')})
+• Tagihan Belum Bayar : *${unpaidOrders.length} transaksi* (Rp ${unpaidTotal.toLocaleString('id-ID')})
+━━━━━━━━━━━━━━━━━━
+_Laporan otomatis dibuat dari Backoffice Well POS_`;
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -351,42 +585,76 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
             <span>Riwayat Transaksi Penjualan</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Daftar faktur transaksi penjualan kasir, pembayaran, ekspor laporan, dan cetak struk.
+            Daftar faktur transaksi penjualan kasir, pembayaran, ekspor laporan, dan rekap item menu.
           </p>
         </div>
 
-        {/* Action Buttons: Ekspor Excel, Cetak Rekap PDF, Segarkan Data */}
+        {/* Action Buttons: Ringkasan WA, Ekspor Excel, Cetak Rekap PDF, Segarkan Data */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Tombol Ringkasan WhatsApp */}
           <button
             type="button"
-            onClick={() => exportOrdersToCsv(orders)}
-            disabled={loading || orders.length === 0}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95"
-            title="Ekspor Riwayat Transaksi ke Excel / CSV"
+            onClick={() => setWhatsappModalOpen(true)}
+            disabled={loading || shiftFilteredOrders.length === 0}
+            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            title="Kirim atau Salin Ringkasan Penjualan ke WhatsApp"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Ekspor Excel</span>
+            <MessageCircle className="w-4 h-4 text-emerald-600" />
+            <span>Ringkasan WA</span>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              const outletName = orders[0]?.outlet?.name || 'Well POS';
-              generateSalesRecapPdf(orders, selectedChannel, outletName);
+              if (activeSubTab === 'invoices') {
+                exportOrdersToCsv(filteredOrders, 'daftar_faktur_penjualan_wellpos');
+              } else {
+                paymentItemsExportRef.current?.exportCsv();
+              }
             }}
-            disabled={loading || orders.length === 0}
-            className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95"
-            title="Cetak Dokumen Rekap Penjualan Kasir (PDF)"
+            disabled={loading || (activeSubTab === 'invoices' ? filteredOrders.length === 0 : false)}
+            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            title={
+              activeSubTab === 'invoices'
+                ? 'Ekspor Daftar Faktur Penjualan ke Excel / CSV'
+                : 'Ekspor Rekap Item Menu Terjual ke Excel / CSV'
+            }
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>
+              {activeSubTab === 'invoices' ? 'Ekspor Faktur (Excel)' : 'Ekspor Rekap Item (Excel)'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (activeSubTab === 'invoices') {
+                const outletName = filteredOrders[0]?.outlet?.name || activeOutlet?.name || 'Well POS';
+                generateSalesRecapPdf(filteredOrders, selectedChannel, outletName);
+              } else {
+                paymentItemsExportRef.current?.exportPdf();
+              }
+            }}
+            disabled={loading || (activeSubTab === 'invoices' ? filteredOrders.length === 0 : false)}
+            className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            title={
+              activeSubTab === 'invoices'
+                ? 'Cetak Dokumen Daftar Faktur Penjualan (PDF)'
+                : 'Cetak Dokumen Rekapitulasi Item Menu Terjual (PDF)'
+            }
           >
             <FileText className="w-4 h-4 text-blue-900" />
-            <span>Cetak Rekap PDF</span>
+            <span>
+              {activeSubTab === 'invoices' ? 'Cetak Faktur (PDF)' : 'Cetak Rekap Item (PDF)'}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => loadOrders()}
             disabled={loading}
-            className="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
+            className="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 text-blue-900 ${loading ? 'animate-spin' : ''}`} />
             <span>Segarkan</span>
@@ -394,8 +662,179 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
         </div>
       </div>
 
-      {/* Metric Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Sub-Tab Navigation Switcher */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('invoices')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer ${
+            activeSubTab === 'invoices'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+          }`}
+        >
+          <Receipt className="w-4 h-4" />
+          <span>Daftar Faktur Penjualan</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              activeSubTab === 'invoices' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {filteredOrders.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('payment_items')}
+          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer ${
+            activeSubTab === 'payment_items'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Rekap Item per Pembayaran</span>
+        </button>
+      </div>
+
+      {/* Global Toolbar Filters (Saluran, Kasir, Rentang Tanggal) - Bersama untuk Kedua Sub-Tab */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto min-w-0">
+          {/* Dropdown Filter Saluran Pesanan */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
+            <Filter className="w-4 h-4 text-blue-900 shrink-0" />
+            <span className="text-xs font-bold text-slate-600 shrink-0">Saluran:</span>
+            <select
+              value={selectedChannel}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedChannel(val);
+                loadOrders(val);
+              }}
+              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-1 min-w-0 flex-1 sm:flex-initial truncate"
+            >
+              <option value="ALL">Semua Saluran</option>
+              {channelOptions.map((ch) => (
+                <option key={ch.code} value={ch.code}>
+                  {getChannelEmoji(ch.code)} {ch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Kasir: Smart Default untuk Kasir (Akun Saya) atau Pilihan Semua Kasir di Toko Ini */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
+            <UserCheck className="w-4 h-4 text-blue-900 shrink-0" />
+            <span className="text-xs font-bold text-slate-600 shrink-0">Kasir:</span>
+            <select
+              value={selectedCashier}
+              onChange={(e) => {
+                setSelectedCashier(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-1 min-w-0 flex-1 truncate"
+            >
+              <option value="ALL">👤 Semua Kasir di Toko Ini</option>
+              {cashierOptions.map((name) => {
+                const isMe = isCashierRole && currentUser?.name === name;
+                return (
+                  <option key={name} value={name}>
+                    👤 {name} {isMe ? '(Akun Saya)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            {isCashierRole && selectedCashier === currentUser?.name && (
+              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0">
+                Akun Saya
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Dropdown Filter Periode / Tanggal */}
+        <div className="relative w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setShowDateDrop((v) => !v)}
+            className="flex items-center justify-between sm:justify-start gap-2 bg-white border border-slate-200 hover:border-blue-900/30 rounded-xl px-3 py-1.5 w-full sm:w-auto max-w-full shadow-2xs text-xs font-bold text-slate-700 transition-all cursor-pointer"
+          >
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <Calendar className="w-4 h-4 text-blue-900 shrink-0" />
+              <span className="truncate">{datePreset !== 'custom' ? PRESET_LABELS[datePreset] : `${customStart} s/d ${customEnd}`}</span>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          </button>
+
+          {showDateDrop && (
+            <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 w-full sm:w-auto sm:min-w-[210px] p-2 animate-in fade-in zoom-in-95">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2.5 py-1 mb-1">
+                Pilih Periode Transaksi
+              </div>
+              {((currentShift ? ['current_shift', 'today', '7days', '30days', 'thismonth', 'all', 'custom'] : ['today', '7days', '30days', 'thismonth', 'all', 'custom']) as DatePreset[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    setDatePreset(p);
+                    if (p !== 'custom') {
+                      setShowDateDrop(false);
+                      loadOrders(selectedChannel, p);
+                    }
+                  }}
+                  className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                    datePreset === p
+                      ? 'bg-blue-50 text-blue-900'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {PRESET_LABELS[p]}
+                </button>
+              ))}
+
+              {datePreset === 'custom' && (
+                <div className="p-2 border-t border-slate-100 mt-1 space-y-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Mulai:</label>
+                    <input
+                      type="date"
+                      value={customStart}
+                      onChange={(e) => setCustomStart(e.target.value)}
+                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-1.5 outline-none focus:border-blue-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Sampai:</label>
+                    <input
+                      type="date"
+                      value={customEnd}
+                      onChange={(e) => setCustomEnd(e.target.value)}
+                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-1.5 outline-none focus:border-blue-900"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDateDrop(false);
+                      loadOrders(selectedChannel, 'custom', customStart, customEnd);
+                    }}
+                    className="w-full mt-1 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                  >
+                    Terapkan Rentang
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sub-Tab Content Switcher */}
+      {activeSubTab === 'invoices' ? (
+        <>
+          {/* Metric Cards Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Faktur Lunas (Uang Masuk) */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
@@ -420,15 +859,27 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
           </div>
         </div>
 
-        {/* Card 2: Total Omset Kasir */}
+        {/* Card 2: Total Omset Kasir & AOV */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-            Total Omset Kasir
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+            <span>Total Omset Kasir</span>
+            {totalFakturLunas > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 text-[10px] font-black">
+                AOV: Rp {averageOrderValue.toLocaleString('id-ID')}
+              </span>
+            )}
           </div>
           <div className="text-2xl font-black text-blue-900">
             Rp {totalOmset.toLocaleString('id-ID')}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">Akumulasi penerimaan riil</div>
+          <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>Akumulasi penerimaan riil</span>
+            {totalFakturLunas > 0 && (
+              <span className="text-slate-400 font-semibold text-[10px]">
+                Rata-rata: Rp {averageOrderValue.toLocaleString('id-ID')}/nota
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Card 3: Tunai (Cash) */}
@@ -438,22 +889,108 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
             <span>Tunai (Cash)</span>
           </div>
           <div className="text-2xl font-black text-emerald-700">{cashTransaksi} Transaksi</div>
-          <div className="text-[11px] text-slate-500 mt-1">Uang fisik laci kasir</div>
+          <div className="text-[11px] text-emerald-800 font-bold mt-1">
+            Rp {cashTotalAmount.toLocaleString('id-ID')}
+          </div>
         </div>
 
-        {/* Card 4: QRIS Non-Tunai */}
+        {/* Card 4: Non-Tunai */}
         <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <QrCode className="w-3.5 h-3.5 text-indigo-600" />
-            <span>QRIS Non-Tunai</span>
+            <span>Non-Tunai</span>
           </div>
-          <div className="text-2xl font-black text-indigo-700">{qrisTransaksi} Transaksi</div>
-          <div className="text-[11px] text-slate-500 mt-1">Settlement digital QR</div>
+          <div className="text-2xl font-black text-indigo-700">{nonCashTransaksi} Transaksi</div>
+          <div className="text-[11px] text-indigo-800 font-bold mt-1">
+            Rp {nonCashTotalAmount.toLocaleString('id-ID')}
+          </div>
         </div>
       </div>
 
-      {/* Filter Bar (Search + Channel Dropdown) */}
-      <div className="flex flex-col sm:flex-row gap-2">
+      {/* Pill Filter Status Faktur (Audit Instan: Semua, Lunas, Dibatalkan/Void, Belum Bayar) */}
+      <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+        <span className="text-slate-400 font-bold text-xs shrink-0 flex items-center gap-1 mr-1">
+          <Filter className="w-3.5 h-3.5" />
+          <span>Status Faktur:</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus('ALL')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            selectedStatus === 'ALL'
+              ? 'bg-blue-900 text-white shadow-xs'
+              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <span>Semua Status</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              selectedStatus === 'ALL' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {statusCounts.all}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus('PAID')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            selectedStatus === 'PAID'
+              ? 'bg-emerald-700 text-white shadow-xs'
+              : 'bg-white border border-slate-200 text-emerald-800 hover:bg-emerald-50'
+          }`}
+        >
+          <span>Lunas (Masuk Uang)</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              selectedStatus === 'PAID' ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'
+            }`}
+          >
+            {statusCounts.paid}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedStatus('VOIDED')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+            selectedStatus === 'VOIDED'
+              ? 'bg-rose-700 text-white shadow-xs'
+              : 'bg-white border border-slate-200 text-rose-700 hover:bg-rose-50'
+          }`}
+        >
+          <span>Dibatalkan (Void)</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              selectedStatus === 'VOIDED' ? 'bg-rose-800 text-white' : 'bg-rose-100 text-rose-700'
+            }`}
+          >
+            {statusCounts.voided}
+          </span>
+        </button>
+        {statusCounts.unpaid > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('UNPAID')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+              selectedStatus === 'UNPAID'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-amber-800 hover:bg-amber-50'
+            }`}
+          >
+            <span>Belum Bayar</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                selectedStatus === 'UNPAID' ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              {statusCounts.unpaid}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Search Bar Khusus Faktur */}
+      <div className="flex gap-2">
         <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -467,108 +1004,13 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
           </div>
           <button
             type="submit"
-            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0"
+            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 cursor-pointer"
           >
             Cari
           </button>
         </form>
-
-        {/* Dropdown Filter Saluran Pesanan */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shrink-0 shadow-2xs">
-          <Filter className="w-4 h-4 text-blue-900 shrink-0" />
-          <span className="text-xs font-bold text-slate-600">Saluran:</span>
-          <select
-            value={selectedChannel}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedChannel(val);
-              loadOrders(val);
-            }}
-            className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-1"
-          >
-            <option value="ALL">Semua Saluran</option>
-            {channelOptions.map((ch) => (
-              <option key={ch.code} value={ch.code}>
-                {getChannelEmoji(ch.code)} {ch.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Dropdown Filter Periode / Tanggal */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowDateDrop((v) => !v)}
-            className="flex items-center gap-2 bg-white border border-slate-200 hover:border-blue-900/30 rounded-xl px-3 py-2 shrink-0 shadow-2xs text-xs font-bold text-slate-700 transition-all cursor-pointer h-full"
-          >
-            <Calendar className="w-4 h-4 text-blue-900 shrink-0" />
-            <span>{datePreset !== 'custom' ? PRESET_LABELS[datePreset] : `${customStart} s/d ${customEnd}`}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </button>
-
-          {showDateDrop && (
-            <div className="absolute right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 min-w-[210px] p-2 animate-in fade-in zoom-in-95">
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2.5 py-1 mb-1">
-                Pilih Periode Transaksi
-              </div>
-              {(['today', '7days', '30days', 'thismonth', 'all', 'custom'] as DatePreset[]).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => {
-                    setDatePreset(p);
-                    if (p !== 'custom') {
-                      setShowDateDrop(false);
-                      loadOrders(selectedChannel, p);
-                    }
-                  }}
-                  className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                    datePreset === p
-                      ? 'bg-blue-50 text-blue-900'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  {PRESET_LABELS[p]}
-                </button>
-              ))}
-
-              {datePreset === 'custom' && (
-                <div className="mt-2 pt-2 border-t border-slate-100 flex flex-col gap-2 p-1">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Dari Tanggal:</label>
-                    <input
-                      type="date"
-                      value={customStart}
-                      onChange={(e) => setCustomStart(e.target.value)}
-                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-1.5 outline-none focus:border-blue-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 block mb-1">Sampai Tanggal:</label>
-                    <input
-                      type="date"
-                      value={customEnd}
-                      onChange={(e) => setCustomEnd(e.target.value)}
-                      className="w-full text-xs font-medium border border-slate-200 rounded-lg p-1.5 outline-none focus:border-blue-900"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowDateDrop(false);
-                      loadOrders(selectedChannel, 'custom', customStart, customEnd);
-                    }}
-                    className="w-full mt-1 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
-                  >
-                    Terapkan Rentang
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
+
 
       {/* Orders Table */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
@@ -604,11 +1046,15 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
               ))}
             </div>
           </div>
-        ) : orders.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <EmptyState
             icon={<Receipt className="w-7 h-7 text-blue-900" />}
             title="Belum Ada Riwayat Transaksi"
-            description="Seluruh transaksi penjualan yang diproses melalui Mesin Kasir POS akan otomatis tercatat dan muncul di sini."
+            description={
+              selectedCashier !== 'ALL'
+                ? `Tidak ditemukan transaksi untuk kasir "${selectedCashier}" pada periode atau saluran yang dipilih.`
+                : "Seluruh transaksi penjualan yang diproses melalui Mesin Kasir POS akan otomatis tercatat dan muncul di sini."
+            }
           />
         ) : (
           <>
@@ -913,11 +1359,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
         )}
 
         {/* Pagination Riwayat Transaksi */}
-        {!loading && orders.length > 0 && (
+        {!loading && filteredOrders.length > 0 && (
           <TablePagination
             currentPage={safeCurrentPage}
             pageSize={pageSize}
-            totalItems={orders.length}
+            totalItems={filteredOrders.length}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
             pageSizeOptions={[10, 25, 50, 100]}
@@ -925,6 +1371,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
           />
         )}
       </div>
+        </>
+      ) : (
+        <div className="space-y-6">
+          <PaymentItemsAuditView
+            activeOutlet={activeOutlet}
+            currentUser={currentUser}
+            orders={filteredOrders}
+            isEmbedded={true}
+            selectedCashier={selectedCashier}
+            dateRangeText={dateRangeText}
+            exportHandlerRef={paymentItemsExportRef}
+          />
+        </div>
+      )}
 
       {/* Toast Alert Sukses */}
       {toastMsg && (
@@ -1012,6 +1472,100 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ activeOutlet, onAppendOr
           loadOrders();
         }}
       />
+
+      {/* Modal Ringkasan Format WhatsApp */}
+      {whatsappModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden border border-slate-200 animate-in slide-in-from-bottom-6 duration-300">
+            {/* Header */}
+            <div className="p-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-800 shrink-0">
+                  <MessageCircle className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-blue-950">
+                    Ringkasan Penjualan WhatsApp
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Pratinjau pesan teks siap kirim ke Owner atau grup operasional
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWhatsappModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                <span>FORMAT TEKS CHAT WHATSAPP:</span>
+                <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  Standar Audit Well POS
+                </span>
+              </div>
+
+              <div className="bg-slate-900 text-emerald-400 p-4 rounded-2xl font-mono text-xs leading-relaxed whitespace-pre-wrap border border-slate-800 shadow-inner select-all">
+                {generateWhatsAppSummaryText()}
+              </div>
+
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 text-xs text-blue-950 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-800 shrink-0 mt-0.5" />
+                <span>
+                  Teks di atas telah terstruktur rapi dengan format tebal (<strong>*</strong>) khas WhatsApp. Anda dapat langsung menyalinnya atau membuka aplikasi WhatsApp.
+                </span>
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setWhatsappModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+              >
+                Tutup
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const text = generateWhatsAppSummaryText();
+                  navigator.clipboard.writeText(text);
+                  setCopiedWaText(true);
+                  setToastMsg('Ringkasan teks WhatsApp berhasil disalin ke clipboard!');
+                  setTimeout(() => {
+                    setCopiedWaText(false);
+                    setToastMsg(null);
+                  }, 4000);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Copy className="w-4 h-4" />
+                <span>{copiedWaText ? '✓ Tersalin' : 'Salin Teks'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const text = generateWhatsAppSummaryText();
+                  const encoded = encodeURIComponent(text);
+                  window.open(`https://wa.me/?text=${encoded}`, '_blank');
+                }}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <MessageCircle className="w-4 h-4 text-white" />
+                <span>Kirim via WhatsApp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -153,6 +153,23 @@ export interface OrderListItemDTO {
       };
     };
   }>;
+  items?: Array<{
+    id: string;
+    productName: string;
+    variantName: string;
+    sku: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    categoryName?: string;
+    product: {
+      name: string;
+      unit: string;
+      category?: {
+        name: string;
+      };
+    };
+  }>;
   payments: Array<{
     id: string;
     paymentMethod: string;
@@ -163,6 +180,7 @@ export interface OrderListItemDTO {
   cashier: {
     id: string;
     name: string;
+    role?: string;
   };
   outlet: {
     id: string;

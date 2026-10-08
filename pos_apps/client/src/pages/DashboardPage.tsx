@@ -104,6 +104,7 @@ type TabKey =
   // Laporan
   | 'reports'
   | 'shifts'
+  | 'payment_items'
   | 'product_analytics'
   // Promosi & Diskon
   | 'promotions'
@@ -122,7 +123,7 @@ type TabKey =
   | 'guide';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
-  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'qr_orders'],
+  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders'],
   WAREHOUSE: [
     'inventory',
     'stock_movements',
@@ -139,6 +140,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'orders',
     'customers',
     'shifts',
+    'payment_items',
     'products',
     'categories',
     'modifiers',
@@ -182,6 +184,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'orders',
     'customers',
     'shifts',
+    'payment_items',
     'reports',
     'product_analytics',
     'promotions',
@@ -216,6 +219,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'orders',
     'customers',
     'shifts',
+    'payment_items',
     'reports',
     'product_analytics',
     'promotions',
@@ -639,6 +643,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'orders' ? (
           <OrdersView
             activeOutlet={activeOutlet}
+            currentUser={user}
             onAppendOrder={(order) => {
               setAppendOrderData(order);
               setActiveTab('pos');
@@ -647,7 +652,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'customers' ? (
           <CustomersView activeOutlet={activeOutlet} />
         ) : activeTab === 'shifts' ? (
-          <ShiftsAuditView activeOutlet={activeOutlet} />
+          <ShiftsAuditView activeOutlet={activeOutlet} currentUser={user} />
+        ) : activeTab === 'payment_items' ? (
+          <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
         ) : activeTab === 'reports' ? (
           <FinancialReportView activeOutlet={activeOutlet} />
         ) : activeTab === 'product_analytics' ? (
@@ -1130,39 +1137,43 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
         {/* User Profile & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {/* Tombol Pengaturan Printer Bluetooth Kasir */}
+          {/* Tombol Pengaturan Printer Bluetooth Kasir (Desktop/Tablet) */}
           <button
             type="button"
             onClick={() => setBluetoothModalOpen(true)}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+            className="hidden sm:inline-flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all font-bold text-xs items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
             title="Pengaturan & Tes Printer Bluetooth Thermal"
           >
             <Bluetooth className="w-3.5 h-3.5 text-blue-700" />
             <span className="hidden md:inline">Printer BT</span>
           </button>
 
-          <PwaInstallButton />
+          {/* Tombol Pasang PWA (Desktop/Tablet, di Mobile sudah ada di drawer dan banner) */}
+          <PwaInstallButton className="hidden sm:inline-flex" />
 
           <div className="hidden sm:flex flex-col text-right">
             <span className="text-sm font-bold text-slate-800">{user.name}</span>
             <span className="text-xs text-slate-500">{user.email}</span>
           </div>
 
+          {/* Role Badge (Desktop) */}
           <span
-            className={`text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full border font-bold shrink-0 ${badge.color}`}
+            className={`hidden md:inline-flex text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full border font-bold shrink-0 ${badge.color}`}
           >
             {badge.label}
           </span>
 
+          {/* Kunci Terminal (Desktop/Tablet, di Mobile ada di drawer) */}
           <button
             onClick={onLogout}
             title="Kunci Layar Terminal Kasir (PIN Lock)"
-            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+            className="hidden sm:inline-flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all font-bold text-xs items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
           >
             <Lock className="w-3.5 h-3.5 text-amber-700" />
             <span className="hidden sm:inline">Kunci Terminal</span>
           </button>
 
+          {/* Keluar Akun */}
           <button
             onClick={onLogout}
             title="Keluar Akun"
@@ -1898,6 +1909,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'orders' ? (
           <OrdersView
             activeOutlet={activeOutlet}
+            currentUser={user}
             onAppendOrder={(order) => {
               setAppendOrderData(order);
               setActiveTab('pos');
@@ -1907,6 +1919,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           <CustomersView />
         ) : activeTab === 'shifts' ? (
           <ShiftsAuditView activeOutlet={activeOutlet} />
+        ) : activeTab === 'payment_items' ? (
+          <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
         ) : activeTab === 'reports' ? (
           <FinancialReportView activeOutlet={activeOutlet} />
         ) : activeTab === 'users' ? (

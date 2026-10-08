@@ -641,7 +641,42 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
 32. **Standar Integritas Penutupan Shift & Visibilitas Audit Kasir (Shift Lock on Unpaid Orders)**:
     - **Kunci Penutupan Shift (Zero Unpaid Orders)**: Kasir DILARANG menutup shift jika masih terdapat pesanan berstatus `paymentStatus === 'UNPAID'` (Open Tab / Tagihan Meja Aktif). Backend wajib menolak penutupan dengan kode HTTP 400 `UNPAID_ORDERS_REMAINING`, dan frontend modal menampilkan daftar nomor invoice yang wajib diselesaikan atau dibatalkan (VOID) terlebih dahulu.
     - **Visibilitas Akuntabilitas Kasir**: Riwayat transaksi kasir wajib memuat kolom **Kasir** (`order.cashier.name`) secara eksplisit di desktop dan mobile agar mempermudah proses audit dan investigasi selisih kas.
-    - **Otomasi Pengujian Regresi**: Terverifikasi secara permanen dalam `npm run test:smoke` (Step 3.6).
+33. **Standar Sub-Tab Riwayat Transaksi & Hirarki Kartu Metode Pembayaran (`OrdersView.tsx` & `PaymentItemsAuditView.tsx`)**:
+    - **Penyatuan Sub-Tab Terpadu (Zero Clutter Sidebar)**: Halaman Riwayat Transaksi menyatukan dua perspektif data tanpa memecah rute menu sidebar:
+      1. Sub-Tab 1: **"Daftar Faktur Penjualan"** (Tabel nota invoice, cetak ulang struk, void transaksi kasir, filter kanal & kasir, ekspor PDF/CSV).
+      2. Sub-Tab 2: **"Rekap Item per Pembayaran"** (Overview statistik nominal & item terjual, kartu filter metode pembayaran hirarkis, dan tabel breakdown menu terjual).
+    - **Hirarki Kartu Pembayaran Murni (Anti-QRIS Berdampingan dengan Non-Tunai)**:
+      - Kartu level teratas (*Top-Level Cards*) HANYA menampilkan kategori induk: `[ Semua Metode ]`, `[ Tunai (Cash) ]`, `[ Non-Tunai ]`, dan `[ Split Payment ]` (bila terdapat transaksi multi-tender).
+      - DILARANG menaruh QRIS, Transfer Bank, atau Kartu EDC sejajar di baris kartu utama di samping Non-Tunai.
+      - Saat kartu `[ Non-Tunai ]` dipilih, sistem memunculkan sub-pill filter dinamis di bawahnya (`[ Semua Non-Tunai ]`, `[ QRIS ]`, `[ Transfer Bank ]`, `[ Kartu EDC / Debit ]`) hanya untuk metode yang memiliki transaksi aktif.
+      - Mengklik sub-pill spesifik (misal QRIS) langsung menyaring tabel breakdown item menu ke `DAFTAR MENU TERJUAL VIA QRIS`.
+    - **Filter Kasir Terpadu**: Filter dropdown Kasir (`selectedCashier`) di baris atas berlaku global dan otomatis menyaring data di kedua sub-tab (Faktur Penjualan dan Rekap Item) secara instan tanpa fetch ganda.
+    - **Pembedaan Ekspor Masing-Masing Sub-Tab (PDF & Excel/CSV)**:
+      - *Sub-Tab 1 ("Daftar Faktur Penjualan")*: Tombol ekspor atas bertuliskan `[ Ekspor Faktur (Excel) ]` dan `[ Cetak Faktur (PDF) ]`. Menghasilkan file CSV daftar faktur transaksi per nota (`daftar_faktur_penjualan_wellpos.csv`) dan dokumen PDF rekap faktur lengkap (`generateSalesRecapPdf`).
+      - *Sub-Tab 2 ("Rekap Item per Pembayaran")*: Tombol ekspor atas otomatis beradaptasi menjadi `[ Ekspor Rekap Item (Excel) ]` dan `[ Cetak Rekap Item (PDF) ]`, serta dilengkapi tombol inline cepat `[ Excel ]` & `[ PDF ]` pada header tabel rekap item. Menghasilkan file CSV rekap item terjual per metode (`rekap_item_penjualan_[metode].csv`) dan dokumen cetak A4 profesional (`generatePaymentItemsRecapPdf`) lengkap dengan ringkasan 4 metrik, tabel kuantitas, kontribusi omset, dan persentase share.
+    - **Filter Status Faktur Eksplisit (Pill Filter Counters)**:
+      - Di atas tabel faktur penjualan, kasir/owner dapat menyaring transaksi dengan filter pills: `[ Semua Status ]`, `[ Lunas (Masuk Uang) ]`, `[ Dibatalkan (Void) ]`, dan `[ Belum Bayar ]` (khusus order open tab).
+      - Masing-masing pill dilengkapi counter badge numerik live yang sinkron dengan rentang waktu dan kasir yang sedang disaring.
+      - Kartu metrik finansial tetap menampilkan gambaran utuh penerimaan shift/toko agar tidak misleading saat kasir sedang memfilter pill void.
+    - **Filter Periode Shift Berjalan (Current Shift Preset)**:
+      - Ditambahkan preset tanggal cepat: `🕒 Shift Berjalan (Saat Ini)`. Saat dipilih, sistem otomatis menyaring transaksi mulai dari `currentShift.startTime` atau ID shift kasir yang sedang incharge tanpa mengharuskan pemilihan jam/menit secara manual.
+    - **Indikator Finansial Mini (Average Order Value / AOV)**:
+      - Kartu metrik Omset menyajikan indikator AOV (Nilai Rata-rata per Nota): `AOV: Rp XX.XXX` dan `Rata-rata: Rp XX.XXX/nota` untuk memantau basket size pelanggan di outlet secara real-time.
+    - **Ekspor Ringkasan Penjualan WhatsApp (`WhatsAppSummaryModal`)**:
+      - Tombol `[ 💬 Ringkasan WA ]` pada header aksi Riwayat Transaksi membuka modal pratinjau pesan teks terstruktur format WhatsApp.
+      - Memuat detail outlet, periode, nama kasir, total omset riil, AOV, faktur lunas, breakdown tunai vs non-tunai, serta status faktur void dan tagihan belum bayar.
+      - Dilengkapi tombol cepat `[ Salin Teks ]` (clipboard dengan toast konfirmasi) dan `[ Kirim via WhatsApp ]` (`https://wa.me/?text=...`) untuk kemudahan pelaporan harian ke Owner toko atau grup chat operasional.
+    - **Financial Intelligence HPP & Estimasi Laba Kotor (Strict Role Isolation)**:
+      - Pada sub-tab *"Rekap Item per Pembayaran"*, pengguna dengan hak istimewa (`OWNER` dan `ADMIN`) memiliki tombol toggle `[ HPP & Margin ]`.
+      - Saat diaktifkan, ringkasan menampilkan Kartu ke-4: `Estimasi Laba Kotor` beserta akumulasi HPP dan persentase gross margin.
+      - Tabel breakdown item, ekspor Excel/CSV, serta dokumen PDF otomatis memunculkan kolom `Total HPP`, `Laba Kotor`, dan `Margin %`.
+      - *Isolasi Privilese Kasir*: Tombol dan seluruh data HPP/margin disembunyikan 100% (*zero leakage*) saat diakses oleh pengguna dengan role `CASHIER` demi menjaga kerahasiaan margin keuntungan usaha.
+    - **Kebijakan Akses Kasir Riwayat Transaksi (Opsi 1 - Smart Default & Kolaborasi Toko)**:
+      - *Proteksi Batas Outlet Backend (Anti-Cross-Outlet Breach)*: Pada endpoint `GET /api/orders` (`order.controller.ts`), jika sesi pengguna adalah kasir (`req.user.role === 'CASHIER'`), backend secara ketat membatasi `effectiveOutletId = req.user.outletId`. Kasir dilarang keras dan tidak mampu mengintip transaksi outlet/cabang lain.
+      - *Smart Default Akun Kasir Aktif*: Saat kasir login membuka Riwayat Transaksi, filter kasir secara otomatis terpasang default ke namanya sendiri (`Kasir: [Nama Kasir] (Akun Saya) [Akun Anda]`), sehingga kartu omset awal dan rekap penjualan memprioritaskan kinerja pribadi kasir tersebut.
+      - *Filter Kasir Murni Role `CASHIER` (Anti-Non-Cashier Role Pollution)*: Dropdown filter kasir HANYA menampilkan staf yang memiliki `role === 'CASHIER'` di outlet yang sedang aktif. Akun non-kasir seperti Owner (`(Owner)`), Supervisor, Admin, maupun Gudang dilarang keras muncul di opsi dropdown filter kasir, baik di tampilan kasir maupun di tampilan backoffice owner/admin saat membuka outlet tersebut.
+      - *Fleksibilitas Kolaborasi Operasional Toko*: Dropdown kasir tetap dapat diubah ke `[ Semua Kasir di Toko Ini ]` atau kasir rekan di toko yang sama agar kasir dapat membantu melayani cetak ulang struk (reprint), memeriksa status pesanan open-tab, atau menangani komplain pelanggan saat kasir rekan sedang istirahat.
+      - *Pertanggungjawaban Uang Fisik Tetap Terisolasi*: Rekonsiliasi fisik laci uang (modal awal, petty cash, selisih kas) tetap terisolasi 100% per individu di menu **Shift Kasir (Z-Report)** sehingga tidak ada risiko salah hitung uang setoran kasir.
 
 ---
 

@@ -313,14 +313,14 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           size="sm"
           icon={<Bluetooth className="w-3.5 h-3.5 text-blue-900" />}
           onClick={() => setBluetoothModalOpen(true)}
-          className="text-xs"
+          className="text-xs hidden sm:inline-flex"
           title="Pengaturan & Tes Koneksi Printer Bluetooth Thermal"
         >
           <span className="hidden sm:inline">Printer BT</span>
         </Button>
 
         {/* Tombol Pasang Aplikasi PWA */}
-        <PwaInstallButton />
+        <PwaInstallButton className="hidden sm:inline-flex" />
 
         {/* Toggle Mode Handheld / HP */}
         {onToggleHandheldMode && (

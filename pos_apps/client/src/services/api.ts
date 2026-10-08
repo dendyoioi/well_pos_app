@@ -653,11 +653,12 @@ export const api = {
     return res.json();
   },
 
-  getOrders: async (params?: { search?: string; channel?: string; outletId?: string; startDate?: string; endDate?: string; limit?: number; page?: number }): Promise<{ status: string; data: Order[]; meta?: any }> => {
+  getOrders: async (params?: { search?: string; channel?: string; outletId?: string; cashierId?: string; startDate?: string; endDate?: string; limit?: number; page?: number }): Promise<{ status: string; data: Order[]; meta?: any }> => {
     const query = new URLSearchParams();
     if (params?.search) query.append('search', params.search);
     if (params?.channel && params.channel !== 'ALL') query.append('channel', params.channel);
     if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.cashierId) query.append('cashierId', params.cashierId);
     if (params?.startDate) query.append('startDate', params.startDate);
     if (params?.endDate) query.append('endDate', params.endDate);
     if (params?.limit) query.append('limit', params.limit.toString());
@@ -847,9 +848,11 @@ export const api = {
     return res.json();
   },
 
-  getShiftHistory: async (outletId?: string): Promise<any> => {
+  getShiftHistory: async (outletId?: string, params?: { startDate?: string; endDate?: string }): Promise<any> => {
     const query = new URLSearchParams();
     if (outletId) query.append('outletId', outletId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
 
     const res = await fetch(`/api/shifts?${query.toString()}`, {
       headers: authHeader(),

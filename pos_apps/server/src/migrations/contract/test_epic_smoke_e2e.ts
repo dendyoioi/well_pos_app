@@ -251,6 +251,21 @@ export async function runEndToEndSmokeTest() {
     const uraTenantId = cashierLoginRes.data.data.user.tenantId;
     const kemangOutletId = cashierLoginRes.data.data.user.outlet?.id;
 
+    // Pastikan kasir memiliki sesi shift aktif untuk pengujian operasional X-Report dan checkout
+    const currentShiftRes = await request('/api/shifts/current', {
+      headers: { Authorization: `Bearer ${cashierToken}` },
+    });
+    if (currentShiftRes.status !== 200 || !currentShiftRes.data?.data) {
+      await request('/api/shifts/start', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cashierToken}` },
+        body: JSON.stringify({
+          initialCash: 100000,
+          notes: 'Shift Smoke Test',
+        }),
+      });
+    }
+
     // 2.2 Ambil Katalog Produk Outlet Kemang
     const productsRes = await request(`/api/products?outletId=${kemangOutletId}`, {
       headers: { Authorization: `Bearer ${cashierToken}` },
@@ -382,13 +397,23 @@ export async function runEndToEndSmokeTest() {
     console.log('▶️ FLOW 3: Laporan Muncul Benar di Backoffice (Validasi WIB Timezone)');
 
     // 3.1 Login Owner Ura Coffee
-    const uraOwnerLoginRes = await request('/api/auth/login', {
+    let uraOwnerLoginRes = await request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({
         email: 'owner@uracoffee.id',
         password: 'Owner123!',
       }),
     });
+
+    if (uraOwnerLoginRes.status !== 200) {
+      uraOwnerLoginRes = await request('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'owner@uracoffee.id',
+          password: 'Admin123!',
+        }),
+      });
+    }
 
     if (uraOwnerLoginRes.status === 200 && uraOwnerLoginRes.data?.data?.token) {
       record('3.1 Login Merchant Owner Ura Coffee (POST /api/auth/login)', true, 'Token Owner Ura Coffee aktif');

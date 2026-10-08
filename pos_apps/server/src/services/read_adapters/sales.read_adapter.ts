@@ -38,7 +38,7 @@ export class SalesReadAdapter extends BaseReadAdapter {
 
     if (cashierId) {
       params.push(cashierId);
-      whereClauses.push(`o.user_id = $${params.length}`);
+      whereClauses.push(`o.cashier_id = $${params.length}`);
     }
 
     if (channel && channel !== 'ALL') {
@@ -110,6 +110,7 @@ export class SalesReadAdapter extends BaseReadAdapter {
         o.created_at,
         o.updated_at,
         u.name as cashier_name,
+        u.role::text as cashier_role,
         out.name as outlet_name,
         c.name as customer_name,
         c.phone as customer_phone,
@@ -158,13 +159,14 @@ export class SalesReadAdapter extends BaseReadAdapter {
         oi.sku,
         oi.quantity,
         oi.unit_price,
+        oi.cost_price,
         oi.subtotal,
         pv.product_id,
         p.unit,
         c.name as category_name
       FROM "order_items" oi
-      JOIN "product_variants" pv ON pv.id = oi.product_variant_id
-      JOIN "products" p ON p.id = pv.product_id
+      LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
+      LEFT JOIN "products" p ON p.id = pv.product_id
       LEFT JOIN "categories" c ON c.id = p.category_id
       WHERE oi.order_id = ANY($1::text[]);
     `;
@@ -196,6 +198,7 @@ export class SalesReadAdapter extends BaseReadAdapter {
         sku: item.sku,
         quantity: Number(item.quantity || 0),
         unitPrice: Number(item.unit_price || 0),
+        costPrice: Number(item.cost_price || 0),
         subtotal: Number(item.subtotal || 0),
         categoryName: item.category_name || 'Lainnya',
         product: {
@@ -249,10 +252,12 @@ export class SalesReadAdapter extends BaseReadAdapter {
       createdAt: new Date(r.created_at),
       updatedAt: new Date(r.updated_at),
       orderItems: itemsByOrder.get(r.id) || [],
+      items: itemsByOrder.get(r.id) || [],
       payments: paymentsByOrder.get(r.id) || [],
       cashier: {
         id: r.user_id,
         name: r.cashier_name || 'Cashier',
+        role: r.cashier_role || 'CASHIER',
       },
       outlet: {
         id: r.outlet_id,

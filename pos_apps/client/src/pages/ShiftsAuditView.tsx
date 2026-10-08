@@ -13,6 +13,7 @@ import {
   TrendingDown,
   TrendingUp,
   Store,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Outlet } from '../types/outlet';
@@ -21,6 +22,7 @@ import { computePresetDateRange } from '../utils/date';
 
 export interface ShiftsAuditViewProps {
   activeOutlet?: Outlet | null;
+  currentUser?: any | null;
 }
 
 export interface ShiftDiscrepancySummary {
@@ -34,12 +36,35 @@ export interface ShiftDiscrepancySummary {
   discrepancyRatePercent: number;
 }
 
-export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }) => {
+const getShiftCashierName = (s: any) =>
+  s.cashierName || (typeof s.cashier === 'string' ? s.cashier : s.cashier?.name) || 'Kasir';
+const getShiftOutletName = (s: any) =>
+  s.outletName || (typeof s.outlet === 'string' ? s.outlet : s.outlet?.name) || '-';
+
+export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, currentUser }) => {
   const [shifts, setShifts] = useState<any[]>([]);
   const [summary, setSummary] = useState<ShiftDiscrepancySummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
+
+  const isCashierRole = currentUser?.role === 'CASHIER';
+  const [selectedCashier, setSelectedCashier] = useState<string>(() => {
+    return currentUser?.role === 'CASHIER' && currentUser?.name ? currentUser.name : 'ALL';
+  });
   const [selectedShift, setSelectedShift] = useState<any | null>(null);
+
+  // Daftar nama kasir unik dari riwayat shift untuk filter
+  const cashierOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    shifts.forEach((s) => {
+      const name = getShiftCashierName(s);
+      if (name && name !== 'Kasir') set.add(name);
+    });
+    if (isCashierRole && currentUser?.name) {
+      set.add(currentUser.name.trim());
+    }
+    return Array.from(set).sort();
+  }, [shifts, isCashierRole, currentUser?.name]);
 
   // Period Preset Filter
   const [periodPreset, setPeriodPreset] = useState<'today' | '7days' | '30days' | 'thisMonth' | 'custom'>('thisMonth');
@@ -75,10 +100,51 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
         setSummary(res.data.summary);
         setShifts(res.data.shifts || []);
       } else {
-        // Fallback jika mode standar
-        const fallbackRes = await api.getShiftHistory(outletIdParam);
+        // Fallback jika mode standar atau role Kasir (403 Forbidden pada endpoint analitik laporan)
+        const fallbackRes = await api.getShiftHistory(outletIdParam, { startDate, endDate });
         if (fallbackRes.status === 'success') {
-          setShifts(fallbackRes.data || []);
+          const list = fallbackRes.data || [];
+          setShifts(list);
+
+          // Client-side computed summary KPI fallback
+          let matchCount = 0;
+          let overCount = 0;
+          let shortCount = 0;
+          let totalOverAmount = 0;
+          let totalShortAmount = 0;
+
+          list.forEach((s: any) => {
+            const diff =
+              s.cashDifference != null
+                ? Number(s.cashDifference)
+                : (s.difference != null ? Number(s.difference) : 0);
+            if (diff === 0) {
+              matchCount++;
+            } else if (diff > 0) {
+              overCount++;
+              totalOverAmount += diff;
+            } else {
+              shortCount++;
+              totalShortAmount += Math.abs(diff);
+            }
+          });
+
+          const totalAudited = list.length;
+          const discrepancyCount = overCount + shortCount;
+          const discrepancyRatePercent =
+            totalAudited > 0 ? Number(((discrepancyCount / totalAudited) * 100).toFixed(1)) : 0;
+          const netDifference = totalOverAmount - totalShortAmount;
+
+          setSummary({
+            totalShiftsAudited: totalAudited,
+            matchCount,
+            overCount,
+            shortCount,
+            totalOverAmount,
+            totalShortAmount,
+            netDifference,
+            discrepancyRatePercent,
+          });
         }
       }
     } catch (err) {
@@ -127,8 +193,8 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
       ['ID Shift', 'Kasir', 'Toko', 'Waktu Mulai', 'Waktu Selesai', 'Modal Awal', 'Kas Diharapkan', 'Kas Fisik Aktual', 'Selisih Kas', 'Status'],
       ...shifts.map((s) => [
         s.id.slice(0, 8),
-        `"${s.cashierName || s.cashier?.name || 'Kasir'}"`,
-        `"${s.outletName || s.outlet?.name || '-'}"`,
+        `"${getShiftCashierName(s)}"`,
+        `"${getShiftOutletName(s)}"`,
         new Date(s.startTime).toLocaleString('id-ID'),
         s.endTime ? new Date(s.endTime).toLocaleString('id-ID') : 'Aktif',
         s.startingCash,
@@ -151,18 +217,23 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
     URL.revokeObjectURL(url);
   };
 
-  const filteredShifts = shifts.filter((s) => {
-    const q = search.toLowerCase();
-    const cashier = (s.cashierName || s.cashier?.name || '').toLowerCase();
-    const outlet = (s.outletName || s.outlet?.name || '').toLowerCase();
-    const notes = (s.notes || '').toLowerCase();
-    return cashier.includes(q) || outlet.includes(q) || notes.includes(q);
-  });
+  const filteredShifts = React.useMemo(() => {
+    return shifts.filter((s) => {
+      const cashier = getShiftCashierName(s);
+      if (selectedCashier !== 'ALL' && cashier !== selectedCashier) {
+        return false;
+      }
+      const q = search.toLowerCase();
+      const outlet = getShiftOutletName(s).toLowerCase();
+      const notes = (s.notes || '').toLowerCase();
+      return cashier.toLowerCase().includes(q) || outlet.includes(q) || notes.includes(q);
+    });
+  }, [shifts, selectedCashier, search]);
 
-  // Reset pagination ke halaman 1 saat pencarian berubah
+  // Reset pagination ke halaman 1 saat pencarian atau filter kasir berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, periodPreset, customStart, customEnd, activeOutlet?.id]);
+  }, [search, selectedCashier, periodPreset, customStart, customEnd, activeOutlet?.id]);
 
   const totalPages = Math.max(1, Math.ceil(filteredShifts.length / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -221,8 +292,8 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
       {/* Filter Controls Toolbar */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">
         {/* Preset Buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full md:w-auto">
+          <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1 shrink-0">
             <Calendar className="w-3.5 h-3.5" /> Periode:
           </span>
           {[
@@ -235,7 +306,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
             <button
               key={item.key}
               onClick={() => setPeriodPreset(item.key as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 periodPreset === item.key
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -368,19 +439,51 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
       )}
 
       {/* Filter Toolbar & Search */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Cari kasir, outlet, atau catatan..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900 shadow-xs"
-          />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:max-w-xl">
+          <div className="relative w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Cari kasir, outlet, atau catatan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900 shadow-xs"
+            />
+          </div>
+
+          {/* Filter Dropdown Nama Kasir */}
+          <div className="relative w-full sm:w-auto shrink-0 flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xs">
+            <User className="w-4 h-4 text-blue-900 shrink-0" />
+            <span className="text-xs font-bold text-slate-600 shrink-0">Kasir:</span>
+            <select
+              value={selectedCashier}
+              onChange={(e) => {
+                setSelectedCashier(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer pr-1 min-w-0 flex-1 sm:flex-initial truncate"
+              title="Filter Shift Berdasarkan Nama Kasir"
+            >
+              <option value="ALL">Semua Kasir di Toko Ini</option>
+              {cashierOptions.map((c) => {
+                const isMe = isCashierRole && currentUser?.name === c;
+                return (
+                  <option key={c} value={c}>
+                    {c} {isMe ? '(Akun Saya)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            {isCashierRole && selectedCashier === currentUser?.name && (
+              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0">
+                Akun Saya
+              </span>
+            )}
+          </div>
         </div>
 
-        <span className="text-xs font-bold text-slate-500">
+        <span className="text-xs font-bold text-slate-500 self-end sm:self-auto">
           Total: <strong className="text-slate-900">{filteredShifts.length}</strong> sesi shift
         </span>
       </div>
@@ -417,8 +520,8 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                 </tr>
               ) : (
                 paginatedShifts.map((shift) => {
-                  const cashierName = shift.cashierName || shift.cashier?.name || 'Kasir';
-                  const outletName = shift.outletName || shift.outlet?.name || '-';
+                  const cashierName = getShiftCashierName(shift);
+                  const outletName = getShiftOutletName(shift);
                   const startingCash = Number(shift.startingCash || 0);
                   const actualCash = shift.actualEnding != null ? Number(shift.actualEnding) : (shift.actualCash != null ? Number(shift.actualCash) : null);
                   const expectedCash = shift.expectedEnding != null ? Number(shift.expectedEnding) : (shift.expectedCash != null ? Number(shift.expectedCash) : null);
@@ -539,9 +642,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
             </div>
           ) : (
             paginatedShifts.map((shift) => {
-              const cashierName = shift.cashierName || shift.cashier?.name || 'Kasir';
-              const outletName = shift.outletName || shift.outlet?.name || '-';
+              const cashierName = getShiftCashierName(shift);
+              const outletName = getShiftOutletName(shift);
+              const isMe = isCashierRole && currentUser?.name === cashierName;
               const startingCash = Number(shift.startingCash || 0);
+              const expectedCash = shift.expectedEnding != null ? Number(shift.expectedEnding) : (shift.expectedCash != null ? Number(shift.expectedCash) : null);
               const actualCash = shift.actualEnding != null ? Number(shift.actualEnding) : (shift.actualCash != null ? Number(shift.actualCash) : null);
               const diff = shift.cashDifference != null ? Number(shift.cashDifference) : (shift.difference != null ? Number(shift.difference) : null);
               const isDiffZero = diff === 0;
@@ -551,12 +656,17 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
               return (
                 <div key={shift.id} className="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                        <User className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>{cashierName}</span>
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                        <User className="w-4 h-4 text-blue-900 shrink-0" />
+                        <span className="truncate">{cashierName}</span>
+                        {isMe && (
+                          <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-black shrink-0">
+                            Akun Saya
+                          </span>
+                        )}
                       </div>
-                      <span className="text-[11px] text-slate-400 pl-5.5 block">{outletName}</span>
+                      <span className="text-[11px] text-slate-400 pl-5.5 block truncate">{outletName}</span>
                     </div>
 
                     {!isClosed && shift.status === 'OPEN' ? (
@@ -565,22 +675,22 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                         <span>AKTIF</span>
                       </span>
                     ) : isDiffZero ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase shrink-0">
-                        SEIMBANG
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase shrink-0 border border-emerald-200">
+                        SEIMBANG (Rp 0)
                       </span>
                     ) : isDiffPositive ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold uppercase shrink-0">
-                        LEBIH
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold uppercase shrink-0 border border-blue-200">
+                        LEBIH (+Rp {Math.abs(diff!).toLocaleString('id-ID')})
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold uppercase shrink-0">
-                        KURANG
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold uppercase shrink-0 border border-rose-200">
+                        KURANG (-Rp {Math.abs(diff!).toLocaleString('id-ID')})
                       </span>
                     )}
                   </div>
 
                   {/* Waktu Shift */}
-                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-slate-50 p-2 rounded-xl">
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-100">
                     <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>
                       {new Date(shift.startTime).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} •{' '}
@@ -591,12 +701,18 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                     </span>
                   </div>
 
-                  {/* Financial Metrics Mini Cards */}
-                  <div className="grid grid-cols-3 gap-2 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 text-center">
+                  {/* Financial Metrics Mini Cards (Compact 4 Grid) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 text-center">
                     <div>
                       <span className="text-[10px] text-slate-400 block font-medium">Modal Awal</span>
                       <span className="text-xs font-bold text-slate-700">
                         Rp {startingCash.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-medium">Kas Sistem</span>
+                      <span className="text-xs font-bold text-slate-700">
+                        {expectedCash != null ? `Rp ${expectedCash.toLocaleString('id-ID')}` : '-'}
                       </span>
                     </div>
                     <div>
@@ -606,7 +722,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block font-medium">Selisih</span>
+                      <span className="text-[10px] text-slate-400 block font-medium">Selisih Kas</span>
                       {diff != null ? (
                         <span
                           className={`text-xs font-black ${
@@ -628,7 +744,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                   {/* Action Button */}
                   <button
                     onClick={() => handleViewDetail(shift.id)}
-                    className="w-full py-2.5 bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                    className="w-full py-2.5 bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                   >
                     <Eye className="w-4 h-4" />
                     <span>Lihat Rincian Audit</span>
@@ -654,74 +770,244 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
       </div>
 
       {/* Detail Shift Modal */}
-      {selectedShift && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-gradient-to-r from-blue-950 to-blue-900 text-white p-5 flex items-center justify-between">
+      {selectedShift && (() => {
+        const modalDiff =
+          selectedShift.difference != null
+            ? Number(selectedShift.difference)
+            : selectedShift.cashDifference != null
+            ? Number(selectedShift.cashDifference)
+            : null;
+        const isModalClosed =
+          selectedShift.status === 'CLOSED' ||
+          selectedShift.status === 'MATCH' ||
+          selectedShift.status === 'OVER' ||
+          selectedShift.status === 'SHORT';
+        const cashierName =
+          selectedShift.cashier?.name ||
+          selectedShift.user?.name ||
+          selectedShift.cashierName ||
+          'Kasir';
+        const outletName =
+          selectedShift.outlet?.name || selectedShift.outletName || '-';
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] min-h-0">
+              {/* Header Bar */}
+              <div className="bg-gradient-to-r from-blue-950 to-blue-900 text-white p-4 sm:p-5 flex items-start justify-between gap-3 shrink-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-800/80 text-[10px] font-bold text-blue-200 uppercase tracking-wide">
+                      Shift #{selectedShift.id.slice(0, 8)}
+                    </span>
+                    {!isModalClosed && selectedShift.status === 'OPEN' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-400/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        AKTIF
+                      </span>
+                    ) : modalDiff === 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">
+                        SEIMBANG (Rp 0)
+                      </span>
+                    ) : (modalDiff || 0) > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-400/20 text-blue-200 text-[10px] font-bold border border-blue-400/30">
+                        LEBIH (+Rp {Math.abs(modalDiff!).toLocaleString('id-ID')})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-bold border border-rose-400/30">
+                        KURANG (-Rp {Math.abs(modalDiff!).toLocaleString('id-ID')})
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-extrabold text-base sm:text-lg text-white truncate">
+                    Rekap Shift: {cashierName}
+                  </h3>
+                  <p className="text-xs text-blue-200/80 mt-0.5 truncate flex items-center gap-1.5">
+                    <Store className="w-3.5 h-3.5 shrink-0" />
+                    <span>{outletName}</span>
+                    <span>•</span>
+                    <span>
+                      {new Date(selectedShift.startTime).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                      ,{' '}
+                      {new Date(selectedShift.startTime).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}{' '}
+                      -{' '}
+                      {selectedShift.endTime
+                        ? new Date(selectedShift.endTime).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Sekarang'}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedShift(null)}
+                  className="p-2 rounded-xl text-blue-200 hover:text-white hover:bg-blue-800/60 transition-colors shrink-0 cursor-pointer active:scale-95"
+                  title="Tutup Modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Body Container */}
+              <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-5 sm:space-y-6 min-h-0">
+                {/* Reconciliation Cards (Compact 6 Grid) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Modal Awal</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-900 block mt-0.5">
+                      Rp {Number(selectedShift.startingCash || 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Penjualan Tunai</span>
+                    <span className="text-xs sm:text-sm font-black text-emerald-700 block mt-0.5">
+                      Rp {Number(selectedShift.stats?.cashSales || 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Kas Sistem (Expected)</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-900 block mt-0.5">
+                      {selectedShift.expectedCash != null
+                        ? `Rp ${Number(selectedShift.expectedCash).toLocaleString('id-ID')}`
+                        : selectedShift.expectedEnding != null
+                        ? `Rp ${Number(selectedShift.expectedEnding).toLocaleString('id-ID')}`
+                        : '-'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Uang Fisik Aktual</span>
+                    <span className="text-xs sm:text-sm font-black text-slate-900 block mt-0.5">
+                      {selectedShift.actualCash != null
+                        ? `Rp ${Number(selectedShift.actualCash).toLocaleString('id-ID')}`
+                        : selectedShift.actualEnding != null
+                        ? `Rp ${Number(selectedShift.actualEnding).toLocaleString('id-ID')}`
+                        : '-'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Penjualan Non-Tunai</span>
+                    <span className="text-xs sm:text-sm font-black text-blue-700 block mt-0.5">
+                      Rp {Number(selectedShift.stats?.nonCashSales ?? selectedShift.stats?.qrisSales ?? 0).toLocaleString('id-ID')}
+                    </span>
+                    {selectedShift.stats?.paymentBreakdown &&
+                      Object.keys(selectedShift.stats.paymentBreakdown).filter((k: string) => k !== 'CASH').length > 1 && (
+                        <span
+                          className="text-[9px] text-slate-500 font-medium block mt-0.5 truncate"
+                          title={Object.entries(selectedShift.stats.paymentBreakdown)
+                            .filter(([k]) => k !== 'CASH')
+                            .map(([k, v]) => `${k}: Rp ${Number(v).toLocaleString('id-ID')}`)
+                            .join(' • ')}
+                        >
+                          {Object.entries(selectedShift.stats.paymentBreakdown)
+                            .filter(([k]) => k !== 'CASH')
+                            .map(([k, v]) => `${k}: Rp ${Number(v).toLocaleString('id-ID')}`)
+                            .join(' • ')}
+                        </span>
+                      )}
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Selisih Kas</span>
+                    <span
+                      className={`text-xs sm:text-sm font-black block mt-0.5 ${
+                        modalDiff === 0
+                          ? 'text-emerald-700'
+                          : (modalDiff || 0) > 0
+                          ? 'text-blue-700'
+                          : 'text-rose-700'
+                      }`}
+                    >
+                      {modalDiff !== null
+                        ? `${(modalDiff || 0) > 0 ? '+' : ''}Rp ${modalDiff.toLocaleString('id-ID')}`
+                        : 'Shift Aktif'}
+                    </span>
+                  </div>
+                </div>
+
+              {/* Rekap Item Terjual Selama Shift */}
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-800 text-[10px] font-bold text-blue-200 uppercase mb-1">
-                  Detail Shift #{selectedShift.id.slice(0, 8)}
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900" />
+                    <span>Rekap Item Terjual ({selectedShift.soldItemsSummary?.length || 0} Menu)</span>
+                  </h4>
+                  {selectedShift.soldItemsSummary && selectedShift.soldItemsSummary.length > 0 && (
+                    <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                      Total: {selectedShift.soldItemsSummary.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0)} Porsi/Item
+                    </span>
+                  )}
                 </div>
-                <h3 className="font-extrabold text-base text-white">
-                  Rekap Shift: {selectedShift.cashier?.name}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedShift(null)}
-                className="p-1.5 rounded-xl text-blue-200 hover:text-white hover:bg-blue-800/60 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <div className="p-6 overflow-y-auto space-y-6">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Modal Awal</span>
-                  <span className="text-xs font-black text-slate-900">
-                    Rp {selectedShift.startingCash?.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Penjualan Tunai</span>
-                  <span className="text-xs font-black text-emerald-700">
-                    Rp {selectedShift.stats?.cashSales?.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Penjualan QRIS</span>
-                  <span className="text-xs font-black text-blue-700">
-                    Rp {selectedShift.stats?.qrisSales?.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Selisih Kas</span>
-                  <span className="text-xs font-black text-slate-900">
-                    {selectedShift.difference !== null
-                      ? `Rp ${selectedShift.difference.toLocaleString('id-ID')}`
-                      : 'Shift Aktif'}
-                  </span>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-56 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase sticky top-0">
+                      <tr>
+                        <th className="px-3.5 py-2">Nama Menu / Produk</th>
+                        <th className="px-3.5 py-2 text-center">Jumlah Terjual</th>
+                        <th className="px-3.5 py-2 text-right">Total Penjualan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {(!selectedShift.soldItemsSummary || selectedShift.soldItemsSummary.length === 0) ? (
+                        <tr>
+                          <td colSpan={3} className="px-3 py-6 text-center text-slate-400 text-xs">
+                            Belum ada rincian item terjual pada shift ini
+                          </td>
+                        </tr>
+                      ) : (
+                        selectedShift.soldItemsSummary.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50/70">
+                            <td className="px-3.5 py-2 font-bold text-slate-800 flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-900 flex items-center justify-center text-[10px] font-black shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span>{item.productName}</span>
+                            </td>
+                            <td className="px-3.5 py-2 text-center">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-extrabold text-[11px]">
+                                {item.quantity} pcs
+                              </span>
+                            </td>
+                            <td className="px-3.5 py-2 text-right font-black text-blue-950">
+                              Rp {Number(item.totalAmount).toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Orders List in this shift */}
+              {/* Orders List in this shift (Hybrid Desktop Table / Mobile Card Rows) */}
               <div>
                 <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider mb-2.5">
                   Daftar Transaksi Selama Shift ({selectedShift.orders?.length || 0})
                 </h4>
                 <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-60 overflow-y-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase">
+                  {/* Desktop View Table */}
+                  <table className="w-full text-left text-xs hidden sm:table">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase sticky top-0">
                       <tr>
-                        <th className="px-3 py-2">No. Faktur</th>
-                        <th className="px-3 py-2">Waktu</th>
-                        <th className="px-3 py-2">Metode</th>
-                        <th className="px-3 py-2 text-right">Total</th>
+                        <th className="px-3.5 py-2">No. Faktur</th>
+                        <th className="px-3.5 py-2">Waktu</th>
+                        <th className="px-3.5 py-2">Metode</th>
+                        <th className="px-3.5 py-2 text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {(!selectedShift.orders || selectedShift.orders.length === 0) ? (
+                      {!selectedShift.orders || selectedShift.orders.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="px-3 py-6 text-center text-slate-400 text-xs">
                             Belum ada transaksi di shift ini
@@ -730,19 +1016,19 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                       ) : (
                         selectedShift.orders.map((ord: any) => (
                           <tr key={ord.id} className="hover:bg-slate-50">
-                            <td className="px-3 py-2 font-bold text-slate-800">{ord.invoiceNumber}</td>
-                            <td className="px-3 py-2 text-slate-500">
+                            <td className="px-3.5 py-2 font-bold text-slate-800">{ord.invoiceNumber}</td>
+                            <td className="px-3.5 py-2 text-slate-500">
                               {new Date(ord.createdAt).toLocaleTimeString('id-ID', {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })}
                             </td>
-                            <td className="px-3 py-2">
-                              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-700">
+                            <td className="px-3.5 py-2">
+                              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-extrabold text-slate-700">
                                 {ord.paymentMethod || ord.payments?.[0]?.method || 'CASH'}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-right font-black text-blue-900">
+                            <td className="px-3.5 py-2 text-right font-black text-blue-900">
                               Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
                             </td>
                           </tr>
@@ -750,6 +1036,39 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
                       )}
                     </tbody>
                   </table>
+
+                  {/* Mobile View Clean Row Items */}
+                  <div className="divide-y divide-slate-100 sm:hidden">
+                    {!selectedShift.orders || selectedShift.orders.length === 0 ? (
+                      <div className="p-4 text-center text-slate-400 text-xs">
+                        Belum ada transaksi di shift ini
+                      </div>
+                    ) : (
+                      selectedShift.orders.map((ord: any) => (
+                        <div key={ord.id} className="p-3 flex items-center justify-between gap-2 hover:bg-slate-50">
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs text-slate-800 block truncate">
+                              {ord.invoiceNumber}
+                            </span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] text-slate-400">
+                                {new Date(ord.createdAt).toLocaleTimeString('id-ID', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] font-extrabold text-slate-600">
+                                {ord.paymentMethod || ord.payments?.[0]?.method || 'CASH'}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="font-black text-xs text-blue-900 shrink-0 text-right">
+                            Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -790,17 +1109,23 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet }
               )}
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+            {/* Sticky Action Footer (Safe Area iPhone Compliant) */}
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-500 font-medium hidden sm:block truncate">
+                <span>Shift ID: </span>
+                <strong className="text-slate-800 font-mono">#{selectedShift.id.slice(0, 8)}</strong>
+              </div>
               <button
                 onClick={() => setSelectedShift(null)}
-                className="px-5 py-2 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold"
+                className="w-full sm:w-auto px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-900/20 transition-all cursor-pointer active:scale-95 text-center"
               >
                 Tutup
               </button>
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
     </div>
   );
 };

@@ -66,12 +66,14 @@ export interface CheckoutPayload {
 export interface OrderItem {
   id: string;
   productId: string;
+  productName?: string;
+  variantName?: string;
   quantity: number;
   costPrice: number;
   unitPrice: number;
   discountAmount: number;
   subtotal: number;
-  product: {
+  product?: {
     name: string;
     sku?: string;
     barcode?: string;
@@ -96,6 +98,7 @@ export interface Order {
   invoiceNumber: string;
   queueNumber?: number | null;
   outletId: string;
+  shiftId?: string | null;
   cashierId: string;
   customerName?: string | null;
   customerPhone?: string | null;
@@ -158,6 +161,7 @@ export interface Order {
   cashier?: {
     id?: string;
     name: string;
+    role?: string;
   };
 }
 

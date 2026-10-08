@@ -764,31 +764,47 @@ export const getShiftHistory = async (req: Request, res: Response) => {
     const userRole = req.user?.role;
     const isPrivileged = userRole && ([Role.OWNER, Role.ADMIN, Role.SUPERVISOR] as Role[]).includes(userRole);
 
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    const dateFilter: any = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
+
     const shifts = await prisma.shift.findMany({
       where: {
         ...(userTenantId ? { tenantId: userTenantId } : {}),
         outletId: targetOutletId || undefined,
         ...(!isPrivileged && req.user ? { userId: req.user.id } : {}),
+        ...(startDate || endDate ? { startTime: dateFilter } : {}),
       },
       include: {
         user: { select: { name: true, email: true } },
         outlet: { select: { name: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: Number(req.query.limit) || 100,
     });
 
     const formatted = shifts.map((s) => ({
       id: s.id,
       cashier: s.user.name,
+      cashierName: s.user.name,
       cashierEmail: s.user.email,
       outlet: s.outlet.name,
+      outletName: s.outlet.name,
       startTime: s.startTime,
       endTime: s.endTime,
       startingCash: Number(s.startingCash),
       expectedCash: s.expectedEnding !== null ? Number(s.expectedEnding) : null,
+      expectedEnding: s.expectedEnding !== null ? Number(s.expectedEnding) : null,
       actualCash: s.actualEnding !== null ? Number(s.actualEnding) : null,
+      actualEnding: s.actualEnding !== null ? Number(s.actualEnding) : null,
       difference: s.cashDifference !== null ? Number(s.cashDifference) : null,
+      cashDifference: s.cashDifference !== null ? Number(s.cashDifference) : null,
       status: s.status,
       notes: s.notes,
       createdAt: s.createdAt,
@@ -840,14 +856,23 @@ export const getShiftById = async (req: Request, res: Response) => {
 
     let cashSales = 0;
     let qrisSales = 0;
+    let nonCashSales = 0;
+    const paymentBreakdown: Record<string, number> = {};
     const orderSet = new Set<string>();
 
     orderRows.forEach((row) => {
       orderSet.add(row.id);
-      if (row.paymentMethod === 'CASH') {
-        cashSales += Number(row.amount || 0);
-      } else if (row.paymentMethod === 'QRIS') {
-        qrisSales += Number(row.amount || 0);
+      const method = (row.paymentMethod || 'CASH').toUpperCase();
+      const amt = Number(row.amount || 0);
+      paymentBreakdown[method] = (paymentBreakdown[method] || 0) + amt;
+
+      if (method === 'CASH') {
+        cashSales += amt;
+      } else {
+        nonCashSales += amt;
+        if (method === 'QRIS') {
+          qrisSales += amt;
+        }
       }
     });
 
@@ -901,7 +926,7 @@ export const getShiftById = async (req: Request, res: Response) => {
       createdAt: d.createdAt,
     }));
 
-    // Ambil seluruh detail pesanan shift ini
+    // Ambil seluruh detail pesanan shift ini beserta item
     const shiftOrders = await prisma.order.findMany({
       where: {
         shiftId: shift.id,
@@ -915,8 +940,32 @@ export const getShiftById = async (req: Request, res: Response) => {
           where: { status: 'CAPTURED' },
           select: { paymentMethod: true, amount: true },
         },
+        items: {
+          select: {
+            id: true,
+            productName: true,
+            variantName: true,
+            quantity: true,
+            unitPrice: true,
+            subtotal: true,
+          },
+        },
       },
     });
+
+    // Agregasi rekapitulasi item yang terjual selama shift ini
+    const soldItemsMap: Record<string, { productName: string; quantity: number; totalAmount: number }> = {};
+    for (const o of shiftOrders) {
+      for (const it of o.items) {
+        const name = it.productName || 'Produk';
+        if (!soldItemsMap[name]) {
+          soldItemsMap[name] = { productName: name, quantity: 0, totalAmount: 0 };
+        }
+        soldItemsMap[name].quantity += Number(it.quantity || 0);
+        soldItemsMap[name].totalAmount += Number(it.subtotal || 0);
+      }
+    }
+    const soldItemsSummary = Object.values(soldItemsMap).sort((a, b) => b.quantity - a.quantity);
 
     const formattedOrders = shiftOrders.map((o) => {
       const primaryPayment = o.payments[0]?.paymentMethod || 'CASH';
@@ -939,6 +988,14 @@ export const getShiftById = async (req: Request, res: Response) => {
           method: pt.paymentMethod,
           amount: Number(pt.amount),
         })),
+        items: o.items.map((it) => ({
+          id: it.id,
+          productName: it.productName,
+          variantName: it.variantName,
+          quantity: Number(it.quantity),
+          unitPrice: Number(it.unitPrice),
+          subtotal: Number(it.subtotal),
+        })),
       };
     });
 
@@ -947,6 +1004,8 @@ export const getShiftById = async (req: Request, res: Response) => {
       data: {
         ...shift,
         cashier: { name: shift.user.name, email: shift.user.email },
+        cashierName: shift.user.name,
+        outletName: shift.outlet.name,
         startingCash: Number(shift.startingCash),
         expectedCash: shift.expectedEnding !== null ? Number(shift.expectedEnding) : null,
         actualCash: shift.actualEnding !== null ? Number(shift.actualEnding) : null,
@@ -956,12 +1015,15 @@ export const getShiftById = async (req: Request, res: Response) => {
         totalDebtCashIn,
         debtPayments: formattedDebtPayments,
         orders: formattedOrders,
+        soldItemsSummary,
         cashMovements,
         stats: {
           totalOrders: formattedOrders.length,
           cashSales,
           qrisSales,
-          totalRevenue: cashSales + qrisSales,
+          nonCashSales,
+          paymentBreakdown,
+          totalRevenue: cashSales + nonCashSales,
         },
       },
     });

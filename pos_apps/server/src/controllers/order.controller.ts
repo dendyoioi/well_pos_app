@@ -908,10 +908,18 @@ export const getOrders = async (req: Request, res: Response) => {
       return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan. Pastikan Anda sudah login.' });
     }
 
+    // Isolasi Hak Akses Peran Kasir (Opsi 1):
+    // Kasir diikat secara ketat ke outlet tempat ia ditugaskan (anti-cross-outlet breach).
+    // Untuk cashierId, kasir dapat menyaring transaksinya sendiri atau melihat seluruh kasir di toko tempat ia incharge.
+    let effectiveOutletId = outletId as string | undefined;
+    if (req.user?.role === 'CASHIER' && req.user.outletId) {
+      effectiveOutletId = req.user.outletId;
+    }
+
     const result = await salesReadAdapter.getOrders({
       tenantId: userTenantId || '',
-      outletId: outletId as string,
-      cashierId: cashierId as string,
+      outletId: (effectiveOutletId || '') as string,
+      cashierId: (cashierId as string) || undefined,
       channel: channel as string,
       search: search as string,
       startDate: startDate as string,
