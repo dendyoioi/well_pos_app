@@ -18,7 +18,7 @@ import {
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
-import type { Product } from '../types/product';
+import type { Product, Category } from '../types/product';
 import type { RecipeInventoryItem } from '../types/recipe';
 import type { Outlet } from '../types/outlet';
 import { formatRupiah } from '../utils/currency';
@@ -35,6 +35,7 @@ export interface FullScreenBulkStockModalProps {
   initialMode?: BulkItemMode;
   initialOperation?: BulkOperationType;
   products: Product[];
+  categories?: Category[];
   ingredients: RecipeInventoryItem[];
   outlets?: Outlet[];
 }
@@ -47,6 +48,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
   initialMode = 'PRODUCTS',
   initialOperation = 'OPNAME',
   products,
+  categories: propCategories = [],
   ingredients,
   outlets: propOutlets,
 }) => {
@@ -54,6 +56,21 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
   const [operation, setOperation] = useState<BulkOperationType>(initialOperation);
   // Mode Jenis Barang: Produk Jadi vs Bahan Baku
   const [mode, setMode] = useState<BulkItemMode>(initialMode);
+
+  // Kategori Master
+  const [internalCategories, setInternalCategories] = useState<Category[]>(propCategories);
+
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      setInternalCategories(propCategories);
+    } else if (isOpen) {
+      api.getCategories(activeOutlet?.id).then((res) => {
+        if (res.status === 'success' && res.data) {
+          setInternalCategories(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [propCategories, isOpen, activeOutlet?.id]);
 
   // Filter & Pencarian
   const [search, setSearch] = useState('');
@@ -451,13 +468,35 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
     }
   };
 
-  // Kategori List
-  const categories = useMemo(() => {
-    if (mode === 'PRODUCTS') {
-      return Array.from(new Set(products.map((p) => p.category?.name).filter(Boolean))) as string[];
-    }
-    return [];
-  }, [mode, products]);
+  // Kategori List & Hitungan Produk Jadi (Termasuk Kategori Kosong / 0 Produk)
+  const categoriesWithCounts = useMemo(() => {
+    if (mode !== 'PRODUCTS') return [];
+
+    const map = new Map<string, { id?: string; name: string; count: number }>();
+
+    // 1. Masukkan seluruh master kategori (termasuk yang 0 produk) agar selaras dengan Menu & Produk
+    internalCategories.forEach((c) => {
+      map.set(c.name, {
+        id: c.id,
+        name: c.name,
+        count: 0,
+      });
+    });
+
+    // 2. Hitung jumlah produk per kategori (dan sertakan kategori dari produk jika ada yang belum di master)
+    products.forEach((p) => {
+      const catName = p.category?.name;
+      if (catName) {
+        if (!map.has(catName)) {
+          map.set(catName, { id: p.category?.id, name: catName, count: 0 });
+        }
+        const item = map.get(catName)!;
+        item.count += 1;
+      }
+    });
+
+    return Array.from(map.values());
+  }, [mode, internalCategories, products]);
 
   // Model Row Terintegrasi
   interface UnifiedRow {
@@ -1083,16 +1122,16 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
             {/* Category Dropdown (for Products) */}
-            {mode === 'PRODUCTS' && categories.length > 0 && (
+            {mode === 'PRODUCTS' && categoriesWithCounts.length > 0 && (
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer shrink-0"
               >
                 <option value="ALL">Semua Kategori ({products.length})</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {categoriesWithCounts.map((cat) => (
+                  <option key={cat.name} value={cat.name}>
+                    {cat.name} ({cat.count})
                   </option>
                 ))}
               </select>

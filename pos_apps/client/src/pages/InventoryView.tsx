@@ -1847,6 +1847,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         initialMode={bulkOpnameMode}
         initialOperation={bulkOperation}
         products={products}
+        categories={categories}
         ingredients={ingredients}
         outlets={allOutlets}
       />
