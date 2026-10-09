@@ -66,7 +66,16 @@ export type StockMovementType =
   | 'DAMAGE_OUT'
   | 'TRANSFER_IN'
   | 'TRANSFER_OUT'
-  | 'ADJUSTMENT';
+  | 'ADJUSTMENT'
+  | 'SALE'
+  | 'PURCHASE'
+  | 'OPNAME_ADJUSTMENT'
+  | 'RETURN'
+  | 'WASTE'
+  | 'VOID'
+  | 'PRODUCTION_CONSUMPTION'
+  | 'PRODUCTION_OUTPUT'
+  | string;
 
 export interface StockMovement {
   id: string;
@@ -75,6 +84,8 @@ export interface StockMovement {
   userId?: string | null;
   type: StockMovementType;
   quantity: number;
+  stockBefore?: number;
+  stockAfter?: number;
   notes?: string | null;
   createdAt: string;
   product?: {

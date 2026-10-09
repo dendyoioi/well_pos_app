@@ -13,11 +13,7 @@ import {
   Store,
   Plus,
   Truck,
-  MapPin,
-  Phone,
-  Edit3,
   X,
-  Info,
   Package,
   CheckCircle2,
   ClipboardCheck,
@@ -33,13 +29,13 @@ import { StockTransferModal } from '../components/StockTransferModal';
 import { CreateIngredientModal } from '../components/modals/CreateIngredientModal';
 import { FullScreenBulkOpnameModal, type BulkOperationType } from '../components/FullScreenBulkOpnameModal';
 import { TablePagination } from '../components/TablePagination';
-import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
+import { EmptyState, TableSkeleton } from '../components/ui';
 import { formatRupiah } from '../utils/currency';
 import { api } from '../services/api';
 
 interface InventoryViewProps {
   activeOutlet?: Outlet | null;
-  initialTab?: 'INGREDIENTS' | 'PRODUCTS' | 'WAREHOUSES';
+  initialTab?: 'INGREDIENTS' | 'PRODUCTS';
   initialSubView?: 'INVENTORY' | 'MOVEMENTS';
 }
 
@@ -48,8 +44,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   initialTab = 'INGREDIENTS',
   initialSubView = 'INVENTORY',
 }) => {
-  // Tab State: 'INGREDIENTS' (Bahan Baku Mentah F&B) | 'PRODUCTS' (Produk Jadi Retail) | 'WAREHOUSES' (Kelola Gudang)
-  const [activeTab, setActiveTab] = useState<'INGREDIENTS' | 'PRODUCTS' | 'WAREHOUSES'>(initialTab);
+  // Tab State: 'INGREDIENTS' (Bahan Baku Mentah F&B) | 'PRODUCTS' (Produk Jadi Retail)
+  const [activeTab, setActiveTab] = useState<'INGREDIENTS' | 'PRODUCTS'>(initialTab);
 
   // Raw Materials State
   const [ingredients, setIngredients] = useState<RecipeInventoryItem[]>([]);
@@ -96,19 +92,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [bulkOperation, setBulkOperation] = useState<BulkOperationType>('OPNAME');
   const [allOutlets, setAllOutlets] = useState<Outlet[]>([]);
 
-  // Warehouses State
-  const [warehouses, setWarehouses] = useState<Outlet[]>([]);
-  const [warehouseStats, setWarehouseStats] = useState<
-    Record<string, { totalSku: number; totalUnits: number; totalAssetValue: number }>
-  >({});
-  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-
-  // Warehouse Modal State
-  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
-  const [editingWarehouse, setEditingWarehouse] = useState<Outlet | null>(null);
-  const [warehouseForm, setWarehouseForm] = useState({ name: '', address: '', phone: '' });
-  const [savingWarehouse, setSavingWarehouse] = useState(false);
-
   // Stock Movement & Transfer Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -118,12 +101,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [transferSourceOutletId, setTransferSourceOutletId] = useState<string | undefined>(undefined);
   const [transferDefaultItemType, setTransferDefaultItemType] = useState<'RAW' | 'PRODUCT'>('RAW');
   const [transferDefaultItemId, setTransferDefaultItemId] = useState<string | undefined>(undefined);
-
-  // Warehouse Raw Inventory Detail Modal
-  const [viewingWarehouse, setViewingWarehouse] = useState<Outlet | null>(null);
-  const [warehouseDetailItems, setWarehouseDetailItems] = useState<RecipeInventoryItem[]>([]);
-  const [loadingWarehouseDetails, setLoadingWarehouseDetails] = useState<boolean>(false);
-  const [warehouseDetailSearch, setWarehouseDetailSearch] = useState<string>('');
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -147,59 +124,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
   };
 
-  const fetchWarehouses = async () => {
-    setLoadingWarehouses(true);
+  const fetchAllOutlets = async () => {
     try {
       const res = await api.getOutlets();
       if (res.status === 'success' && res.data) {
         setAllOutlets(res.data);
-        const whList = res.data.filter((o: Outlet) => o.isWarehouse);
-        setWarehouses(whList);
-
-        // Ambil data statistik per gudang secara paralel (Bahan Baku & Produk Retail)
-        const statsMap: Record<string, { totalSku: number; totalUnits: number; totalAssetValue: number }> = {};
-        await Promise.all(
-          whList.map(async (wh: Outlet) => {
-            try {
-              const [pRes, rawRes] = await Promise.all([
-                api.getProducts({ outletId: wh.id }).catch(() => ({ status: 'error', data: [] as Product[] })),
-                api.getRecipeInventoryItems(wh.id, 'all').catch(() => ({ status: 'error', data: [] as RecipeInventoryItem[] })),
-              ]);
-
-              let totalSku = 0;
-              let totalUnits = 0;
-              let totalAssetValue = 0;
-
-              if (pRes.status === 'success' && pRes.data) {
-                const activeWithStock = pRes.data.filter((p: Product) => p.stock > 0);
-                totalSku += activeWithStock.length;
-                totalUnits += pRes.data.reduce((sum: number, p: Product) => sum + p.stock, 0);
-                totalAssetValue += pRes.data.reduce((sum: number, p: Product) => sum + p.costPrice * p.stock, 0);
-              }
-
-              if (rawRes.status === 'success' && rawRes.data) {
-                const activeRaw = rawRes.data.filter((r: RecipeInventoryItem) => (r.stock ?? r.warehouseStock ?? 0) > 0);
-                totalSku += activeRaw.length;
-                totalUnits += rawRes.data.reduce((sum: number, r: RecipeInventoryItem) => sum + (r.stock ?? r.warehouseStock ?? 0), 0);
-                totalAssetValue += rawRes.data.reduce((sum: number, r: RecipeInventoryItem) => sum + (r.averageCost || 0) * (r.stock ?? r.warehouseStock ?? 0), 0);
-              }
-
-              statsMap[wh.id] = {
-                totalSku,
-                totalUnits,
-                totalAssetValue,
-              };
-            } catch (e) {
-              console.error('Error fetching stats for warehouse', wh.id, e);
-            }
-          })
-        );
-        setWarehouseStats(statsMap);
       }
     } catch (err) {
-      console.error('Gagal mengambil data gudang:', err);
-    } finally {
-      setLoadingWarehouses(false);
+      console.error('Gagal mengambil data toko/outlet:', err);
     }
   };
 
@@ -231,7 +163,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   useEffect(() => {
     fetchInventory();
     fetchIngredients();
-    fetchWarehouses();
+    fetchAllOutlets();
     fetchExpiryAlerts();
   }, [movementTypeFilter, activeOutlet?.id, ingredientScope]);
 
@@ -320,70 +252,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     setTransferModalOpen(true);
   };
 
-  const openWarehouseDetail = async (wh: Outlet) => {
-    setViewingWarehouse(wh);
-    setWarehouseDetailSearch('');
-    setLoadingWarehouseDetails(true);
-    try {
-      const res = await api.getRecipeInventoryItems(wh.id, 'all');
-      if (res.status === 'success' && res.data) {
-        setWarehouseDetailItems(res.data);
-      } else {
-        setWarehouseDetailItems([]);
-      }
-    } catch (err) {
-      console.error('Gagal mengambil rincian bahan baku gudang:', err);
-      setWarehouseDetailItems([]);
-    } finally {
-      setLoadingWarehouseDetails(false);
-    }
-  };
-
-  const openCreateWarehouseModal = () => {
-    setEditingWarehouse(null);
-    setWarehouseForm({ name: '', address: '', phone: '' });
-    setWarehouseModalOpen(true);
-  };
-
-  const openEditWarehouseModal = (wh: Outlet) => {
-    setEditingWarehouse(wh);
-    setWarehouseForm({
-      name: wh.name,
-      address: wh.address || '',
-      phone: wh.phone || '',
-    });
-    setWarehouseModalOpen(true);
-  };
-
-  const handleSaveWarehouse = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!warehouseForm.name.trim()) return;
-    setSavingWarehouse(true);
-    try {
-      if (editingWarehouse) {
-        await api.updateOutlet(editingWarehouse.id, {
-          name: warehouseForm.name,
-          address: warehouseForm.address,
-          phone: warehouseForm.phone,
-        });
-      } else {
-        await api.createOutlet({
-          name: warehouseForm.name,
-          address: warehouseForm.address,
-          phone: warehouseForm.phone,
-          isWarehouse: true,
-        });
-      }
-      setWarehouseModalOpen(false);
-      setEditingWarehouse(null);
-      setWarehouseForm({ name: '', address: '', phone: '' });
-      await fetchWarehouses();
-    } catch (err) {
-      console.error('Gagal menyimpan gudang:', err);
-    } finally {
-      setSavingWarehouse(false);
-    }
-  };
 
   // Kalkulasi total statistik tab overview
   const totalStockUnits = products.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
@@ -404,11 +272,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     const minAlert = Number(p.minStockAlert || 5);
     return s > minAlert;
   }).length;
-
-  // Kalkulasi total inventori gudang logistik
-  const totalWarehouseUnits = Object.values(warehouseStats).reduce((sum, s) => sum + (s.totalUnits || 0), 0);
-  const totalWarehouseAssets = Object.values(warehouseStats).reduce((sum, s) => sum + (s.totalAssetValue || 0), 0);
-  const totalWarehouseSku = Object.values(warehouseStats).reduce((sum, s) => sum + (s.totalSku || 0), 0);
 
   // Kategori unik untuk filter produk jadi
   const uniqueCategories = Array.from(
@@ -541,32 +404,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 }`}
               >
                 {products.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('WAREHOUSES');
-              fetchWarehouses();
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer relative whitespace-nowrap shrink-0 ${
-              activeTab === 'WAREHOUSES'
-                ? 'bg-blue-900 text-white shadow-md shadow-blue-950/20'
-                : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            <Warehouse className="w-4 h-4 shrink-0" />
-            <span>Kelola Gudang &amp; Lokasi Stok</span>
-            {warehouses.length > 0 && (
-              <span
-                className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
-                  activeTab === 'WAREHOUSES'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-indigo-100 text-indigo-800'
-                }`}
-              >
-                {warehouses.length}
               </span>
             )}
           </button>
@@ -1801,339 +1638,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 3: KELOLA GUDANG & LOKASI STOK */}
-      {/* ========================================================================= */}
-      {activeTab === 'WAREHOUSES' && (
-        <div className="space-y-6">
-          {/* Header Banner & Penjelasan Arsitektur Logistik */}
-          <div className="p-6 sm:p-7 bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white rounded-3xl shadow-md relative overflow-hidden">
-            <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-3 py-1 rounded-full bg-indigo-400/20 text-indigo-300 text-xs font-extrabold flex items-center gap-1.5 border border-indigo-400/30">
-                    <Warehouse className="w-3.5 h-3.5" />
-                    Manajemen Pergudangan &amp; Rantai Pasok
-                  </span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight">
-                  Pusat Distribusi &amp; Pergudangan Logistik
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                  Semua pasokan barang dari <strong>Supplier / Vendor</strong> masuk ke <strong>Gudang Utama</strong> terlebih dahulu, kemudian didistribusikan ke masing-masing <strong>Outlet Toko</strong> melalui transfer mutasi.
-                </p>
-              </div>
 
-              <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto">
-                <button
-                  type="button"
-                  onClick={openCreateWarehouseModal}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 shrink-0" />
-                  <span>Tambah Gudang Baru</span>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={fetchWarehouses}
-                  title="Muat Ulang Data Gudang"
-                  className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/10 cursor-pointer shrink-0"
-                >
-                  <RefreshCw className={`w-4 h-4 shrink-0 ${loadingWarehouses ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-            </div>
-          </div>
 
-          {/* 3 Global Warehouse Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fasilitas Pergudangan</span>
-                <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100">
-                  <Warehouse className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-slate-900">{warehouses.length} Lokasi</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Gudang aktif siap menerima pasokan</p>
-            </div>
-
-            <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fisik Persediaan di Gudang</span>
-                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center border border-blue-100">
-                  <Boxes className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-slate-900">{totalWarehouseUnits.toLocaleString('id-ID')} Unit</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Akumulasi {totalWarehouseSku} varian bahan &amp; produk</p>
-            </div>
-
-            <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Nilai Aset Gudang</span>
-                <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-                  <ArrowDownRight className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-slate-900">{formatRupiah(totalWarehouseAssets)}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Estimasi nilai modal seluruh gudang</p>
-            </div>
-          </div>
-
-          {/* Logistics Concept Summary Card */}
-          <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-900 shrink-0 mt-0.5" />
-            <div className="text-xs text-blue-950 leading-relaxed font-medium">
-              <strong className="font-extrabold">Alur Pasokan Standar:</strong> Vendor / Supplier ➔ Gudang Utama ➔ Outlet Toko Kasir.
-              Toko fisik difokuskan untuk pelayanan kasir (POS). Seluruh penerimaan barang dari vendor ditangani di gudang ini agar pembukuan HPP dan kartu stok tetap rapi dan tidak tumpang tindih.
-            </div>
-          </div>
-
-          {/* Warehouse Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {loadingWarehouses ? (
-              <div className="col-span-2 py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-3xl">
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <RefreshCw className="w-7 h-7 animate-spin mx-auto text-blue-900 mb-1" />
-                  <span className="text-xs font-semibold text-slate-600">Memuat daftar gudang dan saldo stok fisik...</span>
-                </div>
-              </div>
-            ) : warehouses.length === 0 ? (
-              <div className="col-span-2 py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-3xl">
-                <Warehouse className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <h5 className="font-bold text-slate-700 text-base">Belum Ada Fasilitas Gudang Terdaftar</h5>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  Buat gudang utama untuk mulai menerima stok pasokan dari supplier dan mendistribusikannya ke seluruh toko / outlet.
-                </p>
-                <button
-                  type="button"
-                  onClick={openCreateWarehouseModal}
-                  className="mt-4 px-4 py-2.5 bg-blue-900 text-white rounded-2xl text-xs font-bold shadow-md hover:bg-blue-800 transition-all cursor-pointer"
-                >
-                  + Buat Gudang Utama Sekarang
-                </button>
-              </div>
-            ) : (
-              warehouses.map((wh) => {
-                const stats = warehouseStats[wh.id] || { totalSku: 0, totalUnits: 0, totalAssetValue: 0 };
-                const isPrimary = wh.name.toLowerCase().includes('utama') || wh.name.toLowerCase().includes('pusat');
-
-                return (
-                  <div
-                    key={wh.id}
-                    className={`bg-white border rounded-3xl p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between ${
-                      isPrimary
-                        ? 'border-indigo-300 ring-2 ring-indigo-600/10'
-                        : 'border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      {/* Top Header Row */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-3 rounded-2xl ${isPrimary ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-100 text-slate-700'}`}>
-                            <Warehouse className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-black text-slate-900 text-base sm:text-lg">
-                                {wh.name}
-                              </h4>
-                              {isPrimary ? (
-                                <span className="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                                  ⭐ Gudang Utama Pusat
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-100 text-slate-600">
-                                  Gudang Logistik
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 inline-block mt-0.5">
-                              ● Beroperasi Aktif
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => openEditWarehouseModal(wh)}
-                          className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                          title="Edit Info Gudang"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Info Alamat & Kontak */}
-                      <div className="space-y-1.5 text-xs text-slate-600 mb-5 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{wh.address || 'Alamat gudang belum diatur'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{wh.phone || 'Nomor telepon belum diatur'}</span>
-                        </div>
-                      </div>
-
-                      {/* Stock Statistics Grid */}
-                      <div className="grid grid-cols-3 gap-2.5 mb-5">
-                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60 text-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                            SKU Tersimpan
-                          </span>
-                          <span className="text-base font-black text-slate-900">
-                            {stats.totalSku} SKU
-                          </span>
-                        </div>
-
-                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60 text-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                            Fisik Barang
-                          </span>
-                          <span className="text-base font-black text-slate-900">
-                            {stats.totalUnits.toLocaleString('id-ID')}
-                          </span>
-                        </div>
-
-                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60 text-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                            Nilai Aset
-                          </span>
-                          <span className="text-xs font-black text-emerald-700 block truncate" title={formatRupiah(stats.totalAssetValue)}>
-                            {formatRupiah(stats.totalAssetValue)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Direct Action Buttons on Warehouse */}
-                    <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openWarehouseDetail(wh)}
-                        className="w-full py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-2xl text-xs font-black border border-blue-200 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs"
-                      >
-                        <Boxes className="w-3.5 h-3.5 text-blue-900" />
-                        <span>📋 Pantau &amp; Alokasikan Stok Bahan Baku</span>
-                      </button>
-
-                      <div className="flex flex-col sm:flex-row items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openModal('IN', undefined, wh.id)}
-                          className="w-full sm:flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                        >
-                          <ArrowDownRight className="w-3.5 h-3.5" />
-                          <span>Terima PO</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openTransferModal(wh.id, 'RAW')}
-                          className="w-full sm:flex-1 py-2 px-3 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold shadow-sm shadow-teal-800/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                        >
-                          <ArrowLeftRight className="w-3.5 h-3.5" />
-                          <span>⇄ Kirim ke Toko</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: TAMBAH / EDIT GUDANG BARU */}
-      {/* ========================================================================= */}
-      {warehouseModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
-                  <Warehouse className="w-5 h-5" />
-                </div>
-                <h3 className="font-extrabold text-blue-950 text-base">
-                  {editingWarehouse ? 'Edit Data Gudang' : 'Tambah Gudang Baru'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setWarehouseModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveWarehouse} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Nama Gudang <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Gudang Logistik Barat"
-                  value={warehouseForm.name}
-                  onChange={(e) => setWarehouseForm({ ...warehouseForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-900 focus:bg-white transition-all font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Alamat Gudang
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Contoh: Kawasan Pergudangan Blok C No. 12"
-                  value={warehouseForm.address}
-                  onChange={(e) => setWarehouseForm({ ...warehouseForm, address: e.target.value })}
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-900 focus:bg-white transition-all resize-none"
-                />
-              </div>
-
-              <div>
-                <WhatsAppInput
-                  label="Nomor Telepon / Kontak PIC"
-                  placeholder="81234567890"
-                  value={warehouseForm.phone}
-                  onChange={(val) => setWarehouseForm({ ...warehouseForm, phone: val })}
-                />
-              </div>
-
-              <div className="p-3 bg-indigo-50/70 border border-indigo-200/70 rounded-xl text-[11px] text-indigo-950 leading-relaxed">
-                Lokasi ini dikhususkan sebagai fasilitas penyimpanan persediaan barang (Warehouse) dan tidak akan muncul di opsi meja kasir POS toko retail.
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setWarehouseModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingWarehouse}
-                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-md shadow-blue-900/20 transition-all disabled:opacity-50"
-                >
-                  {savingWarehouse ? 'Menyimpan...' : 'Simpan Gudang'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* MODAL: TRANSAKSI MUTASI STOK (PO MASUK, RUSAK, OPNAME) */}
@@ -2147,7 +1654,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         onSuccess={() => {
           fetchInventory();
           fetchIngredients();
-          fetchWarehouses();
+          fetchAllOutlets();
         }}
         products={products}
         defaultProduct={selectedProduct}
@@ -2165,7 +1672,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         onSuccess={() => {
           fetchInventory();
           fetchIngredients();
-          fetchWarehouses();
+          fetchAllOutlets();
         }}
         activeOutlet={activeOutlet}
         initialMode={bulkOpnameMode}
@@ -2183,7 +1690,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         onClose={() => setTransferModalOpen(false)}
         onSuccess={() => {
           fetchInventory();
-          fetchWarehouses();
+          fetchAllOutlets();
           fetchIngredients();
         }}
         activeOutlet={activeOutlet}
@@ -2206,166 +1713,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         }}
       />
 
-      {/* ========================================================================= */}
-      {/* MODAL: RINCIAN STOK BAHAN BAKU GUDANG (MULTI-WAREHOUSE VISIBILITY) */}
-      {/* ========================================================================= */}
-      {viewingWarehouse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100">
-                  <Warehouse className="w-5 h-5 text-blue-900" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-blue-950 text-base">
-                      {viewingWarehouse.name}
-                    </h3>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
-                      Gudang Pasokan
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {viewingWarehouse.address || 'Alamat gudang belum diatur'} • {warehouseDetailItems.length} Bahan Baku Tersimpan
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setViewingWarehouse(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Filter Search */}
-            <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center justify-between gap-4">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Cari nama atau kode bahan baku di gudang ini..."
-                  value={warehouseDetailSearch}
-                  onChange={(e) => setWarehouseDetailSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                onClick={() => {
-                  const whId = viewingWarehouse.id;
-                  setViewingWarehouse(null);
-                  openTransferModal(whId, 'RAW');
-                }}
-                className="py-2 px-3.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5" />
-                <span>Alokasikan Semua ke Toko</span>
-              </button>
-            </div>
-
-            {/* Table Content */}
-            <div className="p-6 overflow-y-auto">
-              {loadingWarehouseDetails ? (
-                <div className="py-12 text-center text-xs text-slate-500">
-                  <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <span>Memuat saldo bahan baku gudang...</span>
-                </div>
-              ) : (
-                (() => {
-                  const filteredItems = warehouseDetailItems.filter((it) => {
-                    const q = warehouseDetailSearch.toLowerCase();
-                    return it.name.toLowerCase().includes(q) || (it.itemCode && it.itemCode.toLowerCase().includes(q));
-                  });
-
-                  if (filteredItems.length === 0) {
-                    return (
-                      <div className="py-12 text-center text-slate-400 text-xs">
-                        Tidak ada bahan baku yang cocok dengan pencarian di gudang ini.
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                          <tr>
-                            <th className="py-3 px-4">Bahan Baku</th>
-                            <th className="py-3 px-4 text-center">Stok Fisik di Gudang</th>
-                            <th className="py-3 px-4 text-right">Nilai Satuan / Aset</th>
-                            <th className="py-3 px-4 text-center">Aksi Cepat</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {filteredItems.map((item) => {
-                            const rawStock = item.stock ?? item.warehouseStock ?? 0;
-                            const assetValue = (item.averageCost || 0) * rawStock;
-                            return (
-                              <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                                <td className="py-3 px-4">
-                                  <span className="font-extrabold text-blue-950 block">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-slate-400 font-mono">
-                                    {item.itemCode || 'RAW'}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-center">
-                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-black text-xs ${
-                                    rawStock > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
-                                  }`}>
-                                    {rawStock.toLocaleString('id-ID')} {item.canonicalUom}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-right">
-                                  <span className="font-extrabold text-blue-950 block">
-                                    Rp {assetValue.toLocaleString('id-ID')}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 block">
-                                    @ Rp {(item.averageCost || 0).toLocaleString('id-ID')} / {item.canonicalUom}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-center">
-                                  <button
-                                    onClick={() => {
-                                      const whId = viewingWarehouse.id;
-                                      setViewingWarehouse(null);
-                                      openTransferModal(whId, 'RAW', item.id);
-                                    }}
-                                    disabled={rawStock <= 0}
-                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl font-bold text-xs transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none cursor-pointer inline-flex items-center gap-1"
-                                    title="Alokasikan item ini ke toko"
-                                  >
-                                    <ArrowLeftRight className="w-3 h-3 text-blue-900" />
-                                    <span>Alokasikan</span>
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => setViewingWarehouse(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Modal: Detail Batch Kadaluarsa */}
       {showExpiryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">

@@ -64,6 +64,7 @@ import { SalesChannelsSettingsView } from './SalesChannelsSettingsView';
 import { LoyaltySettingsView } from './LoyaltySettingsView';
 import { PurchaseOrdersView } from './PurchaseOrdersView';
 import { StockTransfersView } from './StockTransfersView';
+import { StockMovementsView } from './StockMovementsView';
 import { OnboardingWizardModal } from '../components/saas/OnboardingWizardModal';
 import { FullScreenStoreWizard } from '../components/saas/FullScreenStoreWizard';
 import { BackofficeLayout } from '../components/saas/BackofficeLayout';
@@ -645,11 +646,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             onWarehousesUpdated={fetchOutlets}
           />
         ) : activeTab === 'stock_movements' ? (
-          <InventoryView
-            activeOutlet={activeOutlet}
-            initialTab="PRODUCTS"
-            initialSubView="MOVEMENTS"
-          />
+          <StockMovementsView activeOutlet={activeOutlet} />
         ) : activeTab === 'purchase_orders' ? (
           <PurchaseOrdersView activeOutlet={activeOutlet} />
         ) : activeTab === 'transfers' ? (
