@@ -324,10 +324,10 @@ export const PromotionsView: React.FC = () => {
       {/* 3 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Voucher</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center">
-              <Tag className="w-4 h-4" />
+          <div className="flex items-center justify-between text-slate-500 mb-2 gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Total Voucher</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+              <Tag className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900">{promotions.length} Promo</p>
@@ -335,10 +335,10 @@ export const PromotionsView: React.FC = () => {
         </div>
 
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Promo Aktif Saat Ini</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
+          <div className="flex items-center justify-between text-slate-500 mb-2 gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Promo Aktif Saat Ini</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <p className="text-2xl font-black text-emerald-700">{activeCount} Promo</p>
@@ -346,10 +346,10 @@ export const PromotionsView: React.FC = () => {
         </div>
 
         <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Terpakai</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+          <div className="flex items-center justify-between text-slate-500 mb-2 gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Total Terpakai</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900">{totalUsed} Kali</p>

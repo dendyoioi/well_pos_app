@@ -647,19 +647,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               ) : (
                 <div className="space-y-4">
                   {/* Info Pelanggan Kasbon */}
-                  <div className="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                         {selectedCustomer.name.slice(0, 2).toUpperCase()}
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-800">{selectedCustomer.name}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-800 truncate">{selectedCustomer.name}</div>
+                        <div className="text-[11px] text-slate-500 font-mono truncate">
                           {selectedCustomer.phone || selectedCustomer.code || 'Pelanggan Terdaftar'}
                         </div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-lg">
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-lg shrink-0">
                       Kasbon
                     </span>
                   </div>

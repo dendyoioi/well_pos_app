@@ -487,8 +487,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mb-2 shadow-sm">
-            <CheckCircle2 className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mb-2 shadow-sm shrink-0">
+            <CheckCircle2 className="w-6 h-6 shrink-0" />
           </div>
           <h3 className="text-lg font-black tracking-tight">Transaksi Berhasil</h3>
           {order.queueNumber !== undefined && order.queueNumber !== null && (

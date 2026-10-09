@@ -218,15 +218,15 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           HEADER BANNER
           ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold">
-              <Store className="w-4 h-4" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-1 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shrink-0">
+              <Store className="w-4 h-4 shrink-0" />
             </div>
             <h2 className="text-xl font-extrabold text-blue-950 tracking-tight">
               Manajemen Outlet Toko
             </h2>
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 shrink-0">
               Paket PRO
             </span>
           </div>

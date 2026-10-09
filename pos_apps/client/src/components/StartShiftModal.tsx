@@ -56,15 +56,15 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
       <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-none">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-950 to-blue-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-800 flex items-center justify-center text-blue-200">
-              <Clock className="w-5 h-5 stroke-[2.5]" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-800 flex items-center justify-center text-blue-200 shrink-0">
+              <Clock className="w-5 h-5 stroke-[2.5] shrink-0" />
             </div>
-            <div>
-              <h3 className="font-extrabold text-base tracking-tight text-white">Buka Shift Kasir Baru</h3>
-              <p className="text-xs text-blue-200 flex items-center gap-1">
-                <Store className="w-3.5 h-3.5" />
-                {outletName || 'Toko Utama'}
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-base tracking-tight text-white truncate">Buka Shift Kasir Baru</h3>
+              <p className="text-xs text-blue-200 flex items-center gap-1 truncate">
+                <Store className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{outletName || 'Toko Utama'}</span>
               </p>
             </div>
           </div>

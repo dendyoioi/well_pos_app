@@ -60,16 +60,16 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white p-4 sm:p-5 flex items-center justify-between no-print">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-800 flex items-center justify-center text-blue-200">
-              <FileText className="w-5 h-5 stroke-[2.5]" />
+        <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white p-4 sm:p-5 flex items-center justify-between no-print shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-800 flex items-center justify-center text-blue-200 shrink-0">
+              <FileText className="w-5 h-5 stroke-[2.5] shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-800/80 text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-0.5">
                 X-Report
               </div>
-              <h3 className="font-black text-base text-white">Laporan Berjalan Kasir</h3>
+              <h3 className="font-black text-base text-white truncate">Laporan Berjalan Kasir</h3>
             </div>
           </div>
 

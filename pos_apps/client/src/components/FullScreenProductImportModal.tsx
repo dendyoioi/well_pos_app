@@ -320,13 +320,13 @@ export const FullScreenProductImportModal: React.FC<FullScreenProductImportModal
       <div className="bg-white w-full h-full sm:h-[92vh] sm:max-w-6xl mx-auto rounded-none sm:rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-900 shadow-xs">
-              <FileSpreadsheet className="w-5 h-5" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-900 shadow-xs shrink-0">
+              <FileSpreadsheet className="w-5 h-5 shrink-0" />
             </div>
-            <div>
-              <h2 className="text-lg font-black text-slate-900">Impor Massal Katalog Produk</h2>
-              <p className="text-xs text-slate-500">
+            <div className="min-w-0">
+              <h2 className="text-lg font-black text-slate-900 truncate">Impor Massal Katalog Produk</h2>
+              <p className="text-xs text-slate-500 truncate">
                 Unggah spreadsheet CSV untuk menambahkan atau memperbarui ratusan SKU produk sekaligus
               </p>
             </div>

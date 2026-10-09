@@ -94,15 +94,15 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
       <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-rose-100 flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Modal Header - Sticky */}
         <div className="bg-rose-50/80 px-6 py-4 border-b border-rose-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shadow-xs">
-              <AlertTriangle className="w-5 h-5 text-rose-600" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shadow-xs shrink-0">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
             </div>
-            <div>
-              <h3 className="font-extrabold text-rose-950 text-base leading-tight">
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-rose-950 text-base leading-tight truncate">
                 Batalkan Transaksi (VOID)
               </h3>
-              <p className="text-xs text-rose-700 font-medium">
+              <p className="text-xs text-rose-700 font-medium truncate">
                 Persetujuan Supervisor / Owner Diperlukan
               </p>
             </div>

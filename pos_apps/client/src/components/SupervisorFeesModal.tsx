@@ -257,20 +257,20 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
       <div className="w-full max-w-xl bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header Modal */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-950 to-indigo-950 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-blue-200 shadow-xs">
-              <Shield className="w-5 h-5 text-emerald-400" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-blue-200 shadow-xs shrink-0">
+              <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base sm:text-lg tracking-tight text-white">
-                  Kelola Biaya Toko & Kemasan
+                <h3 className="font-extrabold text-base sm:text-lg tracking-tight text-white truncate">
+                  Kelola Biaya Toko &amp; Kemasan
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-800 border border-blue-600 text-blue-200">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-800 border border-blue-600 text-blue-200 shrink-0">
                   SPV / Owner
                 </span>
               </div>
-              <p className="text-xs text-blue-200/90 font-medium">
+              <p className="text-xs text-blue-200/90 font-medium truncate">
                 Outlet Toko: <span className="text-white font-bold">{outlet.name}</span>
               </p>
             </div>
@@ -278,7 +278,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -288,8 +288,8 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
         {!pinAuthorized ? (
           <div className="p-6 sm:p-8 space-y-6 flex-1 overflow-y-auto">
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 mx-auto flex items-center justify-center shadow-xs">
-                <Lock className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 mx-auto flex items-center justify-center shadow-xs shrink-0">
+                <Lock className="w-6 h-6 shrink-0" />
               </div>
               <h4 className="text-base font-extrabold text-slate-900">
                 Otorisasi Supervisor Dibutuhkan

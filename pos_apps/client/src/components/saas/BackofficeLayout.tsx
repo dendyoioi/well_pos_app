@@ -720,8 +720,8 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           </button>
 
           <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-950 text-white flex items-center justify-center font-black shadow-md shadow-blue-950/20">
-              <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-950 text-white flex items-center justify-center font-black shadow-md shadow-blue-950/20 shrink-0">
+              <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5] shrink-0" />
             </div>
             <span className="text-sm sm:text-base font-black tracking-tight text-blue-950 hidden sm:inline">
               WELL POS

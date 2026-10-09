@@ -204,10 +204,10 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Piutang Aktif */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-rose-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Sisa Piutang Aktif</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-              <Clock className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Sisa Piutang Aktif</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold shrink-0">
+              <Clock className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -220,10 +220,10 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
 
         {/* Faktur Belum Lunas */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-amber-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Faktur Menunggak</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <AlertTriangle className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Faktur Menunggak</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
@@ -237,10 +237,10 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
 
         {/* Total Terbayar */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Piutang Terbayar</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <CheckCircle2 className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Piutang Terbayar</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -253,10 +253,10 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
 
         {/* Akumulasi Kasbon */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Total Transaksi Kasbon</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
-              <Receipt className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Total Transaksi Kasbon</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
+              <Receipt className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -516,11 +516,11 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
           <div className="bg-white w-full sm:max-w-2xl sm:rounded-3xl rounded-t-3xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col flex-1 min-h-0 overflow-hidden shadow-2xl border border-slate-200">
             {/* Header */}
             <div className="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
-                  <Receipt className="w-5 h-5" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
+                  <Receipt className="w-5 h-5 shrink-0" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-black text-slate-900 text-lg">
                     Rincian Kasbon #{selectedDebtDetail?.order?.invoiceNumber || selectedDebtDetail?.id?.slice(0, 8)}
                   </h3>
@@ -532,9 +532,9 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 shrink-0" />
               </button>
             </div>
 
@@ -749,11 +749,11 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
           <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col flex-1 min-h-0 overflow-hidden shadow-2xl border border-slate-200">
             {/* Header */}
             <div className="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-                  <CheckCircle2 className="w-5 h-5" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                  <CheckCircle2 className="w-5 h-5 shrink-0" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-black text-slate-900 text-lg">Pelunasan Kasbon / Piutang</h3>
                   <p className="text-xs text-slate-500 font-medium">
                     Faktur #{settlementDebt.order?.invoiceNumber || settlementDebt.id.slice(0, 8)}
@@ -763,9 +763,9 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
               <button
                 type="button"
                 onClick={() => setIsPayModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 shrink-0" />
               </button>
             </div>
 

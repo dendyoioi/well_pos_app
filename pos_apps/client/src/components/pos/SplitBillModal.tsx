@@ -69,19 +69,19 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
       <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs">
-              <Split className="w-4 h-4" />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs shrink-0">
+              <Split className="w-4 h-4 shrink-0" />
             </div>
-            <div>
-              <h3 className="text-sm font-black text-slate-900">Pecah Tagihan (Split Bill)</h3>
-              <p className="text-[11px] text-slate-500">Pilih metode pembagian tagihan meja</p>
+            <div className="min-w-0">
+              <h3 className="text-sm font-black text-slate-900 truncate">Pecah Tagihan (Split Bill)</h3>
+              <p className="text-[11px] text-slate-500 truncate">Pilih metode pembagian tagihan meja</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>

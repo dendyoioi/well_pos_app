@@ -190,12 +190,12 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
           TOP HEADER: Judul & Aksi Tambah Gudang
           ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700">
-              <Warehouse className="w-5 h-5" />
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
+              <Warehouse className="w-5 h-5 shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 Kelola Gudang Logistik
               </h1>
@@ -458,11 +458,11 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
           <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
             {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
-                  <Warehouse className="w-5 h-5" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                  <Warehouse className="w-5 h-5 shrink-0" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-black text-slate-900 text-lg">Tambah Gudang Baru</h3>
                   <p className="text-xs text-slate-500">Pusat persediaan &amp; distribusi bahan baku logistik</p>
                 </div>
@@ -567,11 +567,11 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
           <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
             {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
-                  <Warehouse className="w-5 h-5" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                  <Warehouse className="w-5 h-5 shrink-0" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-black text-slate-900 text-lg">Edit Gudang Logistik</h3>
                   <p className="text-xs text-slate-500">{editingWarehouse.name}</p>
                 </div>

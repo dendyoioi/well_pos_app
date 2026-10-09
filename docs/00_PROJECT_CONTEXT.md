@@ -681,15 +681,16 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
 
 ---
 
-## 11. PROTOKOL INFRASTRUKTUR CLOUD & EARLY WARNING SYSTEM (RENDER, SUPABASE, VERCEL)
+## 11. PROTOKOL INFRASTRUKTUR CLOUD & PEMISAHAN ENVIRONMENT (DEV VS PROD)
 
-Topologi server aktif saat ini menggunakan arsitektur *Zero-Cost Bootstrap Multi-Cloud*:
+Topologi server memisahkan secara ketat lingkungan **Development (Dev)** dan **Production (GCP Rp 0 Always Free)**:
 
 | Komponen | Platform & Region | Spesifikasi / Konfigurasi | Batasan Kritis (*Hard Limits*) & Early Warning |
 | :--- | :--- | :--- | :--- |
-| **Frontend SPA** | **Vercel** *(Global/SG)* | React 19 + Vite (`well-pos-app.vercel.app`) | • Auto-deploy hanya aktif untuk branch **`main`**.<br>• Perubahan di branch `dev` tidak akan tampil di domain utama sebelum di-merge.<br>• Caching browser agresif pada smartphone kasir: butuh hard reload jika update baru dirilis. |
-| **Backend API** | **Render** *(Singapore)* | Node 20 + Express (`wellpos-api-dev.onrender.com`) | • **Cold Start (~50s)** jika idle 15 menit. Dicegah dengan GitHub Actions cron pinger tiap 10 menit.<br>• **Batas 750 jam/bulan per akun**: Jangan jalankan web service gratis lain di akun Render yang sama.<br>• **RAM 512 MB & Ephemeral Disk**: Hindari query tanpa paging dan dilarang simpan upload permanen di disk lokal. |
-| **Database** | **Supabase** *(AWS SG)* | PostgreSQL 16 Managed (Port 6543 / 5432) | • **Inactivity Pausing**: Database akan tidur jika tidak ada query selama 7 hari berturut-turut (restore manual via Supabase Dashboard).<br>• **Render Tidak Menjalankan Migrasi**: Skema baru di `schema.prisma` wajib dipatch manual ke Supabase via Port 5432.<br>• Port 6543 (PgBouncer) menolak query DDL (`CREATE TYPE`, `ALTER TABLE`). |
+| **Frontend SPA (DEV)** | **Vercel** *(Global/SG)* | React 19 + Vite (`well-pos-app.vercel.app`)<br>🌿 **Tracking Branch: `dev`** | • Auto-deploy aktif untuk branch **`dev`**.<br>• Proxy/rewrite `/api/*` menembak backend Render Dev.<br>• Uji coba fitur baru tanpa mengganggu live merchant. |
+| **Backend API (DEV)** | **Render** *(Singapore)* | Node 20 + Express (`wellpos-api-dev.onrender.com`)<br>🌿 **Tracking Branch: `dev`** | • **Cold Start (~50s)** jika idle 15 menit. Dicegah dengan GitHub Actions cron pinger tiap 10 menit.<br>• **Batas 750 jam/bulan per akun**: Jangan jalankan web service gratis lain di akun Render yang sama.<br>• **RAM 512 MB & Ephemeral Disk**: Hindari query tanpa paging dan dilarang simpan upload permanen di disk lokal. |
+| **Database (DEV)** | **Supabase** *(AWS SG)* | PostgreSQL 16 Managed (Port 6543 / 5432) | • **Inactivity Pausing**: Database akan tidur jika tidak ada query selama 7 hari berturut-turut (restore manual via Supabase Dashboard).<br>• **Render Tidak Menjalankan Migrasi**: Skema baru di `schema.prisma` wajib dipatch manual ke Supabase via Port 5432.<br>• Port 6543 (PgBouncer) menolak query DDL (`CREATE TYPE`, `ALTER TABLE`). |
+| **Fullstack PROD** | **GCP Compute Engine** *(us-central1)* | VM `e2-micro` (2 vCPU, 1 GB RAM, 30 GB HDD)<br>🌿 **Tracking Branch: `main`** | • **Biaya Rp 0 Selamanya** (GCP Always Free Tier).<br>• **External IP: None** (Cloudflare Tunnel ke `wellpos.id`).<br>• Database PostgreSQL 16 lokal di VM (`127.0.0.1:5432`) dengan Swap 2 GB.<br>• Rilis terkontrol via PR dari `dev` $\rightarrow$ `main`. |
 | **Keep-Alive Bot** | **GitHub Actions** | Workflow `.github/workflows/keep_alive.yml` | Pinger cron tiap 10 menit ke `/api/health` Render agar container backend tidak tidur. |
 
 ---

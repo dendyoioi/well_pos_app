@@ -115,13 +115,13 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   return (
     <div className="bg-white border-b border-slate-200/80 px-4 py-3 shrink-0 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
       {/* Left: Outlet Identity & Shift Status */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs">
-          <Store className="w-4 h-4" />
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+          <Store className="w-4 h-4 shrink-0" />
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-black text-slate-900 tracking-tight">
+            <h2 className="text-sm font-black text-slate-900 tracking-tight truncate">
               {activeOutlet?.name || 'Outlet Utama'}
             </h2>
             {currentShift ? (

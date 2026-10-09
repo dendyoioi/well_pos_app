@@ -942,47 +942,47 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
         <>
           {/* Metric Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-              <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Total Petugas</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Total Petugas</span>
             <div className="text-2xl font-black text-blue-950 mt-1">{totalStaff}</div>
-            <p className="text-[11px] text-slate-400 mt-0.5">Semua peran terdata</p>
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate">Semua peran terdata</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-            <Users className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+            <Users className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Kasir Aktif</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Kasir Aktif</span>
             <div className="text-2xl font-black text-blue-900 mt-1">{activeCashiers}</div>
-            <p className="text-[11px] text-blue-600 mt-0.5">Akses mesin POS</p>
+            <p className="text-[11px] text-blue-600 mt-0.5 truncate">Akses mesin POS</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold">
-            <KeyRound className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
+            <KeyRound className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Staf Gudang</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Staf Gudang</span>
             <div className="text-2xl font-black text-sky-900 mt-1">{activeWarehouse}</div>
-            <p className="text-[11px] text-sky-600 mt-0.5">Akses mutasi stok</p>
+            <p className="text-[11px] text-sky-600 mt-0.5 truncate">Akses mutasi stok</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-900 flex items-center justify-center font-bold">
-            <UserCheck className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-900 flex items-center justify-center font-bold shrink-0">
+            <UserCheck className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Admin & Spv</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Admin &amp; Spv</span>
             <div className="text-2xl font-black text-purple-950 mt-1">{activeAdmins}</div>
-            <p className="text-[11px] text-purple-600 mt-0.5">Audit & finansial</p>
+            <p className="text-[11px] text-purple-600 mt-0.5 truncate">Audit &amp; finansial</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center font-bold">
-            <Shield className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center font-bold shrink-0">
+            <Shield className="w-5 h-5 shrink-0" />
           </div>
         </div>
       </div>

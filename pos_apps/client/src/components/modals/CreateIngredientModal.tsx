@@ -71,18 +71,18 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
       <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header - Sticky */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shadow-xs">
-              <Package className="w-5 h-5" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shadow-xs shrink-0">
+              <Package className="w-5 h-5 shrink-0" />
             </div>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900">Tambah Bahan Baku Baru</h2>
-              <p className="text-xs text-slate-500 font-medium">Daftarkan bahan mentah racikan resep &amp; stok dapur</p>
+            <div className="min-w-0">
+              <h2 className="text-base font-extrabold text-slate-900 truncate">Tambah Bahan Baku Baru</h2>
+              <p className="text-xs text-slate-500 font-medium truncate">Daftarkan bahan mentah racikan resep &amp; stok dapur</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-all cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>

@@ -1851,6 +1851,34 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
     - Desktop (1280x900): `shifts_audit_desktop_enhanced.png` (Exit code 0).
     - Nama kasir nyata (`Rian Kasir Kemang`, `Fajar Kasir Kemang`, `Siti Kasir Kemang`) dan outlet (`Ura Coffee - Flagship Kemang`) berhasil dirender 100%.
 ===============================================================================
+[09 OKTOBER 2026] PERBAIKAN TOTAL DISTORSI IKON RESPONSIF MOBILE & PWA (ZERO-SQUISHED-ICONS)
+===============================================================================
+• Konteks & Root Cause:
+  - User melaporkan ikon-ikon di header banner, kartu KPI, dan modal dialog tampak "kegencet" / pipih secara vertikal/horizontal saat dibuka pada layar smartphone (portrait 375px - 430px) dan instalasi PWA.
+  - Root cause geometris CSS Flexbox: Elemen icon wrapper (`w-12 h-12`, `w-10 h-10`, `w-8 h-8`, dll.) tidak memiliki kelas `shrink-0` (`flex-shrink: 0`), dan container teks saudara tidak memiliki `min-w-0`. Secara default flex items memiliki `flex-shrink: 1`, sehingga saat judul/deskripsi teks panjang mendesak container pada layar sempit, icon wrapper terkompresi secara horizontal menjadi pipih/oval.
+• Solusi & Cakupan Implementasi (20+ Berkas Front-End):
+  1. Header Banner & KPI Cards Halaman Backoffice:
+     - `ShiftsAuditView.tsx` (Banner Audit Shift + 4 KPI Cards Audit).
+     - `FinancialReportView.tsx` (Banner Keuangan + 7 KPI Cards Finansial).
+     - `ProductAnalyticsView.tsx` (Banner Analitik Produk + 4 KPI Cards).
+     - `OutletsView.tsx`, `WarehousesView.tsx`, `CustomersView.tsx`.
+     - `InventoryView.tsx`, `CategoriesView.tsx`, `ModifiersView.tsx`, `RecipesView.tsx`.
+     - `SuppliersView.tsx`, `PromotionsView.tsx`, `UsersView.tsx`, `StaffRolesView.tsx`.
+     - `QrLiveOrdersView.tsx`, `QrTablesView.tsx`, `LoyaltySettingsView.tsx`.
+     - `CashFlowReportTab.tsx`, `CustomerDebtsTab.tsx`.
+  2. Modal Dialog & Transaksi POS:
+     - `CloseShiftModal.tsx`, `StartShiftModal.tsx`, `XReportModal.tsx`, `VoidOrderModal.tsx`.
+     - `SupervisorFeesModal.tsx`, `OnDemandFeesPickerModal.tsx`, `KitchenTicketModal.tsx`.
+     - `ProductBarcodeLabelsModal.tsx`, `CreateIngredientModal.tsx`, `SplitBillModal.tsx`.
+     - `VoucherSelectionModal.tsx`, `AssignCatalogProductModal.tsx`, `FullScreenProductImportModal.tsx`.
+     - `PaymentModal.tsx`, `OrderSuccessModal.tsx`, `PakasirDirectQrisModal.tsx`, `ProductModifierModal.tsx`.
+  3. Header & Navigasi Global:
+     - `BackofficeLayout.tsx` (Logo Toko di mobile/desktop header).
+     - `PosHeader.tsx` (Status kasir & shift icon di terminal POS).
+• Verifikasi:
+  - `npm run build` di `pos_apps/client` berhasil 100% (Exit code 0).
+  - `npm run build` di `pos_apps/server` berhasil 100% (Exit code 0).
+===============================================================================
 ```
 
 

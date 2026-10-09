@@ -333,10 +333,10 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Kas Masuk */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Total Arus Kas Masuk</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <ArrowDownRight className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Total Arus Kas Masuk</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+              <ArrowDownRight className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -362,10 +362,10 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
 
         {/* Total Kas Keluar */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Total Arus Kas Keluar</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-              <ArrowUpRight className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Total Arus Kas Keluar</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold shrink-0">
+              <ArrowUpRight className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -387,12 +387,12 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
 
         {/* Net Cash Flow */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Arus Kas Bersih (Net Flow)</span>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Arus Kas Bersih (Net Flow)</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold shrink-0 ${
               (summary?.netCashFlow ?? 0) >= 0 ? 'bg-blue-50 text-blue-900' : 'bg-rose-50 text-rose-600'
             }`}>
-              <DollarSign className="w-4 h-4" />
+              <DollarSign className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
@@ -418,10 +418,10 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
 
         {/* Piutang Tertahan */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Piutang Belum Tertagih</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Clock className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Piutang Belum Tertagih</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+              <Clock className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -441,10 +441,10 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         {/* Header Grafik */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
-                <BarChart3 className="w-4 h-4" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
+                <BarChart3 className="w-4 h-4 shrink-0" />
               </div>
               <h3 className="font-black text-slate-900 text-base sm:text-lg">
                 Tren Performa Penjualan &amp; Omset Toko

@@ -656,32 +656,32 @@ export const ModifiersView: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Sliders className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <Sliders className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Grup Modifier</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Total Grup Modifier</div>
             <div className="text-2xl font-bold text-slate-900">{groups.length} Kelompok</div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <Layers className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+            <Layers className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Opsi Pilihan</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Total Opsi Pilihan</div>
             <div className="text-2xl font-bold text-slate-900">{totalOptions} Opsi Rasa/Topping</div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Info className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+            <Info className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Standar Operasional</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Standar Operasional</div>
             <div className="text-sm font-bold text-slate-800">Tersinkronisasi Kasir &amp; QR Meja</div>
           </div>
         </div>

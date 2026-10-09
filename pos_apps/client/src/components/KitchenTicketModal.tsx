@@ -97,21 +97,21 @@ export const KitchenTicketModal: React.FC<KitchenTicketModalProps> = ({
       <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[88vh]">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-700 to-orange-600 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600/70 flex items-center justify-center">
-              <ChefHat className="w-5 h-5 stroke-[2.5]" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-600/70 flex items-center justify-center shrink-0">
+              <ChefHat className="w-5 h-5 stroke-[2.5] shrink-0" />
             </div>
-            <div>
-              <h3 className="font-extrabold text-sm tracking-tight">Tiket Dapur (KDS)</h3>
-              <p className="text-[11px] text-orange-200 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {sentAtStr} · {data.outletName || 'Dapur'}
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-sm tracking-tight truncate">Tiket Dapur (KDS)</h3>
+              <p className="text-[11px] text-orange-200 flex items-center gap-1 truncate">
+                <Clock className="w-3 h-3 shrink-0" />
+                <span className="truncate">{sentAtStr} · {data.outletName || 'Dapur'}</span>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-orange-200 hover:text-white hover:bg-orange-600/60 transition-colors"
+            className="p-1.5 rounded-xl text-orange-200 hover:text-white hover:bg-orange-600/60 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

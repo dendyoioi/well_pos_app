@@ -682,11 +682,11 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             <div className="lg:col-span-4 space-y-6">
               {/* Profil & Status Card */}
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                  <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center font-black">
-                    <Shield className="w-4 h-4" />
+                <div className="flex items-center gap-3 pb-3 border-b border-slate-100 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center font-black shrink-0">
+                    <Shield className="w-4 h-4 shrink-0" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-sm font-black text-slate-900">Profil &amp; Status</h3>
                     <p className="text-[11px] text-slate-400">Identitas peran tim kerja</p>
                   </div>
@@ -749,11 +749,11 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
 
               {/* Financial Guardrails (Batas Diskon Kasir) Card */}
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
-                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                  <div className="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-100 text-amber-900 flex items-center justify-center font-black">
-                    <Percent className="w-4 h-4" />
+                <div className="flex items-center gap-3 pb-3 border-b border-slate-100 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-100 text-amber-900 flex items-center justify-center font-black shrink-0">
+                    <Percent className="w-4 h-4 shrink-0" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-sm font-black text-slate-900">Batas Toleransi Diskon</h3>
                     <p className="text-[11px] text-slate-400">Proteksi diskon kasir tanpa PIN supervisor</p>
                   </div>
@@ -1049,32 +1049,32 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
 
       {/* Quick Stat Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center font-black">
-            <Shield className="w-5 h-5" />
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center font-black shrink-0">
+            <Shield className="w-5 h-5 shrink-0" />
           </div>
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Peran</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Total Peran</p>
             <p className="text-lg font-black text-slate-900">{roles.length} Definisi</p>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 flex items-center justify-center font-black">
-            <Sparkles className="w-5 h-5" />
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 flex items-center justify-center font-black shrink-0">
+            <Sparkles className="w-5 h-5 shrink-0" />
           </div>
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peran Baku Sistem</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Peran Baku Sistem</p>
             <p className="text-lg font-black text-slate-900">{defaultRolesCount} Standar F&amp;B</p>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-800 flex items-center justify-center font-black">
-            <Users className="w-5 h-5" />
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-800 flex items-center justify-center font-black shrink-0">
+            <Users className="w-5 h-5 shrink-0" />
           </div>
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Peran Kustom</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Peran Kustom</p>
             <p className="text-lg font-black text-slate-900">{customRolesCount} Dibuat Toko</p>
           </div>
         </div>

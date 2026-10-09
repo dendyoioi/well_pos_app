@@ -214,19 +214,19 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
       <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white p-4 sm:p-5 flex items-center justify-between no-print shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-800/80 flex items-center justify-center text-blue-200">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-800/80 flex items-center justify-center text-blue-200 shrink-0">
               {zReportData ? (
-                <FileCheck className="w-5 h-5 stroke-[2.5] text-emerald-300" />
+                <FileCheck className="w-5 h-5 stroke-[2.5] text-emerald-300 shrink-0" />
               ) : (
-                <Lock className="w-5 h-5 stroke-[2.5] text-amber-300" />
+                <Lock className="w-5 h-5 stroke-[2.5] text-amber-300 shrink-0" />
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-800/80 text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-0.5">
                 {zReportData ? 'Z-Report Selesai' : 'Tutup Shift Kasir'}
               </div>
-              <h3 className="font-black text-base text-white">
+              <h3 className="font-black text-base text-white truncate">
                 {zReportData ? 'Rekapitulasi Kas Akhir (Z-Report)' : 'Rekap Kas Fisik di Laci'}
               </h3>
             </div>

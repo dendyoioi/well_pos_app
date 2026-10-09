@@ -94,18 +94,18 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black ${
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black shrink-0 ${
               isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-800'
             }`}>
-              {isPaid ? <CheckCircle2 className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
+              {isPaid ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <QrCode className="w-5 h-5 shrink-0" />}
             </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">
                 {isPaid ? 'Pembayaran Berhasil!' : title}
               </h3>
-              <p className="text-[11px] text-slate-500 font-mono">
+              <p className="text-[11px] text-slate-500 font-mono truncate">
                 {invoiceNumber}
               </p>
             </div>

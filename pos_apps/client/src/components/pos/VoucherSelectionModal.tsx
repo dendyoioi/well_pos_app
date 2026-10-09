@@ -114,20 +114,20 @@ export const VoucherSelectionModal: React.FC<VoucherSelectionModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs">
-              <Ticket className="w-4 h-4" />
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs shrink-0">
+              <Ticket className="w-4 h-4 shrink-0" />
             </div>
-            <div>
-              <h3 className="text-sm font-black text-slate-900">Voucher &amp; Promo Kasir</h3>
-              <p className="text-[11px] text-slate-500">Pilih voucher atau masukkan kupon promosi</p>
+            <div className="min-w-0">
+              <h3 className="text-sm font-black text-slate-900 truncate">Voucher &amp; Promo Kasir</h3>
+              <p className="text-[11px] text-slate-500 truncate">Pilih voucher atau masukkan kupon promosi</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 flex items-center justify-center transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>

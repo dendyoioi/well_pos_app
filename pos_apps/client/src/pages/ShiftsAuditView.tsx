@@ -246,11 +246,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
     <div className="space-y-6">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20">
-            <Clock className="w-6 h-6 stroke-[2.5]" />
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
+            <Clock className="w-6 h-6 stroke-[2.5] shrink-0" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 Audit &amp; Rekapitulasi Shift Kasir
@@ -348,12 +348,12 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Sesi Diaudit */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                 Shift Kasir Diaudit
               </span>
-              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
-                <Clock className="w-5 h-5 stroke-[2.5]" />
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
+                <Clock className="w-5 h-5 stroke-[2.5] shrink-0" />
               </div>
             </div>
             <div className="mt-3">
@@ -368,12 +368,12 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
           {/* Card 2: Shift Seimbang (Match) */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                 Kas Seimbang (Sesuai)
               </span>
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold shrink-0">
+                <CheckCircle2 className="w-5 h-5 stroke-[2.5] shrink-0" />
               </div>
             </div>
             <div className="mt-3">
@@ -390,12 +390,12 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
           {/* Card 3: Selisih Kurang (Shortage) */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                 Selisih Kurang (Minus)
               </span>
-              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center font-bold">
-                <TrendingDown className="w-5 h-5 stroke-[2.5]" />
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center font-bold shrink-0">
+                <TrendingDown className="w-5 h-5 stroke-[2.5] shrink-0" />
               </div>
             </div>
             <div className="mt-3">
@@ -410,11 +410,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
           {/* Card 4: Net Variance */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                 Net Selisih Kasir
               </span>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 ${
                 summary.netDifference >= 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
               }`}>
                 {summary.netDifference >= 0 ? (

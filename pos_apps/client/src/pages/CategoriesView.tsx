@@ -333,32 +333,32 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Layers className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <Layers className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Kategori</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Total Kategori</div>
             <div className="text-2xl font-bold text-slate-900">{categories.length} Kategori</div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <ShoppingBag className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+            <ShoppingBag className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Menu Terpetakan</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Total Menu Terpetakan</div>
             <div className="text-2xl font-bold text-slate-900">{totalProducts} Menu</div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <Info className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+            <Info className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rata-Rata Per Kategori</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Rata-Rata Per Kategori</div>
             <div className="text-2xl font-bold text-slate-900">
               {categories.length > 0 ? (totalProducts / categories.length).toFixed(1) : 0} Item
             </div>

@@ -114,26 +114,26 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
       <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Header Modal */}
         <div className="p-3.5 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {product.imageUrl ? (
               <img
                 src={product.imageUrl}
                 alt={product.name}
-                className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-sm"
+                className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold text-sm">
+              <div className="w-12 h-12 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
                 {product.name.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <div>
-              <h3 className="font-extrabold text-blue-950 text-base leading-snug">
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-blue-950 text-base leading-snug truncate">
                 {product.name}
               </h3>
-              <div className="text-xs text-slate-500 flex items-center gap-2">
-                <span>Harga Dasar: Rp {basePrice.toLocaleString('id-ID')}</span>
-                <span className="text-slate-300">•</span>
-                <span className="text-blue-900 font-semibold">{product.category.name}</span>
+              <div className="text-xs text-slate-500 flex items-center gap-2 truncate">
+                <span className="truncate">Harga Dasar: Rp {basePrice.toLocaleString('id-ID')}</span>
+                <span className="text-slate-300 shrink-0">•</span>
+                <span className="text-blue-900 font-semibold truncate">{product.category.name}</span>
               </div>
             </div>
           </div>

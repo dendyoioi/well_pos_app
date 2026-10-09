@@ -403,12 +403,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
         <>
           {/* 1. Header Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
-              <Users className="w-5 h-5" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
+              <Users className="w-5 h-5 shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 Master Data Pelanggan
               </h1>
@@ -431,10 +431,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
       {/* 2. Key Analytics Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Total Pelanggan</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Total Pelanggan</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+              <Users className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
@@ -447,10 +447,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Pelanggan Loyal</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Award className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Pelanggan Loyal</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Award className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
@@ -463,10 +463,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Akumulasi Belanja</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Akumulasi Belanja</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Wallet className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">
@@ -478,10 +478,10 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Rata-rata / Pelanggan</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-500 truncate">Rata-rata / Pelanggan</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2">

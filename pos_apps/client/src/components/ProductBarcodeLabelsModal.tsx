@@ -225,26 +225,26 @@ export const ProductBarcodeLabelsModal: React.FC<ProductBarcodeLabelsModalProps>
       <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92dvh] sm:max-h-[92vh] flex flex-col overflow-hidden animate-scaleUp">
         {/* Header Modal */}
         <div className="px-6 py-4 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-white shadow-xs">
-              <Printer className="w-5 h-5 text-blue-200" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-white shadow-xs shrink-0">
+              <Printer className="w-5 h-5 text-blue-200 shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-base font-extrabold tracking-tight text-white flex items-center gap-2">
-                <span>Cetak Label Barcode & Stiker Rak</span>
-                <span className="text-[10px] bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold">
+                <span className="truncate">Cetak Label Barcode &amp; Stiker Rak</span>
+                <span className="text-[10px] bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded-full font-bold shrink-0">
                   EPIC-26
                 </span>
               </h2>
-              <p className="text-xs text-blue-200 mt-0.5">
-                Format label thermal & kertas A4 siap cetak dengan barcode standar Code 128 / EAN
+              <p className="text-xs text-blue-200 mt-0.5 truncate">
+                Format label thermal &amp; kertas A4 siap cetak dengan barcode standar Code 128 / EAN
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
             aria-label="Tutup"
           >
             <X className="w-5 h-5" />

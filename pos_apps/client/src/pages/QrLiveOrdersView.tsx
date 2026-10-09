@@ -159,47 +159,47 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
 
       {/* Metrics Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Perlu Konfirmasi</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Perlu Konfirmasi</span>
             <div className="text-2xl font-black text-rose-600 mt-1">{pendingOrders}</div>
-            <p className="text-[11px] text-rose-500 mt-0.5">Pesanan baru masuk</p>
+            <p className="text-[11px] text-rose-500 mt-0.5 truncate">Pesanan baru masuk</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
-            <Bell className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold shrink-0">
+            <Bell className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Sedang Diracik</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Sedang Diracik</span>
             <div className="text-2xl font-black text-amber-600 mt-1">{inProgressOrders}</div>
-            <p className="text-[11px] text-amber-500 mt-0.5">Diproses dapur / bar</p>
+            <p className="text-[11px] text-amber-500 mt-0.5 truncate">Diproses dapur / bar</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-            <ChefHat className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
+            <ChefHat className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Siap Saji</span>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Siap Saji</span>
             <div className="text-2xl font-black text-blue-900 mt-1">{readyOrders}</div>
-            <p className="text-[11px] text-blue-600 mt-0.5">Siap diantar ke meja</p>
+            <p className="text-[11px] text-blue-600 mt-0.5 truncate">Siap diantar ke meja</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold">
-            <ShoppingBag className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
+            <ShoppingBag className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500 uppercase">Total Pesanan Meja</span>
-            <div className="text-xl font-black text-blue-950 mt-1">{formatRupiah(totalTableRevenue)}</div>
-            <p className="text-[11px] text-slate-400 mt-0.5">{orders.length} transaksi meja</p>
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Total Pesanan Meja</span>
+            <div className="text-xl font-black text-blue-950 mt-1 truncate">{formatRupiah(totalTableRevenue)}</div>
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate">{orders.length} transaksi meja</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-            <CreditCard className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+            <CreditCard className="w-5 h-5 shrink-0" />
           </div>
         </div>
       </div>

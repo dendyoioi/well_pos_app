@@ -167,18 +167,18 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
     <div className="space-y-6">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
-            <Award className="w-6 h-6 stroke-[2.5]" />
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
+            <Award className="w-6 h-6 stroke-[2.5] shrink-0" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 Analisis Menu, HPP &amp; Profitabilitas
               </h2>
               {activeOutlet && !activeOutlet.isWarehouse && (
                 <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-bold text-[10px]">
-                  <Store className="w-3 h-3" />
+                  <Store className="w-3 h-3 shrink-0" />
                   <span>{activeOutlet.name}</span>
                 </span>
               )}
@@ -337,12 +337,12 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Total HPP */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                   Total Modal HPP (COGS)
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center">
-                  <Package className="w-5 h-5 stroke-[2.5]" />
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+                  <Package className="w-5 h-5 stroke-[2.5] shrink-0" />
                 </div>
               </div>
               <div className="mt-3">
@@ -366,12 +366,12 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
 
             {/* Card 2: Laba Kotor Produk */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                   Laba Kotor (*Gross Profit*)
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 stroke-[2.5]" />
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-5 h-5 stroke-[2.5] shrink-0" />
                 </div>
               </div>
               <div className="mt-3">
@@ -395,12 +395,12 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
 
             {/* Card 3: Efisiensi Margin Menu */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                   Rata-rata Margin Menu
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center">
-                  <Percent className="w-5 h-5 stroke-[2.5]" />
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+                  <Percent className="w-5 h-5 stroke-[2.5] shrink-0" />
                 </div>
               </div>
               <div className="mt-3">
@@ -425,12 +425,12 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
 
             {/* Card 4: Modal Mengendap (Dead Stock) */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
                   Modal Mengendap (Dead Stock)
                 </span>
-                <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center">
-                  <AlertOctagon className="w-5 h-5 stroke-[2.5]" />
+                <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
+                  <AlertOctagon className="w-5 h-5 stroke-[2.5] shrink-0" />
                 </div>
               </div>
               <div className="mt-3">

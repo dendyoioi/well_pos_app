@@ -116,20 +116,20 @@ export const AssignCatalogProductModal: React.FC<AssignCatalogProductModalProps>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="relative w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh] border border-slate-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-blue-900/10 text-blue-900 flex items-center justify-center">
-              <ShoppingBag className="w-5 h-5" />
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-900/10 text-blue-900 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-5 h-5 shrink-0" />
             </div>
-            <div>
-              <h3 className="text-base font-black text-blue-950">Ambil Produk dari Master Katalog</h3>
-              <p className="text-xs text-slate-500">Hubungkan produk yang sudah ada ke outlet toko aktif ini</p>
+            <div className="min-w-0">
+              <h3 className="text-base font-black text-blue-950 truncate">Ambil Produk dari Master Katalog</h3>
+              <p className="text-xs text-slate-500 truncate">Hubungkan produk yang sudah ada ke outlet toko aktif ini</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

@@ -610,34 +610,34 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <ChefHat className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <ChefHat className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Resep F&amp;B Aktif</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Total Resep F&amp;B Aktif</div>
             <div className="text-2xl font-bold text-slate-900">
               {totalRecipesCount} dari {allVariantOptions.length} Menu
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Package className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+            <Package className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bahan Baku Terdaftar</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Bahan Baku Terdaftar</div>
             <div className="text-2xl font-bold text-slate-900">{inventoryItems.length} Bahan Mentah</div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <TrendingUp className="w-6 h-6" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+            <TrendingUp className="w-6 h-6 shrink-0" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Otomasi Inventori</div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">Otomasi Inventori</div>
             <div className="text-sm font-bold text-slate-800">Auto Deduct Penjualan Kasir</div>
           </div>
         </div>

@@ -103,17 +103,17 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
     <div className="space-y-6 max-w-5xl mx-auto pb-16 animate-in fade-in duration-300">
       {/* 1. Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-900 flex items-center justify-center font-bold">
-              <Award className="w-5 h-5 text-amber-600" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-900 flex items-center justify-center font-bold shrink-0">
+              <Award className="w-5 h-5 text-amber-600 shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                   Program Loyalitas &amp; Poin Member
                 </h1>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                   Per-Outlet
                 </span>
               </div>

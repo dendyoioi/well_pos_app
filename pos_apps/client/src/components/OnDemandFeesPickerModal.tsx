@@ -116,20 +116,20 @@ export const OnDemandFeesPickerModal: React.FC<OnDemandFeesPickerModalProps> = (
       <div className="w-full max-w-lg bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-950 to-indigo-950 text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-blue-200 shadow-xs">
-              <ShoppingBag className="w-5 h-5 text-emerald-400" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-800/80 border border-blue-700/60 flex items-center justify-center text-blue-200 shadow-xs shrink-0">
+              <ShoppingBag className="w-5 h-5 text-emerald-400 shrink-0" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base sm:text-lg tracking-tight text-white">
-                  Pilih Kemasan & Biaya Tambahan
+                <h3 className="font-extrabold text-base sm:text-lg tracking-tight text-white truncate">
+                  Pilih Kemasan &amp; Biaya Tambahan
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shrink-0">
                   On-Demand
                 </span>
               </div>
-              <p className="text-xs text-blue-200/90 font-medium">
+              <p className="text-xs text-blue-200/90 font-medium truncate">
                 Daftar semua kemasan, plastik, box, dan perlengkapan pesanan
               </p>
             </div>

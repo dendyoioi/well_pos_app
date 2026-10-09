@@ -668,10 +668,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   : 'border-slate-200 hover:border-slate-300'
               }`}
             >
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Bahan Terdaftar</span>
-                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center border border-blue-100">
-                  <Package className="w-4 h-4" />
+              <div className="flex items-center justify-between text-slate-500 mb-2 gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total Bahan Terdaftar</span>
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center border border-blue-100 shrink-0">
+                  <Package className="w-4 h-4 shrink-0" />
                 </div>
               </div>
               <p className="text-2xl font-black text-slate-900">{countAllIngredients}</p>
@@ -686,10 +686,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   : 'border-slate-200 hover:border-slate-300'
               }`}
             >
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stok Menipis &amp; Kritis</span>
-                <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-                  <AlertTriangle className="w-4 h-4" />
+              <div className="flex items-center justify-between text-slate-500 mb-2 gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Stok Menipis &amp; Kritis</span>
+                <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 shrink-0">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
@@ -702,10 +702,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Estimasi Nilai Aset Bahan</span>
-                <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-                  <Boxes className="w-4 h-4" />
+              <div className="flex items-center justify-between text-slate-500 mb-2 gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Estimasi Nilai Aset Bahan</span>
+                <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shrink-0">
+                  <Boxes className="w-4 h-4 shrink-0" />
                 </div>
               </div>
               <p className="text-2xl font-black text-slate-900">
