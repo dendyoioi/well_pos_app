@@ -522,19 +522,19 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
           </div>
 
           {/* Action Buttons - Sticky Bottom with Safe Area */}
-          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="h-10 px-4 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={submitting || availableStock <= 0 || quantity <= 0}
-              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+              className="h-10 px-5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
             >
               {submitting ? (
                 <>
