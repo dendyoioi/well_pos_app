@@ -20,6 +20,8 @@ import {
   Download,
   FileSpreadsheet,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Sparkles,
   Package,
   UtensilsCrossed,
@@ -92,6 +94,35 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Category Scroll Controller untuk Banyak Kategori
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkCategoryScroll = () => {
+    const el = categoryScrollRef.current;
+    if (el) {
+      setCanScrollLeft(el.scrollLeft > 6);
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
+    }
+  };
+
+  useEffect(() => {
+    checkCategoryScroll();
+    window.addEventListener('resize', checkCategoryScroll);
+    return () => window.removeEventListener('resize', checkCategoryScroll);
+  }, [categories]);
+
+  const handleScrollCategory = (direction: 'LEFT' | 'RIGHT') => {
+    if (categoryScrollRef.current) {
+      categoryScrollRef.current.scrollBy({
+        left: direction === 'LEFT' ? -240 : 240,
+        behavior: 'smooth',
+      });
+      setTimeout(checkCategoryScroll, 300);
+    }
+  };
 
   const stats = useMemo(() => {
     const total = products.length;
@@ -713,42 +744,84 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           </button>
         </div>
 
-        {/* Category Pills Horizontal Scroll */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-              selectedCategory === 'all'
-                ? 'bg-blue-900 text-white shadow-sm'
-                : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Semua Kategori ({categories.reduce((acc, c) => acc + (c.productCount || 0), 0)})
-          </button>
-          {categories.map((cat) => (
+        {/* Category Pills Horizontal Scroll - Terproteksi jika Kategori Banyak */}
+        <div className="relative group/catbar">
+          {/* Tombol Geser Kiri */}
+          {canScrollLeft && (
             <button
-              key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => handleScrollCategory('LEFT')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/95 border border-slate-200 shadow-md text-slate-700 hover:text-blue-900 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+              title="Geser kategori ke kiri"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Track Kategori Horizontal dengan Dukungan Mouse Wheel */}
+          <div
+            ref={categoryScrollRef}
+            onScroll={checkCategoryScroll}
+            onWheel={(e) => {
+              if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && categoryScrollRef.current) {
+                categoryScrollRef.current.scrollLeft += e.deltaY;
+              }
+            }}
+            className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full no-scrollbar scroll-smooth px-1"
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                setSelectedCategory('all');
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                selectedCategory === cat.id
+                selectedCategory === 'all'
                   ? 'bg-blue-900 text-white shadow-sm'
                   : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {cat.name} {cat.productCount !== undefined && `(${cat.productCount})`}
+              Semua Kategori ({categories.reduce((acc, c) => acc + (c.productCount || 0), 0)})
             </button>
-          ))}
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={(e) => {
+                  setSelectedCategory(cat.id);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                  selectedCategory === cat.id
+                    ? 'bg-blue-900 text-white shadow-sm'
+                    : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {cat.name} {cat.productCount !== undefined && `(${cat.productCount})`}
+              </button>
+            ))}
 
-          {canManage && onNavigateToCategories && (
+            {canManage && onNavigateToCategories && (
+              <button
+                type="button"
+                onClick={onNavigateToCategories}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-blue-900/40 text-blue-900 hover:bg-blue-50 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer shrink-0"
+                title="Kelola Kategori"
+              >
+                <Plus className="w-3 h-3" /> Kategori
+              </button>
+            )}
+          </div>
+
+          {/* Tombol Geser Kanan */}
+          {canScrollRight && (
             <button
               type="button"
-              onClick={onNavigateToCategories}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-blue-900/40 text-blue-900 hover:bg-blue-50 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer shrink-0"
-              title="Kelola Kategori"
+              onClick={() => handleScrollCategory('RIGHT')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/95 border border-slate-200 shadow-md text-slate-700 hover:text-blue-900 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+              title="Geser kategori ke kanan"
             >
-              <Plus className="w-3 h-3" /> Kategori
+              <ChevronRight className="w-4 h-4" />
             </button>
           )}
         </div>
