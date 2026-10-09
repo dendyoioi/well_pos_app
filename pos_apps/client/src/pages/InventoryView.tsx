@@ -577,7 +577,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <Boxes className="w-4 h-4 shrink-0" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-slate-900">
+              <p className="text-2xl font-black text-slate-900 font-mono tracking-tight">
                 {formatRupiah(
                   ingredients.reduce((sum, it) => sum + Math.max(0, Number(it.stock || 0)) * Number(it.averageCost || 0), 0)
                 )}
@@ -699,19 +699,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           {/* Tabel Bahan Baku Mentah */}
           <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
+              <table className="w-full text-left text-xs text-slate-600 min-w-[1050px]">
                 <thead className="bg-slate-50/90 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200 tracking-wider">
                   <tr>
-                    <th className="px-5 py-3.5 min-w-[200px] whitespace-nowrap">Bahan Baku &amp; SKU</th>
-                    <th className="px-4 py-3.5 whitespace-nowrap">Stok Fisik Toko</th>
-                    <th className="px-4 py-3.5 whitespace-nowrap">Gudang Pasokan</th>
-                    <th className="px-4 py-3.5 whitespace-nowrap">Batas Alert</th>
-                    <th className="px-4 py-3.5 text-right whitespace-nowrap">HPP Rata-rata</th>
-                    <th className="px-4 py-3.5 text-right whitespace-nowrap">Estimasi Nilai</th>
-                    <th className="px-5 py-3.5 text-right whitespace-nowrap">Aksi Cepat</th>
+                    <th className="px-5 py-3.5 min-w-[220px] whitespace-nowrap">Bahan Baku &amp; SKU</th>
+                    <th className="px-4 py-3.5 min-w-[170px] whitespace-nowrap">Stok Fisik Toko</th>
+                    <th className="px-4 py-3.5 min-w-[150px] whitespace-nowrap">Gudang Pasokan</th>
+                    <th className="px-4 py-3.5 min-w-[120px] whitespace-nowrap">Batas Alert</th>
+                    <th className="px-4 py-3.5 min-w-[140px] text-right whitespace-nowrap">HPP Rata-rata</th>
+                    <th className="px-4 py-3.5 min-w-[160px] text-right whitespace-nowrap">Estimasi Nilai</th>
+                    <th className="px-5 py-3.5 min-w-[160px] text-right whitespace-nowrap">Aksi Cepat</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
+                <tbody className="divide-y divide-slate-100 font-medium text-xs">
                   {loadingIngredients ? (
                     <TableSkeleton rows={5} columns={7} actionCol />
                   ) : filteredIngredients.length === 0 ? (
@@ -731,7 +731,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               setIngredientSearch('');
                               setIngredientStatusFilter('ALL');
                             }}
-                            className="mt-3 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                            className="mt-3 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                           >
                             Reset Semua Filter
                           </button>
@@ -750,7 +750,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           {/* Nama Bahan & SKU */}
                           <td className="px-5 py-3.5">
                             <div className="space-y-0.5">
-                              <span className="font-extrabold text-slate-900 text-sm block">
+                              <span className="font-extrabold text-slate-900 text-xs sm:text-sm block">
                                 {ing.name}
                               </span>
                               <div className="flex items-center gap-2">
@@ -765,23 +765,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           </td>
 
                           {/* Stok Fisik Toko */}
-                          <td className="px-5 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${isZero ? 'bg-rose-500 ring-2 ring-rose-200' : isLow ? 'bg-amber-500 ring-2 ring-amber-200' : 'bg-emerald-500 ring-2 ring-emerald-200'}`} />
-                              <span className={`text-sm font-black ${isZero ? 'text-rose-600' : isLow ? 'text-amber-600' : 'text-slate-900'}`}>
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${isZero ? 'bg-rose-500 ring-2 ring-rose-200' : isLow ? 'bg-amber-500 ring-2 ring-amber-200' : 'bg-emerald-500 ring-2 ring-emerald-200'}`} />
+                              <span className={`text-xs font-mono font-black ${isZero ? 'text-rose-600' : isLow ? 'text-amber-600' : 'text-slate-900'}`}>
                                 {stockVal.toLocaleString('id-ID')}
                               </span>
                               <span className="text-[11px] text-slate-400 font-semibold">{ing.canonicalUom}</span>
                               {isZero ? (
-                                <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
+                                <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold shrink-0">
                                   Habis
                                 </span>
                               ) : isLow ? (
-                                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold shrink-0">
                                   Menipis
                                 </span>
                               ) : (
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold shrink-0">
                                   Aman
                                 </span>
                               )}
@@ -789,11 +789,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           </td>
 
                           {/* Gudang Pasokan */}
-                          <td className="px-5 py-3.5">
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             {ing.warehouseName ? (
                               <div className="space-y-0.5">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="font-extrabold text-indigo-950 text-xs">
+                                  <span className="font-extrabold text-indigo-950 text-xs font-mono">
                                     {Number(ing.warehouseStock || 0).toLocaleString('id-ID')}
                                   </span>
                                   <span className="text-[10px] text-slate-400 font-semibold">{ing.canonicalUom}</span>
@@ -811,23 +811,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           </td>
 
                           {/* Batas Alert */}
-                          <td className="px-4 py-3.5 text-slate-500 font-semibold">
-                            <span className="text-xs font-bold text-slate-700">{reorderVal.toLocaleString('id-ID')}</span>{' '}
+                          <td className="px-4 py-3.5 text-slate-500 font-semibold whitespace-nowrap">
+                            <span className="text-xs font-mono font-bold text-slate-700">{reorderVal.toLocaleString('id-ID')}</span>{' '}
                             <span className="text-[11px] text-slate-400">{ing.canonicalUom}</span>
                           </td>
 
                           {/* HPP Satuan */}
-                          <td className="px-4 py-3.5 text-right font-bold text-slate-800 whitespace-nowrap">
+                          <td className="px-4 py-3.5 text-right font-mono font-bold text-xs text-slate-800 whitespace-nowrap">
                             {formatRupiah(ing.averageCost || 0)}
                           </td>
 
                           {/* Total Nilai Bahan */}
-                          <td className="px-4 py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
+                          <td className="px-4 py-3.5 text-right font-mono font-black text-xs text-slate-900 whitespace-nowrap">
                             {formatRupiah(Math.max(0, stockVal) * Number(ing.averageCost || 0))}
                           </td>
 
                           {/* Aksi Cepat */}
-                          <td className="px-5 py-3.5 text-right">
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
                             <div className="inline-flex items-center p-1 bg-slate-100/80 border border-slate-200/80 rounded-xl gap-1 justify-end">
                               {/* Stok Masuk */}
                               <div className="relative group flex items-center">
@@ -1126,7 +1126,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <ArrowDownRight className="w-4 h-4" />
                 </div>
               </div>
-              <div className="text-xl font-black text-slate-900 truncate">
+              <div className="text-xl font-black font-mono tracking-tight text-slate-900 truncate">
                 {formatRupiah(totalAssetValue)}
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-1">Modal persediaan toko saat ini</p>
@@ -1285,16 +1285,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {/* Tabel Daftar Produk Jadi */}
               <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-600">
+                  <table className="w-full text-left text-xs text-slate-600 min-w-[1100px]">
                     <thead className="bg-slate-50/90 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200 tracking-wider">
                       <tr>
                         <th className="px-5 py-3.5 pl-6 min-w-[240px] whitespace-nowrap">Produk &amp; SKU</th>
-                        <th className="px-4 py-3.5 w-36 text-center whitespace-nowrap">Kategori</th>
-                        <th className="px-5 py-3.5 w-44 text-center whitespace-nowrap">Stok Fisik Toko</th>
-                        <th className="px-4 py-3.5 w-36 text-right whitespace-nowrap">Harga Modal (HPP)</th>
-                        <th className="px-4 py-3.5 w-36 text-right whitespace-nowrap">Nilai Aset Stok</th>
-                        <th className="px-4 py-3.5 w-36 text-right whitespace-nowrap">Harga Jual</th>
-                        <th className="px-4 py-3.5 pr-6 w-40 text-center whitespace-nowrap">Aksi Mutasi</th>
+                        <th className="px-4 py-3.5 min-w-[120px] text-center whitespace-nowrap">Kategori</th>
+                        <th className="px-5 py-3.5 min-w-[170px] text-center whitespace-nowrap">Stok Fisik Toko</th>
+                        <th className="px-4 py-3.5 min-w-[140px] text-right whitespace-nowrap">Harga Modal (HPP)</th>
+                        <th className="px-4 py-3.5 min-w-[150px] text-right whitespace-nowrap">Nilai Aset Stok</th>
+                        <th className="px-4 py-3.5 min-w-[140px] text-right whitespace-nowrap">Harga Jual</th>
+                        <th className="px-4 py-3.5 pr-6 min-w-[160px] text-center whitespace-nowrap">Aksi Mutasi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -1356,7 +1356,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                     </div>
                                   )}
                                   <div className="space-y-1 min-w-0">
-                                    <span className="font-extrabold text-slate-900 text-sm block leading-tight">
+                                    <span className="font-extrabold text-slate-900 text-xs block leading-tight">
                                       {p.name}
                                     </span>
                                     <div className="flex items-center flex-wrap gap-1.5">
@@ -1413,7 +1413,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       }`}
                                     />
                                     <span
-                                      className={`text-sm font-black whitespace-nowrap ${
+                                      className={`text-xs font-mono font-bold whitespace-nowrap ${
                                         isZero
                                           ? 'text-rose-600'
                                           : isLow
@@ -1444,17 +1444,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               </td>
 
                               {/* Harga Modal HPP */}
-                              <td className="px-4 py-3.5 text-right font-bold text-slate-700 whitespace-nowrap">
+                              <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
                                 {formatRupiah(p.costPrice || 0)}
                               </td>
 
                               {/* Nilai Aset Stok */}
-                              <td className="px-4 py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
+                              <td className="px-4 py-3.5 text-right font-mono text-xs font-black text-slate-900 whitespace-nowrap">
                                 {isComposite ? '-' : formatRupiah(totalVal)}
                               </td>
 
                               {/* Harga Jual */}
-                              <td className="px-4 py-3.5 text-right font-black text-blue-900 whitespace-nowrap">
+                              <td className="px-4 py-3.5 text-right font-mono text-xs font-black text-blue-900 whitespace-nowrap">
                                 {formatRupiah(p.basePrice || p.price || 0)}
                               </td>
 
@@ -1482,7 +1482,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       <button
                                         type="button"
                                         onClick={() => openModal('IN', p)}
-                                        className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-all cursor-pointer"
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-all cursor-pointer"
                                       >
                                         <ArrowDownRight className="w-4 h-4" />
                                       </button>
@@ -1499,7 +1499,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       <button
                                         type="button"
                                         onClick={() => openTransferModal(undefined, 'PRODUCT', p.id)}
-                                        className="p-1.5 rounded-lg text-teal-700 hover:bg-teal-50 hover:text-teal-800 transition-all cursor-pointer"
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-teal-700 hover:bg-teal-50 hover:text-teal-800 transition-all cursor-pointer"
                                       >
                                         <ArrowLeftRight className="w-4 h-4" />
                                       </button>
@@ -1516,7 +1516,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       <button
                                         type="button"
                                         onClick={() => openModal('OUT', p)}
-                                        className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 hover:text-rose-800 transition-all cursor-pointer"
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-700 hover:bg-rose-50 hover:text-rose-800 transition-all cursor-pointer"
                                       >
                                         <ArrowUpRight className="w-4 h-4" />
                                       </button>
@@ -1533,7 +1533,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       <button
                                         type="button"
                                         onClick={() => openModal('ADJUST', p)}
-                                        className="p-1.5 rounded-lg text-blue-900 hover:bg-blue-50 hover:text-blue-950 transition-all cursor-pointer"
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-900 hover:bg-blue-50 hover:text-blue-950 transition-all cursor-pointer"
                                       >
                                         <SlidersHorizontal className="w-4 h-4" />
                                       </button>
@@ -1619,15 +1619,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {/* Tabel Riwayat Kartu Stok */}
               <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-left border-collapse text-xs min-w-[1000px]">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-500 font-bold text-[11px] uppercase tracking-wider">
-                        <th className="py-3.5 px-4 pl-6 whitespace-nowrap">Waktu</th>
-                        <th className="py-3.5 px-4 min-w-[180px]">Nama Produk</th>
-                        <th className="py-3.5 px-4 whitespace-nowrap">Tipe Mutasi</th>
-                        <th className="py-3.5 px-4 text-right whitespace-nowrap">Perubahan Qty</th>
-                        <th className="py-3.5 px-4 whitespace-nowrap">Petugas (PIC)</th>
-                        <th className="py-3.5 px-4 pr-6 whitespace-nowrap">Keterangan / Catatan</th>
+                        <th className="py-3.5 px-4 pl-6 min-w-[150px] whitespace-nowrap">Waktu</th>
+                        <th className="py-3.5 px-4 min-w-[200px]">Nama Produk</th>
+                        <th className="py-3.5 px-4 min-w-[140px] whitespace-nowrap">Tipe Mutasi</th>
+                        <th className="py-3.5 px-4 min-w-[140px] text-right whitespace-nowrap">Perubahan Qty</th>
+                        <th className="py-3.5 px-4 min-w-[140px] whitespace-nowrap">Petugas (PIC)</th>
+                        <th className="py-3.5 px-4 pr-6 min-w-[200px] whitespace-nowrap">Keterangan / Catatan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
@@ -1664,14 +1664,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                               {/* Produk */}
                               <td className="py-3.5 px-4">
-                                <div className="font-extrabold text-slate-900 text-xs sm:text-sm">
+                                <div className="font-extrabold text-slate-900 text-xs">
                                   {m.product?.name || 'Item Terhapus / Bahan Mentah'}
                                 </div>
                                 <div className="font-mono text-[11px] text-slate-400 font-semibold">{m.product?.sku || '-'}</div>
                               </td>
 
                               {/* Tipe Mutasi */}
-                              <td className="py-3.5 px-4">
+                              <td className="py-3.5 px-4 whitespace-nowrap">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${badge.color}`}>
                                   {badge.label}
                                 </span>
@@ -1680,7 +1680,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               {/* Qty Perubahan */}
                               <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                 <span
-                                  className={`font-mono font-extrabold text-sm ${
+                                  className={`font-mono font-bold text-xs ${
                                     isPositive ? 'text-emerald-700' : 'text-rose-600'
                                   }`}
                                 >
@@ -1689,7 +1689,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               </td>
 
                               {/* Petugas */}
-                              <td className="py-3.5 px-4 text-xs font-bold text-slate-700">
+                              <td className="py-3.5 px-4 text-xs font-bold text-slate-700 whitespace-nowrap">
                                 {m.user?.name || 'Sistem / Otomatis'}
                               </td>
 
