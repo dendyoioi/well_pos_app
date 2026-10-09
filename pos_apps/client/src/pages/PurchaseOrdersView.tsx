@@ -538,7 +538,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <Truck className="w-4 h-4 text-blue-800" />
           </div>
           <div className="text-2xl font-black font-mono text-blue-900 mt-2">{kpiStats.issued}</div>
-          <div className="text-[11px] text-blue-850/80 mt-1">Dalam proses / jalan</div>
+          <div className="text-[11px] text-blue-700 mt-1">Dalam proses / jalan</div>
         </div>
 
         <div
@@ -644,7 +644,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4 min-w-[190px] whitespace-nowrap">No. PO &amp; Tanggal</th>
                 <th className="py-3.5 px-4 min-w-[180px] whitespace-nowrap">Pemasok</th>
-                <th className="py-3.5 px-4 min-w-[170px] whitespace-nowrap">Outlet Tujuan</th>
+                <th className="py-3.5 px-4 min-w-[170px] whitespace-nowrap">Toko / Outlet Tujuan</th>
                 <th className="py-3.5 px-4 min-w-[120px] text-center whitespace-nowrap">Bahan Baku</th>
                 <th className="py-3.5 px-4 min-w-[160px] text-right whitespace-nowrap">Total Nilai</th>
                 <th className="py-3.5 px-4 min-w-[140px] text-center whitespace-nowrap">Status</th>
