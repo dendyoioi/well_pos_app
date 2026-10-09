@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Boxes,
   ArrowDownRight,
@@ -18,8 +18,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Barcode,
   Sparkles,
 } from 'lucide-react';
@@ -311,35 +309,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
     return Array.from(map.values());
   }, [categories, products]);
-
-  // Kategori Scroll Controller untuk Banyak Kategori (Desktop/Mobile)
-  const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkCategoryScroll = () => {
-    const el = categoryScrollRef.current;
-    if (el) {
-      setCanScrollLeft(el.scrollLeft > 6);
-      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
-    }
-  };
-
-  useEffect(() => {
-    checkCategoryScroll();
-    window.addEventListener('resize', checkCategoryScroll);
-    return () => window.removeEventListener('resize', checkCategoryScroll);
-  }, [categoriesWithCounts]);
-
-  const handleScrollCategory = (direction: 'LEFT' | 'RIGHT') => {
-    if (categoryScrollRef.current) {
-      categoryScrollRef.current.scrollBy({
-        left: direction === 'LEFT' ? -240 : 240,
-        behavior: 'smooth',
-      });
-      setTimeout(checkCategoryScroll, 300);
-    }
-  };
 
   // Filter produk jadi
   const filteredProducts = products.filter((p) => {
@@ -1213,15 +1182,36 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {/* Filter, Search & Quick Chips Toolbar */}
               <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
                 <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Cari produk jadi (nama, SKU, barcode)..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all outline-none"
-                    />
+                  <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="Cari produk jadi (nama, SKU, barcode)..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all outline-none"
+                      />
+                    </div>
+
+                    {/* Dropdown Kategori Murni (Menampilkan Semua Kategori Termasuk yang 0 Produk) */}
+                    {categoriesWithCounts.length > 0 && (
+                      <div className="relative w-full sm:w-auto">
+                        <select
+                          value={productCategoryFilter}
+                          onChange={(e) => setProductCategoryFilter(e.target.value)}
+                          className="w-full sm:w-auto appearance-none pr-9 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 hover:bg-slate-100/60 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none cursor-pointer transition-all"
+                        >
+                          <option value="ALL">Semua Kategori ({products.length})</option>
+                          {categoriesWithCounts.map((cat) => (
+                            <option key={cat.name} value={cat.name}>
+                              {cat.name} ({cat.count})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="text-xs text-slate-500 font-bold px-2 self-end md:self-auto">
@@ -1232,79 +1222,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     dari {products.length} produk
                   </div>
                 </div>
-
-                {/* Category Pills Horizontal Scroll - Terproteksi jika Kategori Banyak */}
-                {categoriesWithCounts.length > 0 && (
-                  <div className="relative group/catbar pt-1 border-t border-slate-100">
-                    {/* Tombol Geser Kiri (Muncul saat overflow ke kiri) */}
-                    {canScrollLeft && (
-                      <button
-                        type="button"
-                        onClick={() => handleScrollCategory('LEFT')}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/95 border border-slate-200 shadow-md text-slate-700 hover:text-blue-900 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
-                        title="Geser kategori ke kiri"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                    )}
-
-                    {/* Track Kategori Horizontal dengan Dukungan Mouse Wheel */}
-                    <div
-                      ref={categoryScrollRef}
-                      onScroll={checkCategoryScroll}
-                      onWheel={(e) => {
-                        if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && categoryScrollRef.current) {
-                          categoryScrollRef.current.scrollLeft += e.deltaY;
-                        }
-                      }}
-                      className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full no-scrollbar scroll-smooth px-1"
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          setProductCategoryFilter('ALL');
-                          e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                          productCategoryFilter === 'ALL'
-                            ? 'bg-blue-900 text-white shadow-sm'
-                            : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        Semua Kategori ({products.length})
-                      </button>
-                      {categoriesWithCounts.map((cat) => (
-                        <button
-                          key={cat.name}
-                          type="button"
-                          onClick={(e) => {
-                            setProductCategoryFilter(cat.name);
-                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                            productCategoryFilter === cat.name
-                              ? 'bg-blue-900 text-white shadow-sm'
-                              : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {cat.name} ({cat.count})
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Tombol Geser Kanan (Muncul saat overflow ke kanan) */}
-                    {canScrollRight && (
-                      <button
-                        type="button"
-                        onClick={() => handleScrollCategory('RIGHT')}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/95 border border-slate-200 shadow-md text-slate-700 hover:text-blue-900 hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
-                        title="Geser kategori ke kanan"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
 
                 {/* Quick Status Chips */}
                 <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
