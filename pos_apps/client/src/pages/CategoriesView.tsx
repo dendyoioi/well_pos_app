@@ -422,13 +422,16 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
               : 'Mulai buat kategori pertama Anda seperti Minuman Kopi, Makanan Utama, atau Aneka Snack.'}
           </p>
           {!searchTerm && (
-            <button
-              onClick={handleOpenCreate}
-              className="mt-4 px-4 py-2 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold rounded-xl text-xs sm:text-sm inline-flex items-center gap-2 shadow-md shadow-blue-900/20 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Buat Kategori Pertama</span>
-            </button>
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="primary"
+                size="md"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={handleOpenCreate}
+              >
+                Buat Kategori Pertama
+              </Button>
+            </div>
           )}
         </div>
       ) : (

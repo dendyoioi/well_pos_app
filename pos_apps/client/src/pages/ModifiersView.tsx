@@ -735,13 +735,16 @@ export const ModifiersView: React.FC = () => {
               : 'Buat kustomisasi hidangan pertama Anda seperti Pilihan Susu (Oatmilk +Rp 7.000) atau Level Manis.'}
           </p>
           {!searchTerm && (
-            <button
-              onClick={handleOpenCreate}
-              className="mt-4 px-4 py-2 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold rounded-xl text-xs sm:text-sm inline-flex items-center gap-2 shadow-md shadow-blue-900/20 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Buat Grup Pertama</span>
-            </button>
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="primary"
+                size="md"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={handleOpenCreate}
+              >
+                Buat Grup Pertama
+              </Button>
+            </div>
           )}
         </div>
       ) : (

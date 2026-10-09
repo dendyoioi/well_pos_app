@@ -57,6 +57,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'FNB' | 'RETAIL'>('all');
 
   // Multi-Select State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -204,19 +205,32 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   // Reset pagination ke halaman 1 saat filter atau pencarian berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, statusFilter]);
+  }, [searchTerm, selectedCategory, statusFilter, typeFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+  // Client-side filtering untuk tipe produk F&B vs Ritel Fisik
+  const filteredProducts = useMemo(() => {
+    if (typeFilter === 'all') return products;
+    if (typeFilter === 'FNB') {
+      return products.filter(
+        (p) => p.productType === 'COMPOSITE' || p.hasStock === false || (p.stock !== undefined && p.stock >= 999000)
+      );
+    }
+    return products.filter(
+      (p) => (p.productType === 'STANDARD' || !p.productType) && p.hasStock !== false && (!p.stock || p.stock < 999000)
+    );
+  }, [products, typeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const paginatedProducts = products.slice(
+  const paginatedProducts = filteredProducts.slice(
     (safeCurrentPage - 1) * pageSize,
     safeCurrentPage * pageSize
   );
 
   // Reset selected IDs when filter or list changes
   useEffect(() => {
-    setSelectedIds((prev) => prev.filter((id) => products.some((p) => p.id === id)));
-  }, [products]);
+    setSelectedIds((prev) => prev.filter((id) => filteredProducts.some((p) => p.id === id)));
+  }, [filteredProducts]);
 
   // Clear feedback after 4 seconds
   useEffect(() => {
@@ -227,15 +241,15 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   }, [feedback]);
 
   // Select All Checkbox
-  const isAllSelected = products.length > 0 && selectedIds.length === products.length;
-  const isIndeterminate = selectedIds.length > 0 && selectedIds.length < products.length;
+  const isAllSelected = filteredProducts.length > 0 && selectedIds.length === filteredProducts.length;
+  const isIndeterminate = selectedIds.length > 0 && selectedIds.length < filteredProducts.length;
 
   // Multi-Select Handlers
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(products.map((p) => p.id));
+      setSelectedIds(filteredProducts.map((p) => p.id));
     }
   };
 
@@ -504,8 +518,15 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             onClick={() => {
               setStatusFilter('all');
               setSelectedCategory('all');
+              setTypeFilter('all');
+              setSearchTerm('');
             }}
-            className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
+            className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer backdrop-blur-xs ${
+              statusFilter === 'all' && selectedCategory === 'all' && typeFilter === 'all' && !searchTerm
+                ? 'bg-white/15 border-white/40 ring-2 ring-white/20'
+                : 'bg-white/5 hover:bg-white/10 border-white/10'
+            }`}
+            title="Klik untuk melihat semua produk"
           >
             <div className="flex items-center justify-between text-slate-300 mb-0.5 sm:mb-1">
               <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Menu</span>
@@ -516,8 +537,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           </div>
 
           <div
-            onClick={() => setStatusFilter('active')}
-            className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
+            onClick={() => setStatusFilter((prev) => (prev === 'active' ? 'all' : 'active'))}
+            className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer backdrop-blur-xs ${
+              statusFilter === 'active'
+                ? 'bg-emerald-500/20 border-emerald-400/50 ring-2 ring-emerald-400/30'
+                : 'bg-white/5 hover:bg-white/10 border-white/10'
+            }`}
+            title="Klik untuk memfilter menu aktif kasir"
           >
             <div className="flex items-center justify-between text-emerald-300 mb-0.5 sm:mb-1">
               <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Menu Aktif Kasir</span>
@@ -527,7 +553,15 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">Tayang di mesin kasir</p>
           </div>
 
-          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
+          <div
+            onClick={() => setTypeFilter((prev) => (prev === 'FNB' ? 'all' : 'FNB'))}
+            className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer backdrop-blur-xs ${
+              typeFilter === 'FNB'
+                ? 'bg-teal-500/20 border-teal-400/50 ring-2 ring-teal-400/30'
+                : 'bg-white/5 hover:bg-white/10 border-white/10'
+            }`}
+            title="Klik untuk memfilter hidangan olahan F&B (BOM resep)"
+          >
             <div className="flex items-center justify-between text-teal-300 mb-0.5 sm:mb-1">
               <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Olahan F&amp;B</span>
               <UtensilsCrossed className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-300" />
@@ -536,7 +570,15 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">Potong bahan baku via BOM</p>
           </div>
 
-          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
+          <div
+            onClick={() => setTypeFilter((prev) => (prev === 'RETAIL' ? 'all' : 'RETAIL'))}
+            className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer backdrop-blur-xs ${
+              typeFilter === 'RETAIL'
+                ? 'bg-indigo-500/20 border-indigo-400/50 ring-2 ring-indigo-400/30'
+                : 'bg-white/5 hover:bg-white/10 border-white/10'
+            }`}
+            title="Klik untuk memfilter produk kemasan ritel fisik"
+          >
             <div className="flex items-center justify-between text-indigo-300 mb-0.5 sm:mb-1">
               <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Ritel Fisik</span>
               <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-300" />
@@ -551,7 +593,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
       <ActionBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Cari nama menu, SKU, atau scan barcode..."
+        searchPlaceholder="Cari nama menu, varian, kategori, SKU, barcode..."
         secondaryAction={
           <div className="relative w-full sm:w-auto" ref={toolsDropdownRef}>
             <button
@@ -681,6 +723,83 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         }
       />
 
+      {/* Active Search & Filter Information Bar (Feedback Detail Pencarian) */}
+      {(searchTerm || selectedCategory !== 'all' || statusFilter !== 'all' || typeFilter !== 'all') && (
+        <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3 sm:px-4 sm:py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-950 animate-fadeIn">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="font-bold text-slate-500">Filter Aktif:</span>
+            {searchTerm && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-blue-900 shadow-2xs">
+                Kata kunci: &ldquo;{searchTerm}&rdquo;
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="hover:text-rose-600 cursor-pointer p-0.5 rounded-full"
+                  title="Hapus filter kata kunci"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {selectedCategory !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-blue-900 shadow-2xs">
+                Kategori: {categories.find((c) => c.id === selectedCategory)?.name || selectedCategory}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('all')}
+                  className="hover:text-rose-600 cursor-pointer p-0.5 rounded-full"
+                  title="Hapus filter kategori"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {statusFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-blue-900 shadow-2xs">
+                Status: {statusFilter === 'active' ? 'Aktif Kasir' : 'Nonaktif'}
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className="hover:text-rose-600 cursor-pointer p-0.5 rounded-full"
+                  title="Hapus filter status"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {typeFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-blue-900 shadow-2xs">
+                Tipe: {typeFilter === 'FNB' ? 'Olahan F&B' : 'Ritel Fisik'}
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('all')}
+                  className="hover:text-rose-600 cursor-pointer p-0.5 rounded-full"
+                  title="Hapus filter tipe"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            <span className="text-slate-500 font-semibold ml-1">
+              (Ditemukan <strong>{filteredProducts.length}</strong> dari {stats.total} produk)
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedCategory('all');
+              setStatusFilter('all');
+              setTypeFilter('all');
+            }}
+            className="text-xs font-bold text-blue-800 hover:text-rose-600 underline cursor-pointer ml-auto"
+          >
+            Reset Semua Filter
+          </button>
+        </div>
+      )}
+
       {/* Filter Bar Terpadu: Status & Kategori */}
       <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         {/* Status Filter Pills */}
@@ -778,17 +897,6 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 {cat.name} {cat.productCount !== undefined && `(${cat.productCount})`}
               </button>
             ))}
-
-            {canManage && onNavigateToCategories && (
-              <button
-                type="button"
-                onClick={onNavigateToCategories}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-blue-900/40 text-blue-900 hover:bg-blue-50 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer shrink-0"
-                title="Kelola Kategori"
-              >
-                <Plus className="w-3 h-3" /> Kategori
-              </button>
-            )}
           </div>
 
           {/* Tombol Geser Kanan */}
@@ -852,7 +960,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     </div>
                   </td>
                 </tr>
-              ) : products.length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={canManage ? 9 : 8} className="py-12 text-center text-slate-400">
                     <Layers className="w-8 h-8 mx-auto text-slate-300 mb-2" />
@@ -1135,7 +1243,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               <div className="w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
               <span className="text-xs">Memuat katalog produk...</span>
             </div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <div className="py-12 text-center text-slate-400 px-4">
               <Layers className="w-8 h-8 mx-auto text-slate-300 mb-2" />
               <p className="font-semibold text-xs text-slate-700">Tidak ada produk ditemukan</p>
@@ -1324,11 +1432,11 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         </div>
 
         {/* Pagination Produk */}
-        {!loading && products.length > 0 && (
+        {!loading && filteredProducts.length > 0 && (
           <TablePagination
             currentPage={safeCurrentPage}
             pageSize={pageSize}
-            totalItems={products.length}
+            totalItems={filteredProducts.length}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
             pageSizeOptions={[10, 25, 50, 100]}

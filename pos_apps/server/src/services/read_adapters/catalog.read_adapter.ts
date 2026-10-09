@@ -61,6 +61,9 @@ export class CatalogReadAdapter extends BaseReadAdapter {
         LOWER(p.name) LIKE $${searchIdx} 
         OR LOWER(pv.sku) LIKE $${searchIdx} 
         OR LOWER(COALESCE(pv.barcode, '')) LIKE $${searchIdx}
+        OR LOWER(COALESCE(c.name, '')) LIKE $${searchIdx}
+        OR LOWER(COALESCE(pv.name, '')) LIKE $${searchIdx}
+        OR LOWER(COALESCE(p.description, '')) LIKE $${searchIdx}
       )`);
     }
 
