@@ -410,10 +410,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 onClose();
                 onViewReceipt(order);
               }}
-              className="px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+              className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
               title="Lihat Pratinjau Struk Termal"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 shrink-0" />
               <span>Lihat Struk</span>
             </button>
 
@@ -425,10 +425,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   onClose();
                   onAppendOrder(order);
                 }}
-                className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="h-10 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
                 title="Buat Pesanan Susulan untuk Meja Ini (Khusus Belum Bayar)"
               >
-                <UtensilsCrossed className="w-4 h-4 text-amber-700" />
+                <UtensilsCrossed className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>+ Susulan</span>
               </button>
             )}
@@ -441,10 +441,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   onClose();
                   onVoidOrder(order);
                 }}
-                className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="h-10 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
                 title="Batalkan Transaksi (Approval Supervisor)"
               >
-                <Ban className="w-4 h-4" />
+                <Ban className="w-4 h-4 shrink-0" />
                 <span>Void</span>
               </button>
             )}
@@ -453,7 +453,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
           >
             Tutup
           </button>

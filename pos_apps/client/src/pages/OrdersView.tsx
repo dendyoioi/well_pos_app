@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Receipt,
   Search,
-  RefreshCw,
   Printer,
   Banknote,
   QrCode,
@@ -589,17 +588,17 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
           </p>
         </div>
 
-        {/* Action Buttons: Ringkasan WA, Ekspor Excel, Cetak Rekap PDF, Segarkan Data */}
+        {/* Action Buttons: Ringkasan WA, Ekspor Excel, Cetak Rekap PDF */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           {/* Tombol Ringkasan WhatsApp */}
           <button
             type="button"
             onClick={() => setWhatsappModalOpen(true)}
             disabled={loading || shiftFilteredOrders.length === 0}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
             title="Kirim atau Salin Ringkasan Penjualan ke WhatsApp"
           >
-            <MessageCircle className="w-4 h-4 text-emerald-600" />
+            <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>Ringkasan WA</span>
           </button>
 
@@ -613,14 +612,14 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
               }
             }}
             disabled={loading || (activeSubTab === 'invoices' ? filteredOrders.length === 0 : false)}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
             title={
               activeSubTab === 'invoices'
                 ? 'Ekspor Daftar Faktur Penjualan ke Excel / CSV'
                 : 'Ekspor Rekap Item Menu Terjual ke Excel / CSV'
             }
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               {activeSubTab === 'invoices' ? 'Ekspor Faktur (Excel)' : 'Ekspor Rekap Item (Excel)'}
             </span>
@@ -637,27 +636,17 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
               }
             }}
             disabled={loading || (activeSubTab === 'invoices' ? filteredOrders.length === 0 : false)}
-            className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+            className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
             title={
               activeSubTab === 'invoices'
                 ? 'Cetak Dokumen Daftar Faktur Penjualan (PDF)'
                 : 'Cetak Dokumen Rekapitulasi Item Menu Terjual (PDF)'
             }
           >
-            <FileText className="w-4 h-4 text-blue-900" />
+            <FileText className="w-4 h-4 text-blue-900 shrink-0" />
             <span>
               {activeSubTab === 'invoices' ? 'Cetak Faktur (PDF)' : 'Cetak Rekap Item (PDF)'}
             </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => loadOrders()}
-            disabled={loading}
-            className="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 text-blue-900 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
           </button>
         </div>
       </div>
@@ -702,7 +691,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto min-w-0">
           {/* Dropdown Filter Saluran Pesanan */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
             <Filter className="w-4 h-4 text-blue-900 shrink-0" />
             <span className="text-xs font-bold text-slate-600 shrink-0">Saluran:</span>
             <select
@@ -724,7 +713,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
           </div>
 
           {/* Filter Kasir: Smart Default untuk Kasir (Akun Saya) atau Pilihan Semua Kasir di Toko Ini */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
             <UserCheck className="w-4 h-4 text-blue-900 shrink-0" />
             <span className="text-xs font-bold text-slate-600 shrink-0">Kasir:</span>
             <select
@@ -758,7 +747,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
           <button
             type="button"
             onClick={() => setShowDateDrop((v) => !v)}
-            className="flex items-center justify-between sm:justify-start gap-2 bg-white border border-slate-200 hover:border-blue-900/30 rounded-xl px-3 py-1.5 w-full sm:w-auto max-w-full shadow-2xs text-xs font-bold text-slate-700 transition-all cursor-pointer"
+            className="flex items-center justify-between sm:justify-start gap-2 bg-white border border-slate-200 hover:border-blue-900/30 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full shadow-2xs text-xs font-bold text-slate-700 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-2 min-w-0 truncate">
               <Calendar className="w-4 h-4 text-blue-900 shrink-0" />
@@ -999,12 +988,12 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari nomor invoice (INV/...) atau nama pelanggan..."
-              className="w-full bg-white border border-slate-200 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm font-medium transition-all outline-none"
+              className="w-full h-10 bg-white border border-slate-200 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl pl-10 pr-4 text-xs sm:text-sm font-medium transition-all outline-none"
             />
           </div>
           <button
             type="submit"
-            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 cursor-pointer"
+            className="h-10 px-5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 cursor-pointer flex items-center justify-center active:scale-95"
           >
             Cari
           </button>
@@ -1159,7 +1148,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                             <button
                               type="button"
                               onClick={() => handleViewDetail(order)}
-                              className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                              className="w-9 h-9 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                               title="Lihat Rincian Lengkap Transaksi"
                             >
                               <Eye className="w-4 h-4" />
@@ -1169,7 +1158,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                             <button
                               type="button"
                               onClick={() => handleViewReceipt(order)}
-                              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                              className="w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                               title="Cetak / Pratinjau Struk Termal"
                             >
                               <Printer className="w-4 h-4" />
@@ -1186,7 +1175,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                                   <button
                                     type="button"
                                     onClick={() => onAppendOrder(order)}
-                                    className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                                    className="w-9 h-9 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                                     title="Tambah Pesanan Susulan (Khusus Meja Belum Bayar)"
                                   >
                                     <UtensilsCrossed className="w-4 h-4 text-amber-700" />
@@ -1200,7 +1189,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                                     setOrderToVoid(order);
                                     setVoidModalOpen(true);
                                   }}
-                                  className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                                  className="w-9 h-9 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                                   title="Batalkan Transaksi (Approval Supervisor/Owner)"
                                 >
                                   <Ban className="w-4 h-4" />
@@ -1302,7 +1291,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                       <button
                         type="button"
                         onClick={() => handleViewDetail(order)}
-                        className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                        className="w-9 h-9 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                         title="Lihat Rincian Lengkap Transaksi"
                       >
                         <Eye className="w-4 h-4" />
@@ -1312,7 +1301,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                       <button
                         type="button"
                         onClick={() => handleViewReceipt(order)}
-                        className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                        className="w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                         title="Cetak / Pratinjau Struk Termal"
                       >
                         <Printer className="w-4 h-4" />
@@ -1329,7 +1318,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                             <button
                               type="button"
                               onClick={() => onAppendOrder(order)}
-                              className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                              className="w-9 h-9 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                               title="Tambah Pesanan Susulan (Khusus Meja Belum Bayar)"
                             >
                               <UtensilsCrossed className="w-4 h-4 text-amber-700" />
@@ -1343,7 +1332,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                               setOrderToVoid(order);
                               setVoidModalOpen(true);
                             }}
-                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
+                            className="w-9 h-9 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs inline-flex items-center justify-center active:scale-95 cursor-pointer"
                             title="Batalkan Transaksi (Approval Supervisor/Owner)"
                           >
                             <Ban className="w-4 h-4" />
@@ -1527,7 +1516,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
               <button
                 type="button"
                 onClick={() => setWhatsappModalOpen(false)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold transition-all cursor-pointer"
               >
                 Tutup
               </button>
@@ -1544,9 +1533,9 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                     setToastMsg(null);
                   }, 4000);
                 }}
-                className="px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="h-10 px-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 shrink-0" />
                 <span>{copiedWaText ? '✓ Tersalin' : 'Salin Teks'}</span>
               </button>
 
@@ -1557,9 +1546,9 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                   const encoded = encodeURIComponent(text);
                   window.open(`https://wa.me/?text=${encoded}`, '_blank');
                 }}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
-                <MessageCircle className="w-4 h-4 text-white" />
+                <MessageCircle className="w-4 h-4 text-white shrink-0" />
                 <span>Kirim via WhatsApp</span>
               </button>
             </div>

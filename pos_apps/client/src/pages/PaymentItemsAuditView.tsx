@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Receipt,
   Search,
-  RefreshCw,
   FileSpreadsheet,
   FileText,
   Banknote,
@@ -648,21 +647,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               type="button"
               onClick={handleExportCsv}
               disabled={loading || currentItemsList.length === 0}
-              className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
+              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
               title="Ekspor Rincian Item ke File Excel / CSV"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Ekspor CSV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => loadOrders()}
-              disabled={loading}
-              className="px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
-            >
-              <RefreshCw className={`w-4 h-4 text-blue-900 ${loading ? 'animate-spin' : ''}`} />
-              <span>Segarkan</span>
             </button>
           </div>
         </div>
@@ -883,7 +872,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Search menu */}
             <div className="relative flex-1 sm:w-64">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -892,7 +881,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Cari menu / kategori..."
-                className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium focus:border-blue-900 outline-none"
+                className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-xs font-medium focus:border-blue-900 outline-none transition-all"
               />
             </div>
 
@@ -901,14 +890,14 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCostAndProfit(!showCostAndProfit)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                className={`h-10 px-3 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95 ${
                   showCostAndProfit
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-600'
                     : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
                 }`}
                 title="Tampilkan HPP dan Estimasi Margin Laba Kotor (Khusus Owner/Admin)"
               >
-                <TrendingUp className="w-3.5 h-3.5" />
+                <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                 <span className="hidden sm:inline">
                   {showCostAndProfit ? 'Sembunyikan HPP' : 'HPP & Margin'}
                 </span>
@@ -921,10 +910,10 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               type="button"
               onClick={handleExportCsv}
               disabled={currentItemsList.length === 0}
-              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer shrink-0"
+              className="h-10 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer shrink-0 active:scale-95"
               title="Ekspor tabel menu ini ke CSV / Excel"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               <span className="hidden sm:inline">Excel</span>
             </button>
 
@@ -933,10 +922,10 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               type="button"
               onClick={handleExportPdf}
               disabled={currentItemsList.length === 0}
-              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer shrink-0"
+              className="h-10 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer shrink-0 active:scale-95"
               title="Cetak rekapitulasi item menu ini ke dokumen PDF"
             >
-              <FileText className="w-3.5 h-3.5 text-blue-900" />
+              <FileText className="w-3.5 h-3.5 text-blue-900 shrink-0" />
               <span className="hidden sm:inline">PDF</span>
             </button>
           </div>
