@@ -192,7 +192,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-900 shrink-0">
               <Warehouse className="w-5 h-5 shrink-0" />
             </div>
             <div className="min-w-0">
@@ -200,7 +200,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 Kelola Gudang Logistik
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                Pusat penyimpanan bahan baku, penerimaan pengadaan (PO), dan pasokan otomatis ke toko cabang
+                Pusat penyimpanan bahan baku, penerimaan pengadaan (PO), dan pasokan otomatis ke seluruh toko / outlet
               </p>
             </div>
           </div>
@@ -208,7 +208,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Gudang Baru</span>
@@ -221,7 +221,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Card 1: Total Gudang Aktif */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
             <Warehouse className="w-6 h-6" />
           </div>
           <div>
@@ -234,11 +234,11 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
         {/* Card 2: Toko yang Disuplai */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
             <Store className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Toko Cabang Terhubung</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Toko / Outlet Terhubung</p>
             <p className="text-2xl font-black text-slate-900 mt-0.5">
               {totalStoresSupplied} <span className="text-sm font-semibold text-slate-400">/ {stores.length} Toko POS</span>
             </p>
@@ -246,14 +246,14 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
         </div>
 
         {/* Card 3: Info Rantai Pasok */}
-        <div className="bg-indigo-900 text-white p-5 rounded-2xl shadow-xs flex items-center justify-between gap-4">
+        <div className="bg-blue-950 text-white p-5 rounded-2xl shadow-xs flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Mode Logistik Terpadu</p>
-            <p className="text-sm font-medium text-indigo-100 mt-1 leading-snug">
+            <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Mode Logistik Terpadu</p>
+            <p className="text-sm font-medium text-blue-100 mt-1 leading-snug">
               Beralih ke gudang untuk mengelola stok bahan mentah &amp; penerimaan supplier.
             </p>
           </div>
-          <Boxes className="w-8 h-8 text-indigo-300 shrink-0 opacity-80" />
+          <Boxes className="w-8 h-8 text-blue-300 shrink-0 opacity-80" />
         </div>
       </div>
 
@@ -271,7 +271,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+            className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
           />
         </div>
         <div className="text-xs font-semibold text-slate-500 self-end sm:self-center">
@@ -284,12 +284,12 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
           ========================================================================= */}
       {loading ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3 shadow-xs">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm font-semibold text-slate-500">Memuat data gudang logistik...</p>
         </div>
       ) : filteredWarehouses.length === 0 ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-900 flex items-center justify-center mx-auto">
             <Warehouse className="w-8 h-8" />
           </div>
           <div className="max-w-md mx-auto space-y-1">
@@ -299,13 +299,13 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             <p className="text-xs text-slate-500 leading-relaxed">
               {searchQuery
                 ? `Tidak ada gudang yang cocok dengan kata kunci "${searchQuery}".`
-                : 'Buat gudang pertama Anda untuk menjadi pusat persediaan bahan baku dan menyuplai stok toko-toko cabang secara otomatis (auto-backflush).'}
+                : 'Buat gudang pertama Anda untuk menjadi pusat persediaan bahan baku dan menyuplai stok toko / outlet secara otomatis (auto-backflush).'}
             </p>
           </div>
           {!searchQuery && (
             <button
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Buat Gudang Sekarang</span>
@@ -323,7 +323,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 key={wh.id}
                 className={`bg-white rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
                   isCurrentlyActive
-                    ? 'border-indigo-500 ring-2 ring-indigo-500/20'
+                    ? 'border-blue-900 ring-2 ring-blue-900/10'
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
@@ -331,7 +331,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 <div className="p-5 sm:p-6 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
                         <Warehouse className="w-6 h-6" />
                       </div>
                       <div className="min-w-0">
@@ -340,7 +340,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                             {wh.name}
                           </h3>
                         </div>
-                        <span className="inline-block text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md mt-0.5">
+                        <span className="inline-block text-[11px] font-bold text-blue-900 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md mt-0.5">
                           🏭 Gudang Logistik Pusat
                         </span>
                       </div>
@@ -373,8 +373,8 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
                       <span className="flex items-center gap-1.5">
-                        <Store className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Menyuplai {suppliedStores.length} Toko Cabang:</span>
+                        <Store className="w-3.5 h-3.5 text-blue-900" />
+                        <span>Menyuplai {suppliedStores.length} Toko / Outlet:</span>
                       </span>
                     </div>
                     {suppliedStores.length > 0 ? (
@@ -390,7 +390,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                       </div>
                     ) : (
                       <p className="text-[10px] text-slate-400 italic pt-0.5">
-                        Belum ada toko yang memilih gudang ini sebagai sumber pasokan.
+                        Belum ada toko / outlet yang memilih gudang ini sebagai sumber pasokan.
                       </p>
                     )}
                   </div>
@@ -410,7 +410,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                       </span>
                     )}
                     {isCurrentlyActive && (
-                      <span className="text-[10px] font-extrabold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-extrabold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
                         Sedang Dipilih
                       </span>
                     )}
@@ -420,8 +420,8 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                     onClick={() => onSelectActiveOutlet(wh.id)}
                     className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                       isCurrentlyActive
-                        ? 'bg-indigo-900 text-white hover:bg-indigo-950 shadow-xs'
-                        : 'bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 hover:border-indigo-300'
+                        ? 'bg-blue-900 text-white hover:bg-blue-950 shadow-xs'
+                        : 'bg-white hover:bg-blue-50 text-blue-900 border border-blue-200 hover:border-blue-300'
                     }`}
                   >
                     <span>{isCurrentlyActive ? 'Buka Mode Gudang' : 'Pilih & Buka Gudang'}</span>
@@ -459,7 +459,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
                   <Warehouse className="w-5 h-5 shrink-0" />
                 </div>
                 <div className="min-w-0">
@@ -485,13 +485,13 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
               )}
 
               {/* Callout Panduan */}
-              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 space-y-1">
+              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 space-y-1">
                 <p className="font-bold flex items-center gap-1.5">
-                  <Boxes className="w-4 h-4 text-indigo-700" />
+                  <Boxes className="w-4 h-4 text-blue-900" />
                   <span>Karakteristik Gudang Logistik</span>
                 </p>
-                <p className="text-indigo-800 leading-relaxed">
-                  Gudang tidak memiliki menu kasir (POS). Fungsinya murni untuk penerimaan barang dari supplier (PO), stock opname bahan mentah, serta sumber pasokan bahan baku bagi toko-toko cabang.
+                <p className="text-blue-900 leading-relaxed">
+                  Gudang tidak memiliki menu kasir (POS). Fungsinya murni untuk penerimaan barang dari supplier (PO), stock opname bahan mentah, serta sumber pasokan bahan baku bagi seluruh toko / outlet.
                 </p>
               </div>
 
@@ -507,7 +507,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   placeholder="Contoh: Gudang Logistik Pusat Jakarta"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
                 />
               </div>
 
@@ -532,7 +532,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   placeholder="Contoh: Kawasan Industri Pergudangan Blok C No. 12, Cakung, Jakarta Timur"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium resize-none"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium resize-none"
                 />
               </div>
             </form>
@@ -550,7 +550,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 type="submit"
                 form="add-warehouse-form"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
                 {submitting ? 'Menyimpan...' : 'Buat Gudang Baru'}
               </button>
@@ -568,7 +568,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
                   <Warehouse className="w-5 h-5 shrink-0" />
                 </div>
                 <div className="min-w-0">
@@ -596,17 +596,17 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 </div>
               )}
 
-              {/* Status Pasokan Toko Cabang */}
+              {/* Status Pasokan Toko / Outlet */}
               {(() => {
                 const suppliedStores = stores.filter((s) => s.warehouseId === editingWarehouse.id);
                 return (
-                  <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-950 space-y-1">
+                  <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 space-y-1">
                     <p className="font-bold flex items-center gap-1.5">
-                      <Store className="w-4 h-4 text-indigo-700" />
-                      <span>Status Pasokan Cabang</span>
+                      <Store className="w-4 h-4 text-blue-900" />
+                      <span>Status Pasokan Toko / Outlet</span>
                     </p>
-                    <p className="text-indigo-800 leading-relaxed">
-                      Gudang ini saat ini menyuplai <strong>{suppliedStores.length} toko cabang</strong>. Perubahan nama atau kontak gudang akan langsung terhubung ke seluruh mutasi dan pengadaan toko tersebut.
+                    <p className="text-blue-900 leading-relaxed">
+                      Gudang ini saat ini menyuplai <strong>{suppliedStores.length} toko / outlet</strong>. Perubahan nama atau kontak gudang akan langsung terhubung ke seluruh mutasi dan pengadaan toko tersebut.
                     </p>
                   </div>
                 );
@@ -623,7 +623,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
                 />
               </div>
 
@@ -644,7 +644,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   rows={3}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium resize-none"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium resize-none"
                 />
               </div>
 
@@ -655,12 +655,12 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded-md text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded-md text-blue-900 focus:ring-blue-900"
                   />
                   <div>
                     <p className="text-xs font-bold text-slate-800">Status Gudang Aktif</p>
                     <p className="text-[11px] text-slate-500">
-                      Gudang aktif dapat dipilih sebagai sumber pasokan stok bahan baku oleh toko cabang.
+                      Gudang aktif dapat dipilih sebagai sumber pasokan stok bahan baku oleh toko / outlet.
                     </p>
                   </div>
                 </label>
@@ -683,7 +683,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 type="submit"
                 form="edit-warehouse-form"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
                 {submitting ? 'Menyimpan...' : 'Simpan Perubahan Gudang'}
               </button>
