@@ -21,7 +21,7 @@ import {
   Barcode,
   Sparkles,
 } from 'lucide-react';
-import type { Product, StockMovement } from '../types/product';
+import type { Product, StockMovement, Category } from '../types/product';
 import type { Outlet } from '../types/outlet';
 import type { RecipeInventoryItem } from '../types/recipe';
 import type { ExpiryAlertBatch } from '../types/purchasing';
@@ -68,6 +68,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [showExpiryModal, setShowExpiryModal] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -108,7 +109,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const [prodRes, movRes] = await Promise.all([
+      const [prodRes, movRes, catRes] = await Promise.all([
         api.getProducts({ outletId: activeOutlet?.id }),
         api.getStockMovements({
           outletId: activeOutlet?.id,
@@ -116,10 +117,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           search: movementSearch.trim() || undefined,
           type: movementTypeFilter !== 'ALL' ? movementTypeFilter : undefined,
         }),
+        api.getCategories(activeOutlet?.id),
       ]);
 
       if (prodRes.status === 'success') setProducts(prodRes.data);
       if (movRes.status === 'success') setMovements(movRes.data);
+      if (catRes.status === 'success' && catRes.data) setCategories(catRes.data);
     } catch (err) {
       console.error('Gagal mengambil data inventori:', err);
     } finally {
@@ -279,19 +282,33 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     return s > minAlert;
   }).length;
 
-  // Kategori unik & hitungan produk jadi untuk filter
-  const uniqueCategories = useMemo(() => {
-    return Array.from(
-      new Set(products.map((p) => p.category?.name).filter(Boolean))
-    ) as string[];
-  }, [products]);
-
+  // Kategori unik & hitungan produk jadi untuk filter (selaras 100% dengan master Menu & Produk)
   const categoriesWithCounts = useMemo(() => {
-    return uniqueCategories.map((catName) => ({
-      name: catName,
-      count: products.filter((p) => p.category?.name === catName).length,
-    }));
-  }, [uniqueCategories, products]);
+    const map = new Map<string, { id?: string; name: string; count: number }>();
+
+    // 1. Masukkan semua master kategori (termasuk yang 0 produk) agar jumlah kategori sama persis dengan Menu & Produk
+    categories.forEach((c) => {
+      map.set(c.name, {
+        id: c.id,
+        name: c.name,
+        count: 0,
+      });
+    });
+
+    // 2. Hitung jumlah produk per kategori (dan tampung jika ada nama kategori dari produk yang belum ada di master)
+    products.forEach((p) => {
+      const catName = p.category?.name;
+      if (catName) {
+        if (!map.has(catName)) {
+          map.set(catName, { id: p.category?.id, name: catName, count: 0 });
+        }
+        const item = map.get(catName)!;
+        item.count += 1;
+      }
+    });
+
+    return Array.from(map.values());
+  }, [categories, products]);
 
   // Filter produk jadi
   const filteredProducts = products.filter((p) => {
@@ -1165,36 +1182,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               {/* Filter, Search & Quick Chips Toolbar */}
               <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
                 <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-                  <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
-                    <div className="relative w-full sm:w-72">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        placeholder="Cari produk jadi (nama, SKU, barcode)..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all outline-none"
-                      />
-                    </div>
-
-                    {/* Kategori Filter Dropdown dengan Info Value */}
-                    {uniqueCategories.length > 0 && (
-                      <div className="relative w-full sm:w-auto">
-                        <select
-                          value={productCategoryFilter}
-                          onChange={(e) => setProductCategoryFilter(e.target.value)}
-                          className="w-full sm:w-auto appearance-none pr-9 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 hover:bg-slate-100/60 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none cursor-pointer transition-all"
-                        >
-                          <option value="ALL">Semua Kategori ({products.length})</option>
-                          {categoriesWithCounts.map((cat) => (
-                            <option key={cat.name} value={cat.name}>
-                              {cat.name} ({cat.count})
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    )}
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="Cari produk jadi (nama, SKU, barcode)..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all outline-none"
+                    />
                   </div>
 
                   <div className="text-xs text-slate-500 font-bold px-2 self-end md:self-auto">
