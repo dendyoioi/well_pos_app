@@ -3,7 +3,6 @@ import {
   Truck,
   Plus,
   Search,
-  RefreshCw,
   Phone,
   Mail,
   MapPin,
@@ -231,18 +230,10 @@ export const SuppliersView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={fetchSuppliers}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-            title="Muat Ulang Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
-          </button>
-          <button
-            type="button"
             onClick={handleOpenCreateModal}
-            className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Tambah Pemasok</span>
           </button>
         </div>
@@ -257,7 +248,7 @@ export const SuppliersView: React.FC = () => {
               <Building2 className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900">{suppliers.length} Vendor</p>
+          <p className="text-2xl font-black font-mono text-slate-900">{suppliers.length} Vendor</p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">Mitra rantai pasok terdaftar</p>
         </div>
 
@@ -268,7 +259,7 @@ export const SuppliersView: React.FC = () => {
               <CheckCircle2 className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-2xl font-black text-emerald-700">{activeCount} Vendor</p>
+          <p className="text-2xl font-black font-mono text-emerald-700">{activeCount} Vendor</p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">Siap menerima pesanan restock PO</p>
         </div>
 
@@ -279,13 +270,13 @@ export const SuppliersView: React.FC = () => {
               <Clock className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900">{avgTerms} Hari</p>
+          <p className="text-2xl font-black font-mono text-slate-900">{avgTerms} Hari</p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">Termin jatuh tempo pelunasan tagihan</p>
         </div>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -294,14 +285,14 @@ export const SuppliersView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama vendor, kode, telepon..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all outline-hidden"
+              className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all outline-hidden"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full sm:w-auto py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:border-blue-900 outline-hidden cursor-pointer"
+            className="w-full sm:w-auto h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-blue-900 outline-hidden cursor-pointer"
           >
             <option value="ALL">Semua Status ({suppliers.length})</option>
             <option value="ACTIVE">Aktif Saja ({activeCount})</option>
@@ -317,17 +308,17 @@ export const SuppliersView: React.FC = () => {
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
+          <table className="w-full text-left text-xs text-slate-600 min-w-[1050px]">
             <thead className="bg-slate-50/80 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200 tracking-wider">
               <tr>
-                <th className="px-5 py-3.5 pl-6">Kode</th>
-                <th className="px-4 py-3.5">Nama Vendor / Perusahaan</th>
-                <th className="px-4 py-3.5">Kontak Person (PIC)</th>
-                <th className="px-4 py-3.5">Telepon &amp; Email</th>
-                <th className="px-4 py-3.5">Alamat Gudang / Kantor</th>
-                <th className="px-4 py-3.5 text-center">Termin Bayar</th>
-                <th className="px-4 py-3.5 text-center">Status</th>
-                <th className="px-5 py-3.5 pr-6 text-right">Aksi</th>
+                <th className="px-5 py-3.5 pl-6 min-w-[110px] whitespace-nowrap">Kode</th>
+                <th className="px-4 py-3.5 min-w-[200px] whitespace-nowrap">Nama Vendor / Perusahaan</th>
+                <th className="px-4 py-3.5 min-w-[140px] whitespace-nowrap">Kontak Person (PIC)</th>
+                <th className="px-4 py-3.5 min-w-[160px] whitespace-nowrap">Telepon &amp; Email</th>
+                <th className="px-4 py-3.5 min-w-[180px] whitespace-nowrap">Alamat Gudang / Kantor</th>
+                <th className="px-4 py-3.5 min-w-[130px] text-center whitespace-nowrap">Termin Bayar</th>
+                <th className="px-4 py-3.5 min-w-[110px] text-center whitespace-nowrap">Status</th>
+                <th className="px-5 py-3.5 pr-6 min-w-[110px] text-right whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -352,7 +343,7 @@ export const SuppliersView: React.FC = () => {
               ) : (
                 paginatedSuppliers.map((sup) => (
                   <tr key={sup.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-5 py-3.5 pl-6 font-mono font-bold text-blue-950 text-xs">
+                    <td className="px-5 py-3.5 pl-6 font-mono font-bold text-blue-950 text-xs whitespace-nowrap">
                       {sup.code}
                     </td>
                     <td className="px-4 py-3.5">
@@ -368,7 +359,7 @@ export const SuppliersView: React.FC = () => {
                     <td className="px-4 py-3.5 font-semibold text-slate-700">
                       {sup.contactName || '-'}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 whitespace-nowrap">
                       {sup.phone ? (
                         <a
                           href={`https://wa.me/${sup.phone.replace(/[^0-9]/g, '')}`}
@@ -399,12 +390,12 @@ export const SuppliersView: React.FC = () => {
                         <span className="text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap font-mono">
                       <span className="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-[11px] text-slate-700">
                         {sup.paymentTermsDays === 0 ? 'Tunai (0 Hari)' : `Tempo ${sup.paymentTermsDays} Hari`}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       {sup.isActive ? (
                         <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
                           Aktif
@@ -415,12 +406,12 @@ export const SuppliersView: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 pr-6 text-right">
+                    <td className="px-5 py-3.5 pr-6 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleOpenEditModal(sup)}
-                          className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                          className="w-8 h-8 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center shadow-2xs"
                           title="Edit Pemasok"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -431,7 +422,7 @@ export const SuppliersView: React.FC = () => {
                             setDeletingSupplier(sup);
                             setDeleteConfirmOpen(true);
                           }}
-                          className="p-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                          className="w-8 h-8 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-all cursor-pointer flex items-center justify-center shadow-2xs"
                           title="Hapus Pemasok"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -595,18 +586,18 @@ export const SuppliersView: React.FC = () => {
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer"
+                  className="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer border border-slate-200"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-900/20 cursor-pointer flex items-center gap-1.5"
+                  className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-900/20 cursor-pointer flex items-center gap-1.5"
                 >
                   {saving ? (
                     <>

@@ -5,7 +5,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   ArrowLeftRight,
-  RefreshCw,
   ChevronDown,
   Package,
   Boxes,
@@ -348,20 +347,11 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               type="button"
               onClick={handleExportCSV}
               disabled={filteredMovements.length === 0}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-extrabold border border-white/15 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+              className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold border border-white/15 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
               title="Unduh data mutasi format Excel/CSV"
             >
               <Download className="w-4 h-4 shrink-0" />
               <span>Ekspor CSV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={fetchMovements}
-              title="Muat Ulang Riwayat Mutasi"
-              className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/15 cursor-pointer shrink-0"
-            >
-              <RefreshCw className={`w-4 h-4 shrink-0 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -379,7 +369,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <FileSpreadsheet className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 truncate">
+          <p className="text-xl sm:text-2xl font-black font-mono text-slate-900 truncate">
             {metrics.totalRecords.toLocaleString('id-ID')}
           </p>
           <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5 truncate">
@@ -397,7 +387,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <ArrowDownRight className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-emerald-700 truncate">
+          <p className="text-xl sm:text-2xl font-black font-mono text-emerald-700 truncate">
             +{metrics.totalInflow.toLocaleString('id-ID')}
           </p>
           <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5 truncate">
@@ -415,7 +405,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <ArrowUpRight className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-rose-600 truncate">
+          <p className="text-xl sm:text-2xl font-black font-mono text-rose-600 truncate">
             -{metrics.totalOutflow.toLocaleString('id-ID')}
           </p>
           <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5 truncate">
@@ -433,7 +423,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <SlidersHorizontal className="w-4 h-4 shrink-0" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-amber-800 truncate">
+          <p className="text-xl sm:text-2xl font-black font-mono text-amber-800 truncate">
             {metrics.totalAdjustments.toLocaleString('id-ID')} Kali
           </p>
           <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5 truncate">
@@ -501,7 +491,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari item, SKU, kode bahan, petugas, atau catatan mutasi..."
-            className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:border-blue-900 font-medium text-slate-800 transition-colors"
+            className="w-full h-10 pl-10 pr-4 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-blue-900 font-medium text-slate-800 transition-colors"
           />
         </form>
 
@@ -512,7 +502,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
             <select
               value={selectedOutletId}
               onChange={(e) => setSelectedOutletId(e.target.value)}
-              className="appearance-none py-2.5 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+              className="appearance-none h-10 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
             >
               <option value="ALL">Semua Lokasi &amp; Gudang</option>
               {outlets.map((o) => (
@@ -529,7 +519,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="appearance-none py-2.5 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+              className="appearance-none h-10 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
             >
               <option value="ALL">Semua Jenis Mutasi</option>
               <option value="SALE_OUT">Penjualan Kasir</option>
@@ -549,7 +539,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value as any)}
-              className="appearance-none py-2.5 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+              className="appearance-none h-10 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
             >
               <option value="ALL">Semua Periode</option>
               <option value="TODAY">Hari Ini</option>
@@ -565,7 +555,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
       {/* Tabel Riwayat Kartu Stok */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs min-w-[1050px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-500 font-bold text-[11px] uppercase tracking-wider">
                 <th className="py-3.5 px-4 pl-6 whitespace-nowrap">Waktu Transaksi</th>
