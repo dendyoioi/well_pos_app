@@ -275,6 +275,22 @@ export const recordStockIn = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'productId wajib jika bukan bahan baku' });
     }
 
+    const targetProdIn = await prisma.product.findFirst({
+      where: { id: productId, tenantId },
+      select: { id: true, name: true, type: true, unit: true },
+    });
+
+    if (!targetProdIn) {
+      return res.status(404).json({ status: 'error', message: 'Produk tidak ditemukan di akun bisnis ini' });
+    }
+
+    if (targetProdIn.type === 'COMPOSITE') {
+      return res.status(400).json({
+        status: 'error',
+        message: `Produk "${targetProdIn.name}" adalah menu olahan dapur F&B (Resep BOM) tanpa kartu stok fisik mandiri. Penerimaan stok masuk (kulakan) harus dicatat pada Bahan Baku pembuatnya di tab Bahan Baku.`,
+      });
+    }
+
     // Eksekusi atomik menggunakan Dual-Write Service
     const result = await prisma.$transaction(async (tx) => {
       await inventoryDualWriteService.recordStockIn(
@@ -394,6 +410,22 @@ export const recordStockOut = async (req: Request, res: Response) => {
 
     if (!productId) {
       return res.status(400).json({ status: 'error', message: 'productId wajib diisi untuk stok keluar' });
+    }
+
+    const targetProd = await prisma.product.findFirst({
+      where: { id: productId, tenantId },
+      select: { id: true, name: true, type: true, unit: true },
+    });
+
+    if (!targetProd) {
+      return res.status(404).json({ status: 'error', message: 'Produk tidak ditemukan di akun bisnis ini' });
+    }
+
+    if (targetProd.type === 'COMPOSITE') {
+      return res.status(400).json({
+        status: 'error',
+        message: `Produk "${targetProd.name}" adalah menu olahan dapur F&B (Resep BOM) tanpa kartu stok fisik mandiri. Pengurangan atau pembuangan persediaan (rusak/basi) harus dicatat pada Bahan Baku pembuatnya di tab Bahan Baku.`,
+      });
     }
 
     const opPreRows = await prisma.$queryRawUnsafe<any[]>(
@@ -616,6 +648,22 @@ export const recordStockAdjustment = async (req: Request, res: Response) => {
 
     if (!productId) {
       return res.status(400).json({ status: 'error', message: 'productId wajib jika bukan bahan baku' });
+    }
+
+    const targetProdAdj = await prisma.product.findFirst({
+      where: { id: productId, tenantId },
+      select: { id: true, name: true, type: true, unit: true },
+    });
+
+    if (!targetProdAdj) {
+      return res.status(404).json({ status: 'error', message: 'Produk tidak ditemukan di akun bisnis ini' });
+    }
+
+    if (targetProdAdj.type === 'COMPOSITE') {
+      return res.status(400).json({
+        status: 'error',
+        message: `Produk "${targetProdAdj.name}" adalah menu olahan dapur F&B (Resep BOM) tanpa kartu stok fisik mandiri. Opname fisik persediaan harus dilakukan melalui tab Bahan Baku.`,
+      });
     }
 
     const opAdjRows = await prisma.$queryRawUnsafe<any[]>(
@@ -1168,29 +1216,27 @@ export const recordBulkStockAdjustment = async (req: Request, res: Response) => 
           });
         } else if (item.productId) {
           // Penanganan Produk Retail Jadi
-          const opAdjRows = await tx.$queryRawUnsafe<any[]>(
-            `SELECT COALESCE(ib.quantity_on_hand, 0) as stock, p.name as product_name, p.unit
-             FROM "products" p
-             JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
-             JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
-             JOIN "storage_locations" sl ON sl.outlet_id = $1 AND sl.is_default = true AND sl.tenant_id = $3
-             LEFT JOIN "inventory_balances" ib ON ib.inventory_item_id = ii.id AND ib.storage_location_id = sl.id
-             WHERE p.id = $2 AND p.tenant_id = $3 LIMIT 1;`,
-            targetOutletId,
-            item.productId,
-            tenantId
-          );
-          const existing = opAdjRows && opAdjRows.length > 0 ? opAdjRows[0] : null;
-          if (!existing) continue;
-          const currentStock = Number(existing?.stock ?? 0);
-          const delta = item.actualStock - currentStock;
+          const prod = await tx.product.findFirst({
+            where: { id: item.productId, tenantId },
+            select: { id: true, name: true, type: true, unit: true },
+          });
 
-          await inventoryDualWriteService.recordStockAdjustment(
+          if (!prod) {
+            throw new Error(`Produk dengan ID "${item.productId}" tidak ditemukan.`);
+          }
+
+          if (prod.type === 'COMPOSITE') {
+            throw new Error(
+              `Produk "${prod.name}" adalah menu olahan dapur F&B (Resep BOM) tanpa saldo fisik mandiri. Opname fisik persediaan harus dilakukan melalui tab Bahan Baku.`
+            );
+          }
+
+          const res = await inventoryDualWriteService.recordStockAdjustment(
             {
               outletId: targetOutletId!,
               productId: item.productId,
               actualStock: item.actualStock,
-              notes: item.notes || generalNotes || `Stock Opname Massal: dari ${currentStock} ke ${item.actualStock}`,
+              notes: item.notes || generalNotes || `Stock Opname Massal ke ${item.actualStock}`,
             },
             { tx, tenantId: tenantId!, actorUserId: userId }
           );
@@ -1198,11 +1244,10 @@ export const recordBulkStockAdjustment = async (req: Request, res: Response) => 
           results.push({
             id: item.productId,
             type: 'PRODUCT',
-            name: existing?.product_name || 'Produk',
-            unit: existing?.unit || 'Unit',
-            previousStock: currentStock,
+            name: prod.name,
+            unit: prod.unit || 'Unit',
             actualStock: item.actualStock,
-            delta,
+            delta: 0,
           });
         }
       }
@@ -1371,9 +1416,17 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
         } else if (item.productId) {
           const prod = await tx.product.findFirst({
             where: { id: item.productId, tenantId },
-            select: { id: true },
+            select: { id: true, name: true, type: true, unit: true },
           });
-          if (!prod) continue;
+          if (!prod) {
+            throw new Error(`Produk dengan ID "${item.productId}" tidak ditemukan.`);
+          }
+
+          if (prod.type === 'COMPOSITE') {
+            throw new Error(
+              `Produk "${prod.name}" adalah menu olahan dapur (Resep BOM). Penerimaan stok masuk (kulakan) harus dicatat pada Bahan Baku pembuatnya.`
+            );
+          }
 
           const noteParts: string[] = [];
           if (poNumber) noteParts.push(`PO: ${poNumber}`);
@@ -1382,7 +1435,7 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
           if (generalNotes) noteParts.push(generalNotes);
           const finalNote = noteParts.length > 0 ? noteParts.join(' | ') : 'Penerimaan stok masuk massal';
 
-          const res = await inventoryDualWriteService.recordStockIn(
+          await inventoryDualWriteService.recordStockIn(
             {
               outletId: targetOutletId!,
               productId: item.productId,
@@ -1398,7 +1451,9 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
           results.push({
             id: item.productId,
             type: 'PRODUCT',
+            name: prod.name,
             quantity: item.quantity,
+            newStock: undefined,
           });
         }
       }
@@ -1532,27 +1587,19 @@ export const recordBulkStockOut = async (req: Request, res: Response) => {
             remainingStock: balanceAfter,
           });
         } else if (item.productId) {
-          const opPreRows = await tx.$queryRawUnsafe<any[]>(
-            `SELECT COALESCE(ib.quantity_on_hand, 0) as stock, p.name as product_name, p.unit
-             FROM "products" p
-             JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
-             JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
-             JOIN "storage_locations" sl ON sl.outlet_id = $1 AND sl.is_default = true AND sl.tenant_id = $3
-             LEFT JOIN "inventory_balances" ib ON ib.inventory_item_id = ii.id AND ib.storage_location_id = sl.id
-             WHERE p.id = $2 AND p.tenant_id = $3 LIMIT 1;`,
-            targetOutletId,
-            item.productId,
-            tenantId
-          );
+          const prod = await tx.product.findFirst({
+            where: { id: item.productId, tenantId },
+            select: { id: true, name: true, type: true, unit: true },
+          });
 
-          if (!opPreRows || opPreRows.length === 0) continue;
+          if (!prod) {
+            throw new Error(`Produk dengan ID "${item.productId}" tidak ditemukan.`);
+          }
 
-          const currentStock = Number(opPreRows && opPreRows.length > 0 ? opPreRows[0].stock : 0);
-          const productName = opPreRows && opPreRows.length > 0 ? opPreRows[0].product_name : 'Produk';
-          const productUnit = opPreRows && opPreRows.length > 0 ? opPreRows[0].unit : 'Unit';
-
-          if (currentStock < item.quantity) {
-            throw new Error(`Stok produk "${productName}" tidak mencukupi! Tersedia: ${currentStock} ${productUnit}, diminta keluar: ${item.quantity}.`);
+          if (prod.type === 'COMPOSITE') {
+            throw new Error(
+              `Produk "${prod.name}" adalah menu olahan dapur F&B (Resep BOM) tanpa saldo fisik mandiri. Pengurangan persediaan harus dilakukan melalui tab Bahan Baku.`
+            );
           }
 
           const reasonText = item.reason || generalReason || 'Barang Rusak / Kadaluarsa';
@@ -1572,9 +1619,9 @@ export const recordBulkStockOut = async (req: Request, res: Response) => {
           results.push({
             id: item.productId,
             type: 'PRODUCT',
-            name: productName,
+            name: prod.name,
             quantity: item.quantity,
-            remainingStock: currentStock - item.quantity,
+            remainingStock: undefined,
           });
         }
       }

@@ -30,6 +30,8 @@ export interface FormattedProductDTO {
   isLowStock: boolean;
   productType?: string;
   hasStock?: boolean;
+  hasRecipe?: boolean;
+  recipeId?: string | null;
   variants?: {
     id: string;
     sku?: string;

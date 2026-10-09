@@ -52,6 +52,8 @@ export interface CreateProductDTO {
   initialStock: number;
   minStockAlert?: number;
   outletId: string;
+  productType?: 'STANDARD' | 'COMPOSITE' | 'SERVICE_LABOR';
+  hasStock?: boolean;
 }
 
 export interface UpdateProductDTO {
@@ -66,6 +68,10 @@ export interface UpdateProductDTO {
   imageUrl?: string | null;
   minStockAlert?: number;
   isActive?: boolean;
+  productType?: 'STANDARD' | 'COMPOSITE' | 'SERVICE_LABOR';
+  hasStock?: boolean;
+  currentStock?: number;
+  outletId?: string;
 }
 
 // ==========================================

@@ -322,8 +322,27 @@ export const getInventoryItemsForRecipe = async (req: Request, res: Response) =>
       return res.status(400).json({ status: 'error', message: 'Konteks tenant tidak ditemukan' });
     }
 
+    const filter = (req.query.filter as string) || 'raw_only';
+    const whereClause: any = { tenantId, isActive: true };
+
+    if (filter === 'raw_only') {
+      // Isolasi ketat: HANYA bahan baku mentah dapur & kemasan (tidak terikat ke varian produk menu olahan/ritel)
+      whereClause.variants = {
+        none: {},
+      };
+    } else if (filter === 'exclude_composite') {
+      // Menolak produk olahan F&B dapur (COMPOSITE), tetapi mengizinkan barang ritel jika diperlukan
+      whereClause.variants = {
+        none: {
+          product: {
+            type: 'COMPOSITE',
+          },
+        },
+      };
+    }
+
     let items = await prisma.inventoryItem.findMany({
-      where: { tenantId, isActive: true },
+      where: whereClause,
       select: {
         id: true,
         itemCode: true,

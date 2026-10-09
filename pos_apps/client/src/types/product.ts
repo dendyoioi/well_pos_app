@@ -55,6 +55,8 @@ export interface Product {
   isLowStock?: boolean;
   productType?: string;
   hasStock?: boolean;
+  hasRecipe?: boolean;
+  recipeId?: string | null;
   modifiers?: ProductModifierGroup[];
   variants?: ProductVariant[];
   createdAt?: string;

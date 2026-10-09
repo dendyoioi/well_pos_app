@@ -16,6 +16,7 @@ import {
   Truck,
   Building2,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import type { Product } from '../types/product';
 import type { RecipeInventoryItem } from '../types/recipe';
@@ -29,7 +30,7 @@ export type BulkItemMode = 'PRODUCTS' | 'INGREDIENTS';
 export interface FullScreenBulkStockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (message?: string) => void;
   activeOutlet?: Outlet | null;
   initialMode?: BulkItemMode;
   initialOperation?: BulkOperationType;
@@ -483,6 +484,8 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
     // Transfer
     qtyTransfer: number;
     transferNotes: string;
+    // Tipe Olahan (BOM)
+    isComposite?: boolean;
   }
 
   const currentList: UnifiedRow[] = useMemo(() => {
@@ -490,6 +493,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
       return products.map((p) => {
         const sys = Number(p.stock || 0);
         const cost = Number(p.costPrice || 0);
+        const isComposite = p.productType === 'COMPOSITE' || p.hasStock === false;
 
         const op = productOpname[p.id] || { actualStock: sys, notes: '', isModified: false };
         const sin = productStockIn[p.id] || { quantity: 0, newCostPrice: cost, notes: '' };
@@ -516,6 +520,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
           stockOutNotes: sout.notes,
           qtyTransfer: trf.quantity,
           transferNotes: trf.notes,
+          isComposite,
         };
       });
     } else {
@@ -548,6 +553,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
           stockOutNotes: sout.notes,
           qtyTransfer: trf.quantity,
           transferNotes: trf.notes,
+          isComposite: false,
         };
       });
     }
@@ -601,19 +607,19 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
   const opnameFinancialImpact = currentList.reduce((acc, r) => acc + r.opnameDelta * r.costPrice, 0);
 
   // Stock In Stats
-  const stockInActiveRows = currentList.filter((r) => r.qtyIn > 0);
+  const stockInActiveRows = currentList.filter((r) => r.qtyIn > 0 && !r.isComposite);
   const stockInActiveCount = stockInActiveRows.length;
   const stockInTotalUnits = stockInActiveRows.reduce((acc, r) => acc + r.qtyIn, 0);
   const stockInTotalCost = stockInActiveRows.reduce((acc, r) => acc + r.qtyIn * (r.costPriceIn || r.costPrice), 0);
 
   // Stock Out Stats
-  const stockOutActiveRows = currentList.filter((r) => r.qtyOut > 0);
+  const stockOutActiveRows = currentList.filter((r) => r.qtyOut > 0 && !r.isComposite);
   const stockOutActiveCount = stockOutActiveRows.length;
   const stockOutTotalUnits = stockOutActiveRows.reduce((acc, r) => acc + r.qtyOut, 0);
   const stockOutTotalLoss = stockOutActiveRows.reduce((acc, r) => acc + r.qtyOut * r.costPrice, 0);
 
   // Transfer Stats
-  const transferActiveRows = currentList.filter((r) => r.qtyTransfer > 0);
+  const transferActiveRows = currentList.filter((r) => r.qtyTransfer > 0 && !r.isComposite);
   const transferActiveCount = transferActiveRows.length;
   const transferTotalUnits = transferActiveRows.reduce((acc, r) => acc + r.qtyTransfer, 0);
   const transferTotalAssetValue = transferActiveRows.reduce((acc, r) => acc + r.qtyTransfer * r.costPrice, 0);
@@ -631,11 +637,13 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
     try {
       if (operation === 'OPNAME') {
-        const itemsPayload = currentList.map((r) => ({
-          ...(mode === 'PRODUCTS' ? { productId: r.id } : { inventoryItemId: r.id }),
-          actualStock: r.actualStock,
-          notes: r.opnameNotes.trim() || undefined,
-        }));
+        const itemsPayload = currentList
+          .filter((r) => !r.isComposite)
+          .map((r) => ({
+            ...(mode === 'PRODUCTS' ? { productId: r.id } : { inventoryItemId: r.id }),
+            actualStock: r.actualStock,
+            notes: r.opnameNotes.trim() || undefined,
+          }));
 
         const res = await api.recordBulkStockAdjustment({
           outletId: activeOutlet?.id,
@@ -644,14 +652,14 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
         });
 
         if (res.status === 'success') {
-          onSuccess();
+          onSuccess(res.message);
           onClose();
         } else {
           setErrorMsg(res.message || 'Gagal menyimpan penyesuaian opname massal');
         }
       } else if (operation === 'STOCK_IN') {
         if (stockInActiveCount === 0) {
-          setErrorMsg('Masukkan jumlah stok masuk (Qty > 0) pada minimal 1 barang.');
+          setErrorMsg('Masukkan jumlah stok masuk (Qty > 0) pada minimal 1 barang fisik.');
           setSubmitting(false);
           return;
         }
@@ -672,14 +680,14 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
         });
 
         if (res.status === 'success') {
-          onSuccess();
+          onSuccess(res.message);
           onClose();
         } else {
           setErrorMsg(res.message || 'Gagal mencatat penerimaan stok masuk massal');
         }
       } else if (operation === 'STOCK_OUT') {
         if (stockOutActiveCount === 0) {
-          setErrorMsg('Masukkan jumlah stok keluar (Qty > 0) pada minimal 1 barang.');
+          setErrorMsg('Masukkan jumlah stok keluar (Qty > 0) pada minimal 1 barang fisik.');
           setSubmitting(false);
           return;
         }
@@ -707,7 +715,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
         });
 
         if (res.status === 'success') {
-          onSuccess();
+          onSuccess(res.message);
           onClose();
         } else {
           setErrorMsg(res.message || 'Gagal mencatat pengeluaran stok massal');
@@ -1261,13 +1269,18 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                       <td className="py-3 px-4">
                         <div className="space-y-0.5">
                           <span className="font-extrabold text-slate-900 block text-xs">{row.name}</span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.2 rounded font-bold text-slate-600">
                               {row.code}
                             </span>
                             <span className="text-[10px] text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded font-bold border border-blue-100">
                               {row.unit}
                             </span>
+                            {row.isComposite && (
+                              <span className="text-[9px] text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded font-black border border-amber-200">
+                                ✨ Olahan F&B (BOM)
+                              </span>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -1291,37 +1304,45 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
                           {/* Stok Sistem */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
-                            <span className="text-xs font-black text-slate-700">
-                              {row.systemStock.toLocaleString('id-ID')}
-                            </span>
+                            {row.isComposite ? (
+                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                            ) : (
+                              <span className="text-xs font-black text-slate-700">
+                                {row.systemStock.toLocaleString('id-ID')}
+                              </span>
+                            )}
                           </td>
 
                           {/* Input Stok Fisik Aktual */}
                           <td className="py-2.5 px-4 text-center">
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpnameStockChange(row.id, row.actualStock - 1)}
-                                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                min="0"
-                                value={row.actualStock}
-                                onChange={(e) => handleOpnameStockChange(row.id, parseFloat(e.target.value))}
-                                onFocus={(e) => e.target.select()}
-                                className="w-20 py-1.5 text-center text-xs font-black bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleOpnameStockChange(row.id, row.actualStock + 1)}
-                                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                +
-                              </button>
-                            </div>
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400 italic font-medium">Stok via Bahan Baku</span>
+                            ) : (
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpnameStockChange(row.id, row.actualStock - 1)}
+                                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualStock}
+                                  onChange={(e) => handleOpnameStockChange(row.id, parseFloat(e.target.value))}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-20 py-1.5 text-center text-xs font-black bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpnameStockChange(row.id, row.actualStock + 1)}
+                                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
                           </td>
 
                           {/* Selisih (Delta) */}
@@ -1364,67 +1385,83 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         <>
                           {/* Stok Saat Ini */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
-                            <span className="text-xs font-black text-slate-700">
-                              {row.systemStock.toLocaleString('id-ID')}
-                            </span>
+                            {row.isComposite ? (
+                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                            ) : (
+                              <span className="text-xs font-black text-slate-700">
+                                {row.systemStock.toLocaleString('id-ID')}
+                              </span>
+                            )}
                           </td>
 
                           {/* Input Qty Masuk */}
                           <td className="py-2.5 px-4 text-center">
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleStockInQtyChange(row.id, row.qtyIn - 1)}
-                                className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                min="0"
-                                value={row.qtyIn}
-                                onChange={(e) => handleStockInQtyChange(row.id, parseFloat(e.target.value))}
-                                onFocus={(e) => e.target.select()}
-                                className={`w-20 py-1.5 text-center text-xs font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 ${
-                                  row.qtyIn > 0 ? 'border-emerald-500 text-emerald-800' : 'border-slate-300 text-slate-700'
-                                }`}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleStockInQtyChange(row.id, row.qtyIn + 1)}
-                                className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                +
-                              </button>
-                            </div>
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400 italic font-medium">Kulakan di Bahan Baku</span>
+                            ) : (
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStockInQtyChange(row.id, row.qtyIn - 1)}
+                                  className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={row.qtyIn}
+                                  onChange={(e) => handleStockInQtyChange(row.id, parseFloat(e.target.value))}
+                                  onFocus={(e) => e.target.select()}
+                                  className={`w-20 py-1.5 text-center text-xs font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 ${
+                                    row.qtyIn > 0 ? 'border-emerald-500 text-emerald-800' : 'border-slate-300 text-slate-700'
+                                  }`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleStockInQtyChange(row.id, row.qtyIn + 1)}
+                                  className="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
                           </td>
 
                           {/* Input Harga Beli Satuan (Opsional) */}
                           <td className="py-2.5 px-4 text-right">
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.costPriceIn || ''}
-                              onChange={(e) => handleStockInPriceChange(row.id, parseFloat(e.target.value))}
-                              placeholder={formatRupiah(row.costPrice)}
-                              className="w-28 py-1.5 px-2 text-right text-xs font-semibold bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-600"
-                            />
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400">-</span>
+                            ) : (
+                              <input
+                                type="number"
+                                min="0"
+                                value={row.costPriceIn || ''}
+                                onChange={(e) => handleStockInPriceChange(row.id, parseFloat(e.target.value))}
+                                placeholder={formatRupiah(row.costPrice)}
+                                className="w-28 py-1.5 px-2 text-right text-xs font-semibold bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-600"
+                              />
+                            )}
                           </td>
 
                           {/* Subtotal Belanja */}
                           <td className="py-3 px-4 text-right font-black text-emerald-800">
-                            {formatRupiah(row.qtyIn * (row.costPriceIn || row.costPrice))}
+                            {row.isComposite ? '-' : formatRupiah(row.qtyIn * (row.costPriceIn || row.costPrice))}
                           </td>
 
                           {/* Catatan Baris */}
                           <td className="py-2.5 px-4">
-                            <input
-                              type="text"
-                              value={row.stockInNotes}
-                              onChange={(e) => handleStockInNotesChange(row.id, e.target.value)}
-                              placeholder="Contoh: Dus segel, bonus 1 pcs..."
-                              className="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-emerald-600 font-medium"
-                            />
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                value={row.stockInNotes}
+                                onChange={(e) => handleStockInNotesChange(row.id, e.target.value)}
+                                placeholder="Contoh: Dus segel, bonus 1 pcs..."
+                                className="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-emerald-600 font-medium"
+                              />
+                            )}
                           </td>
                         </>
                       )}
@@ -1436,44 +1473,52 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         <>
                           {/* Stok Saat Ini */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
-                            <span className="text-xs font-black text-slate-700">
-                              {row.systemStock.toLocaleString('id-ID')}
-                            </span>
+                            {row.isComposite ? (
+                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                            ) : (
+                              <span className="text-xs font-black text-slate-700">
+                                {row.systemStock.toLocaleString('id-ID')}
+                              </span>
+                            )}
                           </td>
 
                           {/* Input Qty Keluar */}
                           <td className="py-2.5 px-4 text-center">
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleStockOutQtyChange(row.id, row.qtyOut - 1)}
-                                className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                min="0"
-                                value={row.qtyOut}
-                                onChange={(e) => handleStockOutQtyChange(row.id, parseFloat(e.target.value))}
-                                onFocus={(e) => e.target.select()}
-                                className={`w-20 py-1.5 text-center text-xs font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 ${
-                                  row.qtyOut > row.systemStock
-                                    ? 'border-rose-600 text-rose-700 bg-rose-50/50'
-                                    : row.qtyOut > 0
-                                    ? 'border-rose-500 text-rose-800'
-                                    : 'border-slate-300 text-slate-700'
-                                }`}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleStockOutQtyChange(row.id, row.qtyOut + 1)}
-                                className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                +
-                              </button>
-                            </div>
-                            {row.qtyOut > row.systemStock && (
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400 italic font-medium">Buang/Rusak di Bahan Baku</span>
+                            ) : (
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStockOutQtyChange(row.id, row.qtyOut - 1)}
+                                  className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={row.qtyOut}
+                                  onChange={(e) => handleStockOutQtyChange(row.id, parseFloat(e.target.value))}
+                                  onFocus={(e) => e.target.select()}
+                                  className={`w-20 py-1.5 text-center text-xs font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 ${
+                                    row.qtyOut > row.systemStock
+                                      ? 'border-rose-600 text-rose-700 bg-rose-50/50'
+                                      : row.qtyOut > 0
+                                      ? 'border-rose-500 text-rose-800'
+                                      : 'border-slate-300 text-slate-700'
+                                  }`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleStockOutQtyChange(row.id, row.qtyOut + 1)}
+                                  className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+                            {!row.isComposite && row.qtyOut > row.systemStock && (
                               <div className="text-[10px] text-rose-600 font-black mt-1">
                                 Melebihi Stok!
                               </div>
@@ -1482,33 +1527,41 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
                           {/* Alasan Spesifik Baris */}
                           <td className="py-2.5 px-4">
-                            <select
-                              value={row.reasonOut}
-                              onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
-                              className="w-full py-1.5 px-2 text-[11px] bg-white border border-slate-200 rounded-lg font-bold text-slate-700 focus:outline-none focus:border-rose-600"
-                            >
-                              <option value="WASTE">Rusak / Basi (WASTE)</option>
-                              <option value="EXPIRED">Kadaluarsa (EXPIRED)</option>
-                              <option value="INTERNAL_USE">Konsumsi (INTERNAL)</option>
-                              <option value="SHRINKAGE">Penyusutan (SHRINKAGE)</option>
-                              <option value="OTHER">Lainnya</option>
-                            </select>
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400">-</span>
+                            ) : (
+                              <select
+                                value={row.reasonOut}
+                                onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
+                                className="w-full py-1.5 px-2 text-[11px] bg-white border border-slate-200 rounded-lg font-bold text-slate-700 focus:outline-none focus:border-rose-600"
+                              >
+                                <option value="WASTE">Rusak / Basi (WASTE)</option>
+                                <option value="EXPIRED">Kadaluarsa (EXPIRED)</option>
+                                <option value="INTERNAL_USE">Konsumsi (INTERNAL)</option>
+                                <option value="SHRINKAGE">Penyusutan (SHRINKAGE)</option>
+                                <option value="OTHER">Lainnya</option>
+                              </select>
+                            )}
                           </td>
 
                           {/* Kerugian HPP */}
                           <td className="py-3 px-4 text-right font-black text-rose-700">
-                            {formatRupiah(row.qtyOut * row.costPrice)}
+                            {row.isComposite ? '-' : formatRupiah(row.qtyOut * row.costPrice)}
                           </td>
 
                           {/* Catatan Baris */}
                           <td className="py-2.5 px-4">
-                            <input
-                              type="text"
-                              value={row.stockOutNotes}
-                              onChange={(e) => handleStockOutNotesChange(row.id, e.target.value)}
-                              placeholder="Keterangan kondisi..."
-                              className="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-rose-600 font-medium"
-                            />
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                value={row.stockOutNotes}
+                                onChange={(e) => handleStockOutNotesChange(row.id, e.target.value)}
+                                placeholder="Keterangan kondisi..."
+                                className="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:border-rose-600 font-medium"
+                              />
+                            )}
                           </td>
                         </>
                       )}
@@ -1520,47 +1573,57 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         <>
                           {/* Stok di Asal */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
-                            <span className="text-xs font-black text-slate-700">
-                              {row.systemStock.toLocaleString('id-ID')}
-                            </span>
+                            {row.isComposite ? (
+                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                            ) : (
+                              <span className="text-xs font-black text-slate-700">
+                                {row.systemStock.toLocaleString('id-ID')}
+                              </span>
+                            )}
                           </td>
 
                           {/* Input Qty Transfer */}
                           <td className="py-2.5 px-4 text-center">
-                            <div className="inline-flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleTransferQtyChange(row.id, row.qtyTransfer - 1)}
-                                className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                min="0"
-                                value={row.qtyTransfer}
-                                onChange={(e) => handleTransferQtyChange(row.id, parseFloat(e.target.value))}
-                                onFocus={(e) => e.target.select()}
-                                className={`w-20 py-1.5 text-center text-xs font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 ${
-                                  row.qtyTransfer > row.systemStock
-                                    ? 'border-rose-600 text-rose-700 bg-rose-50/50'
-                                    : row.qtyTransfer > 0
-                                    ? 'border-indigo-500 text-indigo-900'
-                                    : 'border-slate-300 text-slate-700'
-                                }`}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleTransferQtyChange(row.id, row.qtyTransfer + 1)}
-                                className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                              >
-                                +
-                              </button>
-                            </div>
-                            {row.qtyTransfer > row.systemStock && (
-                              <div className="text-[10px] text-rose-600 font-black mt-1">
-                                Melebihi Stok Asal!
+                            {row.isComposite ? (
+                              <span className="text-[10px] text-slate-400 italic font-medium">Transfer di Bahan Baku</span>
+                            ) : (
+                              <>
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTransferQtyChange(row.id, row.qtyTransfer - 1)}
+                                    className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                  type="number"
+                                  min="0"
+                                  value={row.qtyTransfer}
+                                  onChange={(e) => handleTransferQtyChange(row.id, parseFloat(e.target.value))}
+                                  onFocus={(e) => e.target.select()}
+                                  className={`w-20 py-1.5 text-center text-xs font-black bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 ${
+                                    row.qtyTransfer > row.systemStock
+                                      ? 'border-rose-600 text-rose-700 bg-rose-50/50'
+                                      : row.qtyTransfer > 0
+                                      ? 'border-indigo-500 text-indigo-900'
+                                      : 'border-slate-300 text-slate-700'
+                                  }`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleTransferQtyChange(row.id, row.qtyTransfer + 1)}
+                                  className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                >
+                                  +
+                                </button>
                               </div>
+                              {row.qtyTransfer > row.systemStock && (
+                                <div className="text-[10px] text-rose-600 font-black mt-1">
+                                  Melebihi Stok Asal!
+                                </div>
+                              )}
+                              </>
                             )}
                           </td>
 
@@ -1636,13 +1699,23 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         <span className="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-medium">
                           {row.categoryName}
                         </span>
+                        {row.isComposite && (
+                          <span className="text-[10px] bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded font-extrabold border border-amber-200">
+                            ✨ Olahan F&B (BOM)
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Status badge pada Opname */}
                     {operation === 'OPNAME' && (
                       <div className="shrink-0">
-                        {!row.isOpnameModified ? (
+                        {row.isComposite ? (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] inline-flex items-center gap-1 border border-amber-200">
+                            <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span>Virtual BOM</span>
+                          </span>
+                        ) : !row.isOpnameModified ? (
                           <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] inline-flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>Cocok</span>
@@ -1664,19 +1737,31 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
                   {/* Card Body per Operasi */}
                   <div className="pt-3 space-y-3">
-                    {/* OPNAME HANDHELD */}
-                    {operation === 'OPNAME' && (
+                    {row.isComposite ? (
+                      <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/90 text-xs text-amber-900 flex items-start gap-2.5">
+                        <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="font-extrabold text-amber-950">Menu Olahan Dapur (Virtual BOM)</p>
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            Ketersediaan menu ini mengikuti stok bahan baku dapur. Untuk opname, belanja stok masuk, atau barang rusak, silakan beralih ke tab <strong>Bahan Baku</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
                       <>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="p-2.5 rounded-xl bg-slate-100/70 border border-slate-200/80">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                              Stok Sistem
-                            </span>
-                            <span className="text-base font-black text-slate-800">
-                              {row.systemStock.toLocaleString('id-ID')}
-                            </span>
-                            <span className="text-[11px] text-slate-400 ml-1 font-semibold">{row.unit}</span>
-                          </div>
+                        {/* OPNAME HANDHELD */}
+                        {operation === 'OPNAME' && (
+                          <>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="p-2.5 rounded-xl bg-slate-100/70 border border-slate-200/80">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                                  Stok Sistem
+                                </span>
+                                <span className="text-base font-black text-slate-800">
+                                  {row.systemStock.toLocaleString('id-ID')}
+                                </span>
+                                <span className="text-[11px] text-slate-400 ml-1 font-semibold">{row.unit}</span>
+                              </div>
 
                           <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -1942,6 +2027,8 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         </div>
                       </>
                     )}
+                    </>
+                  )}
                   </div>
                 </div>
               );

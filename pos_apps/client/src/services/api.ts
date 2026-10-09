@@ -288,7 +288,9 @@ export const api = {
               return {
                 ...p,
                 description: parsed.text !== undefined ? parsed.text : p.description,
-                modifiers: Array.isArray(parsed.modifiers) ? parsed.modifiers : undefined,
+                modifiers: (p.modifiers && p.modifiers.length > 0)
+                  ? p.modifiers
+                  : (Array.isArray(parsed.modifiers) ? parsed.modifiers : undefined),
               };
             }
           } catch (e) {

@@ -1879,7 +1879,76 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
   - `npm run build` di `pos_apps/client` berhasil 100% (Exit code 0).
   - `npm run build` di `pos_apps/server` berhasil 100% (Exit code 0).
 ===============================================================================
+[09 OKTOBER 2026] RESOLUSI KONVERSI TIPE PRODUK F&B KE RITEL & ELIMINASI DUMMY STOK 999.999
+===============================================================================
+• Konteks & Akar Masalah:
+  - User melaporkan tidak bisa mengedit produk dari Olahan F&B (Made-to-Order) menjadi Barang Kemasan Ritel Fisik.
+  - Saat produk dibuat sebagai F&B, sistem legacy mengisi kuantitas stok dummy sebesar 999.999 pada `outlet_products` dan `inventory_balances` agar kasir tidak terblokir stok.
+  - Ketika merchant mencoba mengedit produk ke "Barang Ritel Fisik", endpoint `PUT /api/products/:id` tidak memiliki kolom `type` dan tidak mengalibrasi saldo stok fisik di DB. Front-end `ProductsView.tsx` dan `ProductModal.tsx` memiliki kuncian rapuh `if (stock >= 99999)` yang otomatis memaksa produk terpental kembali menjadi F&B.
+• Solusi & Implementasi (Opsi 1 - Pragmatis & Bersih):
+  1. Backend (`pos_apps/server`):
+     - `createProductSchema` & `updateProductSchema` diperluas menerima `productType` (`STANDARD` | `COMPOSITE`), `hasStock`, `currentStock`, dan `outletId`.
+     - `catalogDualWriteService.createProduct`: Produk F&B `COMPOSITE` dibuat dengan stok awal bersih `0` (bukan 999.999). Kolom `products.type` disimpan presisi.
+     - `catalogDualWriteService.updateProduct`: Memperbarui kolom `products.type`. Jika beralih ke Ritel Fisik atau menyertakan `currentStock`, sistem mengalibrasi saldo riil di `outlet_products` dan `inventory_balances`, serta mencatat mutasi `OPNAME_ADJUSTMENT` di `inventory_ledgers`.
+     - `saas.controller.ts`: Onboarding store template F&B distandardisasi dengan `initialStock: 0`, `productType: 'COMPOSITE'`, `hasStock: false`.
+  2. Frontend (`pos_apps/client`):
+     - `ProductModal.tsx`: Logika inisialisasi dirombak untuk memprioritaskan `productType` dan `hasStock` dari DTO. Menambahkan input "Saldo Stok Fisik Toko Saat Ini" saat mode Edit beralih ke Ritel Fisik.
+     - `ProductsView.tsx`: Kondisi badge tabel desktop dan mobile cards diganti dari `stock >= 99999` menjadi `p.productType === 'COMPOSITE' || p.hasStock === false`.
+• Verifikasi & Pengujian:
+  - Skrip regression test baru: `pos_apps/server/src/scripts/test_regression_product_type_switch.ts` (100% Pass: Create F&B -> Edit to Retail 35 Pcs -> Edit back to F&B).
+  - `npm run build` di `pos_apps/server`: Exit code 0.
+  - `npm run build` di `pos_apps/client`: Exit code 0.
+===============================================================================
+[09 OKTOBER 2026] VERIFIKASI REGRESI INVENTORI/BOM (OPSI B) & SMOKE TEST E2E (OPSI C)
+===============================================================================
+• Eksekusi Opsi B (Modul Inventori, Resep BOM & Deduksi Stok Kasir):
+  1. Re-sync Sandbox Database: `npm run seed:sandbox` dijalankan dengan sukses (100%).
+  2. Visual Playwright E2E (`npm run test:visual:recipes`):
+     - Happy Path: Pendaftaran bahan baku mentah baru (Biji Kopi Gayo 1.000 GRAM, HPP Rp 250), peracikan formula BOM (18g/cup Kopi Susu Aren Ura), transaksi kasir POS 2 cup tunai uang pas, pemotongan stok bahan baku otomatis terverifikasi 100% presisi matematika (1.000 - 36 = 964g).
+     - Sad Path: Validasi empty state katalog resep dan penolakan takaran tak terhingga/nol (min="0.001").
+     - Bad Path: Proteksi integritas foreign key (penolakan penghapusan bahan baku aktif yang terikat resep).
+     - Hasil: 100% PASS (Exit code 0).
+  3. Eliminasi Residu Saldo Fiktif DB:
+     - Ditemukan 1 produk warisan pengujian awal ("Meals 1") yang memiliki saldo 999.999.
+     - Berhasil dikonversi secara real-time via API `PUT /api/products/:id` menjadi produk ritel dengan saldo stok nyata 50 Pcs.
+     - Proteksi ganda ditambahkan pada `catalog.dual_write.service.ts`: auto-reset saldo fiktif >= 999.000 menjadi 0 jika produk disetel sebagai COMPOSITE/hasStock=false.
+• Eksekusi Opsi C (End-to-End Smoke Test Suite & Offline Sync):
+  1. E2E Smoke Test (`npm run test:smoke`):
+     - Lolos 30 dari 30 skenario (100% PASS).
+     - FLOW 1 (Registrasi Owner -> Approval Superadmin -> Toko Baru -> Pairing Kasir): Lulus.
+     - FLOW 2 (Kasir Checkout Tunai + QRIS & Validasi Potong Stok Resep BOM): Lulus.
+     - FLOW 3 (Laporan Finansial WIB Timezone, X-Report Pure Summary, Anti-falsifikasi QRIS, Lock on Unpaid Orders): Lulus.
+     - FLOW 4 (Multi-Outlet Isolation & RLS Security): Lulus.
+     - FLOW 5 (QR Menu Self-Ordering -> Live Kitchen Feed -> Pelunasan Kasir POS): Lulus.
+  2. Offline Sync Idempotency (`npm run test:offline`):
+     - Pengujian idempotensi kasir checkout offline sukses tanpa duplikasi invoice (100% PASS).
+• Status Akhir Build:
+  - `pos_apps/server`: Exit code 0 (TypeScript compile bersih).
+  - `pos_apps/client`: Exit code 0 (Vite production build sukses).
+===============================================================================
+[09 OKTOBER 2026] PENYEMPURNAAN UI/UX KATALOG MENU & ISOLASI DOMAIN BOM BAHAN BAKU
+===============================================================================
+• 1. Penyempurnaan UI/UX Halaman Daftar Menu (ProductsView.tsx):
+  - Penambahan Hero Banner Gradien Mewah dengan chip "Katalog & Manajemen Menu Toko" dan tombol CTA "+ Tambah Produk".
+  - Penambahan 4 KPI Cards interaktif: Total Menu, Menu Aktif Kasir, Olahan F&B (BOM), dan Ritel Fisik.
+  - Perampingan toolbar dengan Dropdown Popover "Alat & Berkas" (Impor Spreadsheet Excel/CSV, Ekspor CSV, Cetak Label Barcode).
+  - Penyatuan Filter Bar: Status ketersediaan (Semua/Aktif/Nonaktif) dan Kategori pills bersatu dalam satu card hemat ruang.
+  - Eliminasi sticky overlap: Lebar kolom tabel proporsional (min-w-220px s.d w-32), tidak ada kolom terpotong atau menimpa kolom stok.
+  - Format angka ribuan standar Indonesia (.toLocaleString('id-ID')) dan badge pintar "∞ Olahan F&B" untuk menu racikan dapur.
+• 2. Isolasi Domain Boundary Menu vs BOM Bahan Baku (Task 6.8):
+  - Temuan Masalah: Produk menu jadi (Kopi Susu Aren, Meals 1, Meals 2) sebelumnya bocor ke dropdown pemilihan bahan baku resep BOM & modifier akibat tidak adanya filter relasi pada endpoint GET /api/recipes/inventory-items.
+  - Solusi Backend: Menambahkan filter otomatis where: { variants: { none: {} } } (mode raw_only) sehingga hanya bahan baku mentah (biji kopi, susu, sirup, bumbu, daging) dan kemasan (cup, paper bag, box) yang dikembalikan untuk resep dan modifier.
+  - Penyelarasan Dual-Write: Produk olahan dapur (COMPOSITE) tidak lagi dibuatkan baris fisik di inventory_items, varian inventoryItemId di-set null karena stoknya dihitung murni dari bahan baku resep.
+• 3. Test Suite E2E Playwright (scripts/test_e2e_menu_bom_and_stock_matrix.js):
+  - Verifikasi otomatis pada ModifiersView: 0 produk menu bocor, 11 bahan mentah valid tampil (100% PASS).
+  - Verifikasi otomatis pada RecipesView: 0 produk menu bocor, 10 bahan mentah valid tampil (100% PASS).
+  - Bukti visual tersimpan di:
+    • scripts/docs/artifacts/modifiers_bom_dropdown_clean.png
+    • scripts/docs/artifacts/recipes_bom_dropdown_clean.png
+• 4. Status Build: pos_apps/server dan pos_apps/client EXIT CODE 0.
+===============================================================================
 ```
+
 
 
 

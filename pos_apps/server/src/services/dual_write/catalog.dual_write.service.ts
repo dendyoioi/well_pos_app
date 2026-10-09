@@ -37,7 +37,9 @@ export class CatalogDualWriteService extends BaseDualWriteService {
       const unit = dto.unit || 'Pcs';
       const costPrice = Number(dto.costPrice) || 0;
       const basePrice = Number(dto.basePrice) || 0;
-      const initialStock = Number(dto.initialStock) || 0;
+      const isFnbComposite = dto.productType === 'COMPOSITE' || dto.hasStock === false;
+      const resolvedType = dto.productType || (dto.hasStock === false ? 'COMPOSITE' : 'STANDARD');
+      const initialStock = isFnbComposite ? 0 : (Number(dto.initialStock) || 0);
       const minStockAlert = Number(dto.minStockAlert) || 5;
 
       // 1. MUTATION VIA PARAMETERIZED RAW SQL (Adaptive to Cutover / Contract Target-Only)
@@ -46,10 +48,10 @@ export class CatalogDualWriteService extends BaseDualWriteService {
           tx,
           `INSERT INTO "products" (
             "id", "tenant_id", "category_id", "name", "sku", "description", "image_url",
-            "unit", "is_active", "created_at", "updated_at"
+            "unit", "type", "is_active", "created_at", "updated_at"
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
-            $8, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            $8, $9::"ProductType", true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
           );`,
           productId,
           tenantId,
@@ -58,17 +60,18 @@ export class CatalogDualWriteService extends BaseDualWriteService {
           sku,
           dto.description || null,
           dto.imageUrl || null,
-          unit
+          unit,
+          resolvedType
         );
       } else {
         await this.executeRaw(
           tx,
           `INSERT INTO "products" (
             "id", "tenant_id", "category_id", "name", "sku", "barcode", "description", "image_url",
-            "cost_price", "base_price", "unit", "is_active", "created_at", "updated_at"
+            "cost_price", "base_price", "unit", "type", "is_active", "created_at", "updated_at"
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8,
-            $9, $10, $11, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            $9, $10, $11, $12::"ProductType", true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
           );`,
           productId,
           tenantId,
@@ -80,7 +83,8 @@ export class CatalogDualWriteService extends BaseDualWriteService {
           dto.imageUrl || null,
           costPrice,
           basePrice,
-          unit
+          unit,
+          resolvedType
         );
       }
 
@@ -275,6 +279,13 @@ export class CatalogDualWriteService extends BaseDualWriteService {
     const { tx, tenantId } = ctx;
 
     try {
+      let resolvedType: string | null = null;
+      if (dto.productType) {
+        resolvedType = dto.productType;
+      } else if (dto.hasStock !== undefined) {
+        resolvedType = dto.hasStock ? 'STANDARD' : 'COMPOSITE';
+      }
+
       // 1. UPDATE VIA PARAMETERIZED RAW SQL (Adaptive to Cutover / Contract Target-Only)
       if (this.isTargetOnlyWrite()) {
         await this.executeRaw(
@@ -287,8 +298,9 @@ export class CatalogDualWriteService extends BaseDualWriteService {
                "description" = COALESCE($5, "description"),
                "image_url" = COALESCE($6, "image_url"),
                "is_active" = COALESCE($7, "is_active"),
+               "type" = COALESCE($8::"ProductType", "type"),
                "updated_at" = CURRENT_TIMESTAMP
-           WHERE "id" = $8 AND "tenant_id" = $9;`,
+           WHERE "id" = $9 AND "tenant_id" = $10;`,
           dto.name ?? null,
           dto.sku ?? null,
           dto.categoryId ?? null,
@@ -296,6 +308,7 @@ export class CatalogDualWriteService extends BaseDualWriteService {
           dto.description ?? null,
           dto.imageUrl ?? null,
           dto.isActive ?? null,
+          resolvedType,
           productId,
           tenantId
         );
@@ -313,8 +326,9 @@ export class CatalogDualWriteService extends BaseDualWriteService {
                "description" = COALESCE($8, "description"),
                "image_url" = COALESCE($9, "image_url"),
                "is_active" = COALESCE($10, "is_active"),
+               "type" = COALESCE($11::"ProductType", "type"),
                "updated_at" = CURRENT_TIMESTAMP
-           WHERE "id" = $11 AND "tenant_id" = $12;`,
+           WHERE "id" = $12 AND "tenant_id" = $13;`,
           dto.name ?? null,
           dto.barcode ?? null,
           dto.sku ?? null,
@@ -325,6 +339,7 @@ export class CatalogDualWriteService extends BaseDualWriteService {
           dto.description ?? null,
           dto.imageUrl ?? null,
           dto.isActive ?? null,
+          resolvedType,
           productId,
           tenantId
         );
@@ -380,6 +395,106 @@ export class CatalogDualWriteService extends BaseDualWriteService {
         variantId,
         tenantId
       );
+
+      // 3. KALIBRASI SALDO STOK FISIK JIKA DISERTAKAN (misal: beralih dari Olahan F&B ke Barang Ritel Fisik)
+      if (dto.currentStock !== undefined) {
+        let targetOutletId = dto.outletId;
+        if (!targetOutletId) {
+          const outletRows = await (tx as any).$queryRawUnsafe(
+            `SELECT id FROM "outlets" WHERE "tenant_id" = $1 ORDER BY "created_at" ASC LIMIT 1;`,
+            tenantId
+          );
+          targetOutletId = outletRows[0]?.id;
+        }
+
+        if (targetOutletId) {
+          const newStock = Number(dto.currentStock) || 0;
+
+          // A. Pastikan outlet_products aktif tersedia
+          await this.executeRaw(
+            tx,
+            `INSERT INTO "outlet_products" (
+              "id", "tenant_id", "outlet_id", "product_id", "is_available", "created_at", "updated_at"
+            ) VALUES (
+              $1, $2, $3, $4, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT ("outlet_id", "product_id") DO UPDATE SET
+              "is_available" = true,
+              "updated_at" = CURRENT_TIMESTAMP;`,
+            crypto.randomUUID(),
+            tenantId,
+            targetOutletId,
+            productId
+          );
+
+          // B. Update target inventory_balances & ledgers
+          const storageLocationId = await this.resolveDefaultStorageLocation(tx, tenantId, targetOutletId);
+          const balanceId = this.generateDeterministicUuid(`${inventoryItemId}:${storageLocationId}:unbatched_balance`);
+
+          const prevBalRows = await (tx as any).$queryRawUnsafe(
+            `SELECT quantity_on_hand FROM "inventory_balances" WHERE id = $1 LIMIT 1;`,
+            balanceId
+          );
+          const prevBalance = prevBalRows.length > 0 ? Number(prevBalRows[0].quantity_on_hand) : 0;
+          const diff = newStock - prevBalance;
+
+          await this.executeRaw(
+            tx,
+            `INSERT INTO "inventory_balances" (
+              "id", "tenant_id", "inventory_item_id", "storage_location_id", "inventory_batch_id",
+              "quantity_on_hand", "quantity_reserved", "updated_at"
+            ) VALUES ($1, $2, $3, $4, null, $5, 0, CURRENT_TIMESTAMP)
+            ON CONFLICT ("id") DO UPDATE SET
+              "quantity_on_hand" = EXCLUDED."quantity_on_hand",
+              "updated_at" = CURRENT_TIMESTAMP;`,
+            balanceId,
+            tenantId,
+            inventoryItemId,
+            storageLocationId,
+            newStock
+          );
+
+          if (diff !== 0) {
+            const ledgerId = crypto.randomUUID();
+            await this.executeRaw(
+              tx,
+              `INSERT INTO "inventory_ledgers" (
+                "id", "tenant_id", "inventory_item_id", "storage_location_id", "inventory_batch_id",
+                "quantity_delta", "balance_before", "balance_after", "unit_cost",
+                "movement_type", "reference_type", "reference_id",
+                "actor_type", "actor_user_id", "is_negative_balance", "notes", "created_at"
+              ) VALUES (
+                $1, $2, $3, $4, null,
+                $5, $6, $7, $8,
+                'OPNAME_ADJUSTMENT'::"StockMovementType", 'STOCK_OPNAME'::"InventoryRefType", $9,
+                'USER'::"ActorType", $10, false, $11, CURRENT_TIMESTAMP
+              );`,
+              ledgerId,
+              tenantId,
+              inventoryItemId,
+              storageLocationId,
+              diff,
+              prevBalance,
+              newStock,
+              dto.costPrice !== undefined ? Number(dto.costPrice) : 0,
+              productId,
+              ctx.actorUserId || null,
+              'Penyesuaian stok saat update/konversi tipe produk'
+            );
+          }
+          targetUpdates += 2;
+        }
+      } else if (resolvedType === 'COMPOSITE' || dto.hasStock === false) {
+        // Jika beralih ke F&B tanpa stok satuan langsung, pastikan saldo dummy masa lalu dinetralkan
+        await this.executeRaw(
+          tx,
+          `UPDATE "inventory_balances"
+           SET "quantity_on_hand" = 0, "updated_at" = CURRENT_TIMESTAMP
+           WHERE "tenant_id" = $1 AND "inventory_item_id" = $2 AND "quantity_on_hand" >= 999000;`,
+          tenantId,
+          inventoryItemId
+        );
+      }
 
       return {
         legacyData: { id: productId, ...dto },

@@ -171,6 +171,8 @@ export class CatalogReadAdapter extends BaseReadAdapter {
           isLowStock: isComposite ? false : stock <= minAlert,
           productType: r.product_type || (isComposite ? 'COMPOSITE' : 'STANDARD'),
           hasStock: !isComposite,
+          hasRecipe: Boolean(r.recipe_id),
+          recipeId: r.recipe_id || null,
           variants: [variantObj],
           createdAt: new Date(r.created_at),
         });

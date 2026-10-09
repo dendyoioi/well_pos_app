@@ -60,3 +60,9 @@ Skema basis data target 18 tabel Well POS telah siap dan terverifikasi secara pe
     - Template kosong standar `template_impor_produk_wellpos.csv` untuk panduan merchant.
     - Antarmuka layar penuh `FullScreenProductImportModal.tsx` (Zero Stacked Modals) dengan parser CSV client-side, validasi baris real-time, dan kalkulasi cerdas upsert.
     - Backend API `POST /api/products/bulk-import` yang memproses pembuatan/pembaruan produk, varian, kategori otomatis, dan alokasi outlet secara atomik.
+- [x] **Task 6.8: Domain Boundary Isolation (Menu Products vs BOM Raw Materials)**
+  - **Pencegahan Kebocoran Menu ke Dropdown Bahan Baku**: Mengisolasi query `GET /api/recipes/inventory-items` dengan filter otomatis `where: { variants: { none: {} } }` (`raw_only`) sehingga seluruh produk menu olahan (*COMPOSITE*) maupun produk jadi ritel (*STANDARD*) tidak bocor ke dalam dropdown pemilihan bahan baku resep BOM maupun opsi pengurangan stok modifier.
+  - **Dual-Write Architecture Alignment**: Memastikan `catalog.dual_write.service.ts` tidak membuat baris fisik di `inventory_items` untuk produk menu olahan dapur (*COMPOSITE*), dan menetapkan `inventoryItemId = null` pada varian produk olahan karena ketersediaan olahan dihitung murni dari bahan baku resep.
+  - **Automated E2E Matrix Verification**: Pengujian Playwright E2E terpadu pada `scripts/test_e2e_menu_bom_and_stock_matrix.js` memvalidasi secara visual dan fungsional bahwa dropdown Modifier dan Resep BOM 100% bersih dari kebocoran menu produk.
+
+

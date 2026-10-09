@@ -521,8 +521,9 @@ export const onboardingClient = async (req: Request, res: Response) => {
       const sku = `SKU-${Date.now().toString().slice(-6)}`;
       const barcode = `899${Math.floor(1000000000 + Math.random() * 9000000000)}`;
 
-      const initialStockQty = initialProduct.isUnlimited
-        ? 999999
+      const isUnlimited = Boolean(initialProduct.isUnlimited);
+      const initialStockQty = isUnlimited
+        ? 0
         : (initialProduct.storeStock !== undefined
             ? initialProduct.storeStock
             : (initialProduct.initialStock || 0));
@@ -540,6 +541,8 @@ export const onboardingClient = async (req: Request, res: Response) => {
             initialStock: initialStockQty,
             minStockAlert: 5,
             outletId: targetOutletId,
+            productType: isUnlimited ? 'COMPOSITE' : 'STANDARD',
+            hasStock: !isUnlimited,
           },
           { tx, tenantId, actorUserId: req.user?.id }
         );

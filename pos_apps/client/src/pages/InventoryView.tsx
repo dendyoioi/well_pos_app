@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   ChevronDown,
   Barcode,
+  Sparkles,
 } from 'lucide-react';
 import type { Product, StockMovement } from '../types/product';
 import type { Outlet } from '../types/outlet';
@@ -32,6 +33,7 @@ import { TablePagination } from '../components/TablePagination';
 import { EmptyState, TableSkeleton } from '../components/ui';
 import { formatRupiah } from '../utils/currency';
 import { api } from '../services/api';
+import { useDialog } from '../context/DialogContext';
 
 interface InventoryViewProps {
   activeOutlet?: Outlet | null;
@@ -44,6 +46,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   initialTab = 'INGREDIENTS',
   initialSubView = 'INVENTORY',
 }) => {
+  const dialog = useDialog();
   // Tab State: 'INGREDIENTS' (Bahan Baku Mentah F&B) | 'PRODUCTS' (Produk Jadi Retail)
   const [activeTab, setActiveTab] = useState<'INGREDIENTS' | 'PRODUCTS'>(initialTab);
 
@@ -254,20 +257,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
 
   // Kalkulasi total statistik tab overview
-  const totalStockUnits = products.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
-  const totalAssetValue = products.reduce(
+  const isCompositeProd = (p: Product) => p.productType === 'COMPOSITE' || p.hasStock === false;
+  const standardProducts = products.filter((p) => !isCompositeProd(p));
+
+  const totalStockUnits = standardProducts.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
+  const totalAssetValue = standardProducts.reduce(
     (acc, p) => acc + (Number(p.costPrice) || 0) * Math.max(0, Number(p.stock) || 0),
     0
   );
 
   const countAllProducts = products.length;
-  const countOutProducts = products.filter((p) => Number(p.stock || 0) <= 0).length;
-  const countLowProducts = products.filter((p) => {
+  const countOutProducts = standardProducts.filter((p) => Number(p.stock || 0) <= 0).length;
+  const countLowProducts = standardProducts.filter((p) => {
     const s = Number(p.stock || 0);
     const minAlert = Number(p.minStockAlert || 5);
     return s > 0 && s <= minAlert;
   }).length;
-  const countSafeProducts = products.filter((p) => {
+  const countSafeProducts = standardProducts.filter((p) => {
     const s = Number(p.stock || 0);
     const minAlert = Number(p.minStockAlert || 5);
     return s > minAlert;
@@ -294,13 +300,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     if (productStockFilter === 'OUT') {
-      return p.stock <= 0;
+      return !isCompositeProd(p) && (Number(p.stock) || 0) <= 0;
     }
     if (productStockFilter === 'LOW') {
-      return p.stock > 0 && p.stock <= (p.minStockAlert || 5);
+      return !isCompositeProd(p) && (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (p.minStockAlert || 5);
     }
     if (productStockFilter === 'SAFE') {
-      return p.stock > (p.minStockAlert || 5);
+      return !isCompositeProd(p) && (Number(p.stock) || 0) > (p.minStockAlert || 5);
     }
 
     return true;
@@ -670,13 +676,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50/90 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200 tracking-wider">
                   <tr>
-                    <th className="px-5 py-3.5">Bahan Baku &amp; SKU</th>
-                    <th className="px-5 py-3.5">Stok Fisik Toko</th>
-                    <th className="px-5 py-3.5">Gudang Pasokan</th>
-                    <th className="px-4 py-3.5">Batas Alert</th>
-                    <th className="px-5 py-3.5">HPP Rata-rata</th>
-                    <th className="px-5 py-3.5">Estimasi Nilai</th>
-                    <th className="px-5 py-3.5 text-right">Aksi Cepat</th>
+                    <th className="px-5 py-3.5 min-w-[200px] whitespace-nowrap">Bahan Baku &amp; SKU</th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">Stok Fisik Toko</th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">Gudang Pasokan</th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">Batas Alert</th>
+                    <th className="px-4 py-3.5 text-right whitespace-nowrap">HPP Rata-rata</th>
+                    <th className="px-4 py-3.5 text-right whitespace-nowrap">Estimasi Nilai</th>
+                    <th className="px-5 py-3.5 text-right whitespace-nowrap">Aksi Cepat</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -785,12 +791,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           </td>
 
                           {/* HPP Satuan */}
-                          <td className="px-5 py-3.5 font-bold text-slate-800">
+                          <td className="px-4 py-3.5 text-right font-bold text-slate-800 whitespace-nowrap">
                             {formatRupiah(ing.averageCost || 0)}
                           </td>
 
                           {/* Total Nilai Bahan */}
-                          <td className="px-5 py-3.5 font-bold text-slate-900">
+                          <td className="px-4 py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
                             {formatRupiah(Math.max(0, stockVal) * Number(ing.averageCost || 0))}
                           </td>
 
@@ -809,6 +815,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
                                   <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
                                     Stok Masuk / Belanja
+                                  </span>
+                                  <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                </div>
+                              </div>
+
+                              {/* Stok Keluar / Buang / Rusak */}
+                              <div className="relative group flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => openIngredientModal('OUT', ing)}
+                                  className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all cursor-pointer"
+                                >
+                                  <ArrowUpRight className="w-4 h-4" />
+                                </button>
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                  <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                    Stok Keluar / Rusak / Buang
                                   </span>
                                   <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
                                 </div>
@@ -1283,11 +1306,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         </tr>
                       ) : (
                         paginatedProducts.map((p) => {
-                          const stockVal = Number(p.stock || 0);
+                          const isComposite = p.productType === 'COMPOSITE' || p.hasStock === false;
+                          const stockVal = isComposite ? 0 : Number(p.stock || 0);
                           const minAlert = Number(p.minStockAlert || 5);
                           const isZero = stockVal <= 0;
                           const isLow = stockVal > 0 && stockVal <= minAlert;
-                          const totalVal = stockVal * Number(p.costPrice || 0);
+                          const totalVal = isComposite ? 0 : stockVal * Number(p.costPrice || 0);
 
                           return (
                             <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
@@ -1322,6 +1346,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       <span className="text-[10px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200/70 px-1.5 py-0.5 rounded-md">
                                         {p.unit || 'Pcs'}
                                       </span>
+                                      {isComposite && (
+                                        <span className="text-[10px] font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                          ✨ Olahan BOM
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -1336,44 +1365,56 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                               {/* Stok Fisik & Status */}
                               <td className="px-5 py-3.5 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <span
-                                    className={`w-2 h-2 rounded-full ${
-                                      isZero
-                                        ? 'bg-rose-500 ring-2 ring-rose-200'
-                                        : isLow
-                                        ? 'bg-amber-500 ring-2 ring-amber-200'
-                                        : 'bg-emerald-500 ring-2 ring-emerald-200'
-                                    }`}
-                                  />
-                                  <span
-                                    className={`text-sm font-black ${
-                                      isZero
-                                        ? 'text-rose-600'
-                                        : isLow
-                                        ? 'text-amber-600'
-                                        : 'text-slate-900'
-                                    }`}
-                                  >
-                                    {stockVal.toLocaleString('id-ID')}
-                                  </span>
-                                  <span className="text-[11px] text-slate-400 font-semibold">
-                                    {p.unit || 'Unit'}
-                                  </span>
-                                  {isZero ? (
-                                    <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
-                                      Habis
+                                {isComposite ? (
+                                  <div className="flex flex-col items-center justify-center gap-0.5">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/90 font-extrabold text-[11px] shadow-2xs">
+                                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                      <span>Olahan Dapur (BOM)</span>
                                     </span>
-                                  ) : isLow ? (
-                                    <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
-                                      Menipis
+                                    <span className="text-[10px] text-amber-700/80 font-semibold">
+                                      Kalkulasi Resep
                                     </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                                      Aman
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <span
+                                      className={`w-2 h-2 rounded-full ${
+                                        isZero
+                                          ? 'bg-rose-500 ring-2 ring-rose-200'
+                                          : isLow
+                                          ? 'bg-amber-500 ring-2 ring-amber-200'
+                                          : 'bg-emerald-500 ring-2 ring-emerald-200'
+                                      }`}
+                                    />
+                                    <span
+                                      className={`text-sm font-black ${
+                                        isZero
+                                          ? 'text-rose-600'
+                                          : isLow
+                                          ? 'text-amber-600'
+                                          : 'text-slate-900'
+                                      }`}
+                                    >
+                                      {stockVal.toLocaleString('id-ID')}
                                     </span>
-                                  )}
-                                </div>
+                                    <span className="text-[11px] text-slate-400 font-semibold">
+                                      {p.unit || 'Unit'}
+                                    </span>
+                                    {isZero ? (
+                                      <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
+                                        Habis
+                                      </span>
+                                    ) : isLow ? (
+                                      <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                        Menipis
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                        Aman
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </td>
 
                               {/* Harga Modal HPP */}
@@ -1383,7 +1424,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                               {/* Nilai Aset Stok */}
                               <td className="px-4 py-3.5 text-right font-black text-slate-900">
-                                {formatRupiah(totalVal)}
+                                {isComposite ? '-' : formatRupiah(totalVal)}
                               </td>
 
                               {/* Harga Jual */}
@@ -1393,75 +1434,92 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                               {/* Aksi Mutasi */}
                               <td className="px-4 py-3.5 pr-6 text-center">
-                                <div className="inline-flex items-center p-1 bg-slate-100/80 border border-slate-200/80 rounded-xl gap-1 justify-center">
-                                  {/* Stok Masuk */}
-                                  <div className="relative group flex items-center">
+                                {isComposite ? (
+                                  <div className="flex items-center justify-center">
                                     <button
                                       type="button"
-                                      onClick={() => openModal('IN', p)}
-                                      className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-all cursor-pointer"
+                                      onClick={() => {
+                                        setActiveTab('INGREDIENTS');
+                                        dialog.toast(`"${p.name}" adalah menu olahan dapur. Mutasi persediaan (kulakan/rusak/opname) dikelola melalui tab Bahan Baku.`, 'info');
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/90 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                                      title="Menu olahan dapur dihitung dari bahan baku. Klik untuk beralih ke tab Bahan Baku."
                                     >
-                                      <ArrowDownRight className="w-4 h-4" />
+                                      <Boxes className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                      <span>Via Bahan Baku</span>
                                     </button>
-                                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
-                                      <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
-                                        Stok Masuk (PO)
-                                      </span>
-                                      <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
-                                    </div>
                                   </div>
+                                ) : (
+                                  <div className="inline-flex items-center p-1 bg-slate-100/80 border border-slate-200/80 rounded-xl gap-1 justify-center">
+                                    {/* Stok Masuk */}
+                                    <div className="relative group flex items-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => openModal('IN', p)}
+                                        className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-all cursor-pointer"
+                                      >
+                                        <ArrowDownRight className="w-4 h-4" />
+                                      </button>
+                                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                        <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                          Stok Masuk (PO)
+                                        </span>
+                                        <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                      </div>
+                                    </div>
 
-                                  {/* Transfer */}
-                                  <div className="relative group flex items-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => openTransferModal(undefined, 'PRODUCT', p.id)}
-                                      className="p-1.5 rounded-lg text-teal-700 hover:bg-teal-50 hover:text-teal-800 transition-all cursor-pointer"
-                                    >
-                                      <ArrowLeftRight className="w-4 h-4" />
-                                    </button>
-                                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
-                                      <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
-                                        Transfer Toko
-                                      </span>
-                                      <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                    {/* Transfer */}
+                                    <div className="relative group flex items-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => openTransferModal(undefined, 'PRODUCT', p.id)}
+                                        className="p-1.5 rounded-lg text-teal-700 hover:bg-teal-50 hover:text-teal-800 transition-all cursor-pointer"
+                                      >
+                                        <ArrowLeftRight className="w-4 h-4" />
+                                      </button>
+                                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                        <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                          Transfer Toko
+                                        </span>
+                                        <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                      </div>
                                     </div>
-                                  </div>
 
-                                  {/* Stok Rusak */}
-                                  <div className="relative group flex items-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => openModal('OUT', p)}
-                                      className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 hover:text-rose-800 transition-all cursor-pointer"
-                                    >
-                                      <ArrowUpRight className="w-4 h-4" />
-                                    </button>
-                                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
-                                      <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
-                                        Stok Rusak
-                                      </span>
-                                      <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                    {/* Stok Rusak */}
+                                    <div className="relative group flex items-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => openModal('OUT', p)}
+                                        className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-50 hover:text-rose-800 transition-all cursor-pointer"
+                                      >
+                                        <ArrowUpRight className="w-4 h-4" />
+                                      </button>
+                                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                        <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                          Stok Rusak
+                                        </span>
+                                        <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                      </div>
                                     </div>
-                                  </div>
 
-                                  {/* Stock Opname */}
-                                  <div className="relative group flex items-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => openModal('ADJUST', p)}
-                                      className="p-1.5 rounded-lg text-blue-900 hover:bg-blue-50 hover:text-blue-950 transition-all cursor-pointer"
-                                    >
-                                      <SlidersHorizontal className="w-4 h-4" />
-                                    </button>
-                                    <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex flex-col items-end pointer-events-none z-30">
-                                      <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
-                                        Stock Opname
-                                      </span>
-                                      <div className="w-1.5 h-1 mr-2 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                    {/* Stock Opname */}
+                                    <div className="relative group flex items-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => openModal('ADJUST', p)}
+                                        className="p-1.5 rounded-lg text-blue-900 hover:bg-blue-50 hover:text-blue-950 transition-all cursor-pointer"
+                                      >
+                                        <SlidersHorizontal className="w-4 h-4" />
+                                      </button>
+                                      <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex flex-col items-end pointer-events-none z-30">
+                                        <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                          Stock Opname
+                                        </span>
+                                        <div className="w-1.5 h-1 mr-2 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
+                                )}
                               </td>
                             </tr>
                           );
@@ -1538,12 +1596,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-500 font-bold text-[11px] uppercase tracking-wider">
-                        <th className="py-3.5 px-4 pl-6">Waktu</th>
-                        <th className="py-3.5 px-4">Nama Produk</th>
-                        <th className="py-3.5 px-4">Tipe Mutasi</th>
-                        <th className="py-3.5 px-4 text-right">Perubahan Qty</th>
-                        <th className="py-3.5 px-4">Petugas (PIC)</th>
-                        <th className="py-3.5 px-4 pr-6">Keterangan / Catatan</th>
+                        <th className="py-3.5 px-4 pl-6 whitespace-nowrap">Waktu</th>
+                        <th className="py-3.5 px-4 min-w-[180px]">Nama Produk</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Tipe Mutasi</th>
+                        <th className="py-3.5 px-4 text-right whitespace-nowrap">Perubahan Qty</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Petugas (PIC)</th>
+                        <th className="py-3.5 px-4 pr-6 whitespace-nowrap">Keterangan / Catatan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
@@ -1563,6 +1621,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         paginatedMovements.map((m) => {
                           const badge = getBadgeType(m.type);
                           const isPositive = m.quantity > 0;
+                          const formattedQty = Number(m.quantity || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
 
                           return (
                             <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
@@ -1593,13 +1652,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               </td>
 
                               {/* Qty Perubahan */}
-                              <td className="py-3.5 px-4 text-right">
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                 <span
                                   className={`font-mono font-extrabold text-sm ${
                                     isPositive ? 'text-emerald-700' : 'text-rose-600'
                                   }`}
                                 >
-                                  {isPositive ? `+${m.quantity}` : m.quantity} {m.product?.unit || 'PCS'}
+                                  {isPositive ? `+${formattedQty}` : formattedQty} {m.product?.unit || 'PCS'}
                                 </span>
                               </td>
 
@@ -1669,10 +1728,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       <FullScreenBulkOpnameModal
         isOpen={bulkOpnameOpen}
         onClose={() => setBulkOpnameOpen(false)}
-        onSuccess={() => {
+        onSuccess={(msg) => {
           fetchInventory();
           fetchIngredients();
           fetchAllOutlets();
+          dialog.toast(msg || 'Aktivitas inventori massal berhasil dicatat ke sistem!', 'success');
         }}
         activeOutlet={activeOutlet}
         initialMode={bulkOpnameMode}

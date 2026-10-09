@@ -19,6 +19,8 @@ const createProductSchema = z.object({
   initialStock: z.number().int().min(0).default(0),
   minStockAlert: z.number().int().min(0).default(5),
   outletId: z.string().uuid().optional(),
+  productType: z.enum(['STANDARD', 'COMPOSITE', 'SERVICE_LABOR']).optional(),
+  hasStock: z.boolean().optional(),
 });
 
 // Skema validasi update produk
@@ -34,6 +36,10 @@ const updateProductSchema = z.object({
   imageUrl: z.string().optional().nullable(),
   minStockAlert: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  productType: z.enum(['STANDARD', 'COMPOSITE', 'SERVICE_LABOR']).optional(),
+  hasStock: z.boolean().optional(),
+  currentStock: z.number().int().min(0).optional(),
+  outletId: z.string().uuid().optional(),
 });
 
 /**
@@ -177,6 +183,8 @@ export const createProduct = async (req: Request, res: Response) => {
       initialStock,
       minStockAlert,
       outletId,
+      productType,
+      hasStock,
     } = parseResult.data;
 
     let userTenantId = req.user?.tenantId || req.tenantId;
@@ -253,6 +261,8 @@ export const createProduct = async (req: Request, res: Response) => {
           initialStock,
           minStockAlert,
           outletId: targetOutletId,
+          productType,
+          hasStock,
         },
         { tx, tenantId: userTenantId!, actorUserId: req.user?.id }
       );
@@ -342,6 +352,10 @@ export const updateProduct = async (req: Request, res: Response) => {
       imageUrl,
       minStockAlert,
       isActive,
+      productType,
+      hasStock,
+      currentStock,
+      outletId,
     } = parseResult.data;
 
     let userTenantId = req.user?.tenantId || req.tenantId;
@@ -409,6 +423,10 @@ export const updateProduct = async (req: Request, res: Response) => {
           description: description || null,
           imageUrl: imageUrl || null,
           isActive,
+          productType,
+          hasStock,
+          currentStock,
+          outletId: (outletId || req.user?.outletId) || undefined,
         },
         { tx, tenantId: userTenantId!, actorUserId: req.user?.id }
       );

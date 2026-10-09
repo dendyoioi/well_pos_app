@@ -86,6 +86,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [unit, setUnit] = useState('Pcs');
   const [hasStock, setHasStock] = useState<boolean>(false); // Default F&B: Olahan Dapur / Resep BOM
   const [initialStock, setInitialStock] = useState<number>(0);
+  const [editPhysicalStock, setEditPhysicalStock] = useState<number>(0);
   const [minStockAlert, setMinStockAlert] = useState<number>(5);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -168,27 +169,34 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setMinStockAlert(productToEdit.minStockAlert);
       setImageUrl(productToEdit.imageUrl || '');
 
-      // Parse description and check for hasStock metadata
+      // Parse description and check for hasStock metadata / productType
       let loadedHasStock = true;
-      let rawDesc = productToEdit.description || '';
-      if (rawDesc.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(rawDesc);
-          if (parsed.hasStock !== undefined) {
-            loadedHasStock = Boolean(parsed.hasStock);
+      if (productToEdit.productType === 'COMPOSITE' || productToEdit.hasStock === false) {
+        loadedHasStock = false;
+      } else if (productToEdit.productType === 'STANDARD' || productToEdit.hasStock === true) {
+        loadedHasStock = true;
+      } else {
+        let rawDesc = productToEdit.description || '';
+        if (rawDesc.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(rawDesc);
+            if (parsed.hasStock !== undefined) {
+              loadedHasStock = Boolean(parsed.hasStock);
+            }
+            setDescription(parsed.text || '');
+          } catch {
+            setDescription(rawDesc);
           }
-          setDescription(parsed.text || '');
-        } catch {
+        } else {
           setDescription(rawDesc);
         }
-      } else {
-        setDescription(rawDesc);
-      }
 
-      if (productToEdit.stock >= 99999) {
-        loadedHasStock = false;
+        if (productToEdit.stock >= 99999) {
+          loadedHasStock = false;
+        }
       }
       setHasStock(loadedHasStock);
+      setEditPhysicalStock(productToEdit.stock >= 99999 ? 0 : (productToEdit.stock || 0));
 
       // Ensure unit is in unitList
       if (productToEdit.unit && !DEFAULT_UNITS.includes(productToEdit.unit)) {
@@ -379,6 +387,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           description: finalDescription,
           imageUrl: imageUrl.trim() || undefined,
           minStockAlert: hasStock ? Number(minStockAlert) : 0,
+          productType: hasStock ? 'STANDARD' : 'COMPOSITE',
+          hasStock,
+          currentStock: hasStock ? Number(editPhysicalStock) : undefined,
+          outletId: outletId || undefined,
         });
 
         if (res.status === 'success') {
@@ -402,11 +414,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           costPrice: Number(costPrice),
           basePrice: Number(basePrice),
           unit,
-          initialStock: hasStock ? Number(initialStock) : 999999,
+          initialStock: hasStock ? Number(initialStock) : 0,
           minStockAlert: hasStock ? Number(minStockAlert) : 0,
           description: finalDescription,
           imageUrl: imageUrl.trim() || undefined,
           outletId: outletId || undefined,
+          productType: hasStock ? 'STANDARD' : 'COMPOSITE',
+          hasStock,
         });
 
         if (res.status === 'success' && res.data?.id) {
@@ -924,7 +938,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-200/70">
-                  {!isEdit && (
+                  {!isEdit ? (
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-xs font-bold text-slate-700">
@@ -944,8 +958,29 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         Biarkan kosong/0 jika stok akan dimasukkan nanti lewat menu Stok Masuk (PO Gudang) atau Transfer Toko.
                       </p>
                     </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">
+                          Saldo Stok Fisik Toko Saat Ini
+                        </label>
+                        <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                          Ritel Fisik
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editPhysicalStock}
+                        onChange={(e) => setEditPhysicalStock(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+                        className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none font-bold text-blue-950"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Kuantitas fisik riil di toko. Jika beralih dari Olahan F&B, sistem otomatis mengalibrasi saldo dari dummy 999.999 ke angka ini.
+                      </p>
+                    </div>
                   )}
-                  <div className={isEdit ? 'sm:col-span-2' : ''}>
+                  <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Batas Minimum Notifikasi Stok Menipis
                     </label>

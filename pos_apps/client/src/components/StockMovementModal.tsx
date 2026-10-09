@@ -49,6 +49,9 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const currentProduct = products.find((p) => p.id === selectedProductId);
+  const isCompositeProduct = Boolean(
+    currentProduct && !defaultIngredient && (currentProduct.productType === 'COMPOSITE' || currentProduct.hasStock === false)
+  );
 
   useEffect(() => {
     setType(defaultType);
@@ -348,14 +351,26 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             </div>
           )}
 
-          {/* Info Stok Saat Ini untuk Produk */}
+          {/* Info Stok Saat Ini atau Edukasi BOM untuk Produk Olahan */}
           {!defaultIngredient && currentProduct && (
-            <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl flex items-center justify-between text-xs text-blue-950 font-semibold">
-              <span>Stok Riil Sistem Sekarang:</span>
-              <span className="font-extrabold text-sm text-blue-900">
-                {currentProduct.stock} {currentProduct.unit}
-              </span>
-            </div>
+            isCompositeProduct ? (
+              <div className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-extrabold text-amber-950">Menu Olahan Dapur F&B (Resep BOM)</p>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Produk ini adalah menu olahan dapur yang diracik langsung dari bahan baku (tidak memiliki kartu stok fisik barang jadi). Untuk mencatat kulakan (stok masuk), barang terbuang/rusak (stok keluar), atau opname, silakan kelola melalui tab <strong>Bahan Baku</strong>.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl flex items-center justify-between text-xs text-blue-950 font-semibold">
+                <span>Stok Riil Sistem Sekarang:</span>
+                <span className="font-extrabold text-sm text-blue-900">
+                  {currentProduct.stock} {currentProduct.unit}
+                </span>
+              </div>
+            )
           )}
 
           {/* Input Quantity / Opname */}
@@ -485,11 +500,19 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              disabled={loading || isCompositeProduct}
+              className={`px-6 py-2.5 rounded-xl text-white text-xs sm:text-sm font-bold shadow-md transition-all flex items-center gap-1.5 ${
+                isCompositeProduct
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                  : 'bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-50 shadow-blue-900/20 cursor-pointer'
+              }`}
             >
               <Check className="w-4 h-4" />
-              {loading ? 'Menyimpan Mutasi...' : 'Eksekusi Mutasi'}
+              {isCompositeProduct
+                ? 'Menu Olahan (Kelola di Bahan Baku)'
+                : loading
+                ? 'Menyimpan Mutasi...'
+                : 'Eksekusi Mutasi'}
             </button>
           </div>
         </form>

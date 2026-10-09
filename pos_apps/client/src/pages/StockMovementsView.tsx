@@ -27,6 +27,11 @@ interface StockMovementsViewProps {
   activeOutlet?: Outlet | null;
 }
 
+const formatNumber = (val?: number | null) => {
+  if (val === undefined || val === null || isNaN(Number(val))) return '0';
+  return Number(val).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+};
+
 export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOutlet }) => {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -563,14 +568,14 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-500 font-bold text-[11px] uppercase tracking-wider">
-                <th className="py-3.5 px-4 pl-6">Waktu Transaksi</th>
-                <th className="py-3.5 px-4">Nama Item &amp; SKU</th>
-                <th className="py-3.5 px-4">Lokasi (Toko / Gudang)</th>
-                <th className="py-3.5 px-4">Tipe Mutasi</th>
-                <th className="py-3.5 px-4 text-right">Perubahan Qty</th>
-                <th className="py-3.5 px-4 text-center">Saldo (Sebelum ➔ Sesudah)</th>
-                <th className="py-3.5 px-4">Petugas (PIC)</th>
-                <th className="py-3.5 px-4 pr-6">Keterangan / Catatan</th>
+                <th className="py-3.5 px-4 pl-6 whitespace-nowrap">Waktu Transaksi</th>
+                <th className="py-3.5 px-4 min-w-[200px]">Nama Item &amp; SKU</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Lokasi (Toko / Gudang)</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Tipe Mutasi</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Perubahan Qty</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap">Saldo (Sebelum ➔ Sesudah)</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Petugas (PIC)</th>
+                <th className="py-3.5 px-4 pr-6 whitespace-nowrap">Keterangan / Catatan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
@@ -644,7 +649,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
                             isPositive ? 'text-emerald-700' : 'text-rose-600'
                           }`}
                         >
-                          {isPositive ? `+${m.quantity}` : m.quantity} {m.product?.unit || 'PCS'}
+                          {isPositive ? `+${formatNumber(m.quantity)}` : formatNumber(m.quantity)} {m.product?.unit || 'PCS'}
                         </span>
                       </td>
 
@@ -652,10 +657,10 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
                       <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono text-xs">
                         {m.stockBefore !== undefined && m.stockAfter !== undefined ? (
                           <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 font-bold text-slate-700">
-                            <span>{m.stockBefore}</span>
+                            <span>{formatNumber(m.stockBefore)}</span>
                             <span className="text-slate-400 font-normal">➔</span>
                             <span className={m.stockAfter < 5 ? 'text-rose-600 font-black' : 'text-slate-900'}>
-                              {m.stockAfter}
+                              {formatNumber(m.stockAfter)}
                             </span>
                           </div>
                         ) : (

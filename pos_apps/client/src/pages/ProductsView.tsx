@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search,
   Plus,
@@ -19,6 +19,11 @@ import {
   ShoppingBag,
   Download,
   FileSpreadsheet,
+  ChevronDown,
+  Sparkles,
+  Package,
+  UtensilsCrossed,
+  Boxes,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import { ProductModal } from '../components/ProductModal';
@@ -74,6 +79,31 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [bulkCategoryModalOpen, setBulkCategoryModalOpen] = useState(false);
   const [selectedTargetCategoryId, setSelectedTargetCategoryId] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
+  const toolsDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close tools dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (toolsDropdownRef.current && !toolsDropdownRef.current.contains(event.target as Node)) {
+        setToolsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const stats = useMemo(() => {
+    const total = products.length;
+    const activeCount = products.filter((p) => p.isActive).length;
+    const fnbCount = products.filter(
+      (p) => p.productType === 'COMPOSITE' || p.hasStock === false || (p.stock !== undefined && p.stock >= 999000)
+    ).length;
+    const retailCount = products.filter(
+      (p) => (p.productType === 'STANDARD' || !p.productType) && p.hasStock !== false && (!p.stock || p.stock < 999000)
+    ).length;
+    return { total, activeCount, fnbCount, retailCount };
+  }, [products]);
 
   const existingSkusSet = useMemo(() => {
     return new Set(products.map((p) => p.sku || p.variants?.[0]?.sku || '').filter(Boolean));
@@ -418,182 +448,280 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         </div>
       )}
 
-      {/* Top Action & Search Bar */}
-      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        {/* Search Input */}
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Cari nama, SKU, atau scan barcode..."
-            className="w-full bg-slate-50 border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl pl-10 pr-4 py-2.5 text-sm transition-all outline-none"
-          />
+      {/* Hero Banner & KPI Summary Cards */}
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-blue-950/10 relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-10 -top-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold">
+              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+              <span>Katalog &amp; Manajemen Menu Toko</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Daftar Menu &amp; Produk
+            </h1>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Kelola menu F&amp;B racikan dapur/barista, varian harga, formula HPP resep, serta stok produk kemasan ritel fisik toko.
+            </p>
+          </div>
         </div>
 
-        {/* Buttons Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-          {/* Secondary / Utility Actions (Refresh, Kategori, Ambil Katalog) */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => fetchData()}
-              title="Muat Ulang"
-              className="w-10 h-10 sm:w-auto sm:h-auto p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs flex items-center justify-center shrink-0 cursor-pointer"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+        {/* 4 KPI Cards Ringkasan Katalog */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10 relative z-10">
+          <div
+            onClick={() => {
+              setStatusFilter('all');
+              setSelectedCategory('all');
+            }}
+            className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
+          >
+            <div className="flex items-center justify-between text-slate-300 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Total Menu</span>
+              <Package className="w-4 h-4 text-blue-300" />
+            </div>
+            <div className="text-2xl font-black text-white">{stats.total}</div>
+            <p className="text-[10px] text-slate-400 mt-0.5">Semua produk terdaftar</p>
+          </div>
 
-            {canManage && onNavigateToCategories && (
+          <div
+            onClick={() => setStatusFilter('active')}
+            className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
+          >
+            <div className="flex items-center justify-between text-emerald-300 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Menu Aktif Kasir</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-black text-emerald-400">{stats.activeCount}</div>
+            <p className="text-[10px] text-slate-400 mt-0.5">Tayang di mesin kasir</p>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
+            <div className="flex items-center justify-between text-teal-300 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Olahan F&amp;B</span>
+              <UtensilsCrossed className="w-4 h-4 text-teal-300" />
+            </div>
+            <div className="text-2xl font-black text-teal-300">{stats.fnbCount}</div>
+            <p className="text-[10px] text-slate-400 mt-0.5">Potong bahan baku via BOM</p>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
+            <div className="flex items-center justify-between text-indigo-300 mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Ritel Fisik</span>
+              <Boxes className="w-4 h-4 text-indigo-300" />
+            </div>
+            <div className="text-2xl font-black text-indigo-300">{stats.retailCount}</div>
+            <p className="text-[10px] text-slate-400 mt-0.5">Produk berstok unit fisik</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar Pencarian & Aksi Katalog */}
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between">
+        {/* Search Input & Refresh */}
+        <div className="flex items-center gap-2 flex-1 max-w-lg">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari nama menu, SKU, atau scan barcode..."
+              className="w-full bg-slate-50 border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl pl-10 pr-9 py-2.5 text-xs sm:text-sm transition-all outline-none"
+            />
+            {searchTerm && (
               <button
                 type="button"
-                onClick={onNavigateToCategories}
-                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-                title="Buka menu Kelola Kategori Produk"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                title="Hapus pencarian"
               >
-                <Layers className="w-4 h-4 text-blue-900 shrink-0" />
-                <span className="sm:hidden">Kategori</span>
-                <span className="hidden sm:inline">Kategori Produk</span>
-              </button>
-            )}
-
-            {canManage && outletId && (
-              <button
-                type="button"
-                onClick={() => setAssignModalOpen(true)}
-                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-                title="Ambil dan hubungkan menu dari Master Katalog Pusat ke outlet toko ini"
-              >
-                <ShoppingBag className="w-4 h-4 text-blue-800 shrink-0" />
-                <span className="sm:hidden">Dari Master</span>
-                <span className="hidden sm:inline">Ambil dari Master Katalog</span>
-              </button>
-            )}
-
-            {/* Ekspor CSV / Excel */}
-            <button
-              type="button"
-              onClick={() => {
-                const ok = exportProductsToCsv(products, 'katalog_produk_wellpos', (err) => {
-                  setFeedback({ type: 'error', message: err });
-                });
-                if (ok) {
-                  setFeedback({
-                    type: 'success',
-                    message: `Berhasil mengunduh berkas CSV (${products.length} produk). Berkas siap dibuka di Microsoft Excel.`,
-                  });
-                }
-              }}
-              className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-              title="Ekspor daftar produk saat ini ke format CSV / Excel"
-            >
-              <Download className="w-4 h-4 text-emerald-700 shrink-0" />
-              <span className="sm:hidden">Ekspor</span>
-              <span className="hidden sm:inline">Ekspor CSV</span>
-            </button>
-
-            {/* Cetak Label Barcode / Stiker Rak */}
-            <button
-              type="button"
-              onClick={() => {
-                setProductsForLabels(products);
-                setBarcodeLabelsModalOpen(true);
-              }}
-              className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/50 hover:bg-blue-100/50 text-blue-950 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-              title="Cetak label barcode / stiker rak untuk produk"
-            >
-              <Barcode className="w-4 h-4 text-blue-900 shrink-0" />
-              <span className="sm:hidden">Label</span>
-              <span className="hidden sm:inline">Cetak Label</span>
-            </button>
-
-            {/* Impor Massal Produk */}
-            {canManage && (
-              <button
-                type="button"
-                onClick={() => setImportModalOpen(true)}
-                className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-                title="Impor ratusan produk sekaligus dari file spreadsheet CSV / Excel"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-blue-900 shrink-0" />
-                <span className="sm:hidden">Impor</span>
-                <span className="hidden sm:inline">Impor Massal</span>
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Primary Action Button (Tambah Produk) */}
+          <button
+            type="button"
+            onClick={() => fetchData()}
+            title="Muat Ulang Katalog"
+            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs flex items-center justify-center shrink-0 cursor-pointer min-h-[40px] min-w-[40px]"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* Buttons Toolbar Kanan */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
+          {/* Ambil dari Master Katalog (jika outlet mode) */}
+          {canManage && outletId && (
+            <button
+              type="button"
+              onClick={() => setAssignModalOpen(true)}
+              className="px-3 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap min-h-[40px]"
+              title="Ambil dan hubungkan menu dari Master Katalog Pusat ke outlet toko ini"
+            >
+              <ShoppingBag className="w-4 h-4 text-blue-800 shrink-0" />
+              <span>Ambil dari Master</span>
+            </button>
+          )}
+
+          {/* Kelola Kategori */}
+          {canManage && onNavigateToCategories && (
+            <button
+              type="button"
+              onClick={onNavigateToCategories}
+              className="px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap min-h-[40px]"
+              title="Buka menu Kelola Kategori Produk"
+            >
+              <Layers className="w-4 h-4 text-blue-900 shrink-0" />
+              <span>Kategori</span>
+            </button>
+          )}
+
+          {/* Dropdown Menu: Alat & Berkas (Impor, Ekspor, Cetak Label) */}
+          <div className="relative" ref={toolsDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
+              className="px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap min-h-[40px]"
+              title="Opsi Impor, Ekspor, dan Cetak Label"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-slate-600 shrink-0" />
+              <span>Alat &amp; Berkas</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+                  toolsDropdownOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {toolsDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-30 animate-fadeIn space-y-1">
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsDropdownOpen(false);
+                      setImportModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-950 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-blue-900" />
+                    <div>
+                      <div>Impor Spreadsheet</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Format CSV / Excel</div>
+                    </div>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setToolsDropdownOpen(false);
+                    const ok = exportProductsToCsv(products, 'katalog_produk_wellpos', (err) => {
+                      setFeedback({ type: 'error', message: err });
+                    });
+                    if (ok) {
+                      setFeedback({
+                        type: 'success',
+                        message: `Berhasil mengunduh berkas CSV (${products.length} produk). Berkas siap dibuka di Microsoft Excel.`,
+                      });
+                    }
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-950 flex items-center gap-2 cursor-pointer transition-colors"
+                >
+                  <Download className="w-4 h-4 text-emerald-700" />
+                  <div>
+                    <div>Ekspor Katalog CSV</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Unduh data aktif</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setToolsDropdownOpen(false);
+                    setProductsForLabels(products);
+                    setBarcodeLabelsModalOpen(true);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-950 flex items-center gap-2 cursor-pointer transition-colors"
+                >
+                  <Barcode className="w-4 h-4 text-blue-900" />
+                  <div>
+                    <div>Cetak Label Barcode</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Stiker rak &amp; kemasan</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Tombol Utama Tambah Produk */}
           {canManage && (
             <button
               type="button"
               onClick={handleAddNew}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap min-h-[40px]"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Tambah Produk</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Filter Tabs: Kategori & Status Aktif/Nonaktif */}
-      <div className="space-y-3">
-        {/* Status Filter Tabs (Semua / Aktif / Nonaktif) */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
-                statusFilter === 'all'
-                  ? 'bg-white text-blue-950 shadow-xs font-black'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Semua Status
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('active')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                statusFilter === 'active'
-                  ? 'bg-emerald-600 text-white shadow-xs font-black'
-                  : 'text-slate-600 hover:text-emerald-700'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Hanya Aktif</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('inactive')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                statusFilter === 'inactive'
-                  ? 'bg-slate-800 text-white shadow-xs font-black'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-rose-400" />
-              <span>Hanya Nonaktif</span>
-            </button>
-          </div>
-
-          <div className="text-xs text-slate-500 font-medium">
-            Menampilkan <strong>{products.length}</strong> produk
-            {outletId ? ' pada toko aktif' : ''}
-          </div>
+      {/* Filter Bar Terpadu: Status & Kategori */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        {/* Status Filter Pills */}
+        <div className="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200/80 text-xs font-bold shrink-0 self-start">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+              statusFilter === 'all'
+                ? 'bg-white text-blue-950 shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Semua Status ({stats.total})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('active')}
+            className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+              statusFilter === 'active'
+                ? 'bg-emerald-600 text-white shadow-xs font-black'
+                : 'text-slate-600 hover:text-emerald-700'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>Hanya Aktif ({stats.activeCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('inactive')}
+            className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+              statusFilter === 'inactive'
+                ? 'bg-slate-800 text-white shadow-xs font-black'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-rose-400" />
+            <span>Hanya Nonaktif ({stats.total - stats.activeCount})</span>
+          </button>
         </div>
 
-        {/* Category Pills Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {/* Category Pills Horizontal Scroll */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
           <button
             type="button"
             onClick={() => setSelectedCategory('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               selectedCategory === 'all'
                 ? 'bg-blue-900 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
             }`}
           >
             Semua Kategori ({categories.reduce((acc, c) => acc + (c.productCount || 0), 0)})
@@ -603,10 +731,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                 selectedCategory === cat.id
                   ? 'bg-blue-900 text-white shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
               {cat.name} {cat.productCount !== undefined && `(${cat.productCount})`}
@@ -617,10 +745,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <button
               type="button"
               onClick={onNavigateToCategories}
-              className="px-3 py-1 rounded-xl text-xs font-bold border border-dashed border-blue-900/40 text-blue-900 hover:bg-blue-50 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer"
-              title="Buka menu Kelola Kategori Produk"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-dashed border-blue-900/40 text-blue-900 hover:bg-blue-50 transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer shrink-0"
+              title="Kelola Kategori"
             >
-              <Plus className="w-3 h-3" /> Kelola Kategori
+              <Plus className="w-3 h-3" /> Kategori
             </button>
           )}
         </div>
@@ -630,11 +758,11 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         {/* Desktop Table View (Hidden on Mobile) */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+          <table className="w-full text-left border-collapse text-sm table-fixed">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-bold text-xs uppercase tracking-wider">
                 {canManage && (
-                  <th className="py-3.5 pl-4 pr-2 w-10 text-center">
+                  <th className="py-3.5 pl-3 pr-1 w-[36px] text-center">
                     <button
                       type="button"
                       onClick={handleToggleSelectAll}
@@ -653,14 +781,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     </button>
                   </th>
                 )}
-                <th className="py-3.5 px-4 min-w-[260px]">Produk</th>
-                <th className="py-3.5 px-3 min-w-[90px]">Status</th>
-                <th className="py-3.5 px-3 min-w-[130px]">Barcode / SKU</th>
-                <th className="py-3.5 px-3 min-w-[120px]">Kategori</th>
-                <th className="py-3.5 px-4 min-w-[110px] text-right">Modal (HPP)</th>
-                <th className="py-3.5 px-4 min-w-[120px] text-right">Harga Jual</th>
-                <th className="py-3.5 px-4 min-w-[120px] text-center">Stok Toko</th>
-                <th className="py-3.5 px-4 pr-5 min-w-[110px] text-center">Aksi</th>
+                <th className="py-3.5 px-3 min-w-[210px]">Produk</th>
+                <th className="py-3.5 px-1 w-[76px] text-center whitespace-nowrap">Status</th>
+                <th className="py-3.5 px-2 w-[108px] whitespace-nowrap">Barcode / SKU</th>
+                <th className="py-3.5 px-2 w-[108px] whitespace-nowrap">Kategori</th>
+                <th className="py-3.5 px-2.5 w-[132px] text-right whitespace-nowrap">Modal (HPP)</th>
+                <th className="py-3.5 px-2.5 w-[132px] text-right whitespace-nowrap">Harga Jual</th>
+                <th className="py-3.5 px-2 w-[140px] text-center whitespace-nowrap">Stok Toko</th>
+                <th className="py-3.5 px-2 pr-5 w-[166px] text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -688,17 +816,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   const isSelected = selectedIds.includes(p.id);
                   const marginRp = p.basePrice - p.costPrice;
                   const marginPercent = p.basePrice > 0 ? Math.round((marginRp / p.basePrice) * 100) : 0;
+                  const isFnbComposite =
+                    p.productType === 'COMPOSITE' ||
+                    p.hasStock === false ||
+                    (p.stock !== undefined && p.stock >= 999000);
 
                   return (
                     <tr
                       key={p.id}
-                      className={`transition-colors ${
-                        isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'
+                      className={`group transition-colors ${
+                        isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/70'
                       } ${!p.isActive ? 'opacity-70 bg-slate-50/30' : ''}`}
                     >
                       {/* Checkbox */}
                       {canManage && (
-                        <td className="py-3.5 pl-4 pr-2 text-center">
+                        <td className="py-3.5 pl-3 pr-1 text-center">
                           <button
                             type="button"
                             onClick={() => handleToggleSelectOne(p.id)}
@@ -714,35 +846,35 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       )}
 
                       {/* Nama & Foto & Deskripsi */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2.5">
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
                               alt={p.name}
-                              className="w-12 h-12 rounded-xl object-cover border border-slate-200/90 shadow-2xs shrink-0 bg-slate-100"
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-200/90 shadow-2xs shrink-0 bg-slate-100"
                               onError={(e) => {
                                 (e.target as HTMLElement).style.display = 'none';
                               }}
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs shrink-0 shadow-2xs">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs shrink-0 shadow-2xs">
                               {p.name.substring(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <div className="min-w-0">
-                            <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
-                              <span className={!p.isActive ? 'line-through text-slate-500' : ''}>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                              <span className={`font-bold ${!p.isActive ? 'line-through text-slate-500' : ''}`} title={p.name}>
                                 {p.name}
                               </span>
                               {p.modifiers && p.modifiers.length > 0 && (
-                                <span className="text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full shadow-2xs">
+                                <span className="text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full shadow-2xs shrink-0">
                                   ✨ {p.modifiers.length} Custom Opsi
                                 </span>
                               )}
                             </div>
                             {p.description && (
-                              <div className="text-xs text-slate-400 truncate max-w-xs mt-0.5">
+                              <div className="text-xs text-slate-400 line-clamp-1 max-w-xs sm:max-w-md mt-0.5" title={p.description}>
                                 {p.description}
                               </div>
                             )}
@@ -751,7 +883,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </td>
 
                       {/* Status Aktif / Nonaktif */}
-                      <td className="py-3.5 px-3">
+                      <td className="py-3.5 px-1 text-center whitespace-nowrap">
                         {p.isActive ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -766,7 +898,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </td>
 
                       {/* Barcode / SKU */}
-                      <td className="py-3.5 px-3">
+                      <td className="py-3.5 px-2">
                         <div className="font-mono text-xs font-semibold text-slate-700 flex items-center gap-1">
                           <Barcode className="w-3.5 h-3.5 text-blue-900 shrink-0" />
                           <span className="truncate">{p.barcode || '-'}</span>
@@ -775,31 +907,31 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </td>
 
                       {/* Kategori */}
-                      <td className="py-3.5 px-3">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold inline-block truncate max-w-[130px]">
-                          {p.category.name}
+                      <td className="py-3.5 px-2">
+                        <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold inline-block truncate max-w-[92px]" title={p.category?.name}>
+                          {p.category?.name || 'Tanpa Kategori'}
                         </span>
                       </td>
 
                       {/* Modal HPP */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-2.5 text-right whitespace-nowrap">
                         {p.costPrice > 0 ? (
-                          <div>
-                            <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                          <div className="flex flex-col items-end">
+                            <span className="font-semibold text-slate-800 text-xs sm:text-sm whitespace-nowrap">
                               Rp {p.costPrice.toLocaleString('id-ID')}
                             </span>
-                            {p.productType === 'COMPOSITE' && (
-                              <span className="text-[10px] text-slate-400 font-normal block">
+                            {isFnbComposite && (
+                              <span className="text-[10px] text-slate-500 font-semibold px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 inline-block mt-0.5 whitespace-nowrap">
                                 HPP BOM
                               </span>
                             )}
                           </div>
-                        ) : p.productType === 'COMPOSITE' ? (
-                          <div title="Formula resep belum diracik di modul Resep & HPP">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                        ) : isFnbComposite ? (
+                          <div className="flex flex-col items-end" title="Formula resep belum diracik di modul Resep & HPP">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap">
                               Belum Ada Resep
                             </span>
-                            <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-medium block mt-0.5 whitespace-nowrap">
                               HPP: Rp 0
                             </span>
                           </div>
@@ -809,48 +941,55 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       </td>
 
                       {/* Harga Jual & Margin */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="font-extrabold text-blue-950 text-xs sm:text-sm">
-                          Rp {p.basePrice.toLocaleString('id-ID')}
+                      <td className="py-3.5 px-2.5 text-right whitespace-nowrap">
+                        <div className="flex flex-col items-end">
+                          <div className="font-extrabold text-blue-950 text-xs sm:text-sm whitespace-nowrap">
+                            Rp {p.basePrice.toLocaleString('id-ID')}
+                          </div>
+                          {p.costPrice > 0 ? (
+                            <div className="text-[11px] text-emerald-600 font-bold mt-0.5 whitespace-nowrap">
+                              Margin: {marginPercent}%
+                            </div>
+                          ) : isFnbComposite ? (
+                            <div
+                              className="text-[10px] text-slate-400 font-medium mt-0.5 whitespace-nowrap"
+                              title="Margin HPP belum dapat dihitung karena resep belum dirawat"
+                            >
+                              Margin: -
+                            </div>
+                          ) : null}
                         </div>
-                        {p.costPrice > 0 ? (
-                          <div className="text-[11px] text-emerald-600 font-bold mt-0.5">
-                            Margin: {marginPercent}%
-                          </div>
-                        ) : p.productType === 'COMPOSITE' ? (
-                          <div className="text-[10px] text-slate-400 font-medium mt-0.5" title="Margin HPP belum dapat dihitung karena resep belum dirawat">
-                            Margin: -
-                          </div>
-                        ) : null}
                       </td>
 
-                      {/* Stok & Status Alert */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs">
-                          {p.productType === 'COMPOSITE' || p.stock >= 99999 ? (
-                            <span className="flex items-center gap-1 text-emerald-800 bg-emerald-50 border-emerald-200 px-2 py-0.5 rounded-full">
-                              <InfinityIcon className="w-3 h-3 text-emerald-600" />
-                              Olahan F&B
+                      {/* Stok Toko */}
+                      <td className="py-3.5 px-2 text-center whitespace-nowrap">
+                        {isFnbComposite ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 shadow-2xs whitespace-nowrap">
+                            <InfinityIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Olahan F&amp;B</span>
+                          </span>
+                        ) : p.isLowStock ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 shadow-2xs whitespace-nowrap">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span className="whitespace-nowrap">
+                              {Number(p.stock || 0).toLocaleString('id-ID')} {p.unit || 'Pcs'}
                             </span>
-                          ) : p.isLowStock ? (
-                            <span className="flex items-center gap-1 text-amber-700 bg-amber-50 border-amber-200 px-2 py-0.5 rounded-full">
-                              <AlertTriangle className="w-3 h-3 text-amber-600" />
-                              {p.stock} {p.unit}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-blue-950 bg-blue-50 border border-blue-200/80 shadow-2xs whitespace-nowrap">
+                            <span className="whitespace-nowrap">
+                              {Number(p.stock || 0).toLocaleString('id-ID')} {p.unit || 'Pcs'}
                             </span>
-                          ) : (
-                            <span className="text-blue-900 bg-blue-50 border-blue-200 px-2 py-0.5 rounded-full">
-                              {p.stock} {p.unit}
-                            </span>
-                          )}
-                        </div>
+                          </span>
+                        )}
                       </td>
 
                       {/* Tombol Aksi */}
-                      <td className="py-3.5 px-4 pr-5 text-center">
+                      <td className="py-3.5 px-2 pr-5 text-center whitespace-nowrap">
                         {canManage ? (
-                          <div className="flex items-center justify-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
                             {/* Toggle Aktif / Nonaktif */}
-                            <div className="relative group flex items-center">
+                            <div className="relative group/btn flex items-center">
                               <button
                                 type="button"
                                 onClick={() => handleToggleStatusSingle(p)}
@@ -862,7 +1001,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                               >
                                 <Power className="w-3.5 h-3.5" />
                               </button>
-                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/btn:flex flex-col items-center pointer-events-none z-30">
                                 <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
                                   {p.isActive ? 'Nonaktifkan Menu' : 'Aktifkan Kembali'}
                                 </span>
@@ -871,7 +1010,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                             </div>
 
                             {/* Cetak Label Barcode Produk */}
-                            <div className="relative group flex items-center">
+                            <div className="relative group/btn flex items-center">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -882,7 +1021,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                               >
                                 <Barcode className="w-3.5 h-3.5" />
                               </button>
-                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/btn:flex flex-col items-center pointer-events-none z-30">
                                 <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
                                   Cetak Label Barcode
                                 </span>
@@ -891,7 +1030,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                             </div>
 
                             {/* Edit Menu */}
-                            <div className="relative group flex items-center">
+                            <div className="relative group/btn flex items-center">
                               <button
                                 type="button"
                                 onClick={() => handleEdit(p)}
@@ -899,7 +1038,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover/btn:flex flex-col items-center pointer-events-none z-30">
                                 <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
                                   Edit Produk
                                 </span>
@@ -908,7 +1047,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                             </div>
 
                             {/* Hapus / Nonaktifkan */}
-                            <div className="relative group flex items-center">
+                            <div className="relative group/btn flex items-center">
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSingle(p)}
@@ -916,7 +1055,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
-                              <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex flex-col items-end pointer-events-none z-30">
+                              <div className="absolute bottom-full mb-2 right-0 hidden group-hover/btn:flex flex-col items-end pointer-events-none z-30">
                                 <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
                                   Hapus / Nonaktifkan
                                 </span>
@@ -1056,18 +1195,20 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 font-medium block">Stok Toko</span>
                       <div className="inline-flex items-center gap-1 font-bold text-xs mt-0.5">
-                        {p.productType === 'COMPOSITE' || p.stock >= 99999 ? (
-                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px]">
-                            Olahan F&B (∞)
+                        {p.productType === 'COMPOSITE' ||
+                        p.hasStock === false ||
+                        (p.stock !== undefined && p.stock >= 999000) ? (
+                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                            Olahan F&amp;B (∞)
                           </span>
                         ) : p.isLowStock ? (
                           <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px] font-black flex items-center gap-0.5">
                             <AlertTriangle className="w-3 h-3 text-amber-600" />
-                            {p.stock} {p.unit}
+                            {Number(p.stock || 0).toLocaleString('id-ID')} {p.unit || 'Pcs'}
                           </span>
                         ) : (
-                          <span className="text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md text-[10px]">
-                            {p.stock} {p.unit}
+                          <span className="text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                            {Number(p.stock || 0).toLocaleString('id-ID')} {p.unit || 'Pcs'}
                           </span>
                         )}
                       </div>
