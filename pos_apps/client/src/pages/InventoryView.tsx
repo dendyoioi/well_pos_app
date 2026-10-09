@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Boxes,
   ArrowDownRight,
@@ -279,10 +279,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     return s > minAlert;
   }).length;
 
-  // Kategori unik untuk filter produk jadi
-  const uniqueCategories = Array.from(
-    new Set(products.map((p) => p.category?.name).filter(Boolean))
-  ) as string[];
+  // Kategori unik & hitungan produk jadi untuk filter
+  const uniqueCategories = useMemo(() => {
+    return Array.from(
+      new Set(products.map((p) => p.category?.name).filter(Boolean))
+    ) as string[];
+  }, [products]);
+
+  const categoriesWithCounts = useMemo(() => {
+    return uniqueCategories.map((catName) => ({
+      name: catName,
+      count: products.filter((p) => p.category?.name === catName).length,
+    }));
+  }, [uniqueCategories, products]);
 
   // Filter produk jadi
   const filteredProducts = products.filter((p) => {
@@ -1168,7 +1177,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       />
                     </div>
 
-                    {/* Kategori Filter */}
+                    {/* Kategori Filter Dropdown dengan Info Value */}
                     {uniqueCategories.length > 0 && (
                       <div className="relative w-full sm:w-auto">
                         <select
@@ -1177,9 +1186,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           className="w-full sm:w-auto appearance-none pr-9 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 hover:bg-slate-100/60 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none cursor-pointer transition-all"
                         >
                           <option value="ALL">Semua Kategori ({products.length})</option>
-                          {uniqueCategories.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
+                          {categoriesWithCounts.map((cat) => (
+                            <option key={cat.name} value={cat.name}>
+                              {cat.name} ({cat.count})
                             </option>
                           ))}
                         </select>
@@ -1196,6 +1205,37 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     dari {products.length} produk
                   </div>
                 </div>
+
+                {/* Category Pills Horizontal Scroll - Identik dengan Daftar Menu */}
+                {categoriesWithCounts.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full no-scrollbar pt-1 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setProductCategoryFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                        productCategoryFilter === 'ALL'
+                          ? 'bg-blue-900 text-white shadow-sm'
+                          : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Semua Kategori ({products.length})
+                    </button>
+                    {categoriesWithCounts.map((cat) => (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => setProductCategoryFilter(cat.name)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                          productCategoryFilter === cat.name
+                            ? 'bg-blue-900 text-white shadow-sm'
+                            : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {cat.name} ({cat.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Quick Status Chips */}
                 <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
@@ -1262,13 +1302,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <table className="w-full text-left text-xs text-slate-600">
                     <thead className="bg-slate-50/90 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200 tracking-wider">
                       <tr>
-                        <th className="px-5 py-3.5 pl-6 min-w-[240px]">Produk &amp; SKU</th>
-                        <th className="px-4 py-3.5 w-28 text-center">Kategori</th>
-                        <th className="px-5 py-3.5 w-44 text-center">Stok Fisik Toko</th>
-                        <th className="px-4 py-3.5 w-32 text-right">Harga Modal (HPP)</th>
-                        <th className="px-4 py-3.5 w-32 text-right">Nilai Aset Stok</th>
-                        <th className="px-4 py-3.5 w-32 text-right">Harga Jual</th>
-                        <th className="px-4 py-3.5 pr-6 w-36 text-center">Aksi Mutasi</th>
+                        <th className="px-5 py-3.5 pl-6 min-w-[240px] whitespace-nowrap">Produk &amp; SKU</th>
+                        <th className="px-4 py-3.5 w-36 text-center whitespace-nowrap">Kategori</th>
+                        <th className="px-5 py-3.5 w-44 text-center whitespace-nowrap">Stok Fisik Toko</th>
+                        <th className="px-4 py-3.5 w-36 text-right whitespace-nowrap">Harga Modal (HPP)</th>
+                        <th className="px-4 py-3.5 w-36 text-right whitespace-nowrap">Nilai Aset Stok</th>
+                        <th className="px-4 py-3.5 w-36 text-right whitespace-nowrap">Harga Jual</th>
+                        <th className="px-4 py-3.5 pr-6 w-40 text-center whitespace-nowrap">Aksi Mutasi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -1357,28 +1397,28 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               </td>
 
                               {/* Kategori */}
-                              <td className="px-4 py-3.5 text-center">
-                                <span className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-900 font-bold text-[10px] border border-blue-200">
+                              <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                <span className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-900 font-bold text-[10px] border border-blue-200 whitespace-nowrap inline-block">
                                   {p.category?.name || 'Umum'}
                                 </span>
                               </td>
 
                               {/* Stok Fisik & Status */}
-                              <td className="px-5 py-3.5 text-center">
+                              <td className="px-5 py-3.5 text-center whitespace-nowrap">
                                 {isComposite ? (
-                                  <div className="flex flex-col items-center justify-center gap-0.5">
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/90 font-extrabold text-[11px] shadow-2xs">
+                                  <div className="flex flex-col items-center justify-center gap-0.5 whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/90 font-extrabold text-[11px] shadow-2xs whitespace-nowrap">
                                       <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                       <span>Olahan Dapur (BOM)</span>
                                     </span>
-                                    <span className="text-[10px] text-amber-700/80 font-semibold">
+                                    <span className="text-[10px] text-amber-700/80 font-semibold whitespace-nowrap">
                                       Kalkulasi Resep
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center justify-center gap-2">
+                                  <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                                     <span
-                                      className={`w-2 h-2 rounded-full ${
+                                      className={`w-2 h-2 rounded-full shrink-0 ${
                                         isZero
                                           ? 'bg-rose-500 ring-2 ring-rose-200'
                                           : isLow
@@ -1387,7 +1427,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       }`}
                                     />
                                     <span
-                                      className={`text-sm font-black ${
+                                      className={`text-sm font-black whitespace-nowrap ${
                                         isZero
                                           ? 'text-rose-600'
                                           : isLow
@@ -1397,19 +1437,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                     >
                                       {stockVal.toLocaleString('id-ID')}
                                     </span>
-                                    <span className="text-[11px] text-slate-400 font-semibold">
+                                    <span className="text-[11px] text-slate-400 font-semibold whitespace-nowrap">
                                       {p.unit || 'Unit'}
                                     </span>
                                     {isZero ? (
-                                      <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
+                                      <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold whitespace-nowrap">
                                         Habis
                                       </span>
                                     ) : isLow ? (
-                                      <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                      <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold whitespace-nowrap">
                                         Menipis
                                       </span>
                                     ) : (
-                                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold whitespace-nowrap">
                                         Aman
                                       </span>
                                     )}
@@ -1418,31 +1458,31 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               </td>
 
                               {/* Harga Modal HPP */}
-                              <td className="px-4 py-3.5 text-right font-bold text-slate-700">
+                              <td className="px-4 py-3.5 text-right font-bold text-slate-700 whitespace-nowrap">
                                 {formatRupiah(p.costPrice || 0)}
                               </td>
 
                               {/* Nilai Aset Stok */}
-                              <td className="px-4 py-3.5 text-right font-black text-slate-900">
+                              <td className="px-4 py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
                                 {isComposite ? '-' : formatRupiah(totalVal)}
                               </td>
 
                               {/* Harga Jual */}
-                              <td className="px-4 py-3.5 text-right font-black text-blue-900">
+                              <td className="px-4 py-3.5 text-right font-black text-blue-900 whitespace-nowrap">
                                 {formatRupiah(p.basePrice || p.price || 0)}
                               </td>
 
                               {/* Aksi Mutasi */}
-                              <td className="px-4 py-3.5 pr-6 text-center">
+                              <td className="px-4 py-3.5 pr-6 text-center whitespace-nowrap">
                                 {isComposite ? (
-                                  <div className="flex items-center justify-center">
+                                  <div className="flex items-center justify-center whitespace-nowrap">
                                     <button
                                       type="button"
                                       onClick={() => {
                                         setActiveTab('INGREDIENTS');
                                         dialog.toast(`"${p.name}" adalah menu olahan dapur. Mutasi persediaan (kulakan/rusak/opname) dikelola melalui tab Bahan Baku.`, 'info');
                                       }}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/90 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/90 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95 whitespace-nowrap"
                                       title="Menu olahan dapur dihitung dari bahan baku. Klik untuk beralih ke tab Bahan Baku."
                                     >
                                       <Boxes className="w-3.5 h-3.5 text-amber-700 shrink-0" />
@@ -1450,7 +1490,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                     </button>
                                   </div>
                                 ) : (
-                                  <div className="inline-flex items-center p-1 bg-slate-100/80 border border-slate-200/80 rounded-xl gap-1 justify-center">
+                                  <div className="inline-flex items-center p-1 bg-slate-100/80 border border-slate-200/80 rounded-xl gap-1 justify-center whitespace-nowrap">
                                     {/* Stok Masuk */}
                                     <div className="relative group flex items-center">
                                       <button
