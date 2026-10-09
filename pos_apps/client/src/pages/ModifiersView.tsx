@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sliders,
   Plus,
@@ -15,13 +15,13 @@ import {
   ToggleRight,
   Layers,
   Package,
-  ChevronDown,
   X,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { ModifierGroup, ModifierItem, UpsertModifierGroupInput } from '../types/modifier';
 import type { RecipeInventoryItem } from '../types/recipe';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { TablePagination } from '../components/TablePagination';
 import { formatRupiah } from '../utils/currency';
 import { useDialog } from '../context/DialogContext';
@@ -31,6 +31,16 @@ export const ModifiersView: React.FC = () => {
   const [groups, setGroups] = useState<ModifierGroup[]>([]);
   const [inventoryItems, setInventoryItems] = useState<RecipeInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Opsi Bahan Baku Terformat untuk Searchable Dropdown
+  const inventoryOptions = useMemo(() => {
+    return inventoryItems.map((inv) => ({
+      value: inv.id,
+      label: inv.name,
+      sublabel: inv.itemCode ? `Kode: ${inv.itemCode}` : undefined,
+      badge: inv.canonicalUom,
+    }));
+  }, [inventoryItems]);
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -524,28 +534,24 @@ export const ModifiersView: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                      {/* Dropdown Bahan Baku Berukuran Proporsional dengan Chevron Custom */}
-                      <div className="relative w-full sm:w-72 lg:w-80 shrink-0">
-                        <select
+                      {/* Dropdown Bahan Baku dengan Fitur Pencarian (Searchable Dropdown) */}
+                      <div className="w-full sm:w-72 lg:w-80 shrink-0">
+                        <SearchableSelect
                           value={item.inventoryEffect?.inventoryItemId || ''}
-                          onChange={(e) => {
-                            const selectedId = e.target.value;
+                          onChange={(selectedId) => {
                             handleItemInventoryEffectChange(
                               index,
                               selectedId,
                               item.inventoryEffect?.quantityDelta || 1
                             );
                           }}
-                          className="w-full appearance-none pl-3 pr-8 py-2 bg-slate-50/60 hover:bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors cursor-pointer"
-                        >
-                          <option value="">-- Tanpa Efek Bahan Baku --</option>
-                          {inventoryItems.map((inv) => (
-                            <option key={inv.id} value={inv.id}>
-                              {inv.name} ({inv.canonicalUom})
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          options={inventoryOptions}
+                          placeholder="-- Tanpa Efek Bahan Baku --"
+                          searchPlaceholder="Cari nama atau kode bahan baku..."
+                          emptyMessage="Tidak ada bahan baku ditemukan"
+                          emptyLabel="-- Tanpa Efek Bahan Baku --"
+                          accentColor="amber"
+                        />
                       </div>
 
                       {/* Jika Terhubung: Input Takaran & Satuan */}

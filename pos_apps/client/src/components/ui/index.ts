@@ -9,3 +9,4 @@ export * from './WhatsAppInput';
 export * from './CurrencyInput';
 export * from './EmptyState';
 export * from './TableSkeleton';
+export * from './SearchableSelect';
