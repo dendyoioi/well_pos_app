@@ -729,7 +729,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 sm:px-5 py-3 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-bold hover:bg-slate-100 transition-colors"
+            className="h-12 px-4 sm:px-5 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-bold hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
           >
             Batal (Esc)
           </button>
@@ -745,7 +745,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               (method === 'DEBT' && !selectedCustomer)
             }
             onClick={handlePay}
-            className={`flex-1 py-3 px-4 sm:px-5 rounded-xl active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white text-xs sm:text-sm font-extrabold shadow-lg transition-all flex items-center justify-center gap-2 tracking-wide min-h-[46px] ${
+            className={`h-12 flex-1 px-4 sm:px-5 rounded-xl active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white text-xs sm:text-sm font-extrabold shadow-md transition-all flex items-center justify-center gap-2 tracking-wide cursor-pointer ${
               method === 'DEBT'
                 ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
                 : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'

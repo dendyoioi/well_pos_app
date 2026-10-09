@@ -7,6 +7,7 @@ export interface ProductCatalogGridProps {
   onSelectProduct: (product: Product) => void;
   viewMode: 'grid' | 'compact';
   loading: boolean;
+  cartProductQuantities?: Map<string, number>;
 }
 
 export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
@@ -14,6 +15,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
   onSelectProduct,
   viewMode,
   loading,
+  cartProductQuantities,
 }) => {
   if (loading) {
     return (
@@ -51,6 +53,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
             const stock = product.stock ?? 0;
             const isUnlimited = isComposite || stock >= 99999;
             const isOutOfStock = !isUnlimited && stock <= 0;
+            const inCartQty = cartProductQuantities?.get(product.id) || 0;
 
             return (
               <div
@@ -59,24 +62,34 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                 className={`p-3 sm:p-3.5 flex items-center justify-between gap-4 transition-colors cursor-pointer select-none ${
                   isOutOfStock
                     ? 'opacity-50 bg-slate-50 cursor-not-allowed'
-                    : 'hover:bg-blue-50/40 active:bg-blue-100/50'
+                    : inCartQty > 0
+                    ? 'bg-blue-50/30 hover:bg-blue-50/60'
+                    : 'hover:bg-slate-50/80 active:bg-blue-50/50'
                 }`}
               >
                 <div className="min-w-0 flex items-center gap-3">
-                  {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200/90 shadow-2xs"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-500 font-bold text-xs border border-slate-200/80">
-                      {product.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <div className="relative shrink-0">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-12 h-12 rounded-xl object-cover border border-slate-200/90 shadow-2xs"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200/80">
+                        {product.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {inCartQty > 0 && (
+                      <span className="absolute -top-1.5 -left-1.5 bg-blue-900 text-white text-[9px] font-black px-1.5 py-0.2 rounded-md shadow-xs border border-white">
+                        {inCartQty}x
+                      </span>
+                    )}
+                  </div>
+
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
@@ -113,7 +126,11 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                   <button
                     type="button"
                     disabled={isOutOfStock}
-                    className="w-8 h-8 rounded-xl bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer ${
+                      inCartQty > 0
+                        ? 'bg-blue-900 text-white ring-2 ring-blue-900/20'
+                        : 'bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white'
+                    }`}
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -137,6 +154,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
           const stock = product.stock ?? 0;
           const isUnlimited = isComposite || stock >= 99999;
           const isOutOfStock = !isUnlimited && stock <= 0;
+          const inCartQty = cartProductQuantities?.get(product.id) || 0;
 
           // Pendekkan nama kategori supaya tidak terpotong canggung di tengah kata
           const categoryName = product.category?.name || '';
@@ -146,8 +164,12 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
             <div
               key={product.id}
               onClick={() => !isOutOfStock && onSelectProduct(product)}
-              className={`bg-white rounded-2xl border border-slate-200/90 hover:border-blue-900/40 hover:shadow-md p-2.5 sm:p-3 flex flex-col gap-2 transition-all duration-150 cursor-pointer select-none group relative overflow-hidden ${
-                isOutOfStock ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'active:scale-[0.98]'
+              className={`bg-white rounded-2xl border p-2.5 sm:p-3 flex flex-col gap-2 transition-all duration-150 cursor-pointer select-none group relative overflow-hidden ${
+                isOutOfStock
+                  ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200'
+                  : inCartQty > 0
+                  ? 'border-blue-900 ring-2 ring-blue-900/15 shadow-sm active:scale-[0.98]'
+                  : 'border-slate-200/90 hover:border-blue-900/40 hover:shadow-md active:scale-[0.98]'
               }`}
             >
               {/* Product Visual / Image */}
@@ -172,7 +194,16 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                   </div>
                 )}
 
-                {/* Badge Modifier */}
+                {/* Badge In Cart Qty (Top-Left) */}
+                {inCartQty > 0 && (
+                  <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                    <span className="bg-blue-900 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs flex items-center gap-0.5">
+                      {inCartQty}x
+                    </span>
+                  </div>
+                )}
+
+                {/* Badge Modifier (Top-Right) */}
                 {hasModifiers && (
                   <div className="absolute top-1.5 right-1.5 pointer-events-none">
                     <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-xs">
@@ -191,10 +222,10 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                 )}
               </div>
 
-              {/* Label Kategori — di atas nama produk */}
+              {/* Label Kategori & Nama Produk */}
               <div className="flex-1 flex flex-col justify-start gap-0.5">
                 {categoryName && (
-                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-blue-800/60 truncate leading-none">
+                  <p className="text-[9px] font-extrabold uppercase tracking-widest text-blue-800/70 truncate leading-none">
                     {shortCategory}
                   </p>
                 )}
@@ -229,7 +260,11 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                 <button
                   type="button"
                   disabled={isOutOfStock}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 group-hover:bg-blue-900 text-blue-900 group-hover:text-white flex items-center justify-center shrink-0 transition-colors shadow-2xs"
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors shadow-2xs cursor-pointer ${
+                    inCartQty > 0
+                      ? 'bg-blue-900 text-white'
+                      : 'bg-blue-50 group-hover:bg-blue-900 text-blue-900 group-hover:text-white'
+                  }`}
                   aria-label={`Pilih ${product.name}`}
                 >
                   <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

@@ -246,14 +246,14 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 sm:px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
+              className="h-11 px-4 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center cursor-pointer"
             >
               Batal
             </button>
             <button
               type="button"
               onClick={handleConfirm}
-              className="px-4 sm:px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 min-h-[42px]"
+              className="h-11 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <ShoppingCart className="w-4 h-4" />
               <span>Masuk Keranjang</span>

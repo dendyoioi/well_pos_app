@@ -89,14 +89,54 @@ Mengacu pada *binding rules* Well POS:
 
 ---
 
+### 7. Standar Komponen Kanonikal `<ToggleSwitch />`
+
+* **Struktur Baku**: Track kapsul `rounded-full` (`h-6 w-11`) dengan knob bola bulat putih bersih (`h-5 w-5 rounded-full bg-white shadow-md`) yang bergeser mulus (*smooth transition slide* `translate-x-5` saat aktif).
+* **Warna Status**: Biru tua solid saat aktif (`bg-blue-900`) dan abu-abu netral saat nonaktif (`bg-slate-300`).
+* **Larangan Keras**: Dilarang menggunakan raw icon SVG mentah (`<ToggleRight />` / `<ToggleLeft />`) di form pengaturan atau form modifier karena merender pill datar tanpa knob yang membingungkan pengguna.
+
+---
+
+### 8. Standar Baris Kategori Menu (*Dedicated Full-Width Category Carousel*)
+
+* **Baris Mandiri 100% (Full-Width)**: Kategori menu adalah hierarki produk utama dan **WAJIB** berada di baris tersendiri yang membentang 100% selebar container. Dilarang menggabungkan Kategori dengan Status Filter dalam satu baris horizontal yang sempit karena akan menghimpit dan memotong pills kategori di tepi layar.
+* **Pemisahan Baris Filter**: Baris atas khusus untuk status operasional (`Semua Status`, `Hanya Aktif`, `Hanya Nonaktif`) dan filter tipe produk (`Semua`, `Olahan F&B`, `Ritel Fisik`). Baris bawah khusus untuk navigasi Kategori.
+* **Styling Pill Kategori**:
+  * Tinggi seragam `h-9 px-3.5 rounded-xl` dengan tipografi tegas `text-xs sm:text-sm font-bold`.
+  * Counter badge rapi di samping teks: `Semua Kategori (8)`, `Bakery & Pastry (0)`, dsb.
+  * Navigasi scroll horizontal touch (`.no-scrollbar`) dengan tombol panah navigasi kiri/kanan (`ChevronLeft`/`ChevronRight`) yang mengapung anggun jika kategori melebihi lebar layar.
+* **Larangan Tombol Shortcut Terselip**: Dilarang keras menaruh tombol aksi/shortcut seperti `+ Kategori` di barisan pill filter kategori. Akses pengelolaan kategori berada di menu sidebar atau dropdown `Alat & Berkas`.
+
+---
+
+### 9. Standar Terminal Mesin Kasir (POS) & Feedback Visual Kartu Produk
+
+* **Visual Feedback Keranjang Real-Time**:
+  * Ketika kasir menambahkan produk ke keranjang, kartu produk di katalog (baik mode Desktop Grid, Compact List, maupun Mobile Handheld) **WAJIB** menampilkan badge kuantitas aktif `{inCartQty}x` di pojok kiri atas foto serta highlight border biru `border-blue-900 ring-2 ring-blue-900/15`.
+  * Kasir dapat melihat secara instan berapa porsi/unit item yang telah masuk keranjang tanpa harus bolak-balik memeriksa sidebar nota.
+* **Full-Width Category Carousel pada POS Desktop & Mobile**:
+  * Menggunakan standar carousel mandiri yang membentang 100% selebar container.
+  * Dilengkapi tombol geser `ChevronLeft` dan `ChevronRight` yang mengapung anggun dengan gradient mask.
+  * Dilengkapi badge counter jumlah produk per kategori (`Semua (X)`, `{Kategori} (Y)`).
+  * Toolbar atas terpadu dengan tinggi seragam `h-10` (40px) mencakup input pencarian barcode/nama, tombol kamera barcode, dan toggle Grid/List.
+  * Active Filter Feedback Bar menampilkan chip kata kunci pencarian dan filter kategori aktif serta tombol "Reset Filter".
+* **Standar Footer Aksi Kasir & Touch Targets**:
+  * Tombol checkout dan pelunasan kasir pada `PaymentModal` dan `OrderCartSidebar` menggunakan tinggi kanonikal `h-12` (48px) untuk memberikan touch target prima (*Prime Thumb Zone*) yang nyaman ditekan pada tablet layar sentuh dan smartphone PWA.
+  * Tombol aksi modal modifier (`ProductModifierModal`) diseragamkan pada tinggi `h-11` (44px).
+  * Seluruh modal transaksi wajib menyertakan bantalan safe-area iPhone: `pb-[max(0.875rem,env(safe-area-inset-bottom))]`.
+* **Zero Redundant Refresh Buttons di Terminal POS**:
+  * Tidak ada tombol refresh mandiri di POS Header, katalog produk, maupun header modal `XReportModal`. Data shift dan transaksi dimuat ulang secara otomatis dan reaktif saat modal dibuka.
+
+---
+
 ## 🗺️ II. ROADMAP EKSEKUSI BERTAHAP (FASE 0 S.D. FASE 11)
 
 | Fase | Modul Sasaran | Ruang Lingkup & Elemen Terkandung | Status |
-| :---: | :--- | :--- | :---: |
+| :---: | :--- | :--- | :--- | :---: |
 | **FASE 0** | **Kerangka Besar (*Global Shell & Foundations*)** | • Top Header Bar ([BackofficeLayout.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/saas/BackofficeLayout.tsx))<br>• Mobile Drawer & Desktop Sidebar<br>• PWA Bottom Nav & Safe Areas<br>• Relokasi Floating Guide Widget ([FloatingGuideWidget.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/ui/FloatingGuideWidget.tsx))<br>• Fondasi Komponen: [Button.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/ui/Button.tsx), [ActionBar.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/ui/ActionBar.tsx)<br>• Toast System ([DialogContext.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/context/DialogContext.tsx)) | **SELESAI** |
 | **FASE 1** | **Katalog Menu & Produk** | • [ProductsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/ProductsView.tsx) (Hero compact, Toolbar Opsi B, Carousel Kategori no-scrollbar, Grid)<br>• `ProductModal`, `AssignCatalogProductModal`, `FullScreenProductImportModal`, `ProductBarcodeLabelsModal`<br>• [CategoriesView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/CategoriesView.tsx) & `CategoryModal`<br>• [ModifiersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/ModifiersView.tsx) (Topping & Varian, Button standar)<br>• [RecipesView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/RecipesView.tsx) (Formula BOM & Kalkulator HPP, Button standar)<br>• Zero Redundant Refresh Button di seluruh modul | **SELESAI** |
-| **FASE 2** | **Terminal Mesin Kasir (POS)** | • [PosTerminalView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PosTerminalView.tsx) & [PosMobileView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/pos/PosMobileView.tsx)<br>• Cart Drawer & Numpad Kasir<br>• `PaymentModal` (Tunai pecahan cepat, QRIS, EDC, Split, Kasbon)<br>• `ProductModifierModal`, `StartShiftModal`, `CloseShiftModal`<br>• `VoidOrderModal`, `CashExpenseModal`, `ThermalReceiptPreview` | **AKTIF** |
-| **FASE 3** | **Riwayat Transaksi Penjualan** | • [OrdersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/OrdersView.tsx) (Toolbar Ekspor Excel/PDF/WA, Filter Saluran/Kasir)<br>• Sub-tab Faktur Penjualan vs Rekap Item Menu<br>• `OrderDetailModal` (Rincian nota & cetak ulang) | Menunggu Fase 2 |
+| **FASE 2** | **Terminal Mesin Kasir (POS)** | • [PosTerminalView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PosTerminalView.tsx) & [PosMobileView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/pos/PosMobileView.tsx)<br>• Cart Drawer & Numpad Kasir<br>• `CategoryFilterPills.tsx` (Full-width carousel & count badge)<br>• `ProductCatalogGrid.tsx` (Real-time in-cart quantity indicator)<br>• `PaymentModal` (Pecahan uang pas, QRIS, Split, Kasbon, seragam `h-12`)<br>• `ProductModifierModal` (Tinggi seragam `h-11`) & KDS Kitchen Ticket<br>• `StartShiftModal`, `CloseShiftModal`, `CashExpenseModal`<br>• `XReportModal` (Zero redundant refresh button) | **SELESAI** |
+| **FASE 3** | **Riwayat Transaksi Penjualan** | • [OrdersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/OrdersView.tsx) (Toolbar Ekspor Excel/PDF/WA, Filter Saluran/Kasir)<br>• Sub-tab Faktur Penjualan vs Rekap Item Menu<br>• `OrderDetailModal` (Rincian nota & cetak ulang) | **BERIKUTNYA** |
 | **FASE 4** | **Persediaan, Bahan Baku & Stok** | • [InventoryView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/InventoryView.tsx) (Filter stok menipis, tombol opname)<br>• `FullScreenBulkOpnameModal` & `StockMovementModal`<br>• [WarehousesView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/WarehousesView.tsx) (Gudang logistik)<br>• [PurchaseOrdersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PurchaseOrdersView.tsx) & [StockTransfersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/StockTransfersView.tsx)<br>• [StockMovementsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/StockMovementsView.tsx) & [SuppliersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/SuppliersView.tsx) | Menunggu Fase 3 |
 | **FASE 5** | **Buku Menu QR (Self-Ordering Meja)** | • [QrTablesView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/QrTablesView.tsx) (Daftar meja & cetak stiker QR)<br>• [QrMenuSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/QrMenuSettingsView.tsx) (Branding & kebijakan order)<br>• [QrLiveOrdersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/QrLiveOrdersView.tsx) (Antrean order live dapur)<br>• [CustomerQrMenuView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/CustomerQrMenuView.tsx) (Tampilan menu tamu mobile) | Menunggu Fase 4 |
 | **FASE 6** | **Ringkasan Bisnis & Kuota Token** | • [BusinessSummaryView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/saas/BusinessSummaryView.tsx) (Kartu omset, grafik tren, jam ramai)<br>• [BillingTokensView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/BillingTokensView.tsx) (Kuota token AI & langganan) | Menunggu Fase 5 |

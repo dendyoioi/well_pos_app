@@ -6,7 +6,7 @@ import {
   Banknote,
   CreditCard,
   AlertCircle,
-  RefreshCw,
+  Loader2,
   Wallet,
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -95,14 +95,6 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
             </div>
 
             <button
-              onClick={fetchXReport}
-              title="Perbarui Data"
-              className="p-1.5 rounded-xl text-blue-200 hover:text-white hover:bg-blue-800/60 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-
-            <button
               onClick={onClose}
               className="p-1.5 rounded-xl text-blue-200 hover:text-white hover:bg-blue-800/60 transition-colors"
             >
@@ -115,7 +107,7 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 flex justify-center">
           {loading && !data ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
-              <RefreshCw className="w-6 h-6 animate-spin text-blue-900" />
+              <Loader2 className="w-6 h-6 animate-spin text-blue-900" />
               <span className="text-xs font-semibold">Mengambil data X-Report...</span>
             </div>
           ) : errorMsg ? (

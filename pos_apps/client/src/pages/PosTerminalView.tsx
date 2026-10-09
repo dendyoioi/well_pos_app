@@ -160,6 +160,16 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [splitBillModalOpen, setSplitBillModalOpen] = useState<boolean>(false);
   const [cameraScannerOpen, setCameraScannerOpen] = useState<boolean>(false);
 
+  // Kuantitas item di keranjang per ID produk (untuk feedback visual kartu menu)
+  const cartProductQuantities = useMemo(() => {
+    const map = new Map<string, number>();
+    cart.forEach((item) => {
+      const current = map.get(item.product.id) || 0;
+      map.set(item.product.id, current + item.quantity);
+    });
+    return map;
+  }, [cart]);
+
   // CRM Members
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -2012,6 +2022,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                 scanMessage={scanMessage}
                 onClearScanMessage={() => setScanMessage(null)}
                 onOpenBarcodeScanner={() => setCameraScannerOpen(true)}
+                products={products}
               />
 
               <ProductCatalogGrid
@@ -2019,6 +2030,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                 onSelectProduct={handleProductSelect}
                 viewMode={viewMode}
                 loading={loading}
+                cartProductQuantities={cartProductQuantities}
               />
             </div>
 

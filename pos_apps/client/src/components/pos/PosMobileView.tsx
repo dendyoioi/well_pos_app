@@ -404,17 +404,26 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         </div>
 
         {/* Horizontal Category Carousel */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-xs">
           <button
             type="button"
             onClick={() => onSelectCategory('all')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all shrink-0 ${
+            className={`h-8 px-3 rounded-xl font-bold whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
               selectedCategory === 'all'
                 ? 'bg-blue-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/60'
             }`}
           >
-            Semua ({products.length})
+            <span>Semua</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                selectedCategory === 'all'
+                  ? 'bg-blue-800 text-blue-100'
+                  : 'bg-slate-200 text-slate-600'
+              }`}
+            >
+              {products.length}
+            </span>
           </button>
           {categories.map((cat) => {
             const count = products.filter((p) => p.category?.id === cat.id).length;
@@ -424,13 +433,24 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                 key={cat.id}
                 type="button"
                 onClick={() => onSelectCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all shrink-0 ${
+                className={`h-8 px-3 rounded-xl font-bold whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-blue-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/60'
                 }`}
               >
-                {cat.name} {count > 0 ? `(${count})` : ''}
+                <span>{cat.name}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      isSelected
+                        ? 'bg-blue-800 text-blue-100'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}

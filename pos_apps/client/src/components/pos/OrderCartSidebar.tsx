@@ -1161,11 +1161,13 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
               type="button"
               onClick={onPrintKitchenTicket}
               title="Cetak tiket pesanan ke printer dapur (tanpa harga)"
-              className="w-full py-2 px-3 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+              className="w-full h-10 px-3.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100/80 text-amber-900 text-xs font-bold transition-all flex items-center justify-between cursor-pointer active:scale-[0.99]"
             >
-              <ChefHat className="w-3.5 h-3.5" />
-              <span>Cetak Tiket Dapur (KDS)</span>
-              <Printer className="w-3.5 h-3.5 ml-auto opacity-50" />
+              <div className="flex items-center gap-2">
+                <ChefHat className="w-4 h-4 text-amber-700" />
+                <span>Cetak Tiket Dapur (KDS)</span>
+              </div>
+              <Printer className="w-3.5 h-3.5 text-amber-600/70" />
             </button>
           )}
 
