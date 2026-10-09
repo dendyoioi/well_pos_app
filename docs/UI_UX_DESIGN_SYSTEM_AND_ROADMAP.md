@@ -142,8 +142,11 @@ Mengacu pada *binding rules* Well POS:
 * **Keseragaman Font Size Antar Baris Tabel**:
   * Seluruh baris tabel (dari baris pertama nomor faktur terpanjang hingga baris terakhir) wajib menggunakan ukuran font kanonikal `text-xs` yang seragam. Dilarang mencampur `sm:text-sm` pada kolom tertentu yang menyebabkan tinggi baris melonjak atau ukuran teks tampak berbeda.
   * Kolom nomor invoice diberi `min-w-[210px] whitespace-nowrap text-xs font-mono font-bold` agar invoice tes panjang sekalipun tidak wrap 2 baris atau merusak tinggi baris pertama.
-* **Standar Header Action Bar & Ekspor Data**:
-  * Tombol aksi tingkat atas (`Ringkasan WA`, `Ekspor Faktur/Rekap (Excel)`, dan `Cetak Faktur/Rekap (PDF)`) diseragamkan dengan ketinggian kanonikal `h-10` (40px), radius `rounded-xl`, tipografi tegas `text-xs font-bold`, icon `w-4 h-4`, dan elevation `shadow-2xs`.
+* **Standar Header Action Bar & Eliminasi Tombol Duplikat**:
+  * Tombol aksi tingkat atas (`Ringkasan WA`, `Ekspor Faktur (Excel)`, dan `Cetak Faktur (PDF)`) **hanya muncul pada sub-tab Faktur Penjualan** dengan pembungkus `flex-nowrap whitespace-nowrap` agar tetap dalam satu baris bersih di desktop.
+  * Pada sub-tab **Rekap Item per Pembayaran**, tombol-tombol atas disembunyikan karena ekspor tabel menu (`Excel` dan `PDF`) telah terintegrasi langsung di toolbar tabel menu per metode pembayaran. Ini menghilangkan redundansi dan mencegah tombol atas terpecah menjadi 2 baris canggung.
+* **Integritas Ikon Kartu Metode Pembayaran (Anti-Disappearing Icon)**:
+  * Ketika kartu metode pembayaran dipilih (`isSelected === true`), ikon kartu wajib menerima styling `text-white` secara eksplisit pada kontainer `bg-blue-900`. Dilarang membiarkan class `text-blue-900` menimpa ikon saat kontainer berwarna biru gelap. Saat tidak terpilih, ikon menggunakan kontras pastel terkurasi (`bg-emerald-50 text-emerald-700`, `bg-indigo-50 text-indigo-700`, `bg-blue-50 text-blue-900`).
 * **Standar Filter Toolbar Global**:
   * Kontainer filter Saluran (`select`), Kasir (`select`), dan Periode/Tanggal (`Calendar dropdown button`) diseragamkan pada ketinggian `h-10` (40px) dengan padding proporsional `px-3`, mencegah tampilan bertumpuk canggung atau text clipping pada layar mobile dan tablet.
 * **Search Bar & Tombol Aksi Baris Transaksi**:

@@ -604,26 +604,26 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
     }
   }, [exportHandlerRef, handleExportCsv, handleExportPdf, showCostAndProfit, isPrivileged]);
 
-  const getMethodIcon = (code: string) => {
+  const getMethodIcon = (code: string, isSelected = false) => {
     switch (code) {
       case 'ALL':
-        return <Layers className="w-4 h-4 text-blue-900" />;
+        return <Layers className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-blue-900'}`} />;
       case 'CASH':
-        return <Banknote className="w-4 h-4 text-emerald-600" />;
+        return <Banknote className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-emerald-700'}`} />;
       case 'NON_CASH':
-        return <QrCode className="w-4 h-4 text-indigo-600" />;
+        return <QrCode className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-indigo-700'}`} />;
       case 'SPLIT':
-        return <Layers className="w-4 h-4 text-purple-600" />;
+        return <Layers className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-purple-700'}`} />;
       case 'QRIS':
-        return <QrCode className="w-4 h-4 text-purple-600" />;
+        return <QrCode className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-indigo-700'}`} />;
       case 'TRANSFER':
-        return <Building2 className="w-4 h-4 text-sky-600" />;
+        return <Building2 className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-sky-700'}`} />;
       case 'EDC':
-        return <CreditCard className="w-4 h-4 text-teal-600" />;
+        return <CreditCard className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-teal-700'}`} />;
       case 'DEBT':
-        return <BookOpen className="w-4 h-4 text-amber-600" />;
+        return <BookOpen className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-amber-700'}`} />;
       default:
-        return <CreditCard className="w-4 h-4 text-slate-600" />;
+        return <CreditCard className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-slate-700'}`} />;
     }
   };
 
@@ -769,11 +769,19 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        isSelected ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-600'
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                        isSelected
+                          ? 'bg-blue-900 text-white shadow-xs'
+                          : card.code === 'CASH'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          : card.code === 'NON_CASH'
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                          : card.code === 'SPLIT'
+                          ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                          : 'bg-blue-50 text-blue-900 border border-blue-100'
                       }`}
                     >
-                      {getMethodIcon(card.code)}
+                      {getMethodIcon(card.code, isSelected)}
                     </div>
                     {isSelected && (
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-900" />

@@ -588,67 +588,47 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
           </p>
         </div>
 
-        {/* Action Buttons: Ringkasan WA, Ekspor Excel, Cetak Rekap PDF */}
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Tombol Ringkasan WhatsApp */}
-          <button
-            type="button"
-            onClick={() => setWhatsappModalOpen(true)}
-            disabled={loading || shiftFilteredOrders.length === 0}
-            className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
-            title="Kirim atau Salin Ringkasan Penjualan ke WhatsApp"
-          >
-            <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Ringkasan WA</span>
-          </button>
+        {/* Action Buttons: Khusus untuk Sub-Tab Faktur Penjualan */}
+        {activeSubTab === 'invoices' && (
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap sm:flex-nowrap shrink-0">
+            {/* Tombol Ringkasan WhatsApp */}
+            <button
+              type="button"
+              onClick={() => setWhatsappModalOpen(true)}
+              disabled={loading || shiftFilteredOrders.length === 0}
+              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
+              title="Kirim atau Salin Ringkasan Penjualan ke WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Ringkasan WA</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (activeSubTab === 'invoices') {
-                exportOrdersToCsv(filteredOrders, 'daftar_faktur_penjualan_wellpos');
-              } else {
-                paymentItemsExportRef.current?.exportCsv();
-              }
-            }}
-            disabled={loading || (activeSubTab === 'invoices' ? filteredOrders.length === 0 : false)}
-            className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
-            title={
-              activeSubTab === 'invoices'
-                ? 'Ekspor Daftar Faktur Penjualan ke Excel / CSV'
-                : 'Ekspor Rekap Item Menu Terjual ke Excel / CSV'
-            }
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>
-              {activeSubTab === 'invoices' ? 'Ekspor Faktur (Excel)' : 'Ekspor Rekap Item (Excel)'}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => exportOrdersToCsv(filteredOrders, 'daftar_faktur_penjualan_wellpos')}
+              disabled={loading || filteredOrders.length === 0}
+              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
+              title="Ekspor Daftar Faktur Penjualan ke Excel / CSV"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Ekspor Faktur (Excel)</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (activeSubTab === 'invoices') {
+            <button
+              type="button"
+              onClick={() => {
                 const outletName = filteredOrders[0]?.outlet?.name || activeOutlet?.name || 'Well POS';
                 generateSalesRecapPdf(filteredOrders, selectedChannel, outletName);
-              } else {
-                paymentItemsExportRef.current?.exportPdf();
-              }
-            }}
-            disabled={loading || (activeSubTab === 'invoices' ? filteredOrders.length === 0 : false)}
-            className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer"
-            title={
-              activeSubTab === 'invoices'
-                ? 'Cetak Dokumen Daftar Faktur Penjualan (PDF)'
-                : 'Cetak Dokumen Rekapitulasi Item Menu Terjual (PDF)'
-            }
-          >
-            <FileText className="w-4 h-4 text-blue-900 shrink-0" />
-            <span>
-              {activeSubTab === 'invoices' ? 'Cetak Faktur (PDF)' : 'Cetak Rekap Item (PDF)'}
-            </span>
-          </button>
-        </div>
+              }}
+              disabled={loading || filteredOrders.length === 0}
+              className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
+              title="Cetak Dokumen Daftar Faktur Penjualan (PDF)"
+            >
+              <FileText className="w-4 h-4 text-blue-900 shrink-0" />
+              <span>Cetak Faktur (PDF)</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sub-Tab Navigation Switcher */}
