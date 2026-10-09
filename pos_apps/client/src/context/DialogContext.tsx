@@ -142,13 +142,13 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAlert={modalConfig.isAlert}
       />
 
-      {/* Global Floating Non-Blocking Toasts */}
+      {/* Global Floating Non-Blocking Toasts (Top-Center Eye-Level) */}
       {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-[99999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0">
+        <div className="fixed top-4 inset-x-0 mx-auto z-[99999] flex flex-col items-center gap-2 max-w-md w-full pointer-events-none px-4">
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`p-3.5 sm:p-4 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 text-xs sm:text-sm font-bold pointer-events-auto backdrop-blur-md transition-all duration-300 animate-in slide-in-from-bottom-4 fade-in ${
+              className={`w-full p-3 sm:p-3.5 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 text-xs sm:text-sm font-bold pointer-events-auto backdrop-blur-md transition-all duration-300 animate-in slide-in-from-top-4 fade-in ${
                 t.type === 'success'
                   ? 'bg-slate-900/95 text-white border-emerald-500/40 shadow-emerald-950/20'
                   : t.type === 'error'
@@ -156,7 +156,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   : 'bg-slate-900/95 text-white border-blue-500/40 shadow-blue-950/20'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div
                   className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
                     t.type === 'success'

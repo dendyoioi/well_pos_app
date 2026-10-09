@@ -10,3 +10,4 @@ export * from './CurrencyInput';
 export * from './EmptyState';
 export * from './TableSkeleton';
 export * from './SearchableSelect';
+export * from './ActionBar';

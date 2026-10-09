@@ -199,7 +199,7 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
         activeTab === 'pos'
           ? 'bottom-[max(1rem,env(safe-area-inset-bottom,0px))] md:bottom-6'
           : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6'
-      } right-4 z-40 transition-all duration-200`}
+      } right-3 sm:right-6 z-30 transition-all duration-200`}
     >
       {/* Popover Menu Bantuan */}
       {isOpen && (
@@ -372,12 +372,12 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-900 text-white font-extrabold text-xs shadow-xl shadow-blue-950/30 flex items-center gap-2 border border-blue-400/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+        className="px-2.5 py-2 sm:px-3.5 sm:py-2.5 rounded-full sm:rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-900 text-white font-extrabold text-xs shadow-lg shadow-blue-950/25 flex items-center gap-1.5 sm:gap-2 border border-blue-400/30 transition-all hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xs"
         title="Buka Pusat Panduan & Bantuan"
       >
         <BookOpen className="w-4 h-4 text-amber-300" />
-        <span className="hidden sm:inline">Panduan Sistem</span>
-        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+        <span className="hidden md:inline">Panduan Sistem</span>
+        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-400 animate-pulse" />
       </button>
     </div>
   );

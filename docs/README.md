@@ -13,6 +13,7 @@ docs/
 ├── SANDBOX_PLAYBOOK.md                        # [LIVING] Panduan operasional & skenario QA Sandbox lokal
 ├── TENANT_ONBOARDING_AND_TESTING_GUIDE.md     # [LIVING] Panduan alur pengujian manual & sales/marketing demo
 ├── STATE_MACHINE_JOURNEY_SPEC.md              # [LIVING] Arsitektur State Machine (Happy, Sad, Bad Path & Empty State)
+├── UI_UX_DESIGN_SYSTEM_AND_ROADMAP.md         # [LIVING] Standar Kanonikal UI/UX Design System & Roadmap Fase 0-11
 │
 ├── epics/                                     # [LIVING] Spesifikasi fitur, checklist acceptance criteria, & roadmap
 │   ├── 00_EPIC_REGISTRY_AND_PROJECT_MEMORY.md # Master registry seluruh EPIC-01 s.d EPIC-21 & changelog

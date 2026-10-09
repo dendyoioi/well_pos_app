@@ -906,6 +906,21 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             </button>
           ) : null}
 
+          {/* Quick Guide / SOP Icon */}
+          {canViewGuide && activeTab !== 'guide' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenGuide) onOpenGuide();
+                else onTabChange('guide');
+              }}
+              title="Panduan & SOP Toko"
+              className="p-2 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-slate-100 transition-all flex items-center justify-center cursor-pointer shrink-0"
+            >
+              <BookOpen className="w-4 h-4 text-blue-900" />
+            </button>
+          )}
+
           {/* Notifications Dropdown (Khusus Pengumuman Resmi Superadmin Platform) */}
           <div className="relative" ref={notifDropdownRef}>
             <button
@@ -1282,7 +1297,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         </div>
 
         {/* Main Content Pane */}
-        <div className={`flex-1 overflow-y-auto ${activeTab === 'pos' ? 'p-0 sm:p-4' : 'p-3 sm:p-8 pb-20 md:pb-8'}`}>
+        <div className={`flex-1 overflow-y-auto ${activeTab === 'pos' ? 'p-0 sm:p-4' : 'p-3 sm:p-8 pb-28 sm:pb-8'}`}>
           <div className={activeTab === 'pos' ? 'max-w-[1600px] mx-auto' : 'max-w-6xl mx-auto'}>
             {children}
           </div>
