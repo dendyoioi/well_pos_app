@@ -482,19 +482,10 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             type="button"
-            onClick={fetchOrders}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-all cursor-pointer"
-            title="Muat ulang data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
-          </button>
-          <button
-            type="button"
             onClick={handleOpenCreateModal}
-            className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-850 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center gap-2 cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Buat PO Baru</span>
           </button>
         </div>
@@ -514,7 +505,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <span className="text-xs font-semibold">Total PO</span>
             <FileText className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{kpiStats.total}</div>
+          <div className="text-2xl font-black font-mono text-slate-900 mt-2">{kpiStats.total}</div>
           <div className="text-[11px] text-slate-400 mt-1">Semua status</div>
         </div>
 
@@ -530,7 +521,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <span className="text-xs font-semibold">Draf PO</span>
             <Clock className="w-4 h-4 text-slate-500" />
           </div>
-          <div className="text-2xl font-black text-slate-800 mt-2">{kpiStats.drafts}</div>
+          <div className="text-2xl font-black font-mono text-slate-800 mt-2">{kpiStats.drafts}</div>
           <div className="text-[11px] text-slate-500 mt-1">Belum dikirim</div>
         </div>
 
@@ -546,7 +537,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <span className="text-xs font-semibold">Menunggu Kirim</span>
             <Truck className="w-4 h-4 text-blue-800" />
           </div>
-          <div className="text-2xl font-black text-blue-900 mt-2">{kpiStats.issued}</div>
+          <div className="text-2xl font-black font-mono text-blue-900 mt-2">{kpiStats.issued}</div>
           <div className="text-[11px] text-blue-850/80 mt-1">Dalam proses / jalan</div>
         </div>
 
@@ -562,7 +553,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <span className="text-xs font-semibold">Selesai Diterima</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-emerald-700 mt-2">{kpiStats.received}</div>
+          <div className="text-2xl font-black font-mono text-emerald-700 mt-2">{kpiStats.received}</div>
           <div className="text-[11px] text-emerald-600 mt-1">Stok telah masuk</div>
         </div>
 
@@ -571,7 +562,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <span className="text-xs font-semibold">Total Nilai PO</span>
             <Boxes className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="text-xl font-black text-slate-900 mt-2 truncate">
+          <div className="text-xl font-black font-mono tracking-tight text-slate-900 mt-2 truncate">
             {formatRupiah(kpiStats.totalAmount)}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">Estimasi belanja</div>
@@ -587,7 +578,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nomor PO, nama pemasok, atau outlet..."
-            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all"
+            className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all font-medium"
           />
         </div>
 
@@ -599,7 +590,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900"
+            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer"
           >
             <option value="ALL">Semua Status</option>
             <option value="DRAFT">Draf</option>
@@ -616,7 +607,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               setSupplierFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate"
+            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate cursor-pointer"
           >
             <option value="ALL">Semua Pemasok</option>
             {suppliers.map((s) => (
@@ -633,7 +624,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               setOutletFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate"
+            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate cursor-pointer"
           >
             <option value="ALL">Semua Toko / Gudang</option>
             {outlets.map((o) => (
@@ -648,16 +639,16 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       {/* Purchase Orders Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1050px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4">No. PO &amp; Tanggal</th>
-                <th className="py-3.5 px-4">Pemasok</th>
-                <th className="py-3.5 px-4">Outlet Tujuan</th>
-                <th className="py-3.5 px-4 text-center">Bahan Baku</th>
-                <th className="py-3.5 px-4 text-right">Total Nilai</th>
-                <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-center">Aksi</th>
+                <th className="py-3.5 px-4 min-w-[190px] whitespace-nowrap">No. PO &amp; Tanggal</th>
+                <th className="py-3.5 px-4 min-w-[180px] whitespace-nowrap">Pemasok</th>
+                <th className="py-3.5 px-4 min-w-[170px] whitespace-nowrap">Outlet Tujuan</th>
+                <th className="py-3.5 px-4 min-w-[120px] text-center whitespace-nowrap">Bahan Baku</th>
+                <th className="py-3.5 px-4 min-w-[160px] text-right whitespace-nowrap">Total Nilai</th>
+                <th className="py-3.5 px-4 min-w-[140px] text-center whitespace-nowrap">Status</th>
+                <th className="py-3.5 px-4 pr-6 min-w-[150px] text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -690,18 +681,18 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
 
                   return (
                     <tr key={po.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="font-extrabold text-blue-950">{po.poNumber}</div>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-extrabold text-blue-950 font-mono text-xs">{po.poNumber}</div>
                         <div className="text-[11px] text-slate-400 mt-0.5">{dateStr}</div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{po.supplier?.name || '-'}</div>
-                        <div className="text-[11px] text-slate-400">{po.supplier?.code || ''}</div>
+                        <div className="font-bold text-slate-900 text-xs">{po.supplier?.name || '-'}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">{po.supplier?.code || ''}</div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-800">{po.outlet?.name || '-'}</div>
+                        <div className="font-medium text-slate-800 text-xs">{po.outlet?.name || '-'}</div>
                         {po.expectedDeliveryDate && (
-                          <div className="text-[11px] text-blue-800 font-semibold flex items-center gap-1 mt-0.5">
+                          <div className="text-[11px] text-blue-800 font-semibold flex items-center gap-1 mt-0.5 whitespace-nowrap">
                             <Calendar className="w-3 h-3" />
                             Estimasi:{' '}
                             {new Date(po.expectedDeliveryDate).toLocaleDateString('id-ID', {
@@ -711,18 +702,18 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                           </div>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-[11px]">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-[11px] whitespace-nowrap">
                           {itemCount} Bahan
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="font-extrabold text-slate-900">
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono">
+                        <div className="font-extrabold text-slate-900 text-xs">
                           {formatRupiah(po.totalAmount || 0)}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-center">{renderStatusBadge(po.status)}</td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">{renderStatusBadge(po.status)}</td>
+                      <td className="py-3.5 px-4 pr-6 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
@@ -730,7 +721,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                               setSelectedPO(po);
                               setDetailModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+                            className="w-8 h-8 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
                             title="Lihat Detail PO"
                           >
                             <Eye className="w-4 h-4" />
@@ -740,10 +731,10 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                             <button
                               type="button"
                               onClick={() => handleIssuePO(po)}
-                              className="px-2.5 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-850 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                              className="h-8 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                               title="Terbitkan ke Pemasok"
                             >
-                              <Send className="w-3 h-3" />
+                              <Send className="w-3.5 h-3.5" />
                               <span>Kirim</span>
                             </button>
                           )}
@@ -752,10 +743,10 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                             <button
                               type="button"
                               onClick={() => handleOpenReceiveModal(po)}
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                              className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                               title="Penerimaan Fisik Barang"
                             >
-                              <Package className="w-3 h-3" />
+                              <Package className="w-3.5 h-3.5" />
                               <span>Terima</span>
                             </button>
                           )}
@@ -985,18 +976,18 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                 <div className="text-xl font-black text-blue-950">{formatRupiah(poFormTotal)}</div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPO}
-                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-850 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 transition-all cursor-pointer flex items-center gap-2"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 transition-all cursor-pointer flex items-center gap-2"
                 >
                   {submittingPO ? (
                     <>
@@ -1161,7 +1152,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                       setCancellingPO(selectedPO);
                       setCancelModalOpen(true);
                     }}
-                    className="px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer"
+                    className="h-10 px-4 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer border border-rose-200"
                   >
                     Batalkan PO
                   </button>
@@ -1173,7 +1164,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                   <button
                     type="button"
                     onClick={() => handleIssuePO(selectedPO)}
-                    className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-850 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
                     <span>Terbitkan ke Pemasok</span>
@@ -1184,7 +1175,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                   <button
                     type="button"
                     onClick={() => handleOpenReceiveModal(selectedPO)}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <Package className="w-4 h-4" />
                     <span>Terima Fisik Barang</span>
@@ -1342,14 +1333,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                 <button
                   type="button"
                   onClick={() => setReceiveModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReceive}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-700/20 transition-all cursor-pointer flex items-center gap-2"
+                  className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-700/20 transition-all cursor-pointer flex items-center gap-2"
                 >
                   {submittingReceive ? (
                     <>
