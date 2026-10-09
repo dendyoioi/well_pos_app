@@ -11,3 +11,4 @@ export * from './EmptyState';
 export * from './TableSkeleton';
 export * from './SearchableSelect';
 export * from './ActionBar';
+export * from './ToggleSwitch';

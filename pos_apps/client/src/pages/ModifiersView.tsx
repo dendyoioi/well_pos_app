@@ -11,8 +11,6 @@ import {
   RefreshCw,
   Info,
   Check,
-  ToggleLeft,
-  ToggleRight,
   Layers,
   Package,
   X,
@@ -26,6 +24,7 @@ import { TablePagination } from '../components/TablePagination';
 import { formatRupiah } from '../utils/currency';
 import { useDialog } from '../context/DialogContext';
 import { Button } from '../components/ui/Button';
+import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 
 export const ModifiersView: React.FC = () => {
   const dialog = useDialog();
@@ -410,24 +409,19 @@ export const ModifiersView: React.FC = () => {
             </div>
 
             {/* Switch Wajib Dipilih */}
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-4">
               <div>
                 <span className="text-sm font-bold text-slate-800 block">Wajib Dipilih oleh Pelanggan</span>
                 <span className="text-xs text-slate-500">
                   Jika aktif, kasir atau tamu tidak bisa menambahkan produk ke keranjang tanpa memilih opsi ini.
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={handleToggleRequired}
-                className="text-blue-600 focus:outline-none"
-              >
-                {formData.isRequired ? (
-                  <ToggleRight className="w-9 h-9 fill-blue-600 text-white" />
-                ) : (
-                  <ToggleLeft className="w-9 h-9 text-slate-400" />
-                )}
-              </button>
+              <ToggleSwitch
+                checked={formData.isRequired}
+                onChange={handleToggleRequired}
+                size="md"
+                title="Wajib Dipilih oleh Pelanggan"
+              />
             </div>
           </div>
 
