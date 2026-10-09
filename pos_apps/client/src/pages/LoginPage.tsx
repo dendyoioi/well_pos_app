@@ -203,7 +203,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         setError(res.message || 'Gagal menghubungkan perangkat');
       }
     } catch (err: any) {
-      setError(err.message || 'Gagal terhubung ke server');
+      if (err?.message === 'Failed to fetch' || err?.message?.includes('NetworkError')) {
+        setError('Gagal terhubung ke server backend. Pastikan server aktif atau periksa koneksi jaringan.');
+      } else {
+        setError(err.message || 'Gagal terhubung ke server');
+      }
     } finally {
       setLoading(false);
     }
@@ -280,7 +284,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         setPin('');
       }
     } catch (err: any) {
-      setError(err.message || 'Gagal terhubung ke server');
+      if (err?.message === 'Failed to fetch' || err?.message?.includes('NetworkError')) {
+        setError('Gagal terhubung ke server backend. Pastikan server aktif atau periksa koneksi jaringan.');
+      } else {
+        setError(err.message || 'Gagal terhubung ke server');
+      }
       setPin('');
     } finally {
       setLoading(false);
@@ -318,7 +326,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         setError(res.message || 'Email atau kata sandi tidak sesuai');
       }
     } catch (err: any) {
-      setError(err.message || 'Gagal terhubung ke server');
+      if (err?.message === 'Failed to fetch' || err?.message?.includes('NetworkError')) {
+        setError('Gagal terhubung ke server backend. Pastikan server aktif atau periksa koneksi jaringan.');
+      } else {
+        setError(err.message || 'Gagal terhubung ke server');
+      }
     } finally {
       setLoading(false);
     }
