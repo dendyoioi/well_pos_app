@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { Product } from '../types/product';
 import { BarcodeRenderer } from './BarcodeRenderer';
+import { Button } from './ui/Button';
 
 export type LabelTemplateType = '40x30' | '30x20' | '50x30' | '60x40' | 'a4_grid';
 
@@ -538,22 +539,25 @@ export const ProductBarcodeLabelsModal: React.FC<ProductBarcodeLabelsModalProps>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer"
             >
               Batal
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               disabled={isPrinting || printableItems.length === 0}
               onClick={handlePrint}
-              className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs font-extrabold shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              loading={isPrinting}
+              icon={<Printer className="w-4 h-4" />}
             >
-              <Printer className="w-4 h-4" />
-              <span>{isPrinting ? 'Menyiapkan Cetak...' : `Cetak ${totalLabels} Label`}</span>
-            </button>
+              {`Cetak ${totalLabels} Label`}
+            </Button>
           </div>
         </div>
       </div>

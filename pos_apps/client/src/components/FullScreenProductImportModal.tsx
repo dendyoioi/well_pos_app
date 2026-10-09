@@ -15,6 +15,7 @@ import {
 import { api } from '../services/api';
 import { downloadProductImportTemplate } from '../utils/productExportCsv';
 import { formatRupiah } from '../utils/currency';
+import { Button } from './ui/Button';
 
 interface ParsedProductRow {
   rowNumber: number;
@@ -652,33 +653,29 @@ export const FullScreenProductImportModal: React.FC<FullScreenProductImportModal
             </div>
 
             <div className="flex items-center gap-3">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="md"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
               >
                 Batal
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="md"
                 onClick={handleExecuteImport}
                 disabled={isSubmitting || validRows.length === 0}
-                className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-black shadow-md shadow-blue-900/20 flex items-center gap-2 transition-all cursor-pointer"
+                loading={isSubmitting}
+                icon={!isSubmitting ? <ArrowRight className="w-4 h-4" /> : undefined}
               >
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Sedang Mengimpor ({validRows.length} Produk)...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Mulai Impor {validRows.length} Produk</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+                {isSubmitting
+                  ? `Sedang Mengimpor (${validRows.length} Produk)...`
+                  : `Mulai Impor ${validRows.length} Produk`}
+              </Button>
             </div>
           </div>
         )}

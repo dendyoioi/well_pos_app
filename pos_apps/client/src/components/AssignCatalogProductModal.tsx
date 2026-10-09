@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Check, Plus, AlertCircle, ShoppingBag } from 'lucide-react';
 import { api } from '../services/api';
+import { Button } from './ui/Button';
 
 interface AssignCatalogProductModalProps {
   isOpen: boolean;
@@ -244,23 +245,26 @@ export const AssignCatalogProductModal: React.FC<AssignCatalogProductModalProps>
             {countSelected > 0 ? `${countSelected} produk dipilih` : 'Pilih produk yang ingin ditambahkan'}
           </span>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
             >
               Batal
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={handleAssign}
               disabled={countSelected === 0 || submitting}
-              className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              loading={submitting}
+              icon={<Plus className="w-3.5 h-3.5" />}
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{submitting ? 'Menghubungkan...' : `Hubungkan ke Outlet Toko (${countSelected})`}</span>
-            </button>
+              {`Hubungkan ke Toko (${countSelected})`}
+            </Button>
           </div>
         </div>
       </div>

@@ -117,6 +117,9 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
     - **Larangan Tutup Shift dengan Tagihan Menggantung**: Kasir **DILARANG KERAS** menutup shift jika masih terdapat tagihan berstatus `paymentStatus === 'UNPAID'` (Open Tab / Tagihan Meja Aktif). Sistem backend wajib menolak request `POST /api/shifts/close` dengan HTTP 400 `UNPAID_ORDERS_REMAINING`, dan antarmuka kasir wajib menampilkan daftar nomor invoice yang belum lunas.
     - **Visibilitas Akuntabilitas Kasir**: Riwayat transaksi kasir wajib memuat kolom **Kasir** (`order.cashier.name`) secara eksplisit di desktop dan mobile agar mempermudah proses audit dan investigasi selisih kas.
     - **Mandatory Automation Check**: Terverifikasi secara permanen pada `npm run test:smoke` (Step 3.6).
+16. 🔄 **KEBIJAKAN ZERO REDUNDANT REFRESH BUTTON (ANTI-TOMBOL REFRESH MANDIRI)**:
+    - **DILARANG KERAS** menambahkan tombol reload / muat ulang mandiri (`<RefreshCw />`, tombol "Muat Ulang", dsb) di header view, toolbar, samping search bar, atau card data.
+    - **Alasan & Kebijakan Operasional**: Well POS adalah aplikasi modern yang secara otomatis memuat ulang data saat navigasi/tab berpindah, setelah aksi simpan/ubah/hapus berhasil, serta mendukung gestur native `<PullToRefresh />` pada perangkat mobile. Keberadaan tombol refresh terpisah merusak keseimbangan tata letak tombol aksi utama, mengurangi ruang layar mobile yang berharga, dan membingungkan kasir/owner.
 
 ---
 

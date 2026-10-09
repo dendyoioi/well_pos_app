@@ -25,6 +25,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { TablePagination } from '../components/TablePagination';
 import { formatRupiah } from '../utils/currency';
 import { useDialog } from '../context/DialogContext';
+import { Button } from '../components/ui/Button';
 
 export const ModifiersView: React.FC = () => {
   const dialog = useDialog();
@@ -605,28 +606,23 @@ export const ModifiersView: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="md"
               onClick={handleCloseForm}
               disabled={formSubmitting}
-              className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
             >
               Batal
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={formSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold transition-all shadow-md shadow-blue-900/20 text-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              variant="primary"
+              size="md"
+              loading={formSubmitting}
             >
-              {formSubmitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan...</span>
-                </>
-              ) : (
-                <span>{editingGroupId ? 'Simpan Perubahan' : 'Buat Grup Modifier'}</span>
-              )}
-            </button>
+              {editingGroupId ? 'Simpan Perubahan' : 'Buat Grup Modifier'}
+            </Button>
           </div>
         </form>
       </div>
@@ -651,20 +647,15 @@ export const ModifiersView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={fetchModifierGroups}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-            title="Muat Ulang"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleOpenCreate}
-            className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold rounded-xl flex items-center gap-2 transition-all shadow-md shadow-blue-900/20 text-xs sm:text-sm cursor-pointer"
+            fullWidthOnMobile
           >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Grup Modifier</span>
-          </button>
+            Tambah Grup Modifier
+          </Button>
         </div>
       </div>
 

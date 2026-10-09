@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Search,
   Plus,
   Barcode,
   Edit2,
   Trash2,
   AlertTriangle,
   Layers,
-  RefreshCw,
   CheckSquare,
   Square,
   CheckCircle2,
@@ -35,6 +33,7 @@ import { FullScreenProductImportModal } from '../components/FullScreenProductImp
 import { ProductBarcodeLabelsModal } from '../components/ProductBarcodeLabelsModal';
 import { TablePagination } from '../components/TablePagination';
 import { exportProductsToCsv } from '../utils/productExportCsv';
+import { ActionBar, Button } from '../components/ui';
 import { api } from '../services/api';
 
 interface ProductsViewProps {
@@ -480,144 +479,86 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
       )}
 
       {/* Hero Banner & KPI Summary Cards */}
-      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-blue-950/10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 rounded-2xl sm:rounded-3xl p-4 sm:p-7 text-white shadow-xl shadow-blue-950/10 relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -top-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+          <div className="space-y-1 sm:space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-[11px] sm:text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5 text-blue-300" />
               <span>Katalog &amp; Manajemen Menu Toko</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
               Daftar Menu &amp; Produk
             </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed line-clamp-2 sm:line-clamp-none">
               Kelola menu F&amp;B racikan dapur/barista, varian harga, formula HPP resep, serta stok produk kemasan ritel fisik toko.
             </p>
           </div>
         </div>
 
         {/* 4 KPI Cards Ringkasan Katalog */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10 relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mt-3 sm:mt-6 pt-3 sm:pt-6 border-t border-white/10 relative z-10">
           <div
             onClick={() => {
               setStatusFilter('all');
               setSelectedCategory('all');
             }}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
+            className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
           >
-            <div className="flex items-center justify-between text-slate-300 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Total Menu</span>
-              <Package className="w-4 h-4 text-blue-300" />
+            <div className="flex items-center justify-between text-slate-300 mb-0.5 sm:mb-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Menu</span>
+              <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-300" />
             </div>
-            <div className="text-2xl font-black text-white">{stats.total}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Semua produk terdaftar</p>
+            <div className="text-xl sm:text-2xl font-black text-white">{stats.total}</div>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">Semua produk terdaftar</p>
           </div>
 
           <div
             onClick={() => setStatusFilter('active')}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
+            className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer backdrop-blur-xs"
           >
-            <div className="flex items-center justify-between text-emerald-300 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Menu Aktif Kasir</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center justify-between text-emerald-300 mb-0.5 sm:mb-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Menu Aktif Kasir</span>
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
             </div>
-            <div className="text-2xl font-black text-emerald-400">{stats.activeCount}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Tayang di mesin kasir</p>
+            <div className="text-xl sm:text-2xl font-black text-emerald-400">{stats.activeCount}</div>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">Tayang di mesin kasir</p>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
-            <div className="flex items-center justify-between text-teal-300 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Olahan F&amp;B</span>
-              <UtensilsCrossed className="w-4 h-4 text-teal-300" />
+          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
+            <div className="flex items-center justify-between text-teal-300 mb-0.5 sm:mb-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Olahan F&amp;B</span>
+              <UtensilsCrossed className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-300" />
             </div>
-            <div className="text-2xl font-black text-teal-300">{stats.fnbCount}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Potong bahan baku via BOM</p>
+            <div className="text-xl sm:text-2xl font-black text-teal-300">{stats.fnbCount}</div>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">Potong bahan baku via BOM</p>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
-            <div className="flex items-center justify-between text-indigo-300 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Ritel Fisik</span>
-              <Boxes className="w-4 h-4 text-indigo-300" />
+          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all backdrop-blur-xs">
+            <div className="flex items-center justify-between text-indigo-300 mb-0.5 sm:mb-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Ritel Fisik</span>
+              <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-300" />
             </div>
-            <div className="text-2xl font-black text-indigo-300">{stats.retailCount}</div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Produk berstok unit fisik</p>
+            <div className="text-xl sm:text-2xl font-black text-indigo-300">{stats.retailCount}</div>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 truncate">Produk berstok unit fisik</p>
           </div>
         </div>
       </div>
 
-      {/* Toolbar Pencarian & Aksi Katalog */}
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between">
-        {/* Search Input & Refresh */}
-        <div className="flex items-center gap-2 flex-1 max-w-lg">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari nama menu, SKU, atau scan barcode..."
-              className="w-full bg-slate-50 border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl pl-10 pr-9 py-2.5 text-xs sm:text-sm transition-all outline-none"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                title="Hapus pencarian"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => fetchData()}
-            title="Muat Ulang Katalog"
-            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs flex items-center justify-center shrink-0 cursor-pointer min-h-[40px] min-w-[40px]"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-
-        {/* Buttons Toolbar Kanan */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
-          {/* Ambil dari Master Katalog (jika outlet mode) */}
-          {canManage && outletId && (
-            <button
-              type="button"
-              onClick={() => setAssignModalOpen(true)}
-              className="px-3 py-2.5 rounded-xl border border-blue-200 hover:border-blue-300 bg-blue-50/70 hover:bg-blue-100/70 text-blue-900 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap min-h-[40px]"
-              title="Ambil dan hubungkan menu dari Master Katalog Pusat ke outlet toko ini"
-            >
-              <ShoppingBag className="w-4 h-4 text-blue-800 shrink-0" />
-              <span>Ambil dari Master</span>
-            </button>
-          )}
-
-          {/* Kelola Kategori */}
-          {canManage && onNavigateToCategories && (
-            <button
-              type="button"
-              onClick={onNavigateToCategories}
-              className="px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap min-h-[40px]"
-              title="Buka menu Kelola Kategori Produk"
-            >
-              <Layers className="w-4 h-4 text-blue-900 shrink-0" />
-              <span>Kategori</span>
-            </button>
-          )}
-
-          {/* Dropdown Menu: Alat & Berkas (Impor, Ekspor, Cetak Label) */}
-          <div className="relative" ref={toolsDropdownRef}>
+      {/* Toolbar Pencarian & Aksi Katalog Kanonikal (Option B) */}
+      <ActionBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Cari nama menu, SKU, atau scan barcode..."
+        secondaryAction={
+          <div className="relative w-full sm:w-auto" ref={toolsDropdownRef}>
             <button
               type="button"
               onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
-              className="px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap min-h-[40px]"
-              title="Opsi Impor, Ekspor, dan Cetak Label"
+              className="w-full sm:w-auto h-10 px-3.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+              title="Opsi Alat, Berkas, dan Pengaturan Menu"
             >
               <FileSpreadsheet className="w-4 h-4 text-slate-600 shrink-0" />
               <span>Alat &amp; Berkas</span>
@@ -629,7 +570,43 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             </button>
 
             {toolsDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-30 animate-fadeIn space-y-1">
+              <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-30 animate-fadeIn space-y-1">
+                {/* Ambil dari Master Katalog (jika outlet mode) */}
+                {canManage && outletId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsDropdownOpen(false);
+                      setAssignModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-blue-900 hover:bg-blue-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <ShoppingBag className="w-4 h-4 text-blue-800 shrink-0" />
+                    <div>
+                      <div>Ambil dari Master</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Salin katalog pusat ke outlet ini</div>
+                    </div>
+                  </button>
+                )}
+
+                {/* Kelola Kategori */}
+                {canManage && onNavigateToCategories && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsDropdownOpen(false);
+                      onNavigateToCategories();
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <Layers className="w-4 h-4 text-slate-600 shrink-0" />
+                    <div>
+                      <div>Kelola Kategori Menu</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Atur pengelompokan produk</div>
+                    </div>
+                  </button>
+                )}
+
                 {canManage && (
                   <button
                     type="button"
@@ -637,9 +614,9 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       setToolsDropdownOpen(false);
                       setImportModalOpen(true);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-950 flex items-center gap-2 cursor-pointer transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-950 flex items-center gap-2.5 cursor-pointer transition-colors"
                   >
-                    <FileSpreadsheet className="w-4 h-4 text-blue-900" />
+                    <FileSpreadsheet className="w-4 h-4 text-blue-900 shrink-0" />
                     <div>
                       <div>Impor Spreadsheet</div>
                       <div className="text-[10px] text-slate-400 font-normal">Format CSV / Excel</div>
@@ -661,9 +638,9 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       });
                     }
                   }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-950 flex items-center gap-2 cursor-pointer transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-950 flex items-center gap-2.5 cursor-pointer transition-colors"
                 >
-                  <Download className="w-4 h-4 text-emerald-700" />
+                  <Download className="w-4 h-4 text-emerald-700 shrink-0" />
                   <div>
                     <div>Ekspor Katalog CSV</div>
                     <div className="text-[10px] text-slate-400 font-normal">Unduh data aktif</div>
@@ -677,9 +654,9 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     setProductsForLabels(products);
                     setBarcodeLabelsModalOpen(true);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-950 flex items-center gap-2 cursor-pointer transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-950 flex items-center gap-2.5 cursor-pointer transition-colors"
                 >
-                  <Barcode className="w-4 h-4 text-blue-900" />
+                  <Barcode className="w-4 h-4 text-blue-900 shrink-0" />
                   <div>
                     <div>Cetak Label Barcode</div>
                     <div className="text-[10px] text-slate-400 font-normal">Stiker rak &amp; kemasan</div>
@@ -688,20 +665,21 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               </div>
             )}
           </div>
-
-          {/* Tombol Utama Tambah Produk */}
-          {canManage && (
-            <button
-              type="button"
+        }
+        primaryAction={
+          canManage && (
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4 stroke-[2.5]" />}
               onClick={handleAddNew}
-              className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap min-h-[40px]"
+              fullWidthOnMobile
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Tambah Produk</span>
-            </button>
-          )}
-        </div>
-      </div>
+              Tambah Produk
+            </Button>
+          )
+        }
+      />
 
       {/* Filter Bar Terpadu: Status & Kategori */}
       <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">

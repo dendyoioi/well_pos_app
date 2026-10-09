@@ -17,6 +17,7 @@ import type { Product } from '../types/product';
 import { formatRupiah } from '../utils/currency';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
+import { Button } from '../components/ui/Button';
 
 interface RecipesViewProps {
   outletId?: string;
@@ -541,28 +542,23 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="md"
               onClick={handleCloseForm}
               disabled={formSubmitting}
-              className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
             >
               Batal
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={formSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold transition-all shadow-md shadow-blue-900/20 text-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              variant="primary"
+              size="md"
+              loading={formSubmitting}
             >
-              {formSubmitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Menyimpan Resep...</span>
-                </>
-              ) : (
-                <span>Simpan Resep &amp; Kalkulasi HPP</span>
-              )}
-            </button>
+              Simpan Resep &amp; Kalkulasi HPP
+            </Button>
           </div>
         </form>
       </div>
@@ -586,15 +582,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchData}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-            title="Muat Ulang"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
       </div>
 
       {feedback && (
