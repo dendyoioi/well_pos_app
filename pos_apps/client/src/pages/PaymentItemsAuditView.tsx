@@ -948,26 +948,26 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="py-3 px-4 w-12 text-center">No</th>
-                    <th className="py-3 px-4">Nama Menu / Produk</th>
-                    <th className="py-3 px-4">Kategori</th>
-                    <th className="py-3 px-4 text-center">Jumlah Terjual</th>
-                    <th className="py-3 px-4 text-right">Total Omset</th>
-                    <th className="py-3 px-4 text-right">Kontribusi</th>
+                    <th className="py-3 px-4 w-12 text-center whitespace-nowrap">No</th>
+                    <th className="py-3 px-4 min-w-[180px] whitespace-nowrap">Nama Menu / Produk</th>
+                    <th className="py-3 px-4 min-w-[120px] whitespace-nowrap">Kategori</th>
+                    <th className="py-3 px-4 min-w-[110px] whitespace-nowrap text-center">Jumlah Terjual</th>
+                    <th className="py-3 px-4 min-w-[140px] whitespace-nowrap text-right">Total Omset</th>
+                    <th className="py-3 px-4 min-w-[100px] whitespace-nowrap text-right">Kontribusi</th>
                     {showCostAndProfit && isPrivileged && (
                       <>
-                        <th className="py-3 px-4 text-right text-slate-700">Total HPP</th>
-                        <th className="py-3 px-4 text-right text-emerald-800">Laba Kotor</th>
-                        <th className="py-3 px-4 text-center text-emerald-800">Margin</th>
+                        <th className="py-3 px-4 min-w-[140px] whitespace-nowrap text-right text-slate-700">Total HPP</th>
+                        <th className="py-3 px-4 min-w-[140px] whitespace-nowrap text-right text-emerald-800">Laba Kotor</th>
+                        <th className="py-3 px-4 min-w-[90px] whitespace-nowrap text-center text-emerald-800">Margin</th>
                       </>
                     )}
-                    <th className="py-3 px-4 text-center">Alokasi Kas</th>
+                    <th className="py-3 px-4 min-w-[120px] whitespace-nowrap text-center">Alokasi Kas</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700 text-xs">
                   {paginatedItems.map((item, idx) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + idx + 1;
                     const contribPct =
@@ -977,38 +977,38 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
                     return (
                       <tr key={item.name} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="py-3 px-4 text-center text-slate-400 text-xs font-mono">
+                        <td className="py-3 px-4 text-center text-slate-400 text-xs font-mono whitespace-nowrap">
                           {rowNumber}
                         </td>
-                        <td className="py-3 px-4 font-bold text-blue-950">
+                        <td className="py-3 px-4 font-bold text-blue-950 text-xs whitespace-nowrap">
                           {item.name}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-xs whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold">
                             {item.category}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center font-bold">
+                        <td className="py-3 px-4 text-center font-bold text-xs whitespace-nowrap">
                           <span className="inline-flex items-center gap-1 text-slate-900">
                             {item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}
                             <span className="text-[11px] font-normal text-slate-500">porsi</span>
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-black text-blue-950">
+                        <td className="py-3 px-4 text-right font-black text-blue-950 font-mono text-xs whitespace-nowrap">
                           Rp {Math.round(item.revenue).toLocaleString('id-ID')}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-600">
+                        <td className="py-3 px-4 text-right font-bold text-slate-600 text-xs whitespace-nowrap">
                           {contribPct}%
                         </td>
                         {showCostAndProfit && isPrivileged && (
                           <>
-                            <td className="py-3 px-4 text-right font-medium text-slate-600 font-mono">
+                            <td className="py-3 px-4 text-right font-medium text-slate-600 font-mono text-xs whitespace-nowrap">
                               Rp {Math.round(item.cost || 0).toLocaleString('id-ID')}
                             </td>
-                            <td className="py-3 px-4 text-right font-black text-emerald-700 font-mono">
+                            <td className="py-3 px-4 text-right font-black text-emerald-700 font-mono text-xs whitespace-nowrap">
                               Rp {Math.round((item.revenue || 0) - (item.cost || 0)).toLocaleString('id-ID')}
                             </td>
-                            <td className="py-3 px-4 text-center font-bold">
+                            <td className="py-3 px-4 text-center font-bold text-xs whitespace-nowrap">
                               <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
                                 {item.revenue > 0
                                   ? (((item.revenue - (item.cost || 0)) / item.revenue) * 100).toFixed(1)
@@ -1017,7 +1017,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                             </td>
                           </>
                         )}
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4 text-center text-xs whitespace-nowrap">
                           {item.hasSplitAllocation ? (
                             <span
                               className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1"

@@ -132,6 +132,16 @@ Mengacu pada *binding rules* Well POS:
 * **Zero Redundant Refresh Button**:
   * Tombol reload manual ("Segarkan" / `<RefreshCw />`) telah dihapus secara menyeluruh dari header view `OrdersView.tsx` dan `PaymentItemsAuditView.tsx`.
   * Data riwayat transaksi memuat ulang secara otomatis saat filter periode/saluran/kasir berganti, setelah pembatalan pesanan (Void), atau melalui navigasi tab.
+* **Standar 4 Metric Cards Simetris & Proporsional**:
+  * Seluruh 4 kartu metrik transaksi (`Faktur Lunas`, `Total Omset`, `Tunai/Cash`, `Non-Tunai`) wajib memiliki struktur visual, tinggi kontainer, padding, dan hierarki tipografi yang 100% seragam.
+  * Hero value pada kartu finansial secara konsisten berupa angka nominal Rupiah besar (`text-2xl font-black font-mono tracking-tight`), didampingi badge status yang sejajar di header kartu dan footer informatif pembanding (nota tercatat, rata-rata AOV, dan jumlah transaksi).
+* **Standar Anti-Wrap Kolom Rupiah (Kapasitas Ratusan Juta Rupiah)**:
+  * Kolom `Subtotal` (`min-w-[150px]`) dan `Total Bayar` (`min-w-[160px]`) pada tabel desktop wajib menggunakan `whitespace-nowrap font-mono text-xs text-right`.
+  * Dilarang keras membiarkan simbol `Rp` terpisah atau kena enter ke baris baru saat menampilkan nominal ratusan juta hingga miliaran rupiah (contoh: `Rp 850.500.000` wajib dalam satu baris bersih).
+  * Tabel diberikan lebar dasar aman `min-w-[1050px]` dengan kontainer pembungkus `overflow-x-auto`.
+* **Keseragaman Font Size Antar Baris Tabel**:
+  * Seluruh baris tabel (dari baris pertama nomor faktur terpanjang hingga baris terakhir) wajib menggunakan ukuran font kanonikal `text-xs` yang seragam. Dilarang mencampur `sm:text-sm` pada kolom tertentu yang menyebabkan tinggi baris melonjak atau ukuran teks tampak berbeda.
+  * Kolom nomor invoice diberi `min-w-[210px] whitespace-nowrap text-xs font-mono font-bold` agar invoice tes panjang sekalipun tidak wrap 2 baris atau merusak tinggi baris pertama.
 * **Standar Header Action Bar & Ekspor Data**:
   * Tombol aksi tingkat atas (`Ringkasan WA`, `Ekspor Faktur/Rekap (Excel)`, dan `Cetak Faktur/Rekap (PDF)`) diseragamkan dengan ketinggian kanonikal `h-10` (40px), radius `rounded-xl`, tipografi tegas `text-xs font-bold`, icon `w-4 h-4`, dan elevation `shadow-2xs`.
 * **Standar Filter Toolbar Global**:

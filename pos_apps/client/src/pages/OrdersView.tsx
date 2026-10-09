@@ -822,79 +822,120 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
       {/* Sub-Tab Content Switcher */}
       {activeSubTab === 'invoices' ? (
         <>
-          {/* Metric Cards Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Faktur Lunas (Uang Masuk) */}
-        <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-            <span>Faktur Lunas (Masuk Uang)</span>
-            {voidOrders.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-extrabold">
-                {voidOrders.length} Void
-              </span>
-            )}
-          </div>
-          <div className="text-2xl font-black text-blue-950">{totalFakturLunas} Faktur</div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            {voidOrders.length > 0 || unpaidOrders.length > 0 ? (
-              <span>
-                Dari {orders.length} nota ({voidOrders.length > 0 ? `${voidOrders.length} Void` : ''}
-                {voidOrders.length > 0 && unpaidOrders.length > 0 ? ', ' : ''}
-                {unpaidOrders.length > 0 ? `${unpaidOrders.length} Belum Bayar` : ''})
-              </span>
-            ) : (
-              <span>100% penerimaan kas riil</span>
-            )}
-          </div>
-        </div>
+          {/* Metric Cards Grid - 4 Kolom Seragam, Simetris & Sangat Proporsional */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Faktur Lunas (Fisik Nota) */}
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center border border-blue-100 shrink-0">
+                      <Receipt className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Faktur Lunas
+                    </span>
+                  </div>
+                  {voidOrders.length > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black shrink-0">
+                      {voidOrders.length} Void
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black shrink-0">
+                      100% Lunas
+                    </span>
+                  )}
+                </div>
+                <div className="text-2xl font-black text-blue-950 font-mono tracking-tight mt-1">
+                  {totalFakturLunas} <span className="text-sm font-bold text-slate-500 font-sans">Faktur</span>
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span>Total nota tercatat:</span>
+                <span className="font-bold text-slate-700">{shiftFilteredOrders.length} transaksi</span>
+              </div>
+            </div>
 
-        {/* Card 2: Total Omset Kasir & AOV */}
-        <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-            <span>Total Omset Kasir</span>
-            {totalFakturLunas > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 text-[10px] font-black">
-                AOV: Rp {averageOrderValue.toLocaleString('id-ID')}
-              </span>
-            )}
-          </div>
-          <div className="text-2xl font-black text-blue-900">
-            Rp {totalOmset.toLocaleString('id-ID')}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
-            <span>Akumulasi penerimaan riil</span>
-            {totalFakturLunas > 0 && (
-              <span className="text-slate-400 font-semibold text-[10px]">
-                Rata-rata: Rp {averageOrderValue.toLocaleString('id-ID')}/nota
-              </span>
-            )}
-          </div>
-        </div>
+            {/* Card 2: Total Omset Kasir */}
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <span className="text-xs font-black">Rp</span>
+                    </div>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Total Omset
+                    </span>
+                  </div>
+                  {totalFakturLunas > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 text-[10px] font-black shrink-0">
+                      AOV Rp {averageOrderValue.toLocaleString('id-ID')}
+                    </span>
+                  )}
+                </div>
+                <div className="text-2xl font-black text-blue-900 font-mono tracking-tight mt-1 truncate" title={`Rp ${totalOmset.toLocaleString('id-ID')}`}>
+                  Rp {totalOmset.toLocaleString('id-ID')}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span>Rata-rata/nota:</span>
+                <span className="font-bold text-blue-900 font-mono">Rp {averageOrderValue.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
 
-        {/* Card 3: Tunai (Cash) */}
-        <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-            <Banknote className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Tunai (Cash)</span>
-          </div>
-          <div className="text-2xl font-black text-emerald-700">{cashTransaksi} Transaksi</div>
-          <div className="text-[11px] text-emerald-800 font-bold mt-1">
-            Rp {cashTotalAmount.toLocaleString('id-ID')}
-          </div>
-        </div>
+            {/* Card 3: Penerimaan Tunai (Cash) */}
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shrink-0">
+                      <Banknote className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Tunai (Cash)
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black shrink-0">
+                    {totalOmset > 0 ? Math.round((cashTotalAmount / totalOmset) * 100) : 0}% Omset
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-emerald-700 font-mono tracking-tight mt-1 truncate" title={`Rp ${cashTotalAmount.toLocaleString('id-ID')}`}>
+                  Rp {cashTotalAmount.toLocaleString('id-ID')}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span>Transaksi tunai:</span>
+                <span className="font-bold text-emerald-700 font-mono">{cashTransaksi} nota</span>
+              </div>
+            </div>
 
-        {/* Card 4: Non-Tunai */}
-        <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-            <QrCode className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Non-Tunai</span>
+            {/* Card 4: Penerimaan Non-Tunai (QRIS / EDC / Transfer) */}
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shrink-0">
+                      <QrCode className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Non-Tunai
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-black shrink-0">
+                    {totalOmset > 0 ? Math.round((nonCashTotalAmount / totalOmset) * 100) : 0}% Omset
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-indigo-700 font-mono tracking-tight mt-1 truncate" title={`Rp ${nonCashTotalAmount.toLocaleString('id-ID')}`}>
+                  Rp {nonCashTotalAmount.toLocaleString('id-ID')}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span>Transaksi digital:</span>
+                <span className="font-bold text-indigo-700 font-mono">{nonCashTransaksi} nota</span>
+              </div>
+            </div>
           </div>
-          <div className="text-2xl font-black text-indigo-700">{nonCashTransaksi} Transaksi</div>
-          <div className="text-[11px] text-indigo-800 font-bold mt-1">
-            Rp {nonCashTotalAmount.toLocaleString('id-ID')}
-          </div>
-        </div>
-      </div>
 
       {/* Pill Filter Status Faktur (Audit Instan: Semua, Lunas, Dibatalkan/Void, Belum Bayar) */}
       <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
@@ -1006,18 +1047,18 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
         {loading ? (
           <div>
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left text-xs min-w-[1050px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="py-3 px-4">No. Faktur</th>
-                    <th className="py-3 px-4">Waktu</th>
-                    <th className="py-3 px-4">Kasir</th>
-                    <th className="py-3 px-4">Saluran</th>
-                    <th className="py-3 px-4">Pelanggan</th>
-                    <th className="py-3 px-4">Metode Bayar</th>
-                    <th className="py-3 px-4 text-right">Subtotal</th>
-                    <th className="py-3 px-4 text-right">Total Bayar</th>
-                    <th className="py-3 px-4 text-center">Aksi</th>
+                    <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">No. Faktur</th>
+                    <th className="py-3 px-4 min-w-[125px] whitespace-nowrap">Waktu</th>
+                    <th className="py-3 px-4 min-w-[150px] whitespace-nowrap">Kasir</th>
+                    <th className="py-3 px-4 min-w-[95px] whitespace-nowrap">Saluran</th>
+                    <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">Pelanggan</th>
+                    <th className="py-3 px-4 min-w-[130px] whitespace-nowrap">Metode Bayar</th>
+                    <th className="py-3 px-4 min-w-[150px] whitespace-nowrap text-right">Subtotal</th>
+                    <th className="py-3 px-4 min-w-[160px] whitespace-nowrap text-right">Total Bayar</th>
+                    <th className="py-3 px-4 min-w-[130px] whitespace-nowrap text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1049,21 +1090,21 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
           <>
             {/* Desktop Table View (Hidden on Mobile) */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left text-xs min-w-[1050px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="py-3 px-4">No. Faktur</th>
-                    <th className="py-3 px-4">Waktu</th>
-                    <th className="py-3 px-4">Kasir</th>
-                    <th className="py-3 px-4">Saluran</th>
-                    <th className="py-3 px-4">Pelanggan</th>
-                    <th className="py-3 px-4">Metode Bayar</th>
-                    <th className="py-3 px-4 text-right">Subtotal</th>
-                    <th className="py-3 px-4 text-right">Total Bayar</th>
-                    <th className="py-3 px-4 text-center">Aksi</th>
+                    <th className="py-3 px-4 min-w-[210px] whitespace-nowrap">No. Faktur</th>
+                    <th className="py-3 px-4 min-w-[125px] whitespace-nowrap">Waktu</th>
+                    <th className="py-3 px-4 min-w-[150px] whitespace-nowrap">Kasir</th>
+                    <th className="py-3 px-4 min-w-[95px] whitespace-nowrap">Saluran</th>
+                    <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">Pelanggan</th>
+                    <th className="py-3 px-4 min-w-[130px] whitespace-nowrap">Metode Bayar</th>
+                    <th className="py-3 px-4 min-w-[150px] whitespace-nowrap text-right">Subtotal</th>
+                    <th className="py-3 px-4 min-w-[160px] whitespace-nowrap text-right">Total Bayar</th>
+                    <th className="py-3 px-4 min-w-[130px] whitespace-nowrap text-center">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 text-xs">
                   {paginatedOrders.map((order) => {
                     const chKey = (order.channel || 'DINE_IN') as OrderChannel;
                     const chInfo = ORDER_CHANNEL_LABELS[chKey] || {
@@ -1074,9 +1115,9 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
 
                     return (
                       <tr key={order.id} className="hover:bg-blue-50/40 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={order.orderStatus === 'VOIDED' ? 'text-slate-400 line-through' : 'text-blue-950'}>
+                        <td className="py-3.5 px-4 font-mono font-bold text-xs whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className={order.orderStatus === 'VOIDED' ? 'text-slate-400 line-through' : 'text-blue-950 font-bold'}>
                               {order.invoiceNumber}
                             </span>
                             {order.orderStatus === 'VOIDED' && (
@@ -1086,7 +1127,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                             )}
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600 text-xs">
+                        <td className="py-3.5 px-4 text-slate-600 text-xs whitespace-nowrap font-medium">
                           {new Date(order.createdAt).toLocaleString('id-ID', {
                             day: '2-digit',
                             month: 'short',
@@ -1094,39 +1135,39 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                             minute: '2-digit',
                           })}
                         </td>
-                        <td className="py-3.5 px-4 font-semibold text-slate-700 text-xs">
+                        <td className="py-3.5 px-4 font-semibold text-slate-700 text-xs whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <UserCheck className="w-3.5 h-3.5 text-blue-900 shrink-0" />
-                            <span className="truncate max-w-[130px]" title={order.cashier?.name || order.user?.name || 'Kasir'}>
+                            <span className="truncate max-w-[140px]" title={order.cashier?.name || order.user?.name || 'Kasir'}>
                               {order.cashier?.name || order.user?.name || 'Kasir'}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span
-                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-extrabold"
+                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-extrabold whitespace-nowrap"
                             style={{ color: chInfo.color, backgroundColor: chInfo.bg }}
                           >
                             {chInfo.label}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">
+                        <td className="py-3.5 px-4 text-xs font-semibold text-slate-800 whitespace-nowrap">
                           {order.customerName ? (
                             <span className="flex items-center gap-1">
-                              <User className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{order.customerName}</span>
+                              <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[130px]">{order.customerName}</span>
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-xs italic">Umum / Tunai</span>
+                            <span className="text-slate-400 text-xs italic font-medium">Umum / Tunai</span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           {renderPaymentMethodBadge(order, false)}
                         </td>
-                        <td className="py-3.5 px-4 text-right text-slate-600">
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-xs text-slate-600 whitespace-nowrap">
                           Rp {Number(order.subtotal).toLocaleString('id-ID')}
                         </td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right font-mono font-black text-xs whitespace-nowrap">
                           {order.orderStatus === 'VOIDED' ? (
                             <div>
                               <span className="font-bold text-slate-400 line-through text-xs">
@@ -1137,12 +1178,12 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                               </div>
                             </div>
                           ) : (
-                            <span className="font-black text-blue-950">
+                            <span className="text-blue-950 font-black text-xs">
                               Rp {Number(order.grandTotal).toLocaleString('id-ID')}
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5">
                             {/* Tombol Detail Transaksi */}
                             <button
