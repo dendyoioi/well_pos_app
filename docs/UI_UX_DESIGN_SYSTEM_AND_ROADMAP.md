@@ -170,6 +170,11 @@ Mengacu pada *binding rules* Well POS:
   * Tombol aksi mutasi cepat (`Stok Masuk`, `Transfer Toko`, `Stok Rusak`, `Stock Opname`) diseragamkan ukurannya menjadi `w-8 h-8 rounded-lg` dengan tooltip informatif dan micro-interactions hover yang presisi.
 * **Tabel Audit Trail Mutasi Stok (Kartu Stok)**:
   * Tabel kartu stok diberikan `min-w-[1000px]` dengan format waktu, tipe mutasi, kuantitas `font-mono font-bold text-xs`, serta penyeragaman font petugas dan catatan.
+* **Standarisasi Simetris Header Toolbar Tab Bahan Baku & Produk Jadi**:
+  * Kedua tab (Bahan Baku & Produk Jadi) menerapkan susunan tombol aksi header yang 100% identik dan simetris:
+    1. Tombol Sekunder Outline: `[Lembar Kerja Massal]` (`border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold`) dengan ikon biru `<ClipboardCheck />`.
+    2. Tombol Primer Biru: `[+ Tambah ... Baru]` (`bg-blue-900 hover:bg-blue-800 text-white font-bold`) dengan ikon `<Plus />`.
+  * Menghilangkan kapsul 4 pill tombol manual (`Stok Masuk`, `Transfer`, `Stok Rusak`, `Opname`) dari header Produk Jadi karena redundan; keempat aksi mutasi tersebut telah tersedia secara langsung per item di setiap baris tabel serta terintegrasi secara komprehensif pada `Lembar Kerja Massal`.
 * **Zero Redundant Refresh Button**:
   * Tidak ada tombol refresh mandiri terpisah. Seluruh data persediaan memuat ulang secara otomatis setelah mutasi stok berhasil.
 
