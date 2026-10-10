@@ -11,7 +11,6 @@ import {
   Store,
   Tag,
   Receipt,
-  RotateCw,
   Sparkles,
   Info,
 } from 'lucide-react';
@@ -226,9 +225,9 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-6 animate-fadeIn pb-28 sm:pb-16 font-sans relative">
       {/* Top Banner & Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="p-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg">
@@ -243,19 +242,10 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           </p>
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
-          <button
-            onClick={fetchSubscriptionAndInvoices}
-            disabled={loading}
-            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Perbarui Data"
-          >
-            <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => setIsTopUpModalOpen(true)}
-            className="flex-1 sm:flex-initial justify-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-95 cursor-pointer"
           >
             <Zap className="w-4 h-4 fill-white text-white" />
             <span>+ Top-Up Kuota Token</span>
@@ -291,7 +281,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
       {/* Hero Grid: Quota Meter & Business Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Live Quota Card */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between">
               <div>
@@ -299,7 +289,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                   Saldo Kuota Aktif (Pay-As-You-Go)
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-4xl font-black text-slate-900 tracking-tight">
+                  <span className="text-3xl sm:text-4xl font-mono font-black text-slate-900 tracking-tight">
                     {Number(quota.remainingQuota).toLocaleString('id-ID')}
                   </span>
                   <span className="text-sm font-bold text-slate-500">Order Tersisa</span>
@@ -395,7 +385,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
         </div>
 
         {/* Store & Subscription Info Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+        <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
               Profil Lisensi Merchant
@@ -459,7 +449,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           <div className="mt-4 pt-4 border-t border-slate-100">
             <button
               onClick={() => setIsTopUpModalOpen(true)}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full h-10 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-2xs"
             >
               <CreditCard className="w-3.5 h-3.5" />
               <span>Beli Token Pesanan</span>
@@ -469,7 +459,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
       </div>
 
       {/* Invoice & Billing History Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -540,7 +530,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                       <td className="py-3 px-3 text-center">
                         <button
                           onClick={() => setSelectedInvoiceModal(inv)}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                          className="h-8 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center"
                         >
                           Lihat Faktur
                         </button>
@@ -598,7 +588,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     </div>
                     <button
                       onClick={() => setSelectedInvoiceModal(inv)}
-                      className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                      className="h-9 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
                     >
                       <Receipt className="w-3.5 h-3.5" />
                       <span>Lihat Faktur</span>
@@ -628,7 +618,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           ========================================================================= */}
       {isTopUpModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full text-slate-900 animate-scaleUp max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full text-slate-900 animate-scaleUp max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -673,7 +663,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                         }}
                         className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer relative ${
                           isSelected
-                            ? 'border-blue-700 bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs'
+                            ? 'border-blue-900 bg-blue-50/80 ring-2 ring-blue-900/20 shadow-xs'
                             : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
@@ -725,7 +715,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                           step="50"
                           value={customTokenAmount}
                           onChange={(e) => setCustomTokenAmount(Math.max(minTokenPurchase, Number(e.target.value)))}
-                          className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold bg-white text-slate-900"
+                          className="flex-1 h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-mono font-bold bg-white text-slate-900 focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10"
                         />
                         <span className="text-xs font-black text-slate-700">Token</span>
                       </div>
@@ -746,12 +736,12 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     placeholder="Contoh: HEMAT20 atau LAUNCHWELL"
                     value={promoCodeInput}
                     onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase bg-white text-slate-900 placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-blue-700"
+                    className="flex-1 h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase bg-white text-slate-900 placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10"
                   />
                   <button
                     type="button"
                     onClick={handleApplyPromo}
-                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                    className="h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
                   >
                     Terapkan
                   </button>
@@ -869,12 +859,12 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
               </div>
             </div>
 
-            {/* Modal Footer Action (Fixed & Never Cut Off) */}
-            <div className="p-4 border-t border-slate-100 shrink-0 bg-slate-50/80 rounded-b-3xl flex items-center gap-3">
+            {/* Modal Footer Action (Sticky Action Footer with Safe Area Padding per Rule 10) */}
+            <div className="p-4 sm:px-6 border-t border-slate-100 shrink-0 bg-slate-50/90 rounded-b-3xl flex items-center gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={() => setIsTopUpModalOpen(false)}
-                className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className="flex-1 h-10 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Batal
               </button>
@@ -882,7 +872,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                 type="button"
                 onClick={handleExecuteTopUp}
                 disabled={isSubmittingTopUp || !qrisEnabled}
-                className="flex-2 py-2.5 px-4 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer whitespace-nowrap text-center"
+                className="flex-2 h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer whitespace-nowrap text-center"
               >
                 {isSubmittingTopUp ? 'Memproses...' : !qrisEnabled ? 'QRIS Dinonaktifkan' : 'Beli Kuota Sekarang'}
               </button>
@@ -896,7 +886,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           ========================================================================= */}
       {selectedInvoiceModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 max-w-xl w-full shadow-2xl relative text-slate-800 animate-scaleUp max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 max-w-xl w-full shadow-2xl relative text-slate-800 animate-scaleUp max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setSelectedInvoiceModal(null)}
@@ -1034,20 +1024,20 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
               </div>
             </div>
 
-            {/* Sticky Action Footer */}
-            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex items-center gap-3 bg-white">
+            {/* Sticky Action Footer with Safe Area Padding */}
+            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex items-center gap-3 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors cursor-pointer"
+                className="flex-1 h-10 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors cursor-pointer shadow-2xs"
               >
-                <Printer className="w-3.5 h-3.5" />
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
                 <span>Cetak / PDF</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedInvoiceModal(null)}
-                className="py-2.5 px-6 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className="h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Tutup
               </button>
