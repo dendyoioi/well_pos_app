@@ -95,6 +95,12 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   ├── EPIC-12: Local Pre-Release Sandbox (Master Seeder, QRIS/Hardware Simulators, Runner, Playbook) ➔ SELESAI 100% (COMPLETED ✅)
   └── EPIC-13: Total Frontend Re-Architecture & Modern UI/UX Overhaul (Landing, SuperAdmin, POS, Backoffice) ➔ SELESAI 100% (COMPLETED ✅)
 
+[2026-10-10] STANDARISASI DESAIN KANONIKAL FASE 5: BUKU MENU QR & SELF-ORDERING MEJA (100% COMPLETED ✅)
+  ├── Tahap 5.1 (QrTablesView.tsx): Eliminasi tombol refresh mandiri (Rule 16 AGENTS.md), 4 KPI summary cards font-mono font-black, Toolbar & Filter zona h-10, Form modal select appearance-none & custom ChevronDown, PWA bottom clearance pb-28 sm:pb-12, Tombol aksi meja w-8 h-8 & h-7.5.
+  ├── Tahap 5.2 (QrMenuSettingsView.tsx): Standarisasi tema Navy Blue (bg-blue-900 hover:bg-blue-950), input teks & Wi-Fi h-10 px-4 rounded-xl, preset saji h-9 px-3.5, input kustom angka durasi saji h-10, tombol simpan pengaturan h-11 sm:h-10 px-6 sm:px-8, PWA spacing pb-28 sm:pb-16.
+  ├── Tahap 5.3 (QrLiveOrdersView.tsx): Zero redundant refresh button, live status pulse badge (otomatis 10d), 4 KPI font-mono text-2xl font-black, toolbar search & status tabs h-10 rounded-xl, action buttons KDS (Terima dapur, Siap saji, Buka bayar kasir, Tolak) seragam h-10 rounded-xl.
+  └── Tahap 5.4 (CustomerQrMenuView.tsx): Search input h-10, category scroller h-9 px-3.5, tombol tambah menu h-8 px-3.5, item customize notes h-10, checkout inputs h-10, submit kirim dapur h-12 rounded-xl, return button konfirmasi h-11 sm:h-10, PWA safe padding pb-28 sm:pb-16.
+
 [2026-09-28] FITUR ENHANCEMENT: STOCK OPNAME MASSAL (BULK PHYSICAL COUNT ADJUSTMENT)
   ├── Backend Transaction Engine: POST /api/inventory/bulk-adjustment (Prisma transaction atomik, UUID Session Audit).
   ├── Target Dual-Write & Ledger: Pencatatan mutasi OPNAME_ADJUSTMENT ke inventory_ledgers & inventory_balances.
