@@ -237,20 +237,21 @@ Mengacu pada *binding rules* Well POS:
 
 ### 15. Standar Kelola Gudang Logistik & Multi-Outlet (Tahap 4.5)
 
+* **Kesesuaian Palet Warna Kanonikal Well POS (Navy Blue Brand Palette)**:
+  * Tombol aksi primer (`+ Tambah Gudang Baru`), tombol aksi card (`Pilih & Buka Gudang`), dan tombol aksi modal form diselaraskan secara konsisten menggunakan palet **Navy Blue (`bg-blue-900 hover:bg-blue-950 text-white shadow-md shadow-blue-950/20`)**.
+  * Aksen fokus, badge gudang pusat (`text-blue-900 bg-blue-50 border border-blue-200`), dan ring indikator sesi aktif diseragamkan dengan nada biru navy identitas Well POS.
+* **Standarisasi Dropdown Status & Chevron Proporsional**:
+  * Dropdown filter status gudang menggunakan `appearance-none` berpasangan dengan custom ikon Lucide `<ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />` dan padding kanan teratur `pr-9`, menghasilkan tampilan dropdown yang simetris, proporsional, dan sejajar dengan search bar.
+* **Ergonomi Responsif & PWA Mobile**:
+  * Padding bawah kontainer utama menggunakan `pb-28 sm:pb-12` untuk menjamin seluruh data tabel dan pagination tidak tertutup oleh PWA Bottom Navigation Bar pada smartphone kasir/owner.
+  * Tombol header "+ Tambah Gudang Baru" dan tombol card footer adaptif `w-full sm:w-auto` untuk memastikan tap target nyaman di layar sentuh mobile.
+  * Sticky Action Footer modal dioptimalkan dengan tinggi sentuh `h-11 sm:h-10` dan bantalan safe-area iPhone (`pb-[max(1rem,env(safe-area-inset-bottom))]`).
 * **Zero Redundant Refresh Button (Rule 16 AGENTS.md)**:
   * Tidak ada tombol refresh redundan pada [`WarehousesView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/WarehousesView.tsx). Data reaktif ter-refresh otomatis saat status filter atau pencarian diubah serta setelah gudang baru dibuat atau diedit.
 * **Standarisasi 3 KPI Summary Cards Simetris**:
   * 3 kartu metrik (*Gudang Logistik Aktif*, *Toko / Outlet Terhubung*, dan *Status Mode Sesi*) diformat seragam dengan tipografi kanonikal `font-mono text-2xl font-black` serta indikator mode sesi gudang aktif yang jelas.
-* **Toolbar Pencarian, Filter Status & Toggle Mode Tampilan**:
-  * Input pencarian dan dropdown filter status (`Semua Status`, `Gudang Aktif`, `Gudang Nonaktif`) diseragamkan pada ketinggian kanonikal `h-10` (40px) beradius `rounded-xl`.
-  * Disediakan toggle tampilan adaptif: **Grid Kartu** (`<LayoutGrid />`) dan **Tabel Ringkas Kanonikal** (`<List />`) dengan tombol toggle `h-9 rounded-xl`.
-* **Standarisasi Tampilan Data (Grid & Tabel)**:
-  * Grid Kartu: Card rapi dengan header terstruktur, badge pusat, tombol edit presisi `w-8 h-8 rounded-xl`, alamat fisik, WhatsApp PIC (`<WhatsAppInput />`), daftar toko yang disuplai, badge status aktif, dan tombol aksi `h-8 px-3 rounded-xl`.
-  * Tabel Ringkas: Tabel lebar `min-w-[1050px]` dengan baris `text-xs`, informasi alamat, kontak mono, pill toko pasokan, status, dan tombol aksi per baris (`Edit` `w-8 h-8` + `Buka/Pilih Gudang` `h-8 px-3`).
-* **Standarisasi Modal Form Gudang**:
-  * Modal responsif bottom-sheet mobile & desktop center dengan body scrollable.
-  * Input teks berukuran `h-10 rounded-xl`.
-  * Sticky Action Footer dengan tombol aksi seragam: `Batal` `h-10 px-4` dan `Simpan/Buat Gudang` `h-10 px-5` dengan bantalan safe-area iPhone.
+* **Toggle Mode Tampilan Adaptif**:
+  * Disediakan toggle tampilan adaptif: **Grid Kartu** (`<LayoutGrid />`) dan **Tabel Ringkas Kanonikal** (`<List />`) dengan tombol switch `h-9 rounded-xl`.
 
 ---
 
