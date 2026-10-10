@@ -5,7 +5,6 @@ import {
   ChefHat,
   ShoppingBag,
   CreditCard,
-  RefreshCw,
   Store,
   Check,
   XCircle,
@@ -119,7 +118,7 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
     .reduce((acc, curr) => acc + curr.grandTotal, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
@@ -135,25 +134,18 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="w-3.5 h-3.5 text-blue-900 rounded-md focus:ring-blue-900"
-            />
-            <span>Auto-Refresh (10d)</span>
-          </label>
-
-          <button
-            onClick={fetchOrders}
-            className="p-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5"
-            title="Muat Ulang Pesanan"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+            <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+            <span>Live Feed ({autoRefresh ? 'Otomatis 10d' : 'Dijeda'})</span>
+            <button
+              type="button"
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className="ml-1 text-[11px] font-bold text-blue-900 hover:text-blue-950 underline cursor-pointer"
+            >
+              {autoRefresh ? 'Jeda' : 'Aktifkan'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -161,63 +153,63 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Perlu Konfirmasi</span>
-            <div className="text-2xl font-black text-rose-600 mt-1">{pendingOrders}</div>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide truncate block">Perlu Konfirmasi</span>
+            <div className="text-2xl font-black font-mono text-rose-600 mt-1">{pendingOrders}</div>
             <p className="text-[11px] text-rose-500 mt-0.5 truncate">Pesanan baru masuk</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 flex items-center justify-center font-bold shrink-0">
             <Bell className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Sedang Diracik</span>
-            <div className="text-2xl font-black text-amber-600 mt-1">{inProgressOrders}</div>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide truncate block">Sedang Diracik</span>
+            <div className="text-2xl font-black font-mono text-amber-600 mt-1">{inProgressOrders}</div>
             <p className="text-[11px] text-amber-500 mt-0.5 truncate">Diproses dapur / bar</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
             <ChefHat className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Siap Saji</span>
-            <div className="text-2xl font-black text-blue-900 mt-1">{readyOrders}</div>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide truncate block">Siap Saji</span>
+            <div className="text-2xl font-black font-mono text-blue-900 mt-1">{readyOrders}</div>
             <p className="text-[11px] text-blue-600 mt-0.5 truncate">Siap diantar ke meja</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
             <ShoppingBag className="w-5 h-5 shrink-0" />
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Total Pesanan Meja</span>
-            <div className="text-xl font-black text-blue-950 mt-1 truncate">{formatRupiah(totalTableRevenue)}</div>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide truncate block">Total Pesanan Meja</span>
+            <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-blue-950 mt-1 truncate">{formatRupiah(totalTableRevenue)}</div>
             <p className="text-[11px] text-slate-400 mt-0.5 truncate">{orders.length} transaksi meja</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 flex items-center justify-center font-bold shrink-0">
             <CreditCard className="w-5 h-5 shrink-0" />
           </div>
         </div>
       </div>
 
       {/* Filter & Status Tabs */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nomor meja, nama, atau invoice..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+            className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all shadow-2xs"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
           {[
             { id: 'ALL', label: 'Semua' },
             { id: 'CONFIRMED', label: 'Perlu Dikonfirmasi' },
@@ -228,10 +220,10 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
+              className={`h-10 px-4 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer ${
                 statusFilter === tab.id
-                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm shadow-blue-950/20'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               {tab.label}
@@ -338,7 +330,7 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
                 <div className="space-y-3 pt-2 border-t border-slate-100">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-slate-500 font-medium">Total Pesanan:</span>
-                    <span className="text-base font-black text-blue-950">{formatRupiah(order.grandTotal)}</span>
+                    <span className="text-base font-black font-mono text-blue-950">{formatRupiah(order.grandTotal)}</span>
                   </div>
 
                   {/* Actions based on status */}
@@ -346,17 +338,19 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
                     {order.orderStatus === 'CONFIRMED' && (
                       <>
                         <button
+                          type="button"
                           onClick={() => handleUpdateStatus(order.id, 'IN_PROGRESS')}
                           disabled={isUpdating}
-                          className="flex-1 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
+                          className="flex-1 h-10 px-4 bg-blue-900 hover:bg-blue-950 disabled:bg-slate-400 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                         >
-                          <ChefHat className="w-3.5 h-3.5" />
-                          <span>Terima & Kirim Dapur</span>
+                          <ChefHat className="w-4 h-4" />
+                          <span>Terima &amp; Kirim Dapur</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleUpdateStatus(order.id, 'CANCELLED')}
                           disabled={isUpdating}
-                          className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-colors"
+                          className="w-10 h-10 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center shrink-0 cursor-pointer"
                           title="Tolak Pesanan"
                         >
                           <XCircle className="w-4 h-4" />
@@ -366,31 +360,33 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
 
                     {order.orderStatus === 'IN_PROGRESS' && (
                       <button
+                        type="button"
                         onClick={() => handleUpdateStatus(order.id, 'READY')}
                         disabled={isUpdating}
-                        className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
+                        className="flex-1 h-10 px-4 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-400 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <ShoppingBag className="w-4 h-4" />
                         <span>Tandai Siap Saji</span>
                       </button>
                     )}
 
                     {order.orderStatus === 'READY' && order.paymentStatus === 'UNPAID' && (
                       <button
+                        type="button"
                         onClick={() => {
                           if (onOpenInPos) onOpenInPos(order);
                           else handleUpdateStatus(order.id, 'COMPLETED');
                         }}
                         disabled={isUpdating}
-                        className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
+                        className="flex-1 h-10 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-400 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <CreditCard className="w-3.5 h-3.5" />
+                        <CreditCard className="w-4 h-4" />
                         <span>Buka Bayar di Kasir</span>
                       </button>
                     )}
 
                     {order.orderStatus === 'COMPLETED' && (
-                      <div className="w-full py-2 bg-slate-50 text-slate-500 rounded-xl text-xs font-bold text-center flex items-center justify-center gap-1.5">
+                      <div className="w-full h-10 bg-slate-50 border border-slate-100 text-slate-500 rounded-xl text-xs font-bold text-center flex items-center justify-center gap-1.5">
                         <Check className="w-4 h-4 text-emerald-600" />
                         <span>Pesanan Selesai &amp; Lunas</span>
                       </div>
