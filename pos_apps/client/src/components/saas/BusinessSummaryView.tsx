@@ -436,9 +436,9 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
       },
     ];
 
-    // Filter ketat: Hanya sub-kategori yang aktif / memiliki transaksi > 0 yang dirender
-    return list.filter(item => item.isActive && (item.value > 0 || (item.id === 'QRIS' && isQrisConfigActive && m.nonCashTotal === 0)));
-  }, [m.qris, m.card, m.transfer, m.debt, m.onlineDelivery, m.nonCashTotal, activeOutlet?.paymentConfig]);
+    // Filter ketat: Hanya sub-kategori yang aktif & memiliki transaksi > 0 yang dirender
+    return list.filter(item => item.isActive && item.value > 0);
+  }, [m.qris, m.card, m.transfer, m.debt, m.onlineDelivery, activeOutlet?.paymentConfig]);
 
   const dailyTrend = useMemo(() => {
     const map: Record<string, { sales: number; orders: number }> = {};
@@ -1036,7 +1036,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
             </div>
           </div>
 
-          {/* Donut: Metode Bayar */}
+          {/* Donut: Metode Bayar (Hierarki Tunai & Non-Tunai dengan Sub-Kategori Aktif) */}
           <div style={card}>
             <PanelHeader icon={<CreditCard size={13} color="#7c3aed" />} title="Distribusi Metode Bayar" badge="Donut Chart" />
             <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
@@ -1047,18 +1047,58 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
                 ].filter(d => d.value > 0)} />
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:8, width: '100%' }}>
-                {[
-                  { l:'Tunai (Cash)', c:'#16a34a', v: m.cash },
-                  ...activeNonCashSubs.map(s => ({ l: s.label, c: s.color, v: s.value })),
-                ].filter(leg => leg.v > 0).map(leg => (
-                  <div key={leg.l} style={{ display:'flex', alignItems:'center', justifyContent: 'space-between', gap:6 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                      <span style={{ width:9, height:9, borderRadius:2, background:leg.c, flexShrink:0, display:'inline-block' }} />
-                      <span style={{ fontSize:10, color:'#64748b' }}>{leg.l}</span>
-                    </div>
-                    <strong className="font-mono" style={{ fontSize:11, color:'#0f172a' }}>{formatRupiah(leg.v)}</strong>
+                {/* 1. TUNAI (CASH) */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 10px', borderRadius:8, background:'#f0fdf4', border:'1px solid #bbf7d0' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ width:8, height:8, borderRadius:'50%', background:'#16a34a', flexShrink:0 }} />
+                    <span style={{ fontSize:11, fontWeight:700, color:'#166534' }}>Tunai (Cash)</span>
                   </div>
-                ))}
+                  <div style={{ textAlign:'right' }}>
+                    <strong className="font-mono" style={{ fontSize:11, color:'#0f172a' }}>{formatRupiah(m.cash)}</strong>
+                    <span style={{ fontSize:10, fontWeight:700, color:'#16a34a', marginLeft:6 }}>
+                      {m.totalSales > 0 ? Math.round((m.cash / m.totalSales) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. NON-TUNAI */}
+                <div style={{ padding:'7px 10px', borderRadius:8, background:'#eff6ff', border:'1px solid #bfdbfe' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <span style={{ width:8, height:8, borderRadius:'50%', background:'#1d4ed8', flexShrink:0 }} />
+                      <span style={{ fontSize:11, fontWeight:700, color:'#1e40af' }}>Non-Tunai</span>
+                      <span style={{ fontSize:9, fontWeight:600, color:'#3b82f6', background:'#dbeafe', padding:'1px 5px', borderRadius:4 }}>
+                        {activeNonCashSubs.length} Sub-Kategori
+                      </span>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <strong className="font-mono" style={{ fontSize:11, color:'#0f172a' }}>{formatRupiah(m.nonCashTotal)}</strong>
+                      <span style={{ fontSize:10, fontWeight:700, color:'#1d4ed8', marginLeft:6 }}>
+                        {m.totalSales > 0 ? Math.round((m.nonCashTotal / m.totalSales) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Sub-kategori aktif Non-Tunai */}
+                  {activeNonCashSubs.length > 0 && (
+                    <div style={{ marginTop:6, paddingTop:6, borderTop:'1px dashed #bfdbfe', display:'flex', flexDirection:'column', gap:4 }}>
+                      {activeNonCashSubs.map(sub => (
+                        <div key={sub.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:10 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                            <span style={{ width:5, height:5, borderRadius:'50%', background: sub.color, flexShrink:0 }} />
+                            <span style={{ color:'#475569', fontWeight:600 }}>{sub.label}</span>
+                          </div>
+                          <div style={{ textAlign:'right' }}>
+                            <span className="font-mono" style={{ color:'#0f172a', fontWeight:700 }}>{formatRupiah(sub.value)}</span>
+                            <span style={{ color: sub.color, fontWeight:700, marginLeft:4 }}>
+                              ({m.totalSales > 0 ? Math.round((sub.value / m.totalSales) * 100) : 0}%)
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

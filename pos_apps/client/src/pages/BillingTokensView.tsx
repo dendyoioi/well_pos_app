@@ -618,7 +618,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
           ========================================================================= */}
       {isTopUpModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full text-slate-900 animate-scaleUp max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-3xl sm:max-w-4xl w-full text-slate-900 animate-scaleUp max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -643,11 +643,11 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
             </div>
 
             {/* Modal Body (Scrollable) */}
-            <div className="p-5 overflow-y-auto space-y-3.5 flex-1">
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
               {/* Paket Pilihan */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 block">Pilih Jumlah Kuota Token:</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {presetPackages.map((item, idx) => {
                     const price = (typeof item.price === 'number' && item.price > 0) ? item.price : item.tokens * tokenPrice;
                     const isSelected = !isCustomMode && topUpPreset === item.tokens;
@@ -661,30 +661,32 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                           setIsCustomMode(false);
                           setTopUpPreset(item.tokens);
                         }}
-                        className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                        className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                           isSelected
                             ? 'border-blue-900 bg-blue-50/80 ring-2 ring-blue-900/20 shadow-xs'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
+                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
                         }`}
                       >
                         {badgeText && (
-                          <span className={`absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-white text-[8px] font-black uppercase tracking-wider shadow-xs ${
+                          <span className={`absolute -top-2.5 right-3 px-2 py-0.5 rounded-full text-white text-[9px] font-black uppercase tracking-wider shadow-xs ${
                             item.isPopular ? 'bg-blue-900' : 'bg-slate-700'
                           }`}>
                             {badgeText}
                           </span>
                         )}
-                        <span className="text-[10px] font-black text-blue-900 block uppercase truncate pr-6" title={packageName}>
-                          {packageName}
-                        </span>
-                        <span className="text-sm font-black text-slate-900 block mt-0.5">
-                          +{item.tokens.toLocaleString('id-ID')}
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-500 block mt-0.5">
-                          {formatRupiah(price)}
-                        </span>
+                        <div>
+                          <span className="text-xs font-black text-blue-900 block uppercase tracking-wide" title={packageName}>
+                            {packageName}
+                          </span>
+                          <span className="text-base sm:text-lg font-black text-slate-900 block mt-1 font-mono">
+                            +{item.tokens.toLocaleString('id-ID')}
+                          </span>
+                          <span className="text-xs font-bold text-slate-600 block mt-0.5 font-mono">
+                            {formatRupiah(price)}
+                          </span>
+                        </div>
                         {item.description && (
-                          <span className="text-[9px] text-slate-400 block mt-1 truncate" title={item.description}>
+                          <span className="text-[10px] text-slate-400 block mt-2 leading-tight" title={item.description}>
                             {item.description}
                           </span>
                         )}
@@ -703,7 +705,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     <span>{isCustomMode ? 'Gunakan Paket Pilihan Di Atas' : '+ Butuh kuota kustom lainnya?'}</span>
                   </button>
                   {isCustomMode && (
-                    <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                    <div className="mt-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 max-w-md">
                       <div className="flex justify-between items-center">
                         <label className="text-[11px] font-bold text-slate-600">Jumlah Token Kustom:</label>
                         <span className="text-[10px] text-slate-500">Min. {minTokenPurchase.toLocaleString('id-ID')} token</span>
@@ -724,137 +726,160 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                 </div>
               </div>
 
-              {/* Input Kupon Promo */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5 text-blue-700" />
-                  <span>Punya Kupon Diskon B2B?</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Contoh: HEMAT20 atau LAUNCHWELL"
-                    value={promoCodeInput}
-                    onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
-                    className="flex-1 h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase bg-white text-slate-900 placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyPromo}
-                    className="h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-                  >
-                    Terapkan
-                  </button>
-                </div>
-                {appliedPromo && (
-                  <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
-                    <span className="font-bold">
-                      Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name || 'Diskon diterapkan'}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setAppliedPromo(null);
-                        setPromoCodeInput('');
-                      }}
-                      className="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer"
-                    >
-                      Batal
-                    </button>
-                  </div>
-                )}
-                {promoError && (
-                  <p className="text-[11px] text-rose-600 font-semibold">{promoError}</p>
-                )}
-              </div>
-
-              {/* Metode Pembayaran: HANYA QRIS */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 block">Metode Pembayaran:</label>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-[10px] font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Hanya QRIS (Otomatis)
-                  </span>
-                </div>
-
-                {!qrisEnabled ? (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 space-y-1">
-                    <p className="font-bold flex items-center gap-1.5 text-amber-900">
-                      <span>⚠️</span>
-                      <span>Pembayaran QRIS Sedang Dalam Pemeliharaan</span>
-                    </p>
-                    <p className="text-[11px] text-amber-700">
-                      Metode pembayaran QRIS sedang dinonaktifkan sementara oleh platform HQ. Silakan hubungi admin platform.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded bg-blue-900 text-white text-[10px] font-black tracking-wider uppercase">
-                          QRIS RESMI
+              {/* Grid Responsif Bawah: Kolom Kiri Kupon & QRIS, Kolom Kanan Ringkasan Tagihan */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-1">
+                {/* Kolom Kiri: Kupon & QRIS (md:col-span-7) */}
+                <div className="md:col-span-7 space-y-3.5">
+                  {/* Input Kupon Promo */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Tag className="w-3.5 h-3.5 text-blue-700" />
+                      <span>Punya Kupon Diskon B2B?</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Contoh: HEMAT20 atau LAUNCHWELL"
+                        value={promoCodeInput}
+                        onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                        className="flex-1 h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-mono font-bold uppercase bg-white text-slate-900 placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        className="h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                      >
+                        Terapkan
+                      </button>
+                    </div>
+                    {appliedPromo && (
+                      <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+                        <span className="font-bold">
+                          Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name || 'Diskon diterapkan'}
                         </span>
-                        <span className="text-xs font-black text-blue-950">
-                          {platformPaymentConfig?.qris?.merchantName || 'WELL POS PLATFORM HQ'}
-                        </span>
+                        <button
+                          onClick={() => {
+                            setAppliedPromo(null);
+                            setPromoCodeInput('');
+                          }}
+                          className="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer"
+                        >
+                          Batal
+                        </button>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-slate-500">
-                        NMID: {platformPaymentConfig?.qris?.nmid || 'ID1020030040050'}
+                    )}
+                    {promoError && (
+                      <p className="text-[11px] text-rose-600 font-semibold">{promoError}</p>
+                    )}
+                  </div>
+
+                  {/* Metode Pembayaran: HANYA QRIS */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 block">Metode Pembayaran:</label>
+                      <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-[10px] font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Hanya QRIS (Otomatis)
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-3.5">
-                      {/* QR Code Container */}
-                      <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-xs shrink-0 flex flex-col items-center">
-                        <img
-                          src={platformPaymentConfig?.qris?.imageUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C'}
-                          alt="QRIS Statis Well POS Platform HQ"
-                          className="w-24 h-24 object-contain"
-                        />
-                        <span className="text-[9px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">
-                          Scan QRIS
-                        </span>
+                    {!qrisEnabled ? (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 space-y-1">
+                        <p className="font-bold flex items-center gap-1.5 text-amber-900">
+                          <span>⚠️</span>
+                          <span>Pembayaran QRIS Sedang Dalam Pemeliharaan</span>
+                        </p>
+                        <p className="text-[11px] text-amber-700">
+                          Metode pembayaran QRIS sedang dinonaktifkan sementara oleh platform HQ. Silakan hubungi admin platform.
+                        </p>
                       </div>
+                    ) : (
+                      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded bg-blue-900 text-white text-[10px] font-black tracking-wider uppercase">
+                              QRIS RESMI
+                            </span>
+                            <span className="text-xs font-black text-blue-950">
+                              {platformPaymentConfig?.qris?.merchantName || 'WELL POS PLATFORM HQ'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-slate-500">
+                            NMID: {platformPaymentConfig?.qris?.nmid || 'ID1020030040050'}
+                          </span>
+                        </div>
 
-                      {/* Instructions */}
-                      <div className="space-y-1.5 text-xs flex-1">
-                        <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-blue-950 text-[11px] leading-relaxed">
-                          <p className="font-bold mb-0.5 text-blue-950">Panduan Pembayaran QRIS:</p>
-                          <p className="text-slate-600">
-                            {platformPaymentConfig?.qris?.notes || 'Buka aplikasi e-Wallet (GoPay, OVO, Dana, ShopeePay) atau m-Banking (BCA, Livin Mandiri, BRImo, BNI) lalu scan QRIS di samping.'}
-                          </p>
-                        </div>
-                        <div className="flex justify-between items-center text-[11px] pt-1 text-slate-600">
-                          <span>Nominal Pas:</span>
-                          <span className="font-mono font-black text-blue-900 text-sm">{formatRupiah(finalCost)}</span>
+                        <div className="flex flex-col sm:flex-row items-center gap-3.5">
+                          {/* QR Code Container */}
+                          <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-xs shrink-0 flex flex-col items-center">
+                            <img
+                              src={platformPaymentConfig?.qris?.imageUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=00020101021126600016ID.CO.QRIS.WWW011893600002010200300400500215ID10200300400500303UME51440014ID.CO.QRIS.WWW0215ID10200300400500303UME5204581253033605802ID5919WELL+POS+PLATFORM+HQ6007JAKARTA61051219062070703A016304E85C'}
+                              alt="QRIS Statis Well POS Platform HQ"
+                              className="w-24 h-24 object-contain"
+                            />
+                            <span className="text-[9px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">
+                              Scan QRIS
+                            </span>
+                          </div>
+
+                          {/* Instructions */}
+                          <div className="space-y-1.5 text-xs flex-1">
+                            <div className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-blue-950 text-[11px] leading-relaxed">
+                              <p className="font-bold mb-0.5 text-blue-950">Panduan Pembayaran QRIS:</p>
+                              <p className="text-slate-600">
+                                {platformPaymentConfig?.qris?.notes || 'Buka aplikasi e-Wallet (GoPay, OVO, Dana, ShopeePay) atau m-Banking (BCA, Livin Mandiri, BRImo, BNI) lalu scan QRIS di samping.'}
+                              </p>
+                            </div>
+                            <div className="flex justify-between items-center text-[11px] pt-1 text-slate-600">
+                              <span>Nominal Pas:</span>
+                              <span className="font-mono font-black text-blue-900 text-sm">{formatRupiah(finalCost)}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Kolom Kanan: Rincian Total Tagihan (md:col-span-5) */}
+                <div className="md:col-span-5 flex flex-col justify-between space-y-3">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
+                    <div className="pb-2 border-b border-slate-200">
+                      <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider block">
+                        Ringkasan Pembelian
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Kuota Tambahan:</span>
+                      <span className="font-bold text-slate-800 font-mono">
+                        +{totalTokensReceived.toLocaleString('id-ID')} Token
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Subtotal (Rp {tokenPrice} / token):</span>
+                      <span className="font-mono">{formatRupiah(baseCost)}</span>
+                    </div>
+                    {discountCost > 0 && (
+                      <div className="flex justify-between text-emerald-700 font-bold">
+                        <span>Potongan Promo:</span>
+                        <span className="font-mono">- {formatRupiah(discountCost)}</span>
+                      </div>
+                    )}
+                    <div className="pt-2.5 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
+                      <span>Total Tagihan:</span>
+                      <span className="text-blue-900 text-base font-mono">{formatRupiah(finalCost)}</span>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Rincian Total */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
-                <div className="flex justify-between text-slate-500">
-                  <span>Kuota Tambahan:</span>
-                  <span className="font-bold text-slate-800">
-                    +{totalTokensReceived.toLocaleString('id-ID')} Token
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Subtotal (Rp {tokenPrice} / token):</span>
-                  <span>{formatRupiah(baseCost)}</span>
-                </div>
-                {discountCost > 0 && (
-                  <div className="flex justify-between text-emerald-700 font-bold">
-                    <span>Potongan Promo:</span>
-                    <span>- {formatRupiah(discountCost)}</span>
+                  <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-[10px] text-slate-500 space-y-1">
+                    <p className="font-bold text-blue-950 flex items-center gap-1">
+                      <span>✔</span>
+                      <span>Aktivasi Instan &amp; Aman</span>
+                    </p>
+                    <p>
+                      Saldo token otomatis bertambah dan faktur digital resmi diterbitkan segera setelah pembayaran terverifikasi.
+                    </p>
                   </div>
-                )}
-                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
-                  <span>Total Tagihan:</span>
-                  <span className="text-blue-900 text-base">{formatRupiah(finalCost)}</span>
                 </div>
               </div>
             </div>
