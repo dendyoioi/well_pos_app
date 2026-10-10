@@ -157,28 +157,46 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
   // 4. Daftar Item Pesanan
   const items = order.orderItems || order.items || [];
   for (const it of items) {
-    const pName = it.product?.name || it.name || 'Produk';
+    const rawName = it.product?.name || it.productName || it.name || 'Produk';
+    const variantName = it.variantName || it.variant?.name;
+    const hasVariant = Boolean(variantName && variantName !== 'Default' && variantName !== 'Standar');
+    const pName = hasVariant ? `${rawName} (${variantName})` : rawName;
     const qty = it.quantity || 1;
-    const subtotal = Number(it.subtotal ?? (it.price ? it.price * qty : 0));
-    const priceEach = Number(it.price || 0);
+    const priceEach = Number(it.unitPrice ?? it.price ?? 0);
+    const subtotal = Number(it.subtotal ?? (priceEach > 0 ? priceEach * qty : 0));
 
     builder.bold(true).twoColumns(`${pName} x${qty}`, `Rp ${subtotal.toLocaleString('id-ID')}`);
     builder.bold(false);
 
     // Keterangan harga satuan jika qty > 1
-    if (qty > 1) {
+    if (qty > 1 && priceEach > 0) {
       builder.line(`  @ Rp ${priceEach.toLocaleString('id-ID')}`);
     }
 
-    // Modifiers / Catatan
-    if (it.modifiers && Array.isArray(it.modifiers) && it.modifiers.length > 0) {
-      for (const m of it.modifiers) {
-        const modName = typeof m === 'string' ? m : m.name;
-        builder.line(`  + ${modName}`);
+    // Modifiers / Pilihan Tambahan
+    const mods = it.modifiers || it.modifiersSnapshot || it.selectedModifiers || [];
+    if (Array.isArray(mods) && mods.length > 0) {
+      for (const m of mods) {
+        let modName = '';
+        let modPrice = 0;
+        if (typeof m === 'string') {
+          modName = m;
+        } else if (m?.option) {
+          modName = m.option.name;
+          modPrice = Number(m.option.priceDelta || 0);
+        } else if (m?.name) {
+          modName = m.name;
+          modPrice = Number(m.priceAdjustment || m.price_adjustment || 0);
+        }
+        if (modName) {
+          const priceTag = modPrice > 0 ? ` (+Rp ${modPrice.toLocaleString('id-ID')})` : '';
+          builder.line(`  + ${modName}${priceTag}`);
+        }
       }
     }
-    if (it.notes) {
-      builder.line(`  Catatan: ${it.notes}`);
+    const itemNote = it.notes || it.itemNote;
+    if (itemNote) {
+      builder.line(`  Catatan: ${itemNote}`);
     }
   }
 

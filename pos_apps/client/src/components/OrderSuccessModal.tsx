@@ -702,9 +702,16 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
           <div className="space-y-2">
             {order.orderItems?.map((item, idx) => {
               const itemDisc = Number(item.discountAmount) || 0;
+              const rawName = item.product?.name || item.productName || 'Produk';
+              const variantName = item.variantName || item.variant?.name;
+              const hasVariant = Boolean(variantName && variantName !== 'Default' && variantName !== 'Standar');
+              const pName = hasVariant ? `${rawName} (${variantName})` : rawName;
+              const mods = item.modifiers || item.modifiersSnapshot || item.selectedModifiers || [];
+              const itemNotes = item.notes || item.itemNote;
+
               return (
                 <div key={idx} className="space-y-0.5">
-                  <div className="font-bold text-slate-900">{item.product?.name}</div>
+                  <div className="font-bold text-slate-900">{pName}</div>
                   <div className="flex justify-between text-[10px] sm:text-[11px] text-slate-500">
                     <span>
                       {item.quantity} x Rp {Number(item.unitPrice).toLocaleString('id-ID')}
@@ -718,6 +725,25 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                       Rp {Number(item.subtotal).toLocaleString('id-ID')}
                     </span>
                   </div>
+                  {Array.isArray(mods) && mods.length > 0 && (
+                    <div className="text-[10px] text-slate-500 pl-2 space-y-0.5 mt-0.5">
+                      {mods.map((m: any, mIdx: number) => {
+                        const modName = typeof m === 'string' ? m : (m.option?.name || m.name || '');
+                        const modPrice = typeof m === 'string' ? 0 : Number(m.option?.priceDelta || m.priceAdjustment || m.price_adjustment || 0);
+                        if (!modName) return null;
+                        return (
+                          <div key={mIdx} className="text-slate-600">
+                            + {modName} {modPrice > 0 ? `(+Rp ${modPrice.toLocaleString('id-ID')})` : ''}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {itemNotes && (
+                    <div className="text-[10px] text-amber-700 pl-2 italic">
+                      Catatan: {itemNotes}
+                    </div>
+                  )}
                 </div>
               );
             })}

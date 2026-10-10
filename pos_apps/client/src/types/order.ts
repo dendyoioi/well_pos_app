@@ -36,8 +36,11 @@ export interface PaymentPayload {
 export interface CheckoutPayload {
   items: {
     productId: string;
+    variantId?: string;
     quantity: number;
     discountAmount?: number;
+    modifierItemIds?: string[];
+    notes?: string;
   }[];
   channel?: OrderChannel | string;
   tableNumber?: string;
@@ -73,6 +76,15 @@ export interface OrderItem {
   unitPrice: number;
   discountAmount: number;
   subtotal: number;
+  notes?: string | null;
+  itemNote?: string | null;
+  modifiers?: any[];
+  modifiersSnapshot?: any;
+  selectedModifiers?: any[];
+  variant?: {
+    name?: string;
+    price?: number;
+  };
   product?: {
     name: string;
     sku?: string;

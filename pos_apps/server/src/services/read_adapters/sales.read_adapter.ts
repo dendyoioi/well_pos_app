@@ -161,6 +161,8 @@ export class SalesReadAdapter extends BaseReadAdapter {
         oi.unit_price,
         oi.cost_price,
         oi.subtotal,
+        oi.notes,
+        oi.modifiers_snapshot,
         pv.product_id,
         p.unit,
         c.name as category_name
@@ -191,6 +193,14 @@ export class SalesReadAdapter extends BaseReadAdapter {
     const itemsByOrder = new Map<string, any[]>();
     for (const item of itemRows) {
       if (!itemsByOrder.has(item.order_id)) itemsByOrder.set(item.order_id, []);
+      let parsedMods: any[] = [];
+      if (item.modifiers_snapshot) {
+        try {
+          parsedMods = typeof item.modifiers_snapshot === 'string'
+            ? JSON.parse(item.modifiers_snapshot)
+            : item.modifiers_snapshot;
+        } catch (_) {}
+      }
       itemsByOrder.get(item.order_id)!.push({
         id: item.id,
         productName: item.product_name,
@@ -200,6 +210,9 @@ export class SalesReadAdapter extends BaseReadAdapter {
         unitPrice: Number(item.unit_price || 0),
         costPrice: Number(item.cost_price || 0),
         subtotal: Number(item.subtotal || 0),
+        notes: item.notes || null,
+        modifiers: parsedMods,
+        modifiersSnapshot: parsedMods,
         categoryName: item.category_name || 'Lainnya',
         product: {
           name: item.product_name,
@@ -360,6 +373,8 @@ export class SalesReadAdapter extends BaseReadAdapter {
         oi.quantity,
         oi.unit_price,
         oi.subtotal,
+        oi.notes,
+        oi.modifiers_snapshot,
         pv.product_id,
         p.unit,
         c.name as category_name
@@ -411,23 +426,36 @@ export class SalesReadAdapter extends BaseReadAdapter {
       notes: r.notes || null,
       createdAt: new Date(r.created_at),
       updatedAt: new Date(r.updated_at),
-      orderItems: items.map((i) => ({
-        id: i.id,
-        productName: i.product_name,
-        variantName: i.variant_name,
-        sku: i.sku,
-        quantity: Number(i.quantity || 0),
-        unitPrice: Number(i.unit_price || 0),
-        subtotal: Number(i.subtotal || 0),
-        categoryName: i.category_name || 'Lainnya',
-        product: {
-          name: i.product_name,
-          unit: i.unit || 'PCS',
-          category: {
-            name: i.category_name || 'Lainnya',
+      orderItems: items.map((i) => {
+        let parsedMods: any[] = [];
+        if (i.modifiers_snapshot) {
+          try {
+            parsedMods = typeof i.modifiers_snapshot === 'string'
+              ? JSON.parse(i.modifiers_snapshot)
+              : i.modifiers_snapshot;
+          } catch (_) {}
+        }
+        return {
+          id: i.id,
+          productName: i.product_name,
+          variantName: i.variant_name,
+          sku: i.sku,
+          quantity: Number(i.quantity || 0),
+          unitPrice: Number(i.unit_price || 0),
+          subtotal: Number(i.subtotal || 0),
+          notes: i.notes || null,
+          modifiers: parsedMods,
+          modifiersSnapshot: parsedMods,
+          categoryName: i.category_name || 'Lainnya',
+          product: {
+            name: i.product_name,
+            unit: i.unit || 'PCS',
+            category: {
+              name: i.category_name || 'Lainnya',
+            },
           },
-        },
-      })),
+        };
+      }),
       payments: payments.map((p) => ({
         id: p.id,
         paymentMethod: p.payment_method,

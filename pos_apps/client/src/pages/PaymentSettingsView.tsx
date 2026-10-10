@@ -10,12 +10,12 @@ import {
   CreditCard,
   Smartphone,
   Eye,
-  RefreshCw,
   Loader2,
   Users,
   Clock,
   CheckCircle2,
   AlertTriangle,
+  ImagePlus,
 } from 'lucide-react';
 import type { Outlet, PaymentConfig, QrisConfig, CustomerDebtConfig } from '../types/outlet';
 import { api } from '../services/api';
@@ -181,25 +181,25 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 max-w-6xl pb-16">
+    <div className="space-y-6 max-w-6xl pb-28 sm:pb-16 font-sans">
       {/* HEADER UTAMA */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-blue-50 text-blue-700 rounded-2xl border border-blue-100 shadow-xs">
+            <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shadow-2xs">
               <QrCode className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                   Metode Pembayaran &amp; QRIS Statis Toko
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  <Building2 className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 font-sans">
+                  <Building2 className="w-3 h-3 text-blue-800" />
                   Toko: {activeOutlet.name}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">
                 Unggah gambar barcode QRIS resmi toko Anda agar kasir dapat menampilkannya langsung kepada konsumen saat checkout di terminal POS.
               </p>
             </div>
@@ -209,11 +209,11 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
         <button
           onClick={handleSaveConfig}
           disabled={isSaving}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
+          className="hidden sm:inline-flex items-center justify-center gap-2 h-10 px-5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
         >
           {isSaving ? (
             <>
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               <span>Menyimpan...</span>
             </>
           ) : (
@@ -226,13 +226,13 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       </div>
 
       {/* BANNER EDUKASI QRIS STATIS */}
-      <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
-        <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+      <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start gap-3">
+        <div className="p-2 bg-blue-900 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
           <ShieldCheck className="w-5 h-5" />
         </div>
         <div className="space-y-1 text-xs">
           <p className="font-bold text-blue-950">Panduan QRIS Statis Standar Bank Indonesia (ASPI MPM):</p>
-          <p className="text-blue-900/80 leading-relaxed">
+          <p className="text-blue-900/90 leading-relaxed font-medium">
             QRIS Statis (<em>Merchant-Presented Mode</em>) memungkinkan konsumen memindai satu kode QR toko menggunakan seluruh aplikasi pembayaran (BCA, Mandiri, BRI, BNI, GoPay, OVO, ShopeePay, DANA, dll). Konsumen memasukkan nominal sesuai total tagihan di layar kasir, lalu kasir memverifikasi notifikasi berhasil sebelum menyelesaikan pesanan.
           </p>
         </div>
@@ -247,22 +247,22 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-blue-700" />
+                  <CreditCard className="w-4 h-4 text-blue-900" />
                   Status Metode QRIS di Kasir
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
                   Tampilkan tombol pilihan pembayaran "QRIS" di jendela checkout kasir POS.
                 </p>
               </div>
 
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
                 <input
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900"></div>
               </label>
             </div>
           </div>
@@ -271,10 +271,10 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Upload className="w-4 h-4 text-blue-700" />
+                <Upload className="w-4 h-4 text-blue-900" />
                 Unggah Berkas Gambar QRIS Statis
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">
                 Unggah foto atau scan barcode QRIS yang Anda terima dari Bank atau mitra e-wallet Anda.
               </p>
             </div>
@@ -294,15 +294,15 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                   </div>
 
                   <div className="flex items-center justify-center gap-2">
-                    <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer shadow-2xs transition-all">
+                    <label className="h-9 inline-flex items-center gap-1.5 px-3.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl cursor-pointer shadow-2xs transition-all">
                       {isCompressing ? (
                         <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-700" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-900" />
                           <span>Memproses...</span>
                         </>
                       ) : (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5" />
+                          <ImagePlus className="w-3.5 h-3.5 text-blue-900" />
                           <span>Ganti Gambar</span>
                         </>
                       )}
@@ -319,7 +319,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                       type="button"
                       onClick={handleRemoveImage}
                       disabled={isCompressing}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      className="h-9 inline-flex items-center gap-1.5 px-3.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Hapus</span>
@@ -328,21 +328,21 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
+                  <div className="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
                     {isCompressing ? (
-                      <Loader2 className="w-7 h-7 animate-spin text-blue-700" />
+                      <Loader2 className="w-7 h-7 animate-spin text-blue-900" />
                     ) : (
                       <Upload className="w-7 h-7" />
                     )}
                   </div>
                   <div>
                     {isCompressing ? (
-                      <p className="text-xs font-bold text-blue-800 animate-pulse">
+                      <p className="text-xs font-bold text-blue-900 animate-pulse">
                         Sedang memproses gambar barcode...
                       </p>
                     ) : (
                       <>
-                        <label className="text-xs font-bold text-blue-700 hover:text-blue-800 cursor-pointer underline underline-offset-2">
+                        <label className="text-xs font-bold text-blue-900 hover:text-blue-800 cursor-pointer underline underline-offset-2">
                           Pilih berkas dari komputer
                           <input
                             type="file"
@@ -351,8 +351,8 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                             className="hidden"
                           />
                         </label>
-                        <span className="text-xs text-slate-500"> atau seret ke area ini</span>
-                        <p className="text-[11px] text-slate-400 mt-1.5">
+                        <span className="text-xs text-slate-500 font-medium"> atau seret ke area ini</span>
+                        <p className="text-[11px] text-slate-400 mt-1.5 font-medium">
                           Mendukung PNG, JPG, JPEG, WebP (Maksimal 15 MB)
                         </p>
                       </>
@@ -363,7 +363,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             </div>
 
             {/* INFO PANDUAN */}
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed font-medium">
               <strong>Tips:</strong> Gunakan foto/scan barcode QRIS yang Anda terima langsung dari bank atau dompet digital penyedia QRIS Anda (BCA, Mandiri, GoPay, dll). Gambar akan otomatis dioptimasi agar tetap tajam saat discan namun sangat ringan dimuat di terminal kasir.
             </div>
           </div>
@@ -374,8 +374,8 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
           <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs sticky top-20">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-700" />
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <Eye className="w-4 h-4 text-blue-900" />
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                   Pratinjau Layar Kasir POS
                 </h3>
               </div>
@@ -389,8 +389,8 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
               <div className="w-full max-w-[260px] bg-white p-4 border border-slate-300 rounded-2xl shadow-md flex flex-col items-center space-y-3">
                 {/* Label QRIS */}
                 <div className="w-full flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                  <span className="text-xs font-black tracking-wider text-rose-700">QRIS</span>
-                  <span className="text-[9px] font-semibold text-slate-400">PEMBAYARAN</span>
+                  <span className="text-xs font-black tracking-wider text-rose-700 font-mono">QRIS</span>
+                  <span className="text-[9px] font-bold text-slate-400">PEMBAYARAN</span>
                 </div>
 
                 {/* Barcode Image */}
@@ -419,7 +419,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                 </div>
 
                 <div className="w-full text-center">
-                  <p className="text-[9px] text-slate-400">
+                  <p className="text-[9px] text-slate-400 font-medium">
                     Dapat dipindai via GoPay, BCA, OVO, ShopeePay, DANA, dll.
                   </p>
                 </div>
@@ -428,7 +428,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
               {/* Alur Kasir */}
               <div className="mt-3 w-full bg-white/80 p-2.5 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                  <Smartphone className="w-3.5 h-3.5 text-blue-900" />
                   <span>Alur Kasir:</span>
                 </div>
                 <p className="text-[10px] text-slate-500 leading-snug">
@@ -441,7 +441,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       </div>
 
       {/* KARTU PENGATURAN KASBON & PIUTANG PELANGGAN */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           <div className="flex items-start gap-3.5">
             <div className="p-3 bg-amber-50 text-amber-700 rounded-2xl border border-amber-200/60 shrink-0">
@@ -469,7 +469,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                   )}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+              <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed font-medium">
                 Aktifkan opsi kasbon / piutang agar kasir dapat memproses transaksi pelanggan terdaftar yang ingin membayar belakangan. Seluruh kasbon tercatat otomatis di buku piutang dan uang laci bertambah saat kasbon dilunasi tunai.
               </p>
             </div>
@@ -480,19 +480,15 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             <span className="text-xs font-bold text-slate-700">
               {allowCredit ? 'Izinkan Kasbon' : 'Nonaktifkan Kasbon'}
             </span>
-            <button
-              type="button"
-              onClick={() => setAllowCredit(!allowCredit)}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
-                allowCredit ? 'bg-amber-600' : 'bg-slate-200'
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-xs ${
-                  allowCredit ? 'translate-x-6' : 'translate-x-1'
-                }`}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowCredit}
+                onChange={() => setAllowCredit(!allowCredit)}
+                className="sr-only peer"
               />
-            </button>
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+            </label>
           </div>
         </div>
 
@@ -502,11 +498,11 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             <div className="space-y-4 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-600" />
-                <label className="text-xs font-bold text-slate-800">
+                <label className="text-xs font-black text-slate-800 uppercase tracking-wider">
                   Jangka Waktu Jatuh Tempo Standar
                 </label>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 font-medium">
                 Pilih batas waktu pelunasan default saat kasir mencatat kasbon baru di kasir (dapat diubah manual per transaksi).
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -515,7 +511,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                     key={days}
                     type="button"
                     onClick={() => setDefaultDueDays(days)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`h-10 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer font-mono ${
                       defaultDueDays === days
                         ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                         : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
@@ -526,7 +522,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                 ))}
               </div>
               <div className="pt-2">
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">
                   Atau masukkan jumlah hari kustom:
                 </label>
                 <div className="relative">
@@ -536,9 +532,9 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                     max="180"
                     value={defaultDueDays}
                     onChange={(e) => setDefaultDueDays(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                    className="w-full h-10 px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-800 focus:outline-hidden focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                   />
-                  <span className="absolute right-3.5 top-2 text-xs font-bold text-slate-400">
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
                     Hari
                   </span>
                 </div>
@@ -551,7 +547,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>Aturan Operasional Kasir</span>
               </div>
-              <ul className="text-[11px] text-slate-600 space-y-2 list-disc pl-4 leading-relaxed">
+              <ul className="text-[11px] text-slate-600 space-y-2 list-disc pl-4 leading-relaxed font-medium">
                 <li>
                   <strong className="text-slate-800">Wajib Pilih Pelanggan:</strong> Kasir dilarang mencatat kasbon untuk konsumen umum/anonim demi mencegah kerugian piutang fiktif.
                 </li>
@@ -565,6 +561,34 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Mobile Sticky Action Footer (Rule 10 Kanonikal) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg flex items-center justify-between gap-3">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Pengaturan Pembayaran</span>
+          <span className="text-xs font-black text-slate-800 truncate">
+            {isActive ? 'QRIS Aktif' : 'QRIS Nonaktif'} {allowCredit ? '• Kasbon Aktif' : ''}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleSaveConfig}
+          disabled={isSaving}
+          className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Menyimpan...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>Simpan Pengaturan</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

@@ -7,13 +7,13 @@ import {
   Smartphone,
   Monitor,
   Store,
-  RefreshCw,
   Bluetooth,
   Zap,
   Power,
   Coins,
   MessageCircle,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -80,8 +80,8 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
     }
   }, [activeOutlet]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!activeOutlet) {
       setErrorMessage('Pilih outlet toko terlebih dahulu.');
       return;
@@ -163,23 +163,47 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
+      {/* Header Kanonikal */}
       <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
               <Printer className="w-5 h-5 text-blue-900" />
-              <span>Format Struk Kasir Thermal (58mm / 80mm)</span>
+              <span>Format Struk & Pengaturan Printer</span>
             </h2>
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1">
               <Store className="w-3 h-3 text-blue-800" />
               Toko: {activeOutlet?.name || 'Utama'}
             </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              Thermal 58/80mm & WhatsApp E-Receipt
+            </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Kustomisasi tata letak nota belanja kasir, pilihan lebar kertas thermal printer, serta pesan penutup / catatan kaki struk.
+            Kustomisasi tata letak nota belanja kasir, printer thermal Bluetooth (ESC/POS), serta otomasi struk digital via WhatsApp Gateway.
           </p>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => handleSave()}
+            disabled={saving}
+            className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Menyimpan...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Simpan Format Struk</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -200,10 +224,10 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Form Pengaturan (Kiri - 7 Kolom) */}
         <form onSubmit={handleSave} className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-6">
-          {/* Pilihan Lebar Kertas */}
+          {/* 1. Pilihan Lebar Kertas */}
           <div>
             <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-3">
-              1. Pilih Lebar Kertas Thermal Printer
+              1. Pilihan Lebar Kertas Thermal Printer
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button
@@ -222,7 +246,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 <p className="text-[11px] text-slate-500 mt-2 font-medium">
                   Ukuran ringkas. Ideal untuk printer Bluetooth portable, kasir mobile, dan EDC mini.
                 </p>
-                <span className="text-[10px] font-black text-blue-900 mt-3 inline-block">
+                <span className={`text-[10px] font-black mt-3 inline-block px-2 py-0.5 rounded-md w-fit ${
+                  paperSize === '58mm'
+                    ? 'bg-blue-900 text-white'
+                    : 'bg-slate-100 text-slate-500'
+                }`}>
                   {paperSize === '58mm' ? '✓ Pilihan Aktif' : 'Pilih 58mm'}
                 </span>
               </button>
@@ -243,7 +271,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 <p className="text-[11px] text-slate-500 mt-2 font-medium">
                   Ukuran standar lebar. Ideal untuk printer desktop thermal kasir restoran (USB / LAN / Wi-Fi).
                 </p>
-                <span className="text-[10px] font-black text-blue-900 mt-3 inline-block">
+                <span className={`text-[10px] font-black mt-3 inline-block px-2 py-0.5 rounded-md w-fit ${
+                  paperSize === '80mm'
+                    ? 'bg-blue-900 text-white'
+                    : 'bg-slate-100 text-slate-500'
+                }`}>
                   {paperSize === '80mm' ? '✓ Pilihan Aktif' : 'Pilih 80mm'}
                 </span>
               </button>
@@ -300,7 +332,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     <button
                       type="button"
                       onClick={btPrinter.disconnect}
-                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="h-10 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <Power className="w-3.5 h-3.5" />
                       <span>Putus</span>
@@ -310,11 +342,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                       type="button"
                       onClick={handleConnectBluetooth}
                       disabled={btPrinter.isConnecting}
-                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                      className="h-10 px-4 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
                     >
                       {btPrinter.isConnecting ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           <span>Mencari Printer...</span>
                         </>
                       ) : (
@@ -334,7 +366,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     type="button"
                     onClick={handleTestPrint}
                     disabled={testingBt}
-                    className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-900 border border-slate-300 hover:border-blue-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="h-9 px-3.5 bg-white hover:bg-blue-50 text-blue-900 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>{testingBt ? 'Mencetak...' : `Cetak Uji Coba (${paperSize})`}</span>
@@ -343,7 +375,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     type="button"
                     onClick={handleTestKickDrawer}
                     disabled={kickingBt}
-                    className="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-900 border border-slate-300 hover:border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="h-9 px-3.5 bg-white hover:bg-amber-50 text-amber-900 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Coins className="w-3.5 h-3.5 text-amber-600" />
                     <span>{kickingBt ? 'Mengirim Sinyal...' : 'Uji Buka Laci Kasir'}</span>
@@ -485,13 +517,13 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                       Pilih apakah menggunakan jalur gateway platform Superadmin atau token Fonnte milik toko sendiri.
                     </p>
                   </div>
-                  <div className="inline-flex rounded-xl bg-white p-1 border border-emerald-300 shadow-2xs">
+                  <div className="inline-flex rounded-xl bg-slate-200/70 p-1 border border-slate-200 shadow-2xs">
                     <button
                       type="button"
                       onClick={() => setWaUsePlatformFallback(true)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         waUsePlatformFallback
-                          ? 'bg-emerald-600 text-white shadow-xs'
+                          ? 'bg-emerald-700 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -500,9 +532,9 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setWaUsePlatformFallback(false)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         !waUsePlatformFallback
-                          ? 'bg-emerald-600 text-white shadow-xs'
+                          ? 'bg-emerald-700 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -522,7 +554,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                         value={waApiKey}
                         onChange={(e) => setWaApiKey(e.target.value)}
                         placeholder="Contoh: aBcDeFgHiJkLmNoP123456"
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-hidden"
+                        className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-hidden"
                       />
                       <p className="text-[10px] text-slate-500 mt-1">
                         Token disimpan aman dan terenkripsi untuk mengotorisasi pengiriman struk atas nama nomor toko Anda.
@@ -584,11 +616,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             <button
               type="submit"
               disabled={saving}
-              className="w-full sm:w-auto justify-center px-6 py-3 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto justify-center h-10 px-6 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {saving ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Menyimpan Format Struk...</span>
                 </>
               ) : (
@@ -603,6 +635,19 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 
         {/* Live Thermal Receipt Simulator (Kanan - 5 Kolom) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Printer className="w-4 h-4 text-blue-900" />
+                <span>Simulasi Struk Fisik</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium">Pratinjau langsung sesuai lebar kertas thermal kasir aktif</p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
+              {paperSize}
+            </span>
+          </div>
+
           <ThermalReceiptPreview
             paperSize={paperSize}
             onPaperSizeChange={setPaperSize}
@@ -617,6 +662,33 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
           />
         </div>
       </div>
+
+      {/* Mobile Sticky Action Footer (Rule 10 Kanonikal) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg flex items-center justify-between gap-3">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Pengaturan Struk</span>
+          <span className="text-xs font-black text-slate-800 truncate">Kertas {paperSize} {waEnabled ? '+ WA' : ''}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleSave()}
+          disabled={saving}
+          className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Menyimpan...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>Simpan Struk</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };
+

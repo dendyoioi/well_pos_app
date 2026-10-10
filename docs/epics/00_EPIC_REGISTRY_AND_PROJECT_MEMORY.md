@@ -429,6 +429,27 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - 13/13 skenario uji regresi lulus 100% (Toko Mandiri, Toko Pasokan Gudang, Outlet Gudang, Pemotongan Resep BOM Backflush, Keamanan E.164, Tenant Isolation, Self-Referencing Guard).
   └── 6. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
+[2026-10-11] FASE 11: STANDARISASI PENGATURAN RESTO & OUTLET (TAHAP 11.1, 11.2 & 11.3)
+  ├── 1. Tahap 11.1: Format Struk Kasir & Printer Thermal Bluetooth (ReceiptSettingsView.tsx):
+  │   - Standarisasi antarmuka ke palet kanonikal Clean White-Blue / Navy Blue.
+  │   - Eliminasi total tombol reload mandiri (Rule 16 AGENTS.md), spinner diganti Loader2 yang bersih.
+  │   - Pilihan kertas (58mm vs 80mm) distandarisasi ke kartu selektor interaktif dengan badge aktif kanonikal.
+  │   - Standarisasi tombol aksi Bluetooth printer (Hubungkan h-10, Putus h-10, Cetak Uji Coba h-9, Uji Laci Kasir h-9).
+  │   - WhatsApp Gateway Dispatch: segmented tabs token pribadi vs platform, input API key h-10 font-mono.
+  │   - Ditambahkan Sticky Action Footer mobile dengan iPhone safe area clearance (Rule 10 AGENTS.md) dan kontainer pb-28 sm:pb-16 font-sans.
+  ├── 2. Tahap 11.2: Pajak PB1 & Service Charge Restoran (TaxesSettingsView.tsx):
+  │   - Standarisasi kontainer halaman ke pb-28 sm:pb-16 font-sans.
+  │   - Tipografi metrik KPI 4 kartu (PB1, Service Charge, Kurir, Kemasan) diubah ke font-mono font-black.
+  │   - Standarisasi seluruh input controls Tab 1 (Pajak), Tab 2 (Service), Tab 3 (Packaging) ke tinggi kanonikal h-10.
+  │   - Tombol "Mode PIN Supervisor" di header dan tombol simpan pajak di-update ke h-10 dengan Loader2 spinner.
+  ├── 3. Tahap 11.3: Metode Pembayaran, QRIS Statis & Kasbon Pelanggan (PaymentSettingsView.tsx):
+  │   - Eliminasi RefreshCw, tombol ganti gambar menggunakan ImagePlus yang jelas dan semantik.
+  │   - Standarisasi tombol simpan desktop ke h-10 px-5 bg-blue-900 dengan Loader2 loading spinner.
+  │   - Tombol ganti gambar dan hapus gambar distandarisasi ke h-9 px-3.5 rounded-xl.
+  │   - Input jatuh tempo standar (7, 14, 30 hari) dan kustom input hari distandarisasi ke h-10 font-mono.
+  │   - Ditambahkan Sticky Action Footer mobile dengan safe-area iPhone dan kontainer pb-28 sm:pb-16 font-sans.
+  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+===============================================================
 ```
 
 ---
@@ -1992,6 +2013,54 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
   - Modal Detail Pelanggan: Ubah ke bottom-sheet responsif PWA, subtab riwayat belanja vs poin ke h-9 px-4 rounded-xl, form penyesuaian poin manual h-10, angka-angka finansial berformat font-mono, dan Sticky Action Footer dengan tombol Tutup h-10.
   - PWA mobile bottom clearance pb-28 sm:pb-16 font-sans terpasang pada kontainer utama.
 • 3. Status Build: pos_apps/server dan pos_apps/client EXIT CODE 0 (Bersih 100%).
+===============================================================================
+[11 OKTOBER 2026] PERBAIKAN FUNGSIONALITAS TAHAP 11.1 (STRUK KASIR) & 11.2 (SIMULATOR PAJAK)
+===============================================================================
+• 1. Fungsionalitas Format Struk Kasir & Bluetooth ESC/POS (Tahap 11.1):
+  - Masalah: Pesanan varian spesifik (misal Kopi Susu Large +2.000) beserta modifier pilihan (less ice, dsb) tidak mencantumkan nama varian, modifier, dan catatan pada nota fisik, serta harga nota masih membaca base price (Rp 10.000 bukan Rp 12.000).
+  - Investigasi:
+    • PosTerminalView.tsx tidak menyertakan variantId, modifierItemIds, dan notes pada payload checkout.
+    • order.controller.ts menggunakan DISTINCT ON (p.id) yang mengabaikan variantId item dan memotong varian ganda.
+    • sales.dual_write.service.ts meng-hardcode variant_name = 'Default' pada tabel order_items.
+    • escpos.ts & OrderSuccessModal.tsx tidak merender detail modifier dan catatan pada format cetak thermal.
+  - Solusi & Implementasi:
+    • types/order.ts: Menambahkan variantId, modifierItemIds, notes pada CheckoutPayload dan OrderItem.
+    • PosTerminalView.tsx: Mengirimkan variantId, modifierItemIds, notes (itemNote) ke API checkout dan tempOrderData.
+    • order.controller.ts: Menggunakan variantMap dan variantsByProduct untuk menetapkan baseUnitPrice varian riil + harga modifier extra, menyimpan snapshot modifier (modifiers_snapshot), notes, dan variant_name.
+    • sales.dual_write.service.ts: Mengambil nama varian aktual dan menyimpan notes serta modifiers_snapshot ke database.
+    • sales.read_adapter.ts: Men-select dan mem-parse notes dan modifiers_snapshot pada getOrders dan getOrderById.
+    • escpos.ts & OrderSuccessModal.tsx: Merender nama varian di samping produk ("Produk (Large) x1"), baris rincian modifier ("  + Topping (+Rp X)"), dan baris catatan ("  Catatan: less ice").
+• 2. Fungsionalitas Simulator Struk Kasir (Tahap 11.2 - TaxesSettingsView.tsx):
+  - Masalah: Pada Tab 4 (Simulasi Struk Kasir), simulasi kalkulasi kasir tidak bereaksi ketika kanal penjualan atau opsi kemasan diubah (angka statis Rp 100.000).
+  - Investigasi: Outlet fees bawaan berstatus nonaktif (isActive: false) sehingga filter lama mengembalikan 0 untuk semua biaya/pajak, dan daftar fallback kemasan tidak tersinkronisasi dengan array packagingFees di kalkulasi simulasi.
+  - Solusi & Implementasi:
+    • Menambahkan state simulasi interaktif murni: simApplyTax, simTaxRate, simApplyService, simServiceRate, simSubtotal, simChannel, simSelectedPackaging.
+    • Mendefinisikan effectivePackagingList memoized yang seragam antara simulasi kalkulasi dan rendering checklist UI.
+    • Kalkulasi live otomatis: Service charge saat DINE_IN, Ongkir Kurir Toko (+Rp 10.000) saat DELIVERY, Biaya Platform (+Rp 3.000) saat ONLINE_DELIVERY, tarif kemasan terpilih, dan PB1 dari DPP (Subtotal + Service Charge).
+    • Menambahkan tombol "Terapkan Aturan Simulasi Ini ke Toko Aktif" untuk menyimpan hasil uji coba ke database outlet secara permanen.
+• 3. Standardisasi UI/UX Toggle, Dropdown Chevron & Input Nominal (TaxesSettingsView & SupervisorFeesModal):
+  - Toggle Switch: Seluruh toggle status (Status Pajak Kasir, Biaya Layanan, Kemasan Wadah) diseragamkan ke kanonikal rounded pill button (`h-6 w-11` dengan `h-5 w-5` translate knob dan bayangan lembut) menggantikan bar garis datar usang (`w-10 h-5.5`).
+  - Dropdown Chevron: Seluruh elemen `<select>` (Diterapkan Pada Saluran di Tab 1, Tipe Tarif & Kanal di Form Tambah Biaya Baru, serta kanal saat Inline Edit) distandarisasi dengan wrapper `relative`, `appearance-none`, dan ikon `<ChevronDown />` yang proporsional dan tidak menabrak teks.
+  - Input Nominal Mata Uang: Wadah `<CurrencyInput />` pada inline edit diperlebar dari `w-28` (112px) menjadi `w-36 sm:w-44` (144px - 176px) dan padding dinamis `pl-11`, sehingga input nominal puluhan ribu, ratusan ribu, hingga jutaan rupiah (contoh: Rp 2.500.000) tampil leluasa tanpa terpotong batas border.
+• 4. Status Build: pos_apps/server dan pos_apps/client EXIT CODE 0 (Bersih 100%).
+===============================================================================
+[11 OKTOBER 2026] PENYELESAIAN TAHAP 11.4: PENGATURAN KANAL PENJUALAN & MITRA ONLINE DELIVERY (SALESCHANNELSSETTINGSVIEW.TSX)
+===============================================================================
+• 1. Standardisasi Toggle Switch Kanonikal:
+  - Menggantikan tombol status teks biasa pada kartu kanal Penjualan Langsung Toko (Direct Store) dan Mitra Online Delivery (GoFood, GrabFood, ShopeeFood) menjadi kanonikal modern pill toggle switch (`relative inline-flex h-6 w-11` dengan `h-5 w-5` translate knob, bayangan lembut, warna Navy Blue `bg-blue-900`, dan label kontras `Aktif` / `Off`).
+• 2. Pola Kanonikal Modal Form Responsif PWA (Rule 10 AGENTS.md):
+  - Modal Ubah Pengaturan Kanal (`editingChannel`) dan Modal Tambah Mitra Baru (`showAddModal`) dirombak ke antarmuka responsif bottom-sheet PWA:
+    • Mobile: Slide-up dari bawah layar (`items-end sm:items-center`, `rounded-t-3xl sm:rounded-3xl`, `max-h-[92dvh] sm:max-h-[90vh]`).
+    • Scrollable Body: `overflow-y-auto overscroll-contain flex-1` terisolasi sehingga tidak menabrak tombol aksi.
+    • Sticky Action Footer: Tombol Batal & Simpan dipindahkan ke footer terpisah (`bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]`).
+    • Switch Pengaturan Driver/Meja: Menggantikan checkbox kotak default menjadi switch toggle pill modern yang rapi.
+    • Tinggi Input Konsisten: Seluruh form input diseragamkan ke ketinggian `h-10` dengan border rounded-xl dan focus ring biru.
+• 3. Mobile Layout Clearance & Zero Refresh Button (Rule 16 AGENTS.md):
+  - Kontainer utama diberikan bantalan `pb-28 sm:pb-16 font-sans` untuk memastikan kartu kanal terbawah tidak tertutup oleh navigasi bawah mobile.
+  - Mempertahankan kebijakan Zero Redundant Refresh Button (tidak ada tombol muat ulang mandiri).
+• 4. Status Verifikasi:
+  - `pos_apps/client`: `npm run build` EXIT CODE 0 (Bersih 100%).
+  - `pos_apps/server`: `npm run build` EXIT CODE 0 (Bersih 100%).
 ===============================================================================
 ```
 

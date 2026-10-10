@@ -1565,8 +1565,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       const checkoutPayload = {
         items: cart.map((i) => ({
           productId: i.product.id,
+          variantId: i.product.variants?.[0]?.id || undefined,
           quantity: i.quantity,
           discountAmount: i.discountAmount,
+          notes: i.itemNote || undefined,
+          modifierItemIds: i.selectedModifiers?.map((m) => m.option?.id).filter(Boolean),
         })),
         channel: targetChannel,
         tableNumber: tableNumber ? tableNumber.trim() : undefined,
@@ -1653,6 +1656,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
               subtotal: (unitPrice - (i.discountAmount || 0)) * i.quantity,
               discountAmount: i.discountAmount || 0,
               costPrice: Number(i.product.costPrice || 0),
+              notes: i.itemNote || null,
+              modifiers: i.selectedModifiers || [],
+              modifiersSnapshot: i.selectedModifiers || [],
+              variantName: i.product.variants?.[0]?.name,
               product: {
                 name: i.product.name,
                 sku: i.product.sku,

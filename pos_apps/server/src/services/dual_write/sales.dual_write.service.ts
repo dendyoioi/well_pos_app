@@ -406,6 +406,8 @@ export class SalesDualWriteService extends BaseDualWriteService {
         // Fetch variant and packaging multiplier
         const variantRows = await this.queryRaw<{
           id: string;
+          name: string;
+          price: string | number;
           inventory_item_id: string;
           inventory_quantity_multiplier: string | number;
           sku: string;
@@ -414,7 +416,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
           // Resolve variant: cari berdasarkan variantId (prioritas) atau product_id.
           // Tidak difilter tenant_id karena product sudah divalidasi tenant-nya di checkout controller.
           // Ini mencegah false-miss saat data variant terseimpan di tenant berbeda namun product sah.
-          `SELECT id, inventory_item_id, inventory_quantity_multiplier, sku 
+          `SELECT id, name, price, inventory_item_id, inventory_quantity_multiplier, sku 
            FROM "product_variants" 
            WHERE (id = $1) OR (product_id = $2 AND is_active = true)
            ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END, created_at ASC
@@ -426,6 +428,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
         if (variantRows[0]?.id) {
           defaultVariantId = variantRows[0].id;
         }
+        let variantName = variantRows[0]?.name || (item as any).variantName || 'Default';
         let inventoryItemId = variantRows[0]?.inventory_item_id;
         let multiplier = Number(variantRows[0]?.inventory_quantity_multiplier || 1.000);
         let prodSku = variantRows[0]?.sku || null;
@@ -520,7 +523,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
             "unit_price", "discount_amount", "subtotal", "product_name", "variant_name", "sku", "notes", "modifiers_snapshot"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10, 'Default', $11, $12, $13::jsonb
+            $7, $8, $9, $10, $11, $12, $13, $14::jsonb
           );`,
           orderItemId,
           tenantId,
@@ -532,6 +535,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
           item.discountAmount || 0,
           item.subtotal,
           prodName,
+          variantName,
           prodSku,
           item.notes || null,
           modifiersSnapshotJson

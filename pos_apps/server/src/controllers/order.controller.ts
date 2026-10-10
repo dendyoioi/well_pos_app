@@ -294,13 +294,14 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       }
     }
 
-    // Ambil data produk & stok riil dari target database (gabungan products, product_variants, storage_locations & inventory_balances)
+    // Ambil data produk & varian riil dari target database (gabungan products, product_variants, storage_locations & inventory_balances)
     const uniqueProductIds = Array.from(new Set(items.map((i) => i.productId)));
     const productsInDb = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT DISTINCT ON (p.id) p.id, p.name, p.unit, p.type, COALESCE(ii.average_cost, 0) as "costPrice", COALESCE(pv.price, 0) as "basePrice",
+      `SELECT p.id, p.name, p.unit, p.type, COALESCE(ii.average_cost, 0) as "costPrice", COALESCE(pv.price, 0) as "basePrice",
               COALESCE(ib.quantity_on_hand, 0) as stock,
               COALESCE(pv.price, 0) as "outletPrice",
               pv.id as "variantId",
+              pv.name as "variantName",
               r.id as "recipeId"
        FROM "products" p
        LEFT JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
@@ -322,8 +323,23 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       });
     }
 
-    // Peta produk untuk lookup cepat
-    const productMap = new Map(productsInDb.map((p) => [p.id, p]));
+    // Peta produk dan varian untuk lookup cepat
+    const productMap = new Map<string, any>();
+    const variantMap = new Map<string, any>();
+    const variantsByProduct = new Map<string, any[]>();
+
+    for (const row of productsInDb) {
+      if (!productMap.has(row.id)) {
+        productMap.set(row.id, row);
+      }
+      if (row.variantId) {
+        variantMap.set(row.variantId, row);
+        if (!variantsByProduct.has(row.id)) {
+          variantsByProduct.set(row.id, []);
+        }
+        variantsByProduct.get(row.id)!.push(row);
+      }
+    }
 
     // Validasi stok fisik sebelum eksekusi (hanya untuk barang jadi non-resep jika tenant menolak stok negatif)
     const tenantSetting = await prisma.tenant.findUnique({
@@ -370,8 +386,9 @@ export const checkoutOrder = async (req: Request, res: Response) => {
 
     const preparedOrderItems = items.map((item) => {
       const p = productMap.get(item.productId)!;
-      const baseUnitPrice = Number(p.outletPrice ?? p.basePrice);
-      const costPrice = Number(p.costPrice);
+      const v = item.variantId ? variantMap.get(item.variantId) : (variantsByProduct.get(item.productId)?.[0] || null);
+      const baseUnitPrice = v ? Number(v.outletPrice ?? v.basePrice) : Number(p.outletPrice ?? p.basePrice);
+      const costPrice = v ? Number(v.costPrice) : Number(p.costPrice);
       const itemDiscount = item.discountAmount || 0;
 
       // Tambahkan biaya ekstra modifier
@@ -387,7 +404,8 @@ export const checkoutOrder = async (req: Request, res: Response) => {
 
       return {
         productId: item.productId,
-        variantId: item.variantId || p.variantId,
+        variantId: item.variantId || v?.variantId || p.variantId,
+        variantName: v?.variantName || null,
         modifierItemIds: item.modifierItemIds || [],
         notes: item.notes || null,
         quantity: item.quantity,
@@ -723,7 +741,11 @@ export const checkoutOrder = async (req: Request, res: Response) => {
           `SELECT oi.id, oi.order_id as "orderId", pv.product_id as "productId", oi.quantity,
                   oi.cost_price as "costPrice", oi.unit_price as "unitPrice", oi.discount_amount as "discountAmount",
                   oi.subtotal, (NOW() AT TIME ZONE 'UTC') as "createdAt",
-                  json_build_object('name', oi.product_name, 'sku', oi.sku, 'unit', COALESCE(p.unit, 'PCS')) as product
+                  oi.variant_name as "variantName",
+                  oi.notes,
+                  oi.modifiers_snapshot as "modifiersSnapshot",
+                  json_build_object('name', oi.product_name, 'sku', oi.sku, 'unit', COALESCE(p.unit, 'PCS')) as product,
+                  json_build_object('name', oi.variant_name, 'price', oi.unit_price) as variant
            FROM "order_items" oi
            LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
            LEFT JOIN "products" p ON p.id = pv.product_id
@@ -775,13 +797,27 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         notes: o.notes || null,
         createdAt: o.created_at || new Date(),
         updatedAt: o.updated_at || new Date(),
-        orderItems: itemRows.map((it) => ({
-          ...it,
-          costPrice: Number(it.costPrice),
-          unitPrice: Number(it.unitPrice),
-          discountAmount: Number(it.discountAmount),
-          subtotal: Number(it.subtotal),
-        })),
+        orderItems: itemRows.map((it) => {
+          let parsedMods: any[] = [];
+          if (it.modifiersSnapshot) {
+            try {
+              parsedMods = typeof it.modifiersSnapshot === 'string'
+                ? JSON.parse(it.modifiersSnapshot)
+                : it.modifiersSnapshot;
+            } catch (_) {}
+          }
+          return {
+            ...it,
+            variantName: it.variantName || null,
+            notes: it.notes || null,
+            modifiers: parsedMods,
+            modifiersSnapshot: parsedMods,
+            costPrice: Number(it.costPrice),
+            unitPrice: Number(it.unitPrice),
+            discountAmount: Number(it.discountAmount),
+            subtotal: Number(it.subtotal),
+          };
+        }),
         payments: paymentRows.map((pay, idx) => {
           const prep = preparedPayments[idx] || preparedPayments[0];
           const m = pay.paymentMethod || pay.payment_method || prep?.method || 'CASH';
