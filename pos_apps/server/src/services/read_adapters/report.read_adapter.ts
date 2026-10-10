@@ -46,7 +46,6 @@ export class ReportReadAdapter extends BaseReadAdapter {
         COALESCE(o.service_total, 0) as service_total,
         COALESCE(o.grand_total, 0) as total_amount,
         COALESCE(o.channel, 'DINE_IN') as channel,
-        COALESCE(o.payment_method::text, 'CASH') as order_payment_method,
         o.created_at
       FROM "orders" o
       WHERE o.tenant_id = $1 
@@ -161,29 +160,16 @@ export class ReportReadAdapter extends BaseReadAdapter {
     for (const order of orders) {
       if (!coveredOrderIds.has(order.id)) {
         const amt = Number(order.total_amount || 0);
-        const method = (order.order_payment_method || '').toUpperCase();
         const ch = (order.channel || '').toUpperCase();
 
         if (['GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'].includes(ch)) {
           onlineDeliverySalesTotal += amt;
           onlineDeliverySalesCount++;
-        } else if (method === 'CASH') {
+        } else {
+          // Default fallback for legacy orders without payment transaction
           cashSalesTotal += amt;
           cashSalesCount++;
           orderCashMap.set(order.id, (orderCashMap.get(order.id) || 0) + amt);
-        } else if (['CARD', 'CREDIT_CARD', 'DEBIT_CARD'].includes(method)) {
-          cardSalesTotal += amt;
-          cardSalesCount++;
-        } else if (['TRANSFER', 'BANK_TRANSFER'].includes(method)) {
-          transferSalesTotal += amt;
-          transferSalesCount++;
-        } else if (['DEBT', 'CUSTOMER_DEBT'].includes(method)) {
-          debtSalesTotal += amt;
-          debtSalesCount++;
-        } else {
-          qrisSalesTotal += amt;
-          qrisSalesCount++;
-          orderQrisMap.set(order.id, (orderQrisMap.get(order.id) || 0) + amt);
         }
       }
     }
