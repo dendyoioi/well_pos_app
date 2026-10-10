@@ -429,7 +429,7 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - 13/13 skenario uji regresi lulus 100% (Toko Mandiri, Toko Pasokan Gudang, Outlet Gudang, Pemotongan Resep BOM Backflush, Keamanan E.164, Tenant Isolation, Self-Referencing Guard).
   └── 6. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
 ===============================================================
-[2026-10-11] FASE 11: STANDARISASI PENGATURAN RESTO & OUTLET (TAHAP 11.1, 11.2 & 11.3)
+[2026-10-11] FASE 11: STANDARISASI PENGATURAN RESTO & OUTLET (TAHAP 11.1 s.d 11.6 SELESAI PENUH)
   ├── 1. Tahap 11.1: Format Struk Kasir & Printer Thermal Bluetooth (ReceiptSettingsView.tsx):
   │   - Standarisasi antarmuka ke palet kanonikal Clean White-Blue / Navy Blue.
   │   - Eliminasi total tombol reload mandiri (Rule 16 AGENTS.md), spinner diganti Loader2 yang bersih.
@@ -441,14 +441,29 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Standarisasi kontainer halaman ke pb-28 sm:pb-16 font-sans.
   │   - Tipografi metrik KPI 4 kartu (PB1, Service Charge, Kurir, Kemasan) diubah ke font-mono font-black.
   │   - Standarisasi seluruh input controls Tab 1 (Pajak), Tab 2 (Service), Tab 3 (Packaging) ke tinggi kanonikal h-10.
-  │   - Tombol "Mode PIN Supervisor" di header dan tombol simpan pajak di-update ke h-10 dengan Loader2 spinner.
+  │   - Simulator Struk Kasir Tab 4: Kalkulasi reaktif live 100% untuk Dine In, Kurir Toko, Mitra Online, kemasan, dan PB1 dari DPP.
+  │   - Standarisasi toggle switch pill, dropdown chevron, dan perluasan wadah CurrencyInput inline hingga jutaan rupiah.
   ├── 3. Tahap 11.3: Metode Pembayaran, QRIS Statis & Kasbon Pelanggan (PaymentSettingsView.tsx):
   │   - Eliminasi RefreshCw, tombol ganti gambar menggunakan ImagePlus yang jelas dan semantik.
   │   - Standarisasi tombol simpan desktop ke h-10 px-5 bg-blue-900 dengan Loader2 loading spinner.
   │   - Tombol ganti gambar dan hapus gambar distandarisasi ke h-9 px-3.5 rounded-xl.
   │   - Input jatuh tempo standar (7, 14, 30 hari) dan kustom input hari distandarisasi ke h-10 font-mono.
   │   - Ditambahkan Sticky Action Footer mobile dengan safe-area iPhone dan kontainer pb-28 sm:pb-16 font-sans.
-  └── 4. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server.
+  ├── 4. Tahap 11.4: Pengaturan Kanal Penjualan & Mitra Online Delivery (SalesChannelsSettingsView.tsx):
+  │   - Standarisasi toggle status kanal penjualan langsung & mitra aggregator online ke pill toggle switch kanonikal.
+  │   - Modal Ubah & Tambah Mitra dirombak ke pola bottom-sheet PWA responsif dengan Sticky Action Footer (Rule 10 AGENTS.md).
+  │   - Switch modern untuk kewajiban ID Pesanan Driver & Nomor Meja kasir.
+  ├── 5. Tahap 11.5: Program Loyalitas & Poin Member (LoyaltySettingsView.tsx):
+  │   - Standarisasi toggle status program loyalitas ke modern rounded pill switch kanonikal.
+  │   - Ketinggian input formula belanja per poin, nilai potongan, dan ambang penukaran diseragamkan ke h-10 font-mono.
+  │   - Simulasi alur kasir live reactive dengan angka monospaced tebal dan warna kontras tajam.
+  │   - Sticky Action Footer mobile dengan safe area padding iPhone dan Loader2 saving spinner.
+  ├── 6. Tahap 11.6: Manajemen Outlet Toko (OutletsView.tsx):
+  │   - Tombol primer "+ Tambah Outlet Toko" diseragamkan ke h-10 px-5 rounded-xl font-extrabold.
+  │   - Kartu metrik ringkasan (Toko Aktif, Disuplai Gudang Pusat, Toko Mandiri) diformat ke font-mono text-2xl font-black.
+  │   - Toolbar filter status h-8, search input h-10, counter staf/SKU/transaksi font-mono, dan tombol aksi kartu h-9.
+  │   - Modal Tambah & Edit Toko dirombak ke pola kanonikal bottom-sheet PWA, dropdown gudang pasokan dengan ChevronDown, dan status operasional toko via toggle pill switch.
+  └── 7. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server, serta 14 patch skema database verified 100% di Supabase remote.
 ===============================================================
 ```
 
