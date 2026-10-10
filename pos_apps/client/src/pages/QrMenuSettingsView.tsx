@@ -123,7 +123,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16">
+    <div className="space-y-6 max-w-5xl mx-auto pb-28 sm:pb-16">
       {/* Top Header Card */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
@@ -143,7 +143,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
           <button
             type="button"
             onClick={() => window.open(`/#menu?outletId=${activeOutlet.id}&table=01`, '_blank')}
-            className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shadow-2xs hover:shadow-xs cursor-pointer active:scale-95"
+            className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 shadow-2xs hover:shadow-xs cursor-pointer active:scale-95"
             title="Buka tampilan tamu di tab baru"
           >
             <Smartphone className="w-4 h-4 text-blue-900" />
@@ -292,7 +292,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                 value={welcomeTitle}
                 onChange={(e) => setWelcomeTitle(e.target.value)}
                 placeholder="Contoh: Selamat Datang di Kopi Senja!"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-blue-900 transition-all shadow-2xs"
+                className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all shadow-2xs"
               />
               <p className="text-[11px] text-slate-400">
                 Teks sapaan ramah utama yang menyapa tamu di bagian atas layar.
@@ -308,7 +308,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                 value={welcomeSubtitle}
                 onChange={(e) => setWelcomeSubtitle(e.target.value)}
                 placeholder="Contoh: Pilih menu favorit Anda dan nikmati racikan terbaik kami."
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:outline-hidden focus:border-blue-900 transition-all shadow-2xs"
+                className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all shadow-2xs"
               />
               <p className="text-[11px] text-slate-400">
                 Penjelasan singkat cara pemesanan atau promo spesial restoran.
@@ -372,14 +372,14 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                     Nama Jaringan Wi-Fi (SSID)
                   </label>
                   <div className="relative">
-                    <Wifi className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <Wifi className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       required={wifiEnabled}
                       value={wifiName}
                       onChange={(e) => setWifiName(e.target.value)}
                       placeholder="Contoh: KopiSenja_Guest"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-blue-900 transition-all shadow-2xs"
+                      className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all shadow-2xs"
                     />
                   </div>
                   <p className="text-[11px] text-slate-400">
@@ -392,18 +392,18 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                     Kata Sandi Wi-Fi
                   </label>
                   <div className="relative">
-                    <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type={showPasswordText ? 'text' : 'password'}
                       value={wifiPassword}
                       onChange={(e) => setWifiPassword(e.target.value)}
                       placeholder="Kosongkan jika Wi-Fi tanpa sandi"
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-blue-900 font-mono transition-all shadow-2xs"
+                      className="w-full h-10 pl-10 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 font-mono transition-all shadow-2xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPasswordText(!showPasswordText)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
                       title={showPasswordText ? 'Sembunyikan Sandi' : 'Tampilkan Sandi'}
                     >
                       {showPasswordText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -493,9 +493,9 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                       key={preset}
                       type="button"
                       onClick={() => setEstimatedPrepMinutes(preset)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
+                      className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                         estimatedPrepMinutes === preset
-                          ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
+                          ? 'bg-blue-900 text-white border-blue-900 shadow-sm shadow-blue-950/20'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                       }`}
                     >
@@ -514,7 +514,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                       required={showEstimatedTime}
                       value={estimatedPrepMinutes}
                       onChange={(e) => setEstimatedPrepMinutes(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-black text-center text-blue-950 focus:bg-white focus:outline-hidden focus:border-blue-900 transition-all shadow-2xs"
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-black text-center text-blue-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all shadow-2xs"
                     />
                   </div>
                   <span className="text-xs font-bold text-slate-600">Menit Perkiraan Saji</span>
@@ -524,7 +524,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
               <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 text-xs text-amber-950 flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Rekomendasi F&amp;B:</strong> Rentang waktu 10 s.d 20 menit adalah angka optimal untuk coffee shop dan casual dining agar tidak memicu kekhawatiran waktu tunggu yang terlalu lama bagi pelanggan baru.
+                  <strong>Rekomendasi F&B:</strong> Rentang waktu 10 s.d 20 menit adalah angka optimal untuk coffee shop dan casual dining agar tidak memicu kekhawatiran waktu tunggu yang terlalu lama bagi pelanggan baru.
                 </span>
               </div>
             </div>
@@ -559,7 +559,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
                   <span>METODE AKTIF (DEFAULT)</span>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 font-extrabold text-[10px]">
-                  F&amp;B Standard
+                  F&B Standard
                 </span>
               </div>
               <h3 className="font-black text-slate-900 text-sm">Bayar di Kasir (Pay at Cashier)</h3>
@@ -603,7 +603,7 @@ export const QrMenuSettingsView: React.FC<QrMenuSettingsViewProps> = ({ activeOu
           <button
             type="submit"
             disabled={saving}
-            className="w-full sm:w-auto px-8 py-3 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs sm:text-sm rounded-2xl transition-all shadow-md shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto h-11 sm:h-10 px-6 sm:px-8 bg-blue-900 hover:bg-blue-950 disabled:bg-slate-400 text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-blue-950/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
           >
             {saving ? (
               <>
