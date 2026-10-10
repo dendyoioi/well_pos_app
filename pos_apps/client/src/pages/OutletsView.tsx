@@ -17,6 +17,8 @@ import {
   ShoppingBag,
   Smartphone,
   X,
+  ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { api, authStorage } from '../services/api';
 import { useDialog } from '../context/DialogContext';
@@ -213,24 +215,24 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   );
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans animate-fadeIn">
       {/* =========================================================================
           HEADER BANNER
           ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 min-w-0 flex-wrap">
             <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shrink-0">
               <Store className="w-4 h-4 shrink-0" />
             </div>
-            <h2 className="text-xl font-extrabold text-blue-950 tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold text-blue-950 tracking-tight">
               Manajemen Outlet Toko
             </h2>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 shrink-0">
               Paket PRO
             </span>
           </div>
-          <p className="text-xs text-slate-500 max-w-2xl">
+          <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
             Kelola seluruh outlet toko kasir penjualan fisik &amp; meja makan Anda. Setiap outlet toko memiliki isolasi kasir POS, QR menu, dan pengaturan pasokan bahan baku.
           </p>
         </div>
@@ -239,7 +241,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            className="w-full sm:w-auto h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Outlet Toko</span>
@@ -309,7 +311,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider">Toko Penjualan (POS)</span>
             <Store className="w-4 h-4 text-blue-900" />
           </div>
-          <div className="text-2xl font-black text-blue-950">
+          <div className="text-2xl font-mono font-black text-blue-950">
             {stores.filter((s) => s.isActive).length} Toko Aktif
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -323,7 +325,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider">Disuplai Gudang Pusat</span>
             <Warehouse className="w-4 h-4 text-indigo-700" />
           </div>
-          <div className="text-2xl font-black text-indigo-950">
+          <div className="text-2xl font-mono font-black text-indigo-950">
             {stores.filter((s) => !!s.warehouseId).length} Toko
           </div>
           <p className="text-xs text-slate-500 mt-1">Bahan baku otomatis potong ke gudang (backflush)</p>
@@ -335,7 +337,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider">Toko Mandiri (Lokal)</span>
             <Store className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-emerald-700">
+          <div className="text-2xl font-mono font-black text-emerald-700">
             {stores.filter((s) => !s.warehouseId).length} Toko
           </div>
           <p className="text-xs text-slate-500 mt-1">Mengelola persediaan stok secara mandiri</p>
@@ -354,9 +356,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setStatusFilter('ALL');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${
               statusFilter === 'ALL'
-                ? 'bg-white text-blue-950 shadow-xs'
+                ? 'bg-white text-blue-950 shadow-xs font-black'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -368,9 +370,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setStatusFilter('ACTIVE');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${
               statusFilter === 'ACTIVE'
-                ? 'bg-white text-emerald-800 shadow-xs'
+                ? 'bg-white text-emerald-800 shadow-xs font-black'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -382,9 +384,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setStatusFilter('INACTIVE');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${
               statusFilter === 'INACTIVE'
-                ? 'bg-white text-rose-800 shadow-xs'
+                ? 'bg-white text-rose-800 shadow-xs font-black'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -394,7 +396,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
         {/* Search Input */}
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             placeholder="Cari nama toko, alamat, kontak..."
@@ -403,7 +405,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none transition-all"
+            className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all"
           />
         </div>
       </div>
@@ -554,19 +556,19 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   {/* Counter Ringkas */}
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
                     <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="block text-xs font-black text-blue-950">
+                      <span className="block text-xs font-mono font-black text-blue-950">
                         {outlet._count?.users || 0}
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">Staf Toko</span>
                     </div>
                     <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="block text-xs font-black text-blue-950">
+                      <span className="block text-xs font-mono font-black text-blue-950">
                         {outlet._count?.outletProducts || 0}
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">SKU Menu</span>
                     </div>
                     <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="block text-xs font-black text-blue-950">
+                      <span className="block text-xs font-mono font-black text-blue-950">
                         {outlet._count?.orders || 0}
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">Transaksi</span>
@@ -630,7 +632,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedFeeOutlet(outlet)}
-                    className="px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="h-9 px-3 text-xs font-bold text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Shield className="w-3.5 h-3.5 text-blue-900" />
                     <span>Atur Biaya SPV</span>
@@ -644,13 +646,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                           onSelectActiveOutlet(outlet.id);
                         }
                       }}
-                      className="px-4 py-2 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer bg-blue-900 hover:bg-blue-800"
+                      className="h-9 px-4 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer bg-blue-900 hover:bg-blue-800 active:scale-95"
                     >
                       <span>Pilih Toko Ini</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   ) : (
-                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                    <span className="h-9 px-3 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Toko Aktif</span>
                     </span>
@@ -718,7 +720,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     placeholder="Contoh: Kopi Nusantara - Kemang"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                    className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all"
                   />
                 </div>
 
@@ -731,7 +733,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     placeholder="Contoh: Jl. Kemang Raya No. 45, Jakarta Selatan"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none resize-none transition-all"
                   />
                 </div>
 
@@ -742,24 +744,27 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   placeholder="81234567890"
                 />
 
-                {/* Dropdown Sumber Pasokan Stok */}
+                {/* Dropdown Sumber Pasokan Stok dengan ChevronDown */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Gudang Sumber Pasokan (Backflush Warehouse)
                   </label>
-                  <select
-                    value={formData.warehouseId || ''}
-                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                  >
-                    <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
-                    {warehouses.map((wh) => (
-                      <option key={wh.id} value={wh.id}>
-                        🏭 {wh.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <div className="relative">
+                    <select
+                      value={formData.warehouseId || ''}
+                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                      className="w-full h-10 px-3.5 pr-8 appearance-none bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                      {warehouses.map((wh) => (
+                        <option key={wh.id} value={wh.id}>
+                          🏭 {wh.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
                     Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
                   </p>
                 </div>
@@ -770,16 +775,17 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all active:scale-95 flex items-center gap-2"
                 >
-                  {submitting ? 'Menyimpan...' : 'Buat Toko Baru'}
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{submitting ? 'Menyimpan...' : 'Buat Toko Baru'}</span>
                 </button>
               </div>
             </form>
@@ -829,7 +835,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
+                    className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all"
                   />
                 </div>
 
@@ -841,7 +847,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     rows={2}
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none resize-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none resize-none transition-all"
                   />
                 </div>
 
@@ -852,38 +858,57 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   placeholder="81234567890"
                 />
 
-                {/* Dropdown Sumber Pasokan Gudang */}
+                {/* Dropdown Sumber Pasokan Gudang dengan ChevronDown */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Gudang Sumber Pasokan (Backflush Warehouse)
                   </label>
-                  <select
-                    value={formData.warehouseId || ''}
-                    onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 rounded-xl text-xs font-medium outline-none"
-                  >
-                    <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
-                    {warehouses.map((wh) => (
-                      <option key={wh.id} value={wh.id}>
-                        🏭 {wh.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <div className="relative">
+                    <select
+                      value={formData.warehouseId || ''}
+                      onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value || null })}
+                      className="w-full h-10 px-3.5 pr-8 appearance-none bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all cursor-pointer"
+                    >
+                      <option value="">— Toko Mandiri (Kelola Stok Lokal Sendiri) —</option>
+                      {warehouses.map((wh) => (
+                        <option key={wh.id} value={wh.id}>
+                          🏭 {wh.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
                     Bahan baku menu yang diproses kasir di toko ini akan otomatis dipotong langsung ke gudang yang dipilih.
                   </p>
                 </div>
 
-                <div>
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 cursor-pointer"
-                    />
-                    <span>Toko Aktif dan Beroperasi</span>
-                  </label>
+                {/* Status Operasional Toko (Canonical Pill Toggle Switch) */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                  <div className="pr-3">
+                    <span className="text-xs font-bold text-slate-900 block">Status Operasional Toko</span>
+                    <span className="text-[11px] text-slate-500">Toko aktif dapat melayani kasir POS dan transaksi pesanan</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${formData.isActive ? 'text-blue-900' : 'text-slate-400'}`}>
+                      {formData.isActive ? 'Aktif' : 'Off'}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formData.isActive}
+                      onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                        formData.isActive ? 'bg-blue-900' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -895,16 +920,17 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                     setIsEditModalOpen(false);
                     setEditingOutlet(null);
                   }}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-md bg-blue-900 hover:bg-blue-800 shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all"
+                  className="h-10 px-5 rounded-xl text-white font-extrabold text-xs shadow-md bg-blue-900 hover:bg-blue-800 shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all active:scale-95 flex items-center gap-2"
                 >
-                  {submitting ? 'Menyimpan...' : 'Simpan Perubahan Toko'}
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{submitting ? 'Menyimpan...' : 'Simpan Perubahan Toko'}</span>
                 </button>
               </div>
             </form>

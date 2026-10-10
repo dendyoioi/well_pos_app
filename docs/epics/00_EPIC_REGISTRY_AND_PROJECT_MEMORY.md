@@ -2062,6 +2062,29 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
   - `pos_apps/client`: `npm run build` EXIT CODE 0 (Bersih 100%).
   - `pos_apps/server`: `npm run build` EXIT CODE 0 (Bersih 100%).
 ===============================================================================
+[11 OKTOBER 2026] PENYELESAIAN TAHAP 11.5 (LOYALITAS MEMBER) & TAHAP 11.6 (MANAJEMEN OUTLET TOKO)
+===============================================================================
+• 1. Tahap 11.5: Pengaturan Loyalitas & Poin Member (LoyaltySettingsView.tsx):
+  - Standardisasi Toggle Status: Menggantikan checkbox HTML peer usang dengan modern rounded pill toggle switch kanonikal (`relative inline-flex h-6 w-11` dengan `h-5 w-5` translate knob, warna Navy Blue `bg-blue-900`, dan label kontras `Aktif` / `Off`).
+  - Standarisasi Ketinggian Input & Font Mono: Formula perolehan belanja (`pointsPerSpend`), penukaran poin (`pointValueIdr`), dan ambang batas (`minPointsToRedeem`) diseragamkan ke ketinggian `h-10` dengan format `font-mono` dan tipografi tebal.
+  - Simulasi Alur Kasir: Simulasi belanja dan tukar diskon live reactive dengan penekanan angka monospaced warna tajam.
+  - Mobile Sticky Action Footer & PWA Spacing: Tombol simpan mobile dipindahkan ke Sticky Action Footer (`pb-[max(1rem,env(safe-area-inset-bottom))]`) dengan indikator `<Loader2 className="w-4 h-4 animate-spin" />` saat menyimpan, serta kontainer utama `pb-28 sm:pb-16 font-sans`.
+• 2. Tahap 11.6: Manajemen Outlet Toko (OutletsView.tsx):
+  - Tombol Primer Header: "+ Tambah Outlet Toko" diseragamkan ke ketinggian `h-10 px-5 rounded-xl bg-blue-900 font-extrabold`.
+  - Kartu Ringkasan Metrik: Angka total toko aktif, toko disuplai gudang pusat, dan toko mandiri diformat ke `font-mono text-2xl font-black`.
+  - Toolbar Filter & Search: Filter status diseragamkan ke pill container ber-tombol `h-8` dan search bar input ke `h-10`.
+  - Kartu Toko: Counter Staf / SKU Menu / Transaksi diformat ke `font-mono font-black`, serta tombol aksi desktop/mobile diseragamkan ke `h-9` rounded-xl.
+  - Modal Form Tambah & Edit Toko:
+    • Menerapkan pola kanonikal bottom-sheet PWA responsif (`items-end sm:items-center max-h-[92dvh] sm:max-h-[90vh]`).
+    • Seluruh input form diseragamkan ke ketinggian `h-10` rounded-xl.
+    • Dropdown Gudang Sumber Pasokan (Backflush) distandarisasi dengan container `relative`, `appearance-none`, dan `<ChevronDown />` proporsional.
+    • Status Operasional Toko di modal edit dirombak dari checkbox kotak ke modern pill toggle switch.
+    • Tombol aksi Batal & Simpan diseragamkan ke `h-10` dengan `<Loader2 />` spinner saat memproses data.
+  - PWA Mobile Bottom Clearance: Kontainer utama diberi bantalan `pb-28 sm:pb-16 font-sans`.
+• 3. Status Verifikasi:
+  - `pos_apps/client`: `npm run build` EXIT CODE 0 (Bersih 100%).
+  - `pos_apps/server`: `npm run build` EXIT CODE 0 (Bersih 100%).
+===============================================================================
 ```
 
 
