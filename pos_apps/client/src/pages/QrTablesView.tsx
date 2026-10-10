@@ -9,7 +9,7 @@ import {
   Copy,
   Check,
   Search,
-  RefreshCw,
+  ChevronDown,
   Store,
   Eye,
   X,
@@ -315,15 +315,15 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
               <a
                 href={qrImage}
                 download={`QR-${previewTable.tableNumber}.png`}
-                className="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
+                className="flex-1 sm:flex-initial justify-center h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
                 <Download className="w-4 h-4" />
-                <span>Simpan</span>
+                <span>Simpan PNG</span>
               </a>
 
               <button
                 onClick={() => window.print()}
-                className="flex-1 sm:flex-initial justify-center px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors shadow-md"
+                className="flex-1 sm:flex-initial justify-center h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs flex items-center gap-1.5 transition-colors shadow-md shadow-blue-950/20"
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Kartu</span>
@@ -351,13 +351,13 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsPrintAllMode(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs"
+              className="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs"
             >
               Tutup
             </button>
             <button
               onClick={() => window.print()}
-              className="px-5 py-2 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs flex items-center gap-1.5 shadow-md"
+              className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-blue-950/20"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak Sekarang</span>
@@ -437,7 +437,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                 value={formData.tableNumber}
                 onChange={(e) => setFormData({ ...formData, tableNumber: e.target.value })}
                 placeholder="Contoh: 01, 02, VIP-1, Outdoor-A"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-blue-950 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
                 required
               />
             </div>
@@ -451,7 +451,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Contoh: Meja 01 (Sofa Depan)"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
               />
             </div>
 
@@ -460,17 +460,20 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Zona / Area Meja
                 </label>
-                <select
-                  value={formData.section}
-                  onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                  className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
-                >
-                  <option value="Indoor">Indoor (Dalam Ruangan)</option>
-                  <option value="Outdoor">Outdoor (Luar Ruangan)</option>
-                  <option value="Lantai 2">Lantai 2 (Rooftop/Balkon)</option>
-                  <option value="VIP Room">VIP Room (Private)</option>
-                  <option value="Bar">Bar / Counter</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={formData.section}
+                    onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                    className="w-full h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer appearance-none"
+                  >
+                    <option value="Indoor">Indoor (Dalam Ruangan)</option>
+                    <option value="Outdoor">Outdoor (Luar Ruangan)</option>
+                    <option value="Lantai 2">Lantai 2 (Rooftop/Balkon)</option>
+                    <option value="VIP Room">VIP Room (Private)</option>
+                    <option value="Bar">Bar / Counter</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               <div>
@@ -483,7 +486,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                   max={50}
                   value={formData.capacity}
                   onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
                 />
               </div>
             </div>
@@ -493,15 +496,18 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Status Meja
                 </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
-                >
-                  <option value="AVAILABLE">Tersedia (Kosong)</option>
-                  <option value="OCCUPIED">Terisi (Sedang Makan)</option>
-                  <option value="RESERVED">Dipesan (Reserved)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    className="w-full h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer appearance-none"
+                  >
+                    <option value="AVAILABLE">Tersedia (Kosong)</option>
+                    <option value="OCCUPIED">Terisi (Sedang Makan)</option>
+                    <option value="RESERVED">Dipesan (Reserved)</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
             )}
 
@@ -509,14 +515,14 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-xs"
+                className="h-10 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-xs"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-xs rounded-xl shadow-md disabled:opacity-50"
+                className="h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-950/20 disabled:opacity-50"
               >
                 {submitting ? 'Menyimpan...' : 'Simpan Meja'}
               </button>
@@ -531,7 +537,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
   // RENDER: MAIN LIST VIEW
   // ==========================================
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-12">
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
@@ -552,7 +558,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
             href={`/#menu?outletId=${activeOutlet?.id || ''}&table=${tables[0]?.tableNumber || '01'}`}
             target="_blank"
             rel="noreferrer"
-            className="px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold rounded-2xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2"
+            className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold rounded-xl text-xs shadow-xs transition-colors inline-flex items-center gap-2"
             title="Uji coba tampilan menu digital pelanggan di tab baru"
           >
             <ExternalLink className="w-4 h-4" />
@@ -562,7 +568,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
           <button
             onClick={() => setIsPrintAllMode(true)}
             disabled={tables.length === 0}
-            className="px-4 py-3 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-2xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold rounded-xl text-xs shadow-xs transition-colors inline-flex items-center gap-2 disabled:opacity-50"
           >
             <Printer className="w-4 h-4 text-blue-900" />
             <span>Cetak Semua Meja</span>
@@ -570,7 +576,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
 
           <button
             onClick={handleOpenCreateForm}
-            className="px-5 py-3 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-950/20 hover:shadow-lg transition-all inline-flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Meja</span>
@@ -583,7 +589,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
             <span className="text-xs font-bold text-slate-500 uppercase truncate block">Total Meja</span>
-            <div className="text-2xl font-black text-blue-950 mt-1">{tables.length}</div>
+            <div className="text-2xl font-black font-mono text-blue-950 mt-1">{tables.length}</div>
             <p className="text-[11px] text-slate-400 mt-0.5 truncate">Semua area terdata</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
@@ -594,7 +600,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
             <span className="text-xs font-bold text-slate-500 uppercase truncate block">Meja Kosong</span>
-            <div className="text-2xl font-black text-emerald-700 mt-1">{availableCount}</div>
+            <div className="text-2xl font-black font-mono text-emerald-700 mt-1">{availableCount}</div>
             <p className="text-[11px] text-emerald-600 mt-0.5 truncate">Siap menerima tamu</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shrink-0">
@@ -605,7 +611,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
             <span className="text-xs font-bold text-slate-500 uppercase truncate block">Sedang Terisi</span>
-            <div className="text-2xl font-black text-blue-900 mt-1">{occupiedCount}</div>
+            <div className="text-2xl font-black font-mono text-blue-900 mt-1">{occupiedCount}</div>
             <p className="text-[11px] text-blue-600 mt-0.5 truncate">Tamu sedang makan</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
@@ -616,7 +622,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0">
             <span className="text-xs font-bold text-slate-500 uppercase truncate block">Dipesan (Reserved)</span>
-            <div className="text-2xl font-black text-amber-700 mt-1">{reservedCount}</div>
+            <div className="text-2xl font-black font-mono text-amber-700 mt-1">{reservedCount}</div>
             <p className="text-[11px] text-amber-600 mt-0.5 truncate">Reservasi tamu</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shrink-0">
@@ -634,32 +640,24 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nomor meja, nama, atau zona..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+            className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar py-0.5">
           {sections.map((sec) => (
             <button
               key={sec}
               onClick={() => setSectionFilter(sec)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
+              className={`h-10 px-4 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer ${
                 sectionFilter === sec
-                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
+                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm shadow-blue-950/20'
                   : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
               }`}
             >
               {sec === 'ALL' ? 'Semua Zona' : sec}
             </button>
           ))}
-
-          <button
-            onClick={fetchTables}
-            title="Refresh Data"
-            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 
@@ -732,10 +730,10 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                     </div>
                   </button>
 
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <button
                       onClick={() => setPreviewTable(tbl)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-blue-900 border border-slate-200 hover:border-blue-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                      className="w-full text-left h-7.5 px-2.5 rounded-xl bg-white hover:bg-blue-50 text-blue-900 border border-slate-200 hover:border-blue-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>Tent Card</span>
@@ -743,10 +741,10 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
 
                     <button
                       onClick={() => handleCopyLink(tbl)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      className="w-full text-left h-7.5 px-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                       title="Salin Link Menu Meja"
                     >
-                      {copiedId === tbl.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedId === tbl.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
                       <span>{copiedId === tbl.id ? 'Tersalin!' : 'Salin Link'}</span>
                     </button>
 
@@ -754,7 +752,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                       href={tableUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-full text-left px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                      className="w-full text-left h-7.5 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
                       title="Uji coba buka menu meja ini di browser"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -765,11 +763,11 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
 
                 {/* Quick Status Toggle & Card Footer */}
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {tbl.status !== 'AVAILABLE' && (
                       <button
                         onClick={() => handleToggleStatus(tbl, 'AVAILABLE')}
-                        className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold transition-colors"
+                        className="h-7 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold transition-colors cursor-pointer"
                         title="Kosongkan Meja"
                       >
                         Kosongkan
@@ -778,7 +776,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                     {tbl.status !== 'OCCUPIED' && (
                       <button
                         onClick={() => handleToggleStatus(tbl, 'OCCUPIED')}
-                        className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 text-[11px] font-bold transition-colors"
+                        className="h-7 px-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 text-[11px] font-bold transition-colors cursor-pointer"
                         title="Tandai Terisi"
                       >
                         Isi
@@ -789,14 +787,14 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEditForm(tbl)}
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 transition-colors"
+                      className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
                       title="Ubah Meja"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteTable(tbl)}
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition-colors"
+                      className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
                       title="Hapus Meja"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
