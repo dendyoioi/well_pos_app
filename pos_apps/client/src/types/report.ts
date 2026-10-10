@@ -21,9 +21,23 @@ export interface CashFlowDetail {
   percentage: number;
 }
 
+export interface NonCashSubCategory {
+  id: string;
+  label: string;
+  amount: number;
+  count: number;
+  color?: string;
+  percentage: number;
+}
+
+export interface NonCashDetail extends CashFlowDetail {
+  subCategories: NonCashSubCategory[];
+}
+
 export interface CashFlowReport {
   cash: CashFlowDetail;
   qris: CashFlowDetail;
+  nonCash?: NonCashDetail;
 }
 
 export interface TopProductItem {

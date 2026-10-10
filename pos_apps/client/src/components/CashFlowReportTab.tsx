@@ -94,7 +94,14 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
 
   // Chart View State: Daily (30 days) vs Monthly (12 months)
   const [chartMode, setChartMode] = useState<'daily' | 'monthly'>('daily');
-  const [hoveredPoint, setHoveredPoint] = useState<{ label: string; revenue: number; orderCount: number; x: number; y: number } | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    index: number;
+    label: string;
+    revenue: number;
+    orderCount: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Pagination for Daily Table
   const [dailyPage, setDailyPage] = useState<number>(1);
@@ -510,7 +517,10 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
             </div>
           ) : (
             <div className="w-full overflow-x-auto">
-              <div className="min-w-[600px] h-64 relative">
+              <div
+                className="min-w-[600px] h-64 relative"
+                onMouseLeave={() => setHoveredPoint(null)}
+              >
                 <svg className="w-full h-full" viewBox="0 0 800 240" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="cashFlowGradient" x1="0" y1="0" x2="0" y2="1">
@@ -533,6 +543,20 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                       </g>
                     );
                   })}
+
+                  {/* Vertical Guide Line on Hover */}
+                  {hoveredPoint && (
+                    <line
+                      x1={hoveredPoint.x}
+                      y1={20}
+                      x2={hoveredPoint.x}
+                      y2={200}
+                      stroke="#1e3a8a"
+                      strokeWidth="1.5"
+                      strokeDasharray="3 3"
+                      opacity="0.45"
+                    />
+                  )}
 
                   {/* Area fill */}
                   <polygon
@@ -564,23 +588,34 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                       .join(' ')}
                   />
 
-                  {/* Data Points */}
+                  {/* Data Points & Hit Targets */}
                   {chartPoints.map((p, idx) => {
                     const step = (780 - 50) / Math.max(1, chartPoints.length - 1);
                     const x = 50 + idx * step;
                     const y = 200 - (p.revenue / maxRevenue) * 180;
+                    const isHovered = hoveredPoint?.index === idx;
                     return (
-                      <g key={idx} className="cursor-pointer">
+                      <g key={idx}>
+                        {/* Visual Circle */}
                         <circle
                           cx={x}
                           cy={y}
-                          r="4"
-                          fill="#ffffff"
+                          r={isHovered ? 6 : 4}
+                          fill={isHovered ? '#1e3a8a' : '#ffffff'}
                           stroke="#1e3a8a"
-                          strokeWidth="2.5"
-                          className="transition-transform hover:scale-150"
+                          strokeWidth={isHovered ? 3 : 2.5}
+                          className="transition-all duration-150 pointer-events-none"
+                        />
+                        {/* Large Invisible Hit Target to prevent flicker */}
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r="20"
+                          fill="transparent"
+                          className="cursor-pointer"
                           onMouseEnter={() =>
                             setHoveredPoint({
+                              index: idx,
                               label: p.fullLabel,
                               revenue: p.revenue,
                               orderCount: p.orderCount,
@@ -588,11 +623,18 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                               y,
                             })
                           }
-                          onMouseLeave={() => setHoveredPoint(null)}
                         />
-                        {/* X-axis labels (render every few points to avoid crowding) */}
+                        {/* X-axis labels */}
                         {(chartPoints.length <= 12 || idx % Math.ceil(chartPoints.length / 8) === 0) && (
-                          <text x={x} y="222" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="600">
+                          <text
+                            x={x}
+                            y="222"
+                            textAnchor="middle"
+                            fontSize="10"
+                            fill="#64748b"
+                            fontWeight="600"
+                            className="pointer-events-none select-none"
+                          >
                             {p.label}
                           </text>
                         )}
@@ -601,24 +643,36 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                   })}
                 </svg>
 
-                {/* Hover Tooltip */}
-                {hoveredPoint && (
-                  <div
-                    className="absolute z-10 pointer-events-none bg-slate-900 text-white p-2.5 rounded-xl shadow-xl text-xs -translate-x-1/2 -translate-y-full -mt-2 border border-slate-700 min-w-[130px]"
-                    style={{
-                      left: `${(hoveredPoint.x / 800) * 100}%`,
-                      top: `${(hoveredPoint.y / 240) * 100}%`,
-                    }}
-                  >
-                    <span className="font-bold text-slate-300 block text-[11px]">{hoveredPoint.label}</span>
-                    <span className="font-black text-sm text-emerald-400 block mt-0.5">
-                      Rp {hoveredPoint.revenue.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
-                      {hoveredPoint.orderCount} Transaksi
-                    </span>
-                  </div>
-                )}
+                {/* Hover Tooltip (Smart flip below when near top) */}
+                {hoveredPoint && (() => {
+                  const isNearTop = hoveredPoint.y < 75;
+                  const isNearLeft = hoveredPoint.x < 110;
+                  const isNearRight = hoveredPoint.x > 690;
+
+                  let xTranslate = '-translate-x-1/2';
+                  if (isNearLeft) xTranslate = 'translate-x-0';
+                  if (isNearRight) xTranslate = '-translate-x-full';
+
+                  const yTranslate = isNearTop ? 'translate-y-3' : '-translate-y-full -mt-3';
+
+                  return (
+                    <div
+                      className={`absolute z-20 pointer-events-none select-none bg-slate-900/95 backdrop-blur-xs text-white p-2.5 rounded-xl shadow-xl text-xs ${xTranslate} ${yTranslate} border border-slate-700 min-w-[130px] transition-all duration-75`}
+                      style={{
+                        left: `${(hoveredPoint.x / 800) * 100}%`,
+                        top: `${(hoveredPoint.y / 240) * 100}%`,
+                      }}
+                    >
+                      <span className="font-bold text-slate-300 block text-[11px]">{hoveredPoint.label}</span>
+                      <span className="font-black text-sm text-emerald-400 block mt-0.5 font-mono">
+                        Rp {hoveredPoint.revenue.toLocaleString('id-ID')}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        {hoveredPoint.orderCount} Transaksi
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}

@@ -682,7 +682,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
 
           {/* Grid 2: Arus Kas & Analisis Kategori */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Arus Kas (Payment Breakdown) */}
+            {/* Arus Kas (Payment Breakdown: Tunai & Non-Tunai dengan Sub-Kategori Aktif) */}
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">
@@ -691,49 +691,134 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 <span className="text-xs text-slate-400 font-bold">100% Realtime</span>
               </div>
 
-              <div className="space-y-4">
-                {/* Cash */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <Banknote className="w-4 h-4 text-emerald-600" /> Uang Tunai (Cash)
-                    </span>
-                    <span className="font-black text-slate-900">
-                      Rp {data?.cashFlow.cash.amount.toLocaleString('id-ID')} ({data?.cashFlow.cash.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-600 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${data?.cashFlow.cash.percentage || 0}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400 block text-right">
-                    {data?.cashFlow.cash.count} transaksi di laci kasir
-                  </span>
-                </div>
+              {(() => {
+                const nonCashData = data?.cashFlow.nonCash || {
+                  amount: data?.cashFlow.qris.amount || 0,
+                  count: data?.cashFlow.qris.count || 0,
+                  percentage: data?.cashFlow.qris.percentage || 0,
+                  subCategories:
+                    (data?.cashFlow.qris.amount || 0) > 0
+                      ? [
+                          {
+                            id: 'QRIS',
+                            label: 'QRIS (GoPay, OVO, Dana, ShopeePay)',
+                            amount: data?.cashFlow.qris.amount || 0,
+                            count: data?.cashFlow.qris.count || 0,
+                            color: '#1d4ed8',
+                            percentage: data?.cashFlow.qris.percentage || 0,
+                          },
+                        ]
+                      : [],
+                };
 
-                {/* QRIS */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <CreditCard className="w-4 h-4 text-blue-600" /> Non-Tunai (QRIS)
-                    </span>
-                    <span className="font-black text-slate-900">
-                      Rp {data?.cashFlow.qris.amount.toLocaleString('id-ID')} ({data?.cashFlow.qris.percentage}%)
-                    </span>
+                return (
+                  <div className="space-y-4">
+                    {/* 1. Uang Tunai (Cash) */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 shrink-0">
+                            <Banknote className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="font-bold text-slate-800">Tunai (Cash)</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-black font-mono text-slate-900">
+                            Rp {(data?.cashFlow.cash.amount || 0).toLocaleString('id-ID')}
+                          </span>
+                          <span className="text-[11px] font-bold text-emerald-600 ml-1.5">
+                            {data?.cashFlow.cash.percentage || 0}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${data?.cashFlow.cash.percentage || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 block text-right font-medium">
+                        {data?.cashFlow.cash.count || 0} transaksi di laci kasir
+                      </span>
+                    </div>
+
+                    {/* 2. Non-Tunai (Digital & Cashless) */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center border border-blue-200 shrink-0">
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-800">Non-Tunai</span>
+                            {nonCashData.subCategories.length > 0 && (
+                              <span className="text-[10px] text-slate-500 font-semibold ml-1.5">
+                                ({nonCashData.subCategories.length} Sub-Kategori Aktif)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-black font-mono text-slate-900">
+                            Rp {nonCashData.amount.toLocaleString('id-ID')}
+                          </span>
+                          <span className="text-[11px] font-bold text-blue-900 ml-1.5">
+                            {nonCashData.percentage}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-blue-900 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${nonCashData.percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 block text-right font-medium">
+                        {nonCashData.count} transaksi via digital &amp; cashless
+                      </span>
+
+                      {/* Rincian Sub-Kategori Non-Tunai (Hanya yang aktif / ada transaksinya) */}
+                      {nonCashData.subCategories.length > 0 && (
+                        <div className="pt-2 border-t border-dashed border-slate-200 space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                            Rincian Sub-Kategori Non-Tunai:
+                          </span>
+                          {nonCashData.subCategories.map((sub) => (
+                            <div
+                              key={sub.id}
+                              className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/70 text-xs shadow-2xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: sub.color || '#1d4ed8' }}
+                                />
+                                <span className="font-bold text-slate-700 truncate text-[11px]">
+                                  {sub.label}
+                                </span>
+                              </div>
+                              <div className="text-right flex items-center gap-1.5 shrink-0">
+                                <span className="font-black font-mono text-slate-900 text-[11px]">
+                                  Rp {sub.amount.toLocaleString('id-ID')}
+                                </span>
+                                <span
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                                  style={{
+                                    color: sub.color || '#1d4ed8',
+                                    backgroundColor: `${sub.color || '#1d4ed8'}15`,
+                                  }}
+                                >
+                                  {sub.percentage}%
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${data?.cashFlow.qris.percentage || 0}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400 block text-right">
-                    {data?.cashFlow.qris.count} transaksi via dompet digital / m-banking
-                  </span>
-                </div>
-              </div>
+                );
+              })()}
 
               <div className="p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl text-[11px] text-blue-950 space-y-1">
                 <span className="font-bold block">💡 Rekonsiliasi Kas:</span>

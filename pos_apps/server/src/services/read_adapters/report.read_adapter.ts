@@ -46,6 +46,7 @@ export class ReportReadAdapter extends BaseReadAdapter {
         COALESCE(o.service_total, 0) as service_total,
         COALESCE(o.grand_total, 0) as total_amount,
         COALESCE(o.channel, 'DINE_IN') as channel,
+        COALESCE(o.payment_method::text, 'CASH') as order_payment_method,
         o.created_at
       FROM "orders" o
       WHERE o.tenant_id = $1 
@@ -111,22 +112,146 @@ export class ReportReadAdapter extends BaseReadAdapter {
     let cashSalesCount = 0;
     let qrisSalesTotal = 0;
     let qrisSalesCount = 0;
+    let cardSalesTotal = 0;
+    let cardSalesCount = 0;
+    let transferSalesTotal = 0;
+    let transferSalesCount = 0;
+    let debtSalesTotal = 0;
+    let debtSalesCount = 0;
+    let onlineDeliverySalesTotal = 0;
+    let onlineDeliverySalesCount = 0;
 
     const orderCashMap = new Map<string, number>();
     const orderQrisMap = new Map<string, number>();
 
+    const coveredOrderIds = new Set<string>();
     for (const pt of paymentTxs) {
+      coveredOrderIds.add(pt.order_id);
       const amt = Number(pt.amount || 0);
-      if (pt.payment_method === 'CASH') {
+      const method = (pt.payment_method || '').toUpperCase();
+
+      if (method === 'CASH') {
         cashSalesTotal += amt;
         cashSalesCount++;
         orderCashMap.set(pt.order_id, (orderCashMap.get(pt.order_id) || 0) + amt);
-      } else if (pt.payment_method === 'QRIS') {
+      } else if (['QRIS', 'EWALLET', 'GOPAY', 'OVO', 'DANA', 'SHOPEEPAY'].includes(method)) {
+        qrisSalesTotal += amt;
+        qrisSalesCount++;
+        orderQrisMap.set(pt.order_id, (orderQrisMap.get(pt.order_id) || 0) + amt);
+      } else if (['CARD', 'CREDIT_CARD', 'DEBIT_CARD', 'EDC'].includes(method)) {
+        cardSalesTotal += amt;
+        cardSalesCount++;
+      } else if (['TRANSFER', 'BANK_TRANSFER'].includes(method)) {
+        transferSalesTotal += amt;
+        transferSalesCount++;
+      } else if (['DEBT', 'CUSTOMER_DEBT'].includes(method)) {
+        debtSalesTotal += amt;
+        debtSalesCount++;
+      } else if (['ONLINE_DELIVERY', 'GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'].includes(method)) {
+        onlineDeliverySalesTotal += amt;
+        onlineDeliverySalesCount++;
+      } else {
         qrisSalesTotal += amt;
         qrisSalesCount++;
         orderQrisMap.set(pt.order_id, (orderQrisMap.get(pt.order_id) || 0) + amt);
       }
     }
+
+    // Orders without captured payment_transactions
+    for (const order of orders) {
+      if (!coveredOrderIds.has(order.id)) {
+        const amt = Number(order.total_amount || 0);
+        const method = (order.order_payment_method || '').toUpperCase();
+        const ch = (order.channel || '').toUpperCase();
+
+        if (['GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'].includes(ch)) {
+          onlineDeliverySalesTotal += amt;
+          onlineDeliverySalesCount++;
+        } else if (method === 'CASH') {
+          cashSalesTotal += amt;
+          cashSalesCount++;
+          orderCashMap.set(order.id, (orderCashMap.get(order.id) || 0) + amt);
+        } else if (['CARD', 'CREDIT_CARD', 'DEBIT_CARD'].includes(method)) {
+          cardSalesTotal += amt;
+          cardSalesCount++;
+        } else if (['TRANSFER', 'BANK_TRANSFER'].includes(method)) {
+          transferSalesTotal += amt;
+          transferSalesCount++;
+        } else if (['DEBT', 'CUSTOMER_DEBT'].includes(method)) {
+          debtSalesTotal += amt;
+          debtSalesCount++;
+        } else {
+          qrisSalesTotal += amt;
+          qrisSalesCount++;
+          orderQrisMap.set(order.id, (orderQrisMap.get(order.id) || 0) + amt);
+        }
+      }
+    }
+
+    const nonCashTotal =
+      qrisSalesTotal + cardSalesTotal + transferSalesTotal + debtSalesTotal + onlineDeliverySalesTotal;
+    const nonCashCount =
+      qrisSalesCount + cardSalesCount + transferSalesCount + debtSalesCount + onlineDeliverySalesCount;
+    const nonCashPercentage =
+      totalNetRevenue > 0 ? Number(((nonCashTotal / totalNetRevenue) * 100).toFixed(2)) : 0;
+
+    const nonCashSubCategories = [
+      {
+        id: 'QRIS',
+        label: 'QRIS (GoPay, OVO, Dana, ShopeePay)',
+        amount: qrisSalesTotal,
+        count: qrisSalesCount,
+        color: '#1d4ed8',
+        percentage:
+          totalNetRevenue > 0
+            ? Number(((qrisSalesTotal / totalNetRevenue) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'CARD',
+        label: 'Kartu Debit / Kredit (EDC)',
+        amount: cardSalesTotal,
+        count: cardSalesCount,
+        color: '#7c3aed',
+        percentage:
+          totalNetRevenue > 0
+            ? Number(((cardSalesTotal / totalNetRevenue) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'TRANSFER',
+        label: 'Transfer Bank',
+        amount: transferSalesTotal,
+        count: transferSalesCount,
+        color: '#ca8a04',
+        percentage:
+          totalNetRevenue > 0
+            ? Number(((transferSalesTotal / totalNetRevenue) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'DEBT',
+        label: 'Kasbon Piutang Pelanggan',
+        amount: debtSalesTotal,
+        count: debtSalesCount,
+        color: '#ea580c',
+        percentage:
+          totalNetRevenue > 0
+            ? Number(((debtSalesTotal / totalNetRevenue) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'ONLINE_DELIVERY',
+        label: 'Mitra Online Delivery (Ojol)',
+        amount: onlineDeliverySalesTotal,
+        count: onlineDeliverySalesCount,
+        color: '#0284c7',
+        percentage:
+          totalNetRevenue > 0
+            ? Number(((onlineDeliverySalesTotal / totalNetRevenue) * 100).toFixed(2))
+            : 0,
+      },
+    ].filter((sub) => sub.amount > 0);
 
     const productStatsMap = new Map<
       string,
@@ -455,6 +580,12 @@ export class ReportReadAdapter extends BaseReadAdapter {
             totalNetRevenue > 0
               ? Number(((qrisSalesTotal / totalNetRevenue) * 100).toFixed(2))
               : 0,
+        },
+        nonCash: {
+          amount: nonCashTotal,
+          count: nonCashCount,
+          percentage: nonCashPercentage,
+          subCategories: nonCashSubCategories,
         },
       },
       topProducts,

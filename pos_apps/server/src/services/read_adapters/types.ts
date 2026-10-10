@@ -221,6 +221,19 @@ export interface FinancialReportDTO {
   cashFlow: {
     cash: { amount: number; count: number; percentage: number };
     qris: { amount: number; count: number; percentage: number };
+    nonCash?: {
+      amount: number;
+      count: number;
+      percentage: number;
+      subCategories: Array<{
+        id: string;
+        label: string;
+        amount: number;
+        count: number;
+        color?: string;
+        percentage: number;
+      }>;
+    };
   };
   topProducts: Array<{
     id: string;
