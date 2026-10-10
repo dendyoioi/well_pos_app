@@ -14,7 +14,6 @@ import {
   Clock,
   ChevronDown,
   Package,
-  RefreshCw,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Outlet } from '../../types/outlet';
@@ -346,17 +345,17 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
   const grid2: React.CSSProperties = { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', gap:20 };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20, fontFamily:'Inter, system-ui, sans-serif', position:'relative' }}>
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans relative">
 
       {loading && (
-        <div style={{ position:'absolute', top:0, right:0, display:'flex', alignItems:'center', gap:5,
-          fontSize:11, color:'#1d4ed8', fontWeight:700, zIndex:10 }}>
-          <Loader2 size={13} style={{ animation:'spin 1s linear infinite' }} /> Memuat data...
+        <div className="absolute top-0 right-0 flex items-center gap-1.5 text-xs text-blue-900 font-bold z-10 bg-blue-50/80 px-2.5 py-1 rounded-full border border-blue-200">
+          <Loader2 size={13} className="animate-spin text-blue-900" /> 
+          <span>Memuat data...</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold mb-1">
             <span>Laporan</span>
@@ -368,7 +367,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
               Ringkasan Bisnis
             </h1>
             {activeOutlet && (
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-900 border border-blue-200">
                 {activeOutlet.name}
               </span>
             )}
@@ -376,14 +375,14 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
         </div>
 
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           {/* Subtab toggle */}
-          <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0">
+          <div className="h-10 p-1 bg-slate-100 rounded-xl border border-slate-200 inline-flex items-center shrink-0">
             {(['data', 'grafik'] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setSubTab(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`h-8 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   subTab === t
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -395,26 +394,14 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          {onOpenPos && (
             <button
-              onClick={() => loadOrders()}
-              disabled={loading}
-              title="Segarkan data ringkasan bisnis"
-              className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+              onClick={onOpenPos}
+              className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm shadow-blue-950/20 shrink-0 cursor-pointer active:scale-98"
             >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              <span>Segarkan</span>
+              <span>Buka Kasir</span>
             </button>
-
-            {onOpenPos && (
-              <button
-                onClick={onOpenPos}
-                className="px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
-              >
-                <span>Buka Kasir</span>
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -424,10 +411,10 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           <button
             key={p}
             onClick={() => setPill(p)}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+            className={`h-10 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               pill === p
-                ? 'bg-blue-900 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-blue-900 text-white shadow-sm shadow-blue-950/20'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
             {p === 'operasional' ? 'Operasional' : p === 'pembayaran' ? 'Pembayaran' : 'Produk'}
@@ -436,52 +423,59 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
       </div>
 
       {/* Filter bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-2xs space-y-3">
+      {/* Filter bar */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3.5">
         {/* Row 1: Saluran & Layanan Selector (Grid 2 kolom seimbang di mobile, sejajar di desktop) */}
-        <div className="grid grid-cols-2 lg:flex items-center gap-2 sm:gap-2.5 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-2.5 w-full">
           {/* Saluran */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 flex-1 lg:max-w-xs transition-colors focus-within:border-blue-400 focus-within:bg-white">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase sm:normal-case tracking-wider sm:tracking-normal shrink-0">Saluran</span>
-            <select
-              value={channelFilter}
-              onChange={e => setChannelFilter(e.target.value)}
-              className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0 truncate"
-            >
-              <option value="ALL">Semua Saluran</option>
-              <option value="OFFLINE">Kasir Langsung (POS)</option>
-              <option value="ONLINE">Mitra Online (Semua Ojol)</option>
-              <option value="GOFOOD">Mitra GoFood</option>
-              <option value="GRABFOOD">Mitra GrabFood</option>
-              <option value="SHOPEEFOOD">Mitra ShopeeFood</option>
-            </select>
+          <div className="relative flex-1 lg:max-w-xs">
+            <div className="flex items-center h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl transition-all focus-within:border-blue-900 focus-within:ring-2 focus-within:ring-blue-900/10 focus-within:bg-white shadow-2xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-2">Saluran:</span>
+              <select
+                value={channelFilter}
+                onChange={e => setChannelFilter(e.target.value)}
+                className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-800 outline-none cursor-pointer appearance-none pr-6"
+              >
+                <option value="ALL">Semua Saluran</option>
+                <option value="OFFLINE">Kasir Langsung (POS)</option>
+                <option value="ONLINE">Mitra Online (Semua Ojol)</option>
+                <option value="GOFOOD">Mitra GoFood</option>
+                <option value="GRABFOOD">Mitra GrabFood</option>
+                <option value="SHOPEEFOOD">Mitra ShopeeFood</option>
+              </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           {/* Jenis Layanan */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 flex-1 lg:max-w-xs transition-colors focus-within:border-blue-400 focus-within:bg-white">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase sm:normal-case tracking-wider sm:tracking-normal shrink-0">Layanan</span>
-            <select
-              value={serviceFilter}
-              onChange={e => setServiceFilter(e.target.value)}
-              className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 outline-none cursor-pointer flex-1 min-w-0 truncate"
-            >
-              <option value="ALL">Semua Jenis</option>
-              <option value="DINE_IN">Makan di Tempat (Dine In)</option>
-              <option value="TAKE_AWAY">Bawa Pulang (Take Away)</option>
-              <option value="DELIVERY">Kurir Toko (Internal)</option>
-              <option value="ONLINE_DELIVERY">Mitra Online Delivery</option>
-            </select>
+          <div className="relative flex-1 lg:max-w-xs">
+            <div className="flex items-center h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl transition-all focus-within:border-blue-900 focus-within:ring-2 focus-within:ring-blue-900/10 focus-within:bg-white shadow-2xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-2">Layanan:</span>
+              <select
+                value={serviceFilter}
+                onChange={e => setServiceFilter(e.target.value)}
+                className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-800 outline-none cursor-pointer appearance-none pr-6"
+              >
+                <option value="ALL">Semua Jenis</option>
+                <option value="DINE_IN">Makan di Tempat (Dine In)</option>
+                <option value="TAKE_AWAY">Bawa Pulang (Take Away)</option>
+                <option value="DELIVERY">Kurir Toko (Internal)</option>
+                <option value="ONLINE_DELIVERY">Mitra Online Delivery</option>
+              </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
 
         {/* Row 2: Date Picker, Jam, & Ekspor CSV */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
           <div className="flex flex-wrap items-center gap-2">
             {/* Date picker */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowDateDrop(v => !v)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer"
+                className="h-10 flex items-center gap-2 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-800 transition-colors cursor-pointer shadow-2xs"
               >
                 <Calendar size={13} className="text-slate-500" />
                 <span>{dateLabel}</span>
@@ -517,7 +511,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
                       <button
                         type="button"
                         onClick={() => setShowDateDrop(false)}
-                        className="w-full py-1.5 rounded-lg bg-blue-900 text-white font-bold text-xs hover:bg-blue-800 transition-colors"
+                        className="w-full h-8 rounded-lg bg-blue-900 text-white font-bold text-xs hover:bg-blue-950 transition-colors cursor-pointer"
                       >
                         Terapkan
                       </button>
@@ -528,7 +522,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
             </div>
 
             {/* Time Mode Radio */}
-            <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+            <div className="h-10 flex items-center gap-3 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs shadow-2xs">
               {(['24h','custom'] as const).map(tm => (
                 <label key={tm} className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-700">
                   <input
@@ -564,7 +558,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           <button
             type="button"
             onClick={handleExport}
-            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            className="w-full sm:w-auto h-10 flex items-center justify-center gap-2 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
           >
             <Download size={13} className="text-slate-500" />
             <span>Ekspor CSV</span>
@@ -579,20 +573,20 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           { label:'Volume Pesanan', value:`${filtered.length} pesanan`, sub:`AOV ${formatRupiah(m.aov)}`, icon:<ShoppingCart size={15}/>, bg:'#eff6ff', ic:'#1d4ed8', foot:'Frekuensi transaksi', fc:'#1d4ed8' },
           { label:'Laba Kotor (Est.)', value: formatRupiah(m.gp), sub:`~${m.margin}% Margin`, icon:<TrendingUp size={15}/>, bg:'#faf5ff', ic:'#7c3aed', foot:'Margin pendapatan kotor', fc:'#7c3aed' },
         ].map(card2 => (
-          <div key={card2.label} className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-2xs">
+          <div key={card2.label} className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{card2.label}</span>
               <div
                 style={{ background: card2.bg, color: card2.ic }}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 border border-slate-100"
               >
                 {card2.icon}
               </div>
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{card2.value}</p>
+            <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900 tracking-tight">{card2.value}</p>
             <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
               <span>{card2.foot}</span>
-              <span style={{ color: card2.fc }} className="font-bold flex items-center gap-1">
+              <span style={{ color: card2.fc }} className="font-bold flex items-center gap-1 font-mono">
                 <ArrowUpRight size={12} />
                 <span>{card2.sub}</span>
               </span>
