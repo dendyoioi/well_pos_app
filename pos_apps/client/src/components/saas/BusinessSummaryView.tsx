@@ -12,8 +12,9 @@ import {
   BarChart2,
   TableProperties,
   Clock,
-  ChevronDown,
   Package,
+  Banknote,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Outlet } from '../../types/outlet';
@@ -184,6 +185,12 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
 
   // Data state
   const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [cashFlowData, setCashFlowData] = useState<{
+    totalCashOut: number;
+    totalManualCashIn: number;
+    totalRefunds: number;
+    movements: any[];
+  }>({ totalCashOut: 0, totalManualCashIn: 0, totalRefunds: 0, movements: [] });
   const [loading, setLoading] = useState(false);
 
   const dateRange = useMemo(() => {
@@ -193,19 +200,46 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
     return getPresetRange(preset);
   }, [preset, customStart, customEnd]);
 
-  // Fetch orders
-  const loadOrders = useCallback(async () => {
+  // Fetch orders and cash flow data
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.getOrders({ outletId: activeOutlet?.id, limit: 500 });
-      if (res.status === 'success' && res.data) setAllOrders(res.data);
-    } catch (e) { console.error('BusinessSummary fetch error:', e); }
-    finally { setLoading(false); }
-  }, [activeOutlet?.id]);
+      const startStr = toLocalDateStr(dateRange.start);
+      const endStr = toLocalDateStr(dateRange.end);
+      const outletIdParam = activeOutlet && !activeOutlet.isWarehouse ? activeOutlet.id : undefined;
+
+      const [resOrders, resCashFlow] = await Promise.all([
+        api.getOrders({ outletId: outletIdParam, limit: 500 }),
+        api.getCashFlowReport({ startDate: startStr, endDate: endStr, outletId: outletIdParam }).catch(err => {
+          console.warn('Cash flow report fetch warning:', err);
+          return null;
+        }),
+      ]);
+
+      if (resOrders?.status === 'success' && resOrders.data) {
+        setAllOrders(resOrders.data);
+      }
+
+      if (resCashFlow?.status === 'success' && resCashFlow.data?.summary) {
+        setCashFlowData({
+          totalCashOut: Number(resCashFlow.data.summary.totalCashOut || 0),
+          totalManualCashIn: Number(resCashFlow.data.summary.totalManualCashIn || 0),
+          totalRefunds: Number(resCashFlow.data.summary.totalRefunds || 0),
+          movements: resCashFlow.data.recentMovements || [],
+        });
+      } else {
+        setCashFlowData({ totalCashOut: 0, totalManualCashIn: 0, totalRefunds: 0, movements: [] });
+      }
+    } catch (e) {
+      console.error('BusinessSummary fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeOutlet?.id, activeOutlet?.isWarehouse, dateRange]);
 
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+    loadData();
+  }, [loadData]);
 
   // Filter in-memory
   const filtered = useMemo(() => allOrders.filter(o => {
@@ -244,7 +278,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
     let grabfoodS = 0, grabfoodC = 0;
     let shopeefoodS = 0, shopeefoodC = 0;
     let onlineMitraS = 0, onlineMitraC = 0;
-    let cash = 0, qris = 0, card = 0, transfer = 0, costTotal = 0;
+    let cash = 0, qris = 0, card = 0, transfer = 0, debt = 0, onlineDelivery = 0, costTotal = 0;
     const catMap: Record<string, { sales: number; qty: number }> = {};
     const prodMap: Record<string, { name: string; cat: string; sales: number; qty: number }> = {};
 
@@ -276,7 +310,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
         dineInS += amt; dineInC++;
       }
 
-      // Payment
+      // Payment Breakdown
       if (o.payments?.length) {
         o.payments.forEach(p => {
           const pa = Number(p.amountPaid ?? p.amount ?? 0);
@@ -284,9 +318,23 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           if (pm === 'QRIS') qris += pa;
           else if (['DEBIT','CREDIT','DEBIT_CARD','CREDIT_CARD'].includes(pm)) card += pa;
           else if (['TRANSFER','BANK_TRANSFER'].includes(pm)) transfer += pa;
+          else if (['DEBT','CUSTOMER_DEBT'].includes(pm)) debt += pa;
+          else if (['ONLINE_DELIVERY','GOFOOD','GRABFOOD','SHOPEEFOOD'].includes(pm)) onlineDelivery += pa;
           else cash += pa;
         });
-      } else { cash += amt; }
+      } else {
+        const pm = ((o as any).paymentMethod ?? (o as any).payment?.method ?? '').toUpperCase();
+        if (pm === 'QRIS') qris += amt;
+        else if (['DEBIT','CREDIT','DEBIT_CARD','CREDIT_CARD'].includes(pm)) card += amt;
+        else if (['TRANSFER','BANK_TRANSFER'].includes(pm)) transfer += amt;
+        else if (['DEBT','CUSTOMER_DEBT'].includes(pm)) debt += amt;
+        else if (['ONLINE_DELIVERY','GOFOOD','GRABFOOD','SHOPEEFOOD'].includes(pm)) onlineDelivery += amt;
+        else if (['GOFOOD','GRABFOOD','SHOPEEFOOD'].includes((o.channel || '').toUpperCase())) {
+          onlineDelivery += amt;
+        } else {
+          cash += amt;
+        }
+      }
 
       // Items
       (o.orderItems ?? []).forEach((item: any) => {
@@ -302,6 +350,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
       });
     });
 
+    const nonCashTotal = qris + card + transfer + debt + onlineDelivery;
     const gp = costTotal > 0 ? Math.max(0, subtotal - costTotal) : Math.round(subtotal * 0.4);
     const margin = subtotal > 0 ? Math.round((gp / subtotal) * 100) : 0;
     const aov = filtered.length > 0 ? Math.round(totalSales / filtered.length) : 0;
@@ -317,8 +366,79 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
       onlineMitraS, onlineMitraC,
       delS: kurirS + onlineMitraS,
       delC: kurirC + onlineMitraC,
-      cash, qris, card, transfer, gp, margin, topCat, topProd };
+      cash, qris, card, transfer, debt, onlineDelivery, nonCashTotal,
+      gp, margin, topCat, topProd };
   }, [filtered]);
+
+  // Hitung Pengeluaran Kasir (Petty Cash Out) yang sesuai filter waktu
+  const cashExpenses = useMemo(() => {
+    let cashOut = cashFlowData.totalCashOut;
+    let cashIn = cashFlowData.totalManualCashIn;
+    if (timeMode === 'custom' && cashFlowData.movements?.length) {
+      const [sh, sm] = startHour.split(':').map(Number);
+      const [eh, em] = endHour.split(':').map(Number);
+      let co = 0;
+      let ci = 0;
+      cashFlowData.movements.forEach((mov: any) => {
+        const d = new Date(mov.createdAt);
+        const m = d.getHours() * 60 + d.getMinutes();
+        if (m >= sh * 60 + sm && m <= eh * 60 + em) {
+          if (mov.type === 'CASH_OUT') co += Number(mov.amount || 0);
+          else if (mov.type === 'CASH_IN') ci += Number(mov.amount || 0);
+        }
+      });
+      cashOut = co;
+      cashIn = ci;
+    }
+    return { cashOut, cashIn };
+  }, [cashFlowData, timeMode, startHour, endHour]);
+
+  // Sub-kategori Non-Tunai yang hanya muncul jika aktif / ada transaksinya
+  const activeNonCashSubs = useMemo(() => {
+    const isQrisConfigActive = activeOutlet?.paymentConfig?.qris?.isActive !== false;
+    const isDebtConfigActive = activeOutlet?.paymentConfig?.customerDebt?.allowCredit === true;
+
+    const list = [
+      {
+        id: 'QRIS',
+        label: 'QRIS (GoPay, OVO, Dana, ShopeePay)',
+        value: m.qris,
+        color: '#1d4ed8',
+        isActive: m.qris > 0 || (isQrisConfigActive && m.nonCashTotal === 0),
+      },
+      {
+        id: 'CARD',
+        label: 'Kartu Debit / Kredit (EDC)',
+        value: m.card,
+        color: '#7c3aed',
+        isActive: m.card > 0,
+      },
+      {
+        id: 'TRANSFER',
+        label: 'Transfer Bank',
+        value: m.transfer,
+        color: '#ca8a04',
+        isActive: m.transfer > 0,
+      },
+      {
+        id: 'DEBT',
+        label: 'Kasbon Piutang Pelanggan',
+        value: m.debt,
+        color: '#ea580c',
+        isActive: m.debt > 0 || (isDebtConfigActive && m.debt > 0),
+      },
+      {
+        id: 'ONLINE_DELIVERY',
+        label: 'Mitra Online Delivery (Ojol)',
+        value: m.onlineDelivery,
+        color: '#0284c7',
+        isActive: m.onlineDelivery > 0,
+      },
+    ];
+
+    // Filter ketat: Hanya sub-kategori yang aktif / memiliki transaksi > 0 yang dirender
+    return list.filter(item => item.isActive && (item.value > 0 || (item.id === 'QRIS' && isQrisConfigActive && m.nonCashTotal === 0)));
+  }, [m.qris, m.card, m.transfer, m.debt, m.onlineDelivery, m.nonCashTotal, activeOutlet?.paymentConfig]);
 
   const dailyTrend = useMemo(() => {
     const map: Record<string, { sales: number; orders: number }> = {};
@@ -662,38 +782,90 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           {/* PEMBAYARAN */}
           {pill === 'pembayaran' && (
             <div style={grid2}>
-              {/* Panel: Kanal Pembayaran */}
+              {/* Panel: Kanal Pembayaran (Tunai vs Non-Tunai dengan Sub-Kategori Aktif) */}
               <div style={card}>
                 <PanelHeader icon={<CreditCard size={13} color="#7c3aed" />} title="Perincian Metode Pembayaran" badge="Kanal Pembayaran" />
-                <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:9 }}>
+                <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:10 }}>
                   {filtered.length === 0 ? <EmptyState message="Belum ada pembayaran pada periode ini." /> : (
-                    [
-                      { label:'Tunai (Cash)', value: m.cash, color:'#16a34a' },
-                      { label:'QRIS (GoPay, OVO, Dana, dll)', value: m.qris, color:'#1d4ed8' },
-                      { label:'Kartu Debit / Kredit (EDC)', value: m.card, color:'#7c3aed' },
-                      { label:'Transfer Bank', value: m.transfer, color:'#ca8a04' },
-                    ].map(r => {
-                      const pct = m.totalSales > 0 ? Math.round(r.value / m.totalSales * 100) : 0;
-                      return (
-                        <div key={r.label} style={{ padding:'9px 12px', borderRadius:10, background:'#f8fafc', border:'1px solid #f1f5f9' }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                            <span style={{ fontSize:12, fontWeight:700, color:'#1e293b' }}>{r.label}</span>
-                            <div style={{ textAlign:'right' }}>
-                              <span style={{ fontSize:12, fontWeight:900, color:'#0f172a' }}>{formatRupiah(r.value)}</span>
-                              <span style={{ fontSize:10, color:r.color, fontWeight:700, marginLeft:6 }}>{pct}%</span>
+                    <>
+                      {/* 1. TUNAI (CASH) */}
+                      <div style={{ padding:'10px 14px', borderRadius:12, background:'#f8fafc', border:'1px solid #e2e8f0' }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <div style={{ width:24, height:24, borderRadius:8, background:'#f0fdf4', color:'#16a34a', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid #bbf7d0' }}>
+                              <Banknote size={13} />
                             </div>
+                            <span style={{ fontSize:13, fontWeight:800, color:'#0f172a' }}>Tunai (Cash)</span>
                           </div>
-                          <div style={{ height:4, borderRadius:2, background:'#e2e8f0' }}>
-                            <div style={{ height:4, borderRadius:2, background:r.color, width:`${pct}%`, transition:'width 0.4s' }} />
+                          <div style={{ textAlign:'right' }}>
+                            <span className="font-mono" style={{ fontSize:13, fontWeight:900, color:'#0f172a' }}>{formatRupiah(m.cash)}</span>
+                            <span style={{ fontSize:11, color:'#16a34a', fontWeight:800, marginLeft:6 }}>
+                              {m.totalSales > 0 ? Math.round((m.cash / m.totalSales) * 100) : 0}%
+                            </span>
                           </div>
                         </div>
-                      );
-                    })
+                        <div style={{ height:5, borderRadius:3, background:'#e2e8f0', overflow:'hidden' }}>
+                          <div style={{ height:'100%', borderRadius:3, background:'#16a34a', width:`${m.totalSales > 0 ? Math.round((m.cash / m.totalSales) * 100) : 0}%`, transition:'width 0.4s' }} />
+                        </div>
+                      </div>
+
+                      {/* 2. NON-TUNAI (DIGITAL & CASHLESS) */}
+                      <div style={{ padding:'10px 14px', borderRadius:12, background:'#f8fafc', border:'1px solid #e2e8f0' }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <div style={{ width:24, height:24, borderRadius:8, background:'#eff6ff', color:'#1d4ed8', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid #bfdbfe' }}>
+                              <CreditCard size={13} />
+                            </div>
+                            <div>
+                              <span style={{ fontSize:13, fontWeight:800, color:'#0f172a' }}>Non-Tunai</span>
+                              <span style={{ fontSize:10, color:'#64748b', fontWeight:600, marginLeft:6 }}>
+                                ({activeNonCashSubs.length} Sub-Kategori Aktif)
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ textAlign:'right' }}>
+                            <span className="font-mono" style={{ fontSize:13, fontWeight:900, color:'#0f172a' }}>{formatRupiah(m.nonCashTotal)}</span>
+                            <span style={{ fontSize:11, color:'#1d4ed8', fontWeight:800, marginLeft:6 }}>
+                              {m.totalSales > 0 ? Math.round((m.nonCashTotal / m.totalSales) * 100) : 0}%
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ height:5, borderRadius:3, background:'#e2e8f0', overflow:'hidden', marginBottom: activeNonCashSubs.length > 0 ? 10 : 0 }}>
+                          <div style={{ height:'100%', borderRadius:3, background:'#1d4ed8', width:`${m.totalSales > 0 ? Math.round((m.nonCashTotal / m.totalSales) * 100) : 0}%`, transition:'width 0.4s' }} />
+                        </div>
+
+                        {/* SUB-SUB KATEGORI NON-TUNAI (HANYA YANG AKTIF) */}
+                        {activeNonCashSubs.length > 0 && (
+                          <div style={{ borderTop:'1px dashed #cbd5e1', paddingTop:8, marginTop:8, display:'flex', flexDirection:'column', gap:6 }}>
+                            <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', color:'#64748b', marginBottom:2 }}>
+                              Rincian Sub-Kategori Non-Tunai:
+                            </span>
+                            {activeNonCashSubs.map(sub => {
+                              const subPctOfTotal = m.totalSales > 0 ? Math.round((sub.value / m.totalSales) * 100) : 0;
+                              return (
+                                <div key={sub.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'6px 10px', borderRadius:8, background:'#ffffff', border:'1px solid #e2e8f0' }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                    <span style={{ width:6, height:6, borderRadius:'50%', background: sub.color, flexShrink:0 }} />
+                                    <span style={{ fontSize:11, fontWeight:700, color:'#334155' }}>{sub.label}</span>
+                                  </div>
+                                  <div style={{ textAlign:'right', display:'flex', alignItems:'center', gap:6 }}>
+                                    <span className="font-mono" style={{ fontSize:11, fontWeight:800, color:'#0f172a' }}>{formatRupiah(sub.value)}</span>
+                                    <span style={{ fontSize:10, fontWeight:700, color: sub.color, background:`${sub.color}15`, padding:'1px 5px', borderRadius:4 }}>
+                                      {subPctOfTotal}%
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* Panel: Rekonsiliasi Kas */}
+              {/* Panel: Rekonsiliasi Kas (Memperhitungkan Pengeluaran Kasir / Petty Cash Out) */}
               <div style={card}>
                 <PanelHeader icon={<Receipt size={13} color="#16a34a" />} title="Rekonsiliasi Kas" badge="Ringkasan" />
                 <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:9 }}>
@@ -701,11 +873,46 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
                   <RowCard left="(-) Total Diskon" right={`-${formatRupiah(m.disc)}`} accent="#dc2626" />
                   <RowCard left="(+) Pajak (PPN)" right={formatRupiah(m.tax)} accent="#ca8a04" />
                   <RowCard left="(+) Biaya Layanan" right={formatRupiah(m.svc)} accent="#7c3aed" />
-                  <RowCard left="= Grand Total Bersih" right={formatRupiah(m.totalSales)} highlight />
+                  <RowCard left="= Grand Total Penjualan" right={formatRupiah(m.totalSales)} highlight />
+
+                  {/* Perhitungan Pengeluaran Kasir */}
+                  <RowCard
+                    left="(-) Pengeluaran Kasir (Petty Cash Out)"
+                    right={`-${formatRupiah(cashExpenses.cashOut)}`}
+                    subLeft="Biaya operasional / belanja kasir shift"
+                    accent="#dc2626"
+                  />
+
+                  {cashExpenses.cashIn > 0 && (
+                    <RowCard
+                      left="(+) Kas Masuk Kasir (Cash In)"
+                      right={`+${formatRupiah(cashExpenses.cashIn)}`}
+                      subLeft="Setoran modal kasir tambahan"
+                      accent="#16a34a"
+                    />
+                  )}
+
+                  {/* Kas Operasional Bersih */}
+                  <RowCard
+                    left="= Kas Operasional Bersih (Net Cash)"
+                    right={formatRupiah(m.totalSales - cashExpenses.cashOut + cashExpenses.cashIn)}
+                    subLeft="Penerimaan omset setelah pengeluaran kasir"
+                    highlight
+                  />
+
                   <div style={{ marginTop:4, padding:'9px 12px', borderRadius:10, background:'#f0fdf4', border:'1px solid #bbf7d0' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontWeight:700 }}>
-                      <span style={{ color:'#166534' }}>Estimasi Laba Kotor</span>
-                      <span style={{ color:'#16a34a', fontWeight:900 }}>{formatRupiah(m.gp)} (~{m.margin}%)</span>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:11, fontWeight:700 }}>
+                      <div>
+                        <span style={{ color:'#166534', display:'block' }}>Estimasi Laba Kotor</span>
+                        {cashExpenses.cashOut > 0 && (
+                          <span style={{ color:'#64748b', fontSize:9, fontWeight:600 }}>
+                            (Setelah dikurangi pengeluaran kasir {formatRupiah(cashExpenses.cashOut)})
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono" style={{ color:'#16a34a', fontWeight:900, fontSize:12 }}>
+                        {formatRupiah(Math.max(0, m.gp - cashExpenses.cashOut))} (~{m.subtotal > 0 ? Math.round((Math.max(0, m.gp - cashExpenses.cashOut) / m.subtotal) * 100) : 0}%)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -836,24 +1043,20 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
               <div style={{ flexShrink:0 }}>
                 <DonutChart size={110} data={[
                   { label:'Tunai', value: m.cash, color:'#16a34a' },
-                  { label:'QRIS', value: m.qris, color:'#1d4ed8' },
-                  { label:'Kartu', value: m.card, color:'#7c3aed' },
-                  { label:'Transfer', value: m.transfer, color:'#ca8a04' },
-                ]} />
+                  ...activeNonCashSubs.map(s => ({ label: s.label.split(' ')[0], value: s.value, color: s.color })),
+                ].filter(d => d.value > 0)} />
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:8, width: '100%' }}>
                 {[
-                  { l:'Tunai', c:'#16a34a', v: m.cash },
-                  { l:'QRIS', c:'#1d4ed8', v: m.qris },
-                  { l:'Kartu EDC', c:'#7c3aed', v: m.card },
-                  { l:'Transfer', c:'#ca8a04', v: m.transfer },
-                ].map(leg => (
+                  { l:'Tunai (Cash)', c:'#16a34a', v: m.cash },
+                  ...activeNonCashSubs.map(s => ({ l: s.label, c: s.color, v: s.value })),
+                ].filter(leg => leg.v > 0).map(leg => (
                   <div key={leg.l} style={{ display:'flex', alignItems:'center', justifyContent: 'space-between', gap:6 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                       <span style={{ width:9, height:9, borderRadius:2, background:leg.c, flexShrink:0, display:'inline-block' }} />
                       <span style={{ fontSize:10, color:'#64748b' }}>{leg.l}</span>
                     </div>
-                    <strong style={{ fontSize:11, color:'#1e293b' }}>{formatRupiah(leg.v)}</strong>
+                    <strong className="font-mono" style={{ fontSize:11, color:'#0f172a' }}>{formatRupiah(leg.v)}</strong>
                   </div>
                 ))}
               </div>
