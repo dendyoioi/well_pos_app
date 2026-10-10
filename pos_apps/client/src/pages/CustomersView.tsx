@@ -61,6 +61,23 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
     }
   };
 
+  useEffect(() => {
+    const checkSubTab = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const sub = params.get('subtab');
+        if (sub === 'debts') {
+          setActiveSubTab('debts');
+        } else {
+          setActiveSubTab('directory');
+        }
+      }
+    };
+    checkSubTab();
+    window.addEventListener('popstate', checkSubTab);
+    return () => window.removeEventListener('popstate', checkSubTab);
+  }, []);
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [summary, setSummary] = useState<CustomerSummaryStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

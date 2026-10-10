@@ -70,6 +70,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
     stok: false,
     laporan: false,
     promosi: false,
+    pelanggan: false,
     staf: false,
     pengaturan: false,
   });
@@ -136,8 +137,18 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   };
 
   const renderNavContent = (onItemClick?: () => void) => {
-    const handleSelectTab = (tab: any) => {
+    const handleSelectTab = (tab: any, subtab?: string) => {
       onTabChange(tab);
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        if (subtab) {
+          url.searchParams.set('subtab', subtab);
+        } else {
+          url.searchParams.delete('subtab');
+        }
+        window.history.replaceState({}, '', url.toString());
+      }
       onItemClick?.();
     };
 
@@ -592,7 +603,45 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           )}
         </div>
 
-        {/* 7. Group: Manajemen Staf */}
+        {/* 7. Group: Pelanggan & Kasbon (CRM & Piutang) */}
+        <div className="pt-1">
+          <button
+            onClick={() => toggleGroup('pelanggan')}
+            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-500" />
+              <span>Pelanggan &amp; Kasbon</span>
+            </span>
+            {openGroups.pelanggan ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
+          {openGroups.pelanggan && (
+            <div className="pl-8 pr-2 py-1 space-y-1">
+              <button
+                onClick={() => handleSelectTab('customers', 'directory')}
+                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
+                  activeTab === 'customers' && (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('subtab') !== 'debts')
+                    ? 'bg-blue-50 text-blue-900 font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Direktori Pelanggan
+              </button>
+              <button
+                onClick={() => handleSelectTab('customers', 'debts')}
+                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
+                  activeTab === 'customers' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('subtab') === 'debts'
+                    ? 'bg-blue-50 text-blue-900 font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Buku Kasbon &amp; Piutang
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 8. Group: Manajemen Staf */}
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('staf')}
@@ -626,7 +675,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           )}
         </div>
 
-        {/* 8. Group: Pengaturan Resto & Outlet */}
+        {/* 9. Group: Pengaturan Resto & Outlet */}
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('pengaturan')}
@@ -749,7 +798,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   {isWarehouseActive ? (
                     <Warehouse className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-200 shrink-0" />
                   )}
                   <span className="max-w-[95px] xs:max-w-[130px] sm:max-w-[200px] truncate">
                     {activeOutlet?.name || (storeOutlets[0]?.name ?? 'Pilih Toko')}
@@ -769,7 +818,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                       className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent"
                       onClick={() => setStoreDropdownOpen(false)}
                     />
-                    <div className="fixed sm:absolute left-3 right-3 sm:left-0 sm:right-auto top-[58px] sm:top-full mt-0 sm:mt-2 w-auto sm:w-80 max-w-[calc(100vw-1.5rem)] sm:max-w-sm max-h-[85vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-2 text-xs space-y-1 animate-fadeIn">
+                    <div className="fixed sm:absolute left-3 right-3 sm:left-0 sm:right-auto top-[58px] sm:top-full mt-0 sm:mt-2 w-auto sm:w-80 max-w-[calc(100vw-1.5rem)] sm:max-w-sm max-h-[85vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-2 text-xs space-y-1">
                       {isWarehouseActive && storeOutlets.length > 0 && (
                         <div className="pb-1.5 mb-1 border-b border-slate-100">
                           <button

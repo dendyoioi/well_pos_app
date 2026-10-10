@@ -436,17 +436,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
   useEffect(() => {
     if (!activeOutlet?.id) return;
-    api
-      .getProducts({ outletId: activeOutlet.id, isActive: 'all' })
-      .then((res) => {
-        if (res.status === 'success') {
-          setProductCount(res.data.length);
-        }
-      })
-      .catch(() => {});
 
     // Otomatis buka wizard untuk Admin/Owner bila toko baru belum melengkapi profil/kontak
-    if ((!activeOutlet.address || activeOutlet.address.includes('Setup di Onboarding') || !activeOutlet.phone) && (user.role === 'ADMIN' || (user as any).role === 'OWNER')) {
+    const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem(`wellpos_dismissed_wizard_${activeOutlet.id}`);
+    if (
+      !isDismissed &&
+      (!activeOutlet.address || activeOutlet.address.includes('Setup di Onboarding') || !activeOutlet.phone) &&
+      (user.role === 'ADMIN' || (user as any).role === 'OWNER')
+    ) {
       setShowOnboardingWizard(true);
     }
   }, [activeOutlet?.id]);
@@ -730,7 +727,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         {showOnboardingWizard && activeOutlet && (
           <OnboardingWizardModal
             isOpen={showOnboardingWizard}
-            onClose={() => setShowOnboardingWizard(false)}
+            onClose={() => {
+              if (activeOutlet?.id && typeof window !== 'undefined') {
+                sessionStorage.setItem(`wellpos_dismissed_wizard_${activeOutlet.id}`, 'true');
+              }
+              setShowOnboardingWizard(false);
+            }}
             outletId={activeOutlet.id}
             businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
             currentUser={user}
