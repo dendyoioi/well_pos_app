@@ -178,66 +178,6 @@ export class ReportReadAdapter extends BaseReadAdapter {
       qrisSalesTotal + cardSalesTotal + transferSalesTotal + debtSalesTotal + onlineDeliverySalesTotal;
     const nonCashCount =
       qrisSalesCount + cardSalesCount + transferSalesCount + debtSalesCount + onlineDeliverySalesCount;
-    const nonCashPercentage =
-      totalNetRevenue > 0 ? Number(((nonCashTotal / totalNetRevenue) * 100).toFixed(2)) : 0;
-
-    const nonCashSubCategories = [
-      {
-        id: 'QRIS',
-        label: 'QRIS (GoPay, OVO, Dana, ShopeePay)',
-        amount: qrisSalesTotal,
-        count: qrisSalesCount,
-        color: '#1d4ed8',
-        percentage:
-          totalNetRevenue > 0
-            ? Number(((qrisSalesTotal / totalNetRevenue) * 100).toFixed(2))
-            : 0,
-      },
-      {
-        id: 'CARD',
-        label: 'Kartu Debit / Kredit (EDC)',
-        amount: cardSalesTotal,
-        count: cardSalesCount,
-        color: '#7c3aed',
-        percentage:
-          totalNetRevenue > 0
-            ? Number(((cardSalesTotal / totalNetRevenue) * 100).toFixed(2))
-            : 0,
-      },
-      {
-        id: 'TRANSFER',
-        label: 'Transfer Bank',
-        amount: transferSalesTotal,
-        count: transferSalesCount,
-        color: '#ca8a04',
-        percentage:
-          totalNetRevenue > 0
-            ? Number(((transferSalesTotal / totalNetRevenue) * 100).toFixed(2))
-            : 0,
-      },
-      {
-        id: 'DEBT',
-        label: 'Kasbon Piutang Pelanggan',
-        amount: debtSalesTotal,
-        count: debtSalesCount,
-        color: '#ea580c',
-        percentage:
-          totalNetRevenue > 0
-            ? Number(((debtSalesTotal / totalNetRevenue) * 100).toFixed(2))
-            : 0,
-      },
-      {
-        id: 'ONLINE_DELIVERY',
-        label: 'Mitra Online Delivery (Ojol)',
-        amount: onlineDeliverySalesTotal,
-        count: onlineDeliverySalesCount,
-        color: '#0284c7',
-        percentage:
-          totalNetRevenue > 0
-            ? Number(((onlineDeliverySalesTotal / totalNetRevenue) * 100).toFixed(2))
-            : 0,
-      },
-    ].filter((sub) => sub.amount > 0);
 
     const productStatsMap = new Map<
       string,
@@ -528,6 +468,74 @@ export class ReportReadAdapter extends BaseReadAdapter {
       }))
       .sort((a, b) => b.amount - a.amount);
 
+    const totalCashInflow = cashSalesTotal + nonCashTotal;
+    const baseInflow = totalCashInflow > 0 ? totalCashInflow : totalNetRevenue;
+
+    const cashPercentage =
+      baseInflow > 0 ? Number(((cashSalesTotal / baseInflow) * 100).toFixed(2)) : 0;
+    const qrisPercentage =
+      baseInflow > 0 ? Number(((qrisSalesTotal / baseInflow) * 100).toFixed(2)) : 0;
+    const nonCashPercentage =
+      baseInflow > 0 ? Number(((nonCashTotal / baseInflow) * 100).toFixed(2)) : 0;
+
+    const nonCashSubCategories = [
+      {
+        id: 'QRIS',
+        label: 'QRIS (GoPay, OVO, Dana, ShopeePay)',
+        amount: qrisSalesTotal,
+        count: qrisSalesCount,
+        color: '#1d4ed8',
+        percentage:
+          baseInflow > 0
+            ? Number(((qrisSalesTotal / baseInflow) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'CARD',
+        label: 'Kartu Debit / Kredit (EDC)',
+        amount: cardSalesTotal,
+        count: cardSalesCount,
+        color: '#7c3aed',
+        percentage:
+          baseInflow > 0
+            ? Number(((cardSalesTotal / baseInflow) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'TRANSFER',
+        label: 'Transfer Bank',
+        amount: transferSalesTotal,
+        count: transferSalesCount,
+        color: '#ca8a04',
+        percentage:
+          baseInflow > 0
+            ? Number(((transferSalesTotal / baseInflow) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'DEBT',
+        label: 'Kasbon Piutang Pelanggan',
+        amount: debtSalesTotal,
+        count: debtSalesCount,
+        color: '#ea580c',
+        percentage:
+          baseInflow > 0
+            ? Number(((debtSalesTotal / baseInflow) * 100).toFixed(2))
+            : 0,
+      },
+      {
+        id: 'ONLINE_DELIVERY',
+        label: 'Mitra Online Delivery (Ojol)',
+        amount: onlineDeliverySalesTotal,
+        count: onlineDeliverySalesCount,
+        color: '#0284c7',
+        percentage:
+          baseInflow > 0
+            ? Number(((onlineDeliverySalesTotal / baseInflow) * 100).toFixed(2))
+            : 0,
+      },
+    ].filter((sub) => sub.amount > 0);
+
     return {
       filter: {
         startDate: start.toISOString(),
@@ -554,18 +562,12 @@ export class ReportReadAdapter extends BaseReadAdapter {
         cash: {
           amount: cashSalesTotal,
           count: cashSalesCount,
-          percentage:
-            totalNetRevenue > 0
-              ? Number(((cashSalesTotal / totalNetRevenue) * 100).toFixed(2))
-              : 0,
+          percentage: cashPercentage,
         },
         qris: {
           amount: qrisSalesTotal,
           count: qrisSalesCount,
-          percentage:
-            totalNetRevenue > 0
-              ? Number(((qrisSalesTotal / totalNetRevenue) * 100).toFixed(2))
-              : 0,
+          percentage: qrisPercentage,
         },
         nonCash: {
           amount: nonCashTotal,

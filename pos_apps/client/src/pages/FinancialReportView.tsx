@@ -147,7 +147,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       ['Titipan PPN (11%)', `Rp ${data.financialSummary.totalTax}`],
       ['Service Charge', `Rp ${data.financialSummary.totalService}`],
       ['Arus Kas Tunai (Cash)', `Rp ${data.cashFlow.cash.amount} (${data.cashFlow.cash.percentage}%)`],
-      ['Arus Kas QRIS / Non-Tunai', `Rp ${data.cashFlow.qris.amount} (${data.cashFlow.qris.percentage}%)`],
+      ['Arus Kas Non-Tunai (Digital & Cashless)', `Rp ${data.cashFlow.nonCash?.amount ?? data.cashFlow.qris.amount} (${data.cashFlow.nonCash?.percentage ?? data.cashFlow.qris.percentage}%)`],
       [''],
       ['RINCIAN TREN PENJUALAN & HPP HARIAN'],
       ['Tanggal', 'Jumlah Faktur', 'Total Omset Bersih', 'Total HPP', 'Laba Kotor', 'Tunai (Cash)', 'Non-Tunai (QRIS)'],
@@ -692,6 +692,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
 
               {(() => {
+                const cashAmt = data?.cashFlow.cash.amount || 0;
                 const nonCashData = data?.cashFlow.nonCash || {
                   amount: data?.cashFlow.qris.amount || 0,
                   count: data?.cashFlow.qris.count || 0,
@@ -710,6 +711,21 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                         ]
                       : [],
                 };
+                const nonCashAmt = nonCashData.amount || 0;
+                const totalInflow =
+                  cashAmt + nonCashAmt > 0
+                    ? cashAmt + nonCashAmt
+                    : (data?.financialSummary?.totalNetRevenue || 0);
+
+                const cashPct =
+                  totalInflow > 0
+                    ? Number(((cashAmt / totalInflow) * 100).toFixed(2))
+                    : (data?.cashFlow.cash.percentage || 0);
+
+                const nonCashPct =
+                  totalInflow > 0
+                    ? Number(((nonCashAmt / totalInflow) * 100).toFixed(2))
+                    : (nonCashData.percentage || 0);
 
                 return (
                   <div className="space-y-4">
@@ -724,17 +740,17 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                         </div>
                         <div className="text-right">
                           <span className="font-black font-mono text-slate-900">
-                            Rp {(data?.cashFlow.cash.amount || 0).toLocaleString('id-ID')}
+                            Rp {cashAmt.toLocaleString('id-ID')}
                           </span>
                           <span className="text-[11px] font-bold text-emerald-600 ml-1.5">
-                            {data?.cashFlow.cash.percentage || 0}%
+                            {cashPct}%
                           </span>
                         </div>
                       </div>
                       <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
                         <div
                           className="bg-emerald-600 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${data?.cashFlow.cash.percentage || 0}%` }}
+                          style={{ width: `${Math.min(100, cashPct)}%` }}
                         />
                       </div>
                       <span className="text-[10px] text-slate-400 block text-right font-medium">
@@ -760,17 +776,17 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                         </div>
                         <div className="text-right">
                           <span className="font-black font-mono text-slate-900">
-                            Rp {nonCashData.amount.toLocaleString('id-ID')}
+                            Rp {nonCashAmt.toLocaleString('id-ID')}
                           </span>
                           <span className="text-[11px] font-bold text-blue-900 ml-1.5">
-                            {nonCashData.percentage}%
+                            {nonCashPct}%
                           </span>
                         </div>
                       </div>
                       <div className="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
                         <div
                           className="bg-blue-900 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${nonCashData.percentage}%` }}
+                          style={{ width: `${Math.min(100, nonCashPct)}%` }}
                         />
                       </div>
                       <span className="text-[10px] text-slate-400 block text-right font-medium">
@@ -783,36 +799,43 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                             Rincian Sub-Kategori Non-Tunai:
                           </span>
-                          {nonCashData.subCategories.map((sub) => (
-                            <div
-                              key={sub.id}
-                              className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/70 text-xs shadow-2xs"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span
-                                  className="w-2 h-2 rounded-full shrink-0"
-                                  style={{ backgroundColor: sub.color || '#1d4ed8' }}
-                                />
-                                <span className="font-bold text-slate-700 truncate text-[11px]">
-                                  {sub.label}
-                                </span>
+                          {nonCashData.subCategories.map((sub) => {
+                            const subPct =
+                              totalInflow > 0
+                                ? Number(((sub.amount / totalInflow) * 100).toFixed(2))
+                                : (sub.percentage || 0);
+
+                            return (
+                              <div
+                                key={sub.id}
+                                className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/70 text-xs shadow-2xs"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: sub.color || '#1d4ed8' }}
+                                  />
+                                  <span className="font-bold text-slate-700 truncate text-[11px]">
+                                    {sub.label}
+                                  </span>
+                                </div>
+                                <div className="text-right flex items-center gap-1.5 shrink-0">
+                                  <span className="font-black font-mono text-slate-900 text-[11px]">
+                                    Rp {sub.amount.toLocaleString('id-ID')}
+                                  </span>
+                                  <span
+                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                                    style={{
+                                      color: sub.color || '#1d4ed8',
+                                      backgroundColor: `${sub.color || '#1d4ed8'}15`,
+                                    }}
+                                  >
+                                    {subPct}%
+                                  </span>
+                                </div>
                               </div>
-                              <div className="text-right flex items-center gap-1.5 shrink-0">
-                                <span className="font-black font-mono text-slate-900 text-[11px]">
-                                  Rp {sub.amount.toLocaleString('id-ID')}
-                                </span>
-                                <span
-                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-                                  style={{
-                                    color: sub.color || '#1d4ed8',
-                                    backgroundColor: `${sub.color || '#1d4ed8'}15`,
-                                  }}
-                                >
-                                  {sub.percentage}%
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
