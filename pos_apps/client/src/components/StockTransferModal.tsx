@@ -9,6 +9,7 @@ import {
   FileText,
   Warehouse,
   Boxes,
+  ChevronDown,
 } from 'lucide-react';
 import type { Product } from '../types/product';
 import type { Outlet } from '../types/outlet';
@@ -322,18 +323,21 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                     </span>
                   )}
                 </div>
-                <select
-                  value={sourceOutletId}
-                  onChange={(e) => handleSourceChange(e.target.value)}
-                  disabled={loadingOutlets || submitting}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                >
-                  {outlets.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.isWarehouse ? '🏭 [Gudang]' : '🏪 [Toko]'} {o.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={sourceOutletId}
+                    onChange={(e) => handleSourceChange(e.target.value)}
+                    disabled={loadingOutlets || submitting}
+                    className="w-full h-10 pl-3.5 pr-9 bg-white border border-slate-300 rounded-xl text-xs font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm appearance-none cursor-pointer"
+                  >
+                    {outlets.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.isWarehouse ? '🏭 [Gudang]' : '🏪 [Toko]'} {o.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               <div>
@@ -356,20 +360,23 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                     </span>
                   )}
                 </div>
-                <select
-                  value={targetOutletId}
-                  onChange={(e) => handleTargetChange(e.target.value)}
-                  disabled={loadingOutlets || submitting}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-                >
-                  {outlets
-                    .filter((o) => o.id !== sourceOutletId)
-                    .map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.isWarehouse ? '🏭 [Gudang]' : '🏪 [Toko]'} {o.name}
-                      </option>
-                    ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={targetOutletId}
+                    onChange={(e) => handleTargetChange(e.target.value)}
+                    disabled={loadingOutlets || submitting}
+                    className="w-full h-10 pl-3.5 pr-9 bg-white border border-slate-300 rounded-xl text-xs font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm appearance-none cursor-pointer"
+                  >
+                    {outlets
+                      .filter((o) => o.id !== sourceOutletId)
+                      .map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.isWarehouse ? '🏭 [Gudang]' : '🏪 [Toko]'} {o.name}
+                        </option>
+                      ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
             </div>
 
@@ -440,39 +447,45 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                 Memuat daftar stok barang...
               </div>
             ) : itemType === 'RAW' ? (
-              <select
-                value={selectedRawItemId}
-                onChange={(e) => setSelectedRawItemId(e.target.value)}
-                disabled={submitting || sourceRawItems.length === 0}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {sourceRawItems.length === 0 ? (
-                  <option value="">Tidak ada bahan baku di lokasi ini</option>
-                ) : (
-                  sourceRawItems.map((it) => (
-                    <option key={it.id} value={it.id}>
-                      [{it.itemCode || 'RAW'}] {it.name} - Stok: {(it.stock ?? it.warehouseStock ?? 0).toLocaleString('id-ID')} {it.canonicalUom}
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedRawItemId}
+                  onChange={(e) => setSelectedRawItemId(e.target.value)}
+                  disabled={submitting || sourceRawItems.length === 0}
+                  className="w-full pl-3.5 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {sourceRawItems.length === 0 ? (
+                    <option value="">Tidak ada bahan baku di lokasi ini</option>
+                  ) : (
+                    sourceRawItems.map((it) => (
+                      <option key={it.id} value={it.id}>
+                        [{it.itemCode || 'RAW'}] {it.name} - Stok: {(it.stock ?? it.warehouseStock ?? 0).toLocaleString('id-ID')} {it.canonicalUom}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             ) : (
-              <select
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                disabled={submitting || sourceProducts.length === 0}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {sourceProducts.length === 0 ? (
-                  <option value="">Tidak ada produk retail di lokasi ini</option>
-                ) : (
-                  sourceProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      [{p.sku}] {p.name} - Stok: {p.stock.toLocaleString('id-ID')} {p.unit}
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  disabled={submitting || sourceProducts.length === 0}
+                  className="w-full pl-3.5 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {sourceProducts.length === 0 ? (
+                    <option value="">Tidak ada produk retail di lokasi ini</option>
+                  ) : (
+                    sourceProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        [{p.sku}] {p.name} - Stok: {p.stock.toLocaleString('id-ID')} {p.unit}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             )}
           </div>
 

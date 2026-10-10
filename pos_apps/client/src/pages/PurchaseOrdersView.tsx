@@ -14,6 +14,7 @@ import {
   Trash2,
   Eye,
   Boxes,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type {
@@ -584,55 +585,64 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Status filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer"
-          >
-            <option value="ALL">Semua Status</option>
-            <option value="DRAFT">Draf</option>
-            <option value="ISSUED">Diterbitkan</option>
-            <option value="PARTIALLY_RECEIVED">Diterima Sebagian</option>
-            <option value="RECEIVED">Selesai</option>
-            <option value="CANCELLED">Dibatalkan</option>
-          </select>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
+            >
+              <option value="ALL">Semua Status</option>
+              <option value="DRAFT">Draf</option>
+              <option value="ISSUED">Diterbitkan</option>
+              <option value="PARTIALLY_RECEIVED">Diterima Sebagian</option>
+              <option value="RECEIVED">Selesai</option>
+              <option value="CANCELLED">Dibatalkan</option>
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
 
           {/* Supplier filter */}
-          <select
-            value={supplierFilter}
-            onChange={(e) => {
-              setSupplierFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate cursor-pointer"
-          >
-            <option value="ALL">Semua Pemasok</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={supplierFilter}
+              onChange={(e) => {
+                setSupplierFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[200px] truncate cursor-pointer appearance-none"
+            >
+              <option value="ALL">Semua Pemasok</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
 
           {/* Outlet filter */}
-          <select
-            value={outletFilter}
-            onChange={(e) => {
-              setOutletFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[180px] truncate cursor-pointer"
-          >
-            <option value="ALL">Semua Toko / Gudang</option>
-            {outlets.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name} {o.isWarehouse ? '(Gudang)' : ''}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={outletFilter}
+              onChange={(e) => {
+                setOutletFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[200px] truncate cursor-pointer appearance-none"
+            >
+              <option value="ALL">Semua Toko / Gudang</option>
+              {outlets.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name} {o.isWarehouse ? '(Gudang)' : ''}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
       </div>
 
@@ -807,37 +817,43 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Outlet / Gudang Tujuan <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    value={poFormOutletId}
-                    onChange={(e) => setPoFormOutletId(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
-                  >
-                    {outlets.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name} {o.isWarehouse ? '(Gudang)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={poFormOutletId}
+                      onChange={(e) => setPoFormOutletId(e.target.value)}
+                      required
+                      className="w-full h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 appearance-none cursor-pointer"
+                    >
+                      {outlets.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} {o.isWarehouse ? '(Gudang)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Pemasok (Supplier) <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    value={poFormSupplierId}
-                    onChange={(e) => setPoFormSupplierId(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
-                  >
-                    <option value="">-- Pilih Pemasok --</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.code})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={poFormSupplierId}
+                      onChange={(e) => setPoFormSupplierId(e.target.value)}
+                      required
+                      className="w-full h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 appearance-none cursor-pointer"
+                    >
+                      <option value="">-- Pilih Pemasok --</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.code})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
 
                 <div>
@@ -900,17 +916,20 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
                               Bahan Baku
                             </label>
-                            <select
-                              value={item.inventoryItemId}
-                              onChange={(e) => handleUpdateItemField(idx, 'inventoryItemId', e.target.value)}
-                              className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
-                            >
-                              {inventoryItems.map((it) => (
-                                <option key={it.id} value={it.id}>
-                                  {it.name} ({it.canonicalUom})
-                                </option>
-                              ))}
-                            </select>
+                            <div className="relative">
+                              <select
+                                value={item.inventoryItemId}
+                                onChange={(e) => handleUpdateItemField(idx, 'inventoryItemId', e.target.value)}
+                                className="w-full h-10 pl-3 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 appearance-none cursor-pointer"
+                              >
+                                {inventoryItems.map((it) => (
+                                  <option key={it.id} value={it.id}>
+                                    {it.name} ({it.canonicalUom})
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
                           </div>
 
                           <div className="sm:col-span-2">

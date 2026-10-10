@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Package, AlertCircle, Save, Loader2 } from 'lucide-react';
+import { X, Package, AlertCircle, Save, Loader2, ChevronDown } from 'lucide-react';
 import { api } from '../../services/api';
 import { CurrencyInput } from '../ui/CurrencyInput';
 
@@ -131,17 +131,20 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Satuan Ukur Standar (UOM) <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={canonicalUom}
-                onChange={(e) => setCanonicalUom(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-              >
-                <option value="GRAM">GRAM (Berat Bubuk, Biji, Daging)</option>
-                <option value="ML">ML (Cairan, Susu, Sirup, Saus)</option>
-                <option value="PCS">PCS (Cup, Sedotan, Telur, Roti)</option>
-                <option value="KG">KG (Kilogram)</option>
-                <option value="LITER">LITER</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={canonicalUom}
+                  onChange={(e) => setCanonicalUom(e.target.value)}
+                  className="w-full h-11 sm:h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="GRAM">GRAM (Berat Bubuk, Biji, Daging)</option>
+                  <option value="ML">ML (Cairan, Susu, Sirup, Saus)</option>
+                  <option value="PCS">PCS (Cup, Sedotan, Telur, Roti)</option>
+                  <option value="KG">KG (Kilogram)</option>
+                  <option value="LITER">LITER</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
           </div>
 

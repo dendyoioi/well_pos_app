@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Supplier, SupplierFormData } from '../types/supplier';
@@ -289,15 +290,18 @@ export const SuppliersView: React.FC = () => {
             />
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full sm:w-auto h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-blue-900 outline-hidden cursor-pointer"
-          >
-            <option value="ALL">Semua Status ({suppliers.length})</option>
-            <option value="ACTIVE">Aktif Saja ({activeCount})</option>
-            <option value="INACTIVE">Nonaktif Saja ({suppliers.length - activeCount})</option>
-          </select>
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="w-full sm:w-auto h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-blue-900 outline-hidden cursor-pointer appearance-none"
+            >
+              <option value="ALL">Semua Status ({suppliers.length})</option>
+              <option value="ACTIVE">Aktif Saja ({activeCount})</option>
+              <option value="INACTIVE">Nonaktif Saja ({suppliers.length - activeCount})</option>
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
 
         <div className="text-xs text-slate-400 font-semibold self-end sm:self-auto">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowDownRight, ArrowUpRight, SlidersHorizontal, Check, AlertCircle, Warehouse } from 'lucide-react';
+import { X, ArrowDownRight, ArrowUpRight, SlidersHorizontal, Check, AlertCircle, Warehouse, ChevronDown } from 'lucide-react';
 import type { Product } from '../types/product';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -293,17 +293,20 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
                   </span>
                 )}
               </div>
-              <select
-                value={targetOutletId}
-                onChange={(e) => setTargetOutletId(e.target.value)}
-                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none font-medium"
-              >
-                {outlets.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.isWarehouse ? '🏭 [Gudang Pusat]' : '🏪 [Toko]'} {o.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={targetOutletId}
+                  onChange={(e) => setTargetOutletId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold transition-all outline-none cursor-pointer appearance-none"
+                >
+                  {outlets.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.isWarehouse ? '🏭 [Gudang Pusat]' : '🏪 [Toko]'} {o.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
               <p className="text-[10px] text-slate-500 mt-1">
                 {type === 'IN'
                   ? 'Anda dapat menerima barang langsung di Gudang Pusat untuk kemudian ditransfer, atau langsung di outlet toko tertentu.'
@@ -317,7 +320,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
-                  Bahan Baku Mentah F&amp;B
+                  Bahan Baku Mentah F&B
                 </span>
                 <h4 className="text-sm font-extrabold text-blue-950">{defaultIngredient.name}</h4>
                 <p className="text-xs text-slate-500 font-medium">
@@ -336,18 +339,21 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Pilih Produk *
               </label>
-              <select
-                required
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none"
-              >
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    [{p.sku}] {p.name} (Stok saat ini: {p.stock} {p.unit})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  required
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-bold transition-all outline-none cursor-pointer appearance-none"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      [{p.sku}] {p.name} (Stok saat ini: {p.stock} {p.unit})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
           )}
 

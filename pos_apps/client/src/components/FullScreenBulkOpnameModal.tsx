@@ -17,6 +17,7 @@ import {
   Building2,
   AlertCircle,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import type { RecipeInventoryItem } from '../types/recipe';
@@ -1016,11 +1017,11 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
             <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
             <span>Alasan Umum:</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative">
             <select
               value={generalReason}
               onChange={(e) => setGeneralReason(e.target.value)}
-              className="py-1.5 px-3 bg-white border border-rose-200 rounded-xl font-bold text-rose-950 focus:outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer"
+              className="py-1.5 pl-3 pr-8 bg-white border border-rose-200 rounded-xl font-bold text-rose-950 focus:outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer appearance-none"
             >
               <option value="WASTE">Rusak / Basi / Pecah (WASTE)</option>
               <option value="EXPIRED">Kadaluarsa (EXPIRED)</option>
@@ -1028,6 +1029,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
               <option value="SHRINKAGE">Penyusutan / Selisih Hilang (SHRINKAGE)</option>
               <option value="OTHER">Lainnya (Catat di baris)</option>
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-rose-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
           <span className="text-slate-500 font-medium text-[11px] hidden sm:inline">
             * Menjadi default untuk seluruh baris, Anda juga dapat mengubah alasan secara spesifik per baris.
@@ -1044,18 +1046,21 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-semibold whitespace-nowrap">Dari:</span>
-            <select
-              value={sourceOutletId}
-              onChange={(e) => setSourceOutletId(e.target.value)}
-              disabled={loadingOutlets || allOutlets.length <= 1}
-              className="py-1.5 px-3 bg-white border border-indigo-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-            >
-              {allOutlets.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name} {o.isWarehouse ? '(Gudang)' : ''}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={sourceOutletId}
+                onChange={(e) => setSourceOutletId(e.target.value)}
+                disabled={loadingOutlets || allOutlets.length <= 1}
+                className="py-1.5 pl-3 pr-8 bg-white border border-indigo-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {allOutlets.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name} {o.isWarehouse ? '(Gudang)' : ''}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-indigo-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           <div className="flex items-center justify-center text-indigo-600 font-bold">
@@ -1064,21 +1069,24 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
 
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-semibold whitespace-nowrap">Ke:</span>
-            <select
-              value={targetOutletId}
-              onChange={(e) => setTargetOutletId(e.target.value)}
-              disabled={loadingOutlets || allOutlets.length <= 1}
-              className="py-1.5 px-3 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-            >
-              <option value="">-- Pilih Tujuan --</option>
-              {allOutlets
-                .filter((o) => o.id !== sourceOutletId)
-                .map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name} {o.isWarehouse ? '(Gudang)' : ''}
-                  </option>
-                ))}
-            </select>
+            <div className="relative">
+              <select
+                value={targetOutletId}
+                onChange={(e) => setTargetOutletId(e.target.value)}
+                disabled={loadingOutlets || allOutlets.length <= 1}
+                className="py-1.5 pl-3 pr-8 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <option value="">-- Pilih Tujuan --</option>
+                {allOutlets
+                  .filter((o) => o.id !== sourceOutletId)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} {o.isWarehouse ? '(Gudang)' : ''}
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-indigo-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 flex-1 min-w-[180px] max-w-xs">
@@ -1123,18 +1131,21 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
             {/* Category Dropdown (for Products) */}
             {mode === 'PRODUCTS' && categoriesWithCounts.length > 0 && (
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer shrink-0"
-              >
-                <option value="ALL">Semua Kategori ({products.length})</option>
-                {categoriesWithCounts.map((cat) => (
-                  <option key={cat.name} value={cat.name}>
-                    {cat.name} ({cat.count})
-                  </option>
-                ))}
-              </select>
+              <div className="relative shrink-0">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="py-2 pl-3 pr-8 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 cursor-pointer appearance-none"
+                >
+                  <option value="ALL">Semua Kategori ({products.length})</option>
+                  {categoriesWithCounts.map((cat) => (
+                    <option key={cat.name} value={cat.name}>
+                      {cat.name} ({cat.count})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             )}
 
             {/* Toggle: Tampilkan Hanya yang Aktif / Diisi / Selisih */}
@@ -1569,17 +1580,20 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                             {row.isComposite ? (
                               <span className="text-[10px] text-slate-400">-</span>
                             ) : (
-                              <select
-                                value={row.reasonOut}
-                                onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
-                                className="w-full py-1.5 px-2 text-[11px] bg-white border border-slate-200 rounded-lg font-bold text-slate-700 focus:outline-none focus:border-rose-600"
-                              >
-                                <option value="WASTE">Rusak / Basi (WASTE)</option>
-                                <option value="EXPIRED">Kadaluarsa (EXPIRED)</option>
-                                <option value="INTERNAL_USE">Konsumsi (INTERNAL)</option>
-                                <option value="SHRINKAGE">Penyusutan (SHRINKAGE)</option>
-                                <option value="OTHER">Lainnya</option>
-                              </select>
+                              <div className="relative">
+                                <select
+                                  value={row.reasonOut}
+                                  onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
+                                  className="w-full py-1.5 pl-2 pr-6 text-[11px] bg-white border border-slate-200 rounded-lg font-bold text-slate-700 focus:outline-none focus:border-rose-600 appearance-none cursor-pointer"
+                                >
+                                  <option value="WASTE">Rusak / Basi (WASTE)</option>
+                                  <option value="EXPIRED">Kadaluarsa (EXPIRED)</option>
+                                  <option value="INTERNAL_USE">Konsumsi (INTERNAL)</option>
+                                  <option value="SHRINKAGE">Penyusutan (SHRINKAGE)</option>
+                                  <option value="OTHER">Lainnya</option>
+                                </select>
+                                <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              </div>
                             )}
                           </td>
 
@@ -1971,17 +1985,20 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-[10px] font-bold text-slate-500 block mb-1">Alasan Pengeluaran</span>
-                            <select
-                              value={row.reasonOut}
-                              onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
-                              className="w-full py-1.5 px-2 bg-white border border-rose-200 rounded-xl font-bold text-rose-950 text-xs"
-                            >
-                              <option value="WASTE">Rusak / Basi</option>
-                              <option value="EXPIRED">Kadaluarsa</option>
-                              <option value="INTERNAL_USE">Operasional</option>
-                              <option value="SHRINKAGE">Penyusutan</option>
-                              <option value="OTHER">Lainnya</option>
-                            </select>
+                            <div className="relative">
+                              <select
+                                value={row.reasonOut}
+                                onChange={(e) => handleStockOutReasonChange(row.id, e.target.value)}
+                                className="w-full py-1.5 pl-2.5 pr-7 bg-white border border-rose-200 rounded-xl font-bold text-rose-950 text-xs appearance-none cursor-pointer"
+                              >
+                                <option value="WASTE">Rusak / Basi</option>
+                                <option value="EXPIRED">Kadaluarsa</option>
+                                <option value="INTERNAL_USE">Operasional</option>
+                                <option value="SHRINKAGE">Penyusutan</option>
+                                <option value="OTHER">Lainnya</option>
+                              </select>
+                              <ChevronDown className="w-3.5 h-3.5 text-rose-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
                           </div>
                           <div>
                             <span className="text-[10px] font-bold text-slate-500 block mb-1">Kerugian HPP</span>

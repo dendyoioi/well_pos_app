@@ -10,6 +10,7 @@ import {
   RefreshCw,
   TrendingUp,
   Package,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Recipe, RecipeInventoryItem, UpsertRecipeInput } from '../types/recipe';
@@ -442,18 +443,21 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
                         <label className="block text-xs font-bold text-slate-600 mb-1">
                           Bahan Baku Mentah #{index + 1}
                         </label>
-                        <select
-                          value={row.inventoryItemId}
-                          onChange={(e) => handleRowChange(index, 'inventoryItemId', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        >
-                          {inventoryItems.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.name} ({item.canonicalUom})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={row.inventoryItemId}
+                            onChange={(e) => handleRowChange(index, 'inventoryItemId', e.target.value)}
+                            className="w-full pl-3.5 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 appearance-none cursor-pointer"
+                            required
+                          >
+                            {inventoryItems.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name} ({item.canonicalUom})
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
                       </div>
 
                       {/* Kuantitas Takaran */}
