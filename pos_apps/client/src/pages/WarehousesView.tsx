@@ -11,6 +11,9 @@ import {
   Store,
   Boxes,
   ArrowRight,
+  LayoutGrid,
+  List,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
@@ -33,6 +36,8 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -73,15 +78,21 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
   const warehouses = outlets.filter((o) => !!o.isWarehouse);
   const stores = outlets.filter((o) => !o.isWarehouse);
 
-  // Search filter
+  // Search & Status filter
   const filteredWarehouses = warehouses.filter((wh) => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
+    const matchSearch =
+      !q ||
       wh.name.toLowerCase().includes(q) ||
       (wh.address && wh.address.toLowerCase().includes(q)) ||
-      (wh.phone && wh.phone.toLowerCase().includes(q))
-    );
+      (wh.phone && wh.phone.toLowerCase().includes(q));
+
+    const matchStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'ACTIVE' && wh.isActive) ||
+      (statusFilter === 'INACTIVE' && !wh.isActive);
+
+    return matchSearch && matchStatus;
   });
 
   const paginatedWarehouses = filteredWarehouses.slice(
@@ -148,6 +159,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
   const handleUpdateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingWarehouse) return;
+
     if (!formData.name.trim()) {
       setFormError('Nama gudang wajib diisi');
       return;
@@ -183,16 +195,17 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
   const activeWarehousesCount = warehouses.filter((w) => w.isActive).length;
   const totalStoresSupplied = stores.filter((s) => s.warehouseId).length;
+  const currentSelectedWarehouse = warehouses.find((w) => w.id === activeOutletId);
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
       {/* =========================================================================
           TOP HEADER: Judul & Aksi Tambah Gudang
           ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-900 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
               <Warehouse className="w-5 h-5 shrink-0" />
             </div>
             <div className="min-w-0">
@@ -208,7 +221,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Gudang Baru</span>
@@ -216,103 +229,175 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
       </div>
 
       {/* =========================================================================
-          RINGKASAN METRIK GUDANG
+          RINGKASAN METRIK GUDANG (3 KPI CARDS SIMETRIS & PROPORSIONAL)
           ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Card 1: Total Gudang Aktif */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
             <Warehouse className="w-6 h-6" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gudang Logistik Aktif</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">
-              {activeWarehousesCount} <span className="text-sm font-semibold text-slate-400">/ {warehouses.length} Total</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Gudang Logistik Aktif</p>
+            <p className="mt-1 flex items-baseline gap-1.5">
+              <span className="font-mono text-2xl font-black text-slate-900 tracking-tight">{activeWarehousesCount}</span>
+              <span className="font-mono text-xs font-semibold text-slate-400">/ {warehouses.length} Total</span>
             </p>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Fasilitas penyimpanan terdaftar</p>
           </div>
         </div>
 
         {/* Card 2: Toko yang Disuplai */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
             <Store className="w-6 h-6" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Toko / Outlet Terhubung</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">
-              {totalStoresSupplied} <span className="text-sm font-semibold text-slate-400">/ {stores.length} Toko POS</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Toko / Outlet Terhubung</p>
+            <p className="mt-1 flex items-baseline gap-1.5">
+              <span className="font-mono text-2xl font-black text-slate-900 tracking-tight">{totalStoresSupplied}</span>
+              <span className="font-mono text-xs font-semibold text-slate-400">/ {stores.length} Toko POS</span>
             </p>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Menerima pasokan &amp; auto-backflush</p>
           </div>
         </div>
 
-        {/* Card 3: Info Rantai Pasok */}
-        <div className="bg-blue-950 text-white p-5 rounded-2xl shadow-xs flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Mode Logistik Terpadu</p>
-            <p className="text-sm font-medium text-blue-100 mt-1 leading-snug">
-              Beralih ke gudang untuk mengelola stok bahan mentah &amp; penerimaan supplier.
-            </p>
+        {/* Card 3: Sesi Mode Gudang Saat Ini */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <Boxes className="w-6 h-6" />
           </div>
-          <Boxes className="w-8 h-8 text-blue-300 shrink-0 opacity-80" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status Mode Sesi</p>
+            {currentSelectedWarehouse ? (
+              <div className="mt-1 min-w-0">
+                <p className="font-mono text-base font-black text-slate-900 truncate tracking-tight">
+                  {currentSelectedWarehouse.name}
+                </p>
+                <p className="text-[11px] font-bold text-blue-600 flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Mode Gudang Sedang Aktif</span>
+                </p>
+              </div>
+            ) : (
+              <div className="mt-1 min-w-0">
+                <p className="text-base font-bold text-slate-700 truncate">
+                  Mode Toko POS Kasir
+                </p>
+                <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                  Pilih gudang untuk masuk logistik
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* =========================================================================
-          PENCARIAN & TOOLBAR
+          TOOLBAR: PENCARIAN, FILTER STATUS & TOGGLE VIEW
           ========================================================================= */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Cari nama gudang, alamat, atau PIC..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
-          />
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 flex-1 max-w-2xl">
+          {/* Input Search */}
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Cari nama gudang, alamat, PIC..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 pl-10 pr-4 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          {/* Filter Status */}
+          <div className="relative w-full sm:w-44">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as any);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 px-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-700 cursor-pointer"
+            >
+              <option value="ALL">Semua Status</option>
+              <option value="ACTIVE">Gudang Aktif</option>
+              <option value="INACTIVE">Gudang Nonaktif</option>
+            </select>
+          </div>
         </div>
-        <div className="text-xs font-semibold text-slate-500 self-end sm:self-center">
-          Menampilkan <span className="font-bold text-slate-900">{filteredWarehouses.length}</span> Gudang Logistik
+
+        {/* Info Total & Toggle View */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+          <div className="text-xs font-semibold text-slate-500">
+            Menampilkan <span className="font-mono font-bold text-slate-900">{filteredWarehouses.length}</span> Gudang
+          </div>
+
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Tampilan Grid Kartu"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Tampilan Tabel Ringkas"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* =========================================================================
-          DAFTAR GUDANG (CARD GRID)
+          DAFTAR GUDANG (CARD GRID vs TABEL RINGKAS)
           ========================================================================= */}
       {loading ? (
-        <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3 shadow-xs">
-          <div className="w-10 h-10 border-4 border-blue-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-slate-500">Memuat data gudang logistik...</p>
+        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3 shadow-xs">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Memuat data gudang logistik...</p>
         </div>
       ) : filteredWarehouses.length === 0 ? (
-        <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs">
-          <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-900 flex items-center justify-center mx-auto">
+        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-4 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
             <Warehouse className="w-8 h-8" />
           </div>
           <div className="max-w-md mx-auto space-y-1">
             <h3 className="text-base font-bold text-slate-900">
-              {searchQuery ? 'Gudang Tidak Ditemukan' : 'Belum Ada Gudang Logistik'}
+              {searchQuery || statusFilter !== 'ALL' ? 'Gudang Tidak Ditemukan' : 'Belum Ada Gudang Logistik'}
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              {searchQuery
-                ? `Tidak ada gudang yang cocok dengan kata kunci "${searchQuery}".`
+              {searchQuery || statusFilter !== 'ALL'
+                ? 'Tidak ada gudang yang cocok dengan kriteria pencarian atau filter yang dipilih.'
                 : 'Buat gudang pertama Anda untuk menjadi pusat persediaan bahan baku dan menyuplai stok toko / outlet secara otomatis (auto-backflush).'}
             </p>
           </div>
-          {!searchQuery && (
+          {!searchQuery && statusFilter === 'ALL' && (
             <button
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Buat Gudang Sekarang</span>
             </button>
           )}
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
+        /* MODE 1: GRID KARTU */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {paginatedWarehouses.map((wh) => {
             const isCurrentlyActive = wh.id === activeOutletId;
@@ -321,26 +406,24 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             return (
               <div
                 key={wh.id}
-                className={`bg-white rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
+                className={`bg-white rounded-2xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
                   isCurrentlyActive
-                    ? 'border-blue-900 ring-2 ring-blue-900/10'
+                    ? 'border-blue-500 ring-2 ring-blue-500/10'
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
                 {/* Bagian Atas Card */}
-                <div className="p-5 sm:p-6 space-y-4">
+                <div className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
-                        <Warehouse className="w-6 h-6" />
+                      <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <Warehouse className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-black text-slate-900 text-base truncate" title={wh.name}>
-                            {wh.name}
-                          </h3>
-                        </div>
-                        <span className="inline-block text-[11px] font-bold text-blue-900 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md mt-0.5">
+                        <h3 className="font-black text-slate-900 text-base truncate" title={wh.name}>
+                          {wh.name}
+                        </h3>
+                        <span className="inline-block text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md mt-0.5">
                           🏭 Gudang Logistik Pusat
                         </span>
                       </div>
@@ -348,10 +431,10 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
                     <button
                       onClick={() => handleOpenEdit(wh)}
-                      className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
                       title="Edit Gudang"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -365,15 +448,15 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span>{wh.phone || <span className="italic text-slate-400">Belum ada kontak PIC</span>}</span>
+                      <span className="font-mono">{wh.phone || <span className="italic text-slate-400 font-sans">Belum ada kontak PIC</span>}</span>
                     </div>
                   </div>
 
                   {/* Daftar Toko yang Disuplai */}
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
                       <span className="flex items-center gap-1.5">
-                        <Store className="w-3.5 h-3.5 text-blue-900" />
+                        <Store className="w-3.5 h-3.5 text-blue-600" />
                         <span>Menyuplai {suppliedStores.length} Toko / Outlet:</span>
                       </span>
                     </div>
@@ -382,7 +465,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                         {suppliedStores.map((store) => (
                           <span
                             key={store.id}
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700"
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700"
                           >
                             🏪 {store.name}
                           </span>
@@ -397,20 +480,20 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 </div>
 
                 {/* Bagian Bawah: Aksi Buka Mode Gudang */}
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-1.5">
                     {wh.isActive ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         Aktif
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full">
                         Nonaktif
                       </span>
                     )}
                     {isCurrentlyActive && (
-                      <span className="text-[10px] font-extrabold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
                         Sedang Dipilih
                       </span>
                     )}
@@ -418,10 +501,10 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
                   <button
                     onClick={() => onSelectActiveOutlet(wh.id)}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                       isCurrentlyActive
-                        ? 'bg-blue-900 text-white hover:bg-blue-950 shadow-xs'
-                        : 'bg-white hover:bg-blue-50 text-blue-900 border border-blue-200 hover:border-blue-300'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 shadow-2xs'
                     }`}
                   >
                     <span>{isCurrentlyActive ? 'Buka Mode Gudang' : 'Pilih & Buka Gudang'}</span>
@@ -431,6 +514,150 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
               </div>
             );
           })}
+        </div>
+      ) : (
+        /* MODE 2: TABEL RINGKAS KANONIKAL */
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
+          <table className="min-w-[1050px] w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4">Gudang Logistik</th>
+                <th className="py-3.5 px-4">Alamat Fisik</th>
+                <th className="py-3.5 px-4">Kontak PIC WhatsApp</th>
+                <th className="py-3.5 px-4">Toko / Outlet Terhubung</th>
+                <th className="py-3.5 px-4 text-center">Status</th>
+                <th className="py-3.5 px-4 text-center">Mode Sesi</th>
+                <th className="py-3.5 px-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs">
+              {paginatedWarehouses.map((wh) => {
+                const isCurrentlyActive = wh.id === activeOutletId;
+                const suppliedStores = stores.filter((s) => s.warehouseId === wh.id);
+
+                return (
+                  <tr
+                    key={wh.id}
+                    className={`hover:bg-slate-50/80 transition-colors ${
+                      isCurrentlyActive ? 'bg-blue-50/30' : ''
+                    }`}
+                  >
+                    {/* Nama Gudang */}
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                          <Warehouse className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">{wh.name}</p>
+                          <span className="text-[10px] font-semibold text-blue-600">
+                            Pusat Logistik
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Alamat Fisik */}
+                    <td className="py-3 px-4 text-slate-600 max-w-xs truncate">
+                      {wh.address ? (
+                        <div className="flex items-center gap-1.5 truncate">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate" title={wh.address}>{wh.address}</span>
+                        </div>
+                      ) : (
+                        <span className="italic text-slate-400">-</span>
+                      )}
+                    </td>
+
+                    {/* Kontak PIC */}
+                    <td className="py-3 px-4 text-slate-600 font-mono">
+                      {wh.phone ? (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{wh.phone}</span>
+                        </div>
+                      ) : (
+                        <span className="italic text-slate-400 font-sans">-</span>
+                      )}
+                    </td>
+
+                    {/* Pasokan Toko */}
+                    <td className="py-3 px-4">
+                      {suppliedStores.length > 0 ? (
+                        <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
+                          {suppliedStores.slice(0, 2).map((s) => (
+                            <span
+                              key={s.id}
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700"
+                            >
+                              🏪 {s.name}
+                            </span>
+                          ))}
+                          {suppliedStores.length > 2 && (
+                            <span className="text-[10px] font-bold text-slate-500">
+                              +{suppliedStores.length - 2} lainnya
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Belum ada toko</span>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-3 px-4 text-center">
+                      {wh.isActive ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Aktif
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full">
+                          Nonaktif
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Mode Sesi */}
+                    <td className="py-3 px-4 text-center">
+                      {isCurrentlyActive ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Aktif Digunakan
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium">Tersedia</span>
+                      )}
+                    </td>
+
+                    {/* Aksi */}
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEdit(wh)}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Edit Gudang"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onSelectActiveOutlet(wh.id)}
+                          className={`inline-flex items-center gap-1 h-8 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                            isCurrentlyActive
+                              ? 'bg-blue-600 text-white shadow-2xs'
+                              : 'bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 shadow-2xs'
+                          }`}
+                        >
+                          <span>{isCurrentlyActive ? 'Buka' : 'Pilih'}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -459,7 +686,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                   <Warehouse className="w-5 h-5 shrink-0" />
                 </div>
                 <div className="min-w-0">
@@ -469,7 +696,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -478,19 +705,19 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             {/* Scrollable Form Body */}
             <form id="add-warehouse-form" onSubmit={handleCreateWarehouse} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
               {formError && (
-                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
 
               {/* Callout Panduan */}
-              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 space-y-1">
-                <p className="font-bold flex items-center gap-1.5">
-                  <Boxes className="w-4 h-4 text-blue-900" />
+              <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-blue-900">
+                  <Boxes className="w-4 h-4 text-blue-600" />
                   <span>Karakteristik Gudang Logistik</span>
                 </p>
-                <p className="text-blue-900 leading-relaxed">
+                <p className="text-blue-900/90 leading-relaxed">
                   Gudang tidak memiliki menu kasir (POS). Fungsinya murni untuk penerimaan barang dari supplier (PO), stock opname bahan mentah, serta sumber pasokan bahan baku bagi seluruh toko / outlet.
                 </p>
               </div>
@@ -507,7 +734,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   placeholder="Contoh: Gudang Logistik Pusat Jakarta"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
+                  className="w-full h-10 px-4 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
                 />
               </div>
 
@@ -532,7 +759,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   placeholder="Contoh: Kawasan Industri Pergudangan Blok C No. 12, Cakung, Jakarta Timur"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium resize-none"
+                  className="w-full p-3 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 resize-none"
                 />
               </div>
             </form>
@@ -542,7 +769,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                className="h-10 px-4 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
               >
                 Batal
               </button>
@@ -550,7 +777,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 type="submit"
                 form="add-warehouse-form"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
               >
                 {submitting ? 'Menyimpan...' : 'Buat Gudang Baru'}
               </button>
@@ -568,7 +795,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             {/* Header Modal */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                   <Warehouse className="w-5 h-5 shrink-0" />
                 </div>
                 <div className="min-w-0">
@@ -581,7 +808,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   setIsEditModalOpen(false);
                   setEditingWarehouse(null);
                 }}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -590,7 +817,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
             {/* Scrollable Form Body */}
             <form id="edit-warehouse-form" onSubmit={handleUpdateWarehouse} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
               {formError && (
-                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{formError}</span>
                 </div>
@@ -600,12 +827,12 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
               {(() => {
                 const suppliedStores = stores.filter((s) => s.warehouseId === editingWarehouse.id);
                 return (
-                  <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 space-y-1">
-                    <p className="font-bold flex items-center gap-1.5">
-                      <Store className="w-4 h-4 text-blue-900" />
+                  <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5 text-blue-900">
+                      <Store className="w-4 h-4 text-blue-600" />
                       <span>Status Pasokan Toko / Outlet</span>
                     </p>
-                    <p className="text-blue-900 leading-relaxed">
+                    <p className="text-blue-900/90 leading-relaxed">
                       Gudang ini saat ini menyuplai <strong>{suppliedStores.length} toko / outlet</strong>. Perubahan nama atau kontak gudang akan langsung terhubung ke seluruh mutasi dan pengadaan toko tersebut.
                     </p>
                   </div>
@@ -623,7 +850,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
+                  className="w-full h-10 px-4 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                 />
               </div>
 
@@ -644,18 +871,18 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   rows={3}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium resize-none"
+                  className="w-full p-3 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium resize-none"
                 />
               </div>
 
               {/* Status Aktif */}
               <div className="pt-2">
-                <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-all">
+                <label className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-all">
                   <input
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded-md text-blue-900 focus:ring-blue-900"
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                   />
                   <div>
                     <p className="text-xs font-bold text-slate-800">Status Gudang Aktif</p>
@@ -675,7 +902,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                   setIsEditModalOpen(false);
                   setEditingWarehouse(null);
                 }}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                className="h-10 px-4 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
               >
                 Batal
               </button>
@@ -683,7 +910,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 type="submit"
                 form="edit-warehouse-form"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
               >
                 {submitting ? 'Menyimpan...' : 'Simpan Perubahan Gudang'}
               </button>
