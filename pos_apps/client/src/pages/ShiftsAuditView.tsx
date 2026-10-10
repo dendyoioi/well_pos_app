@@ -243,7 +243,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
         <div className="flex items-center gap-3.5 min-w-0">
@@ -272,19 +272,10 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
           <button
             onClick={handleExportCSV}
             disabled={shifts.length === 0}
-            className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-blue-900/20 transition-all disabled:opacity-50"
+            className="h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
           >
             <Download className="w-4 h-4 stroke-[2.5]" />
             <span>Ekspor CSV</span>
-          </button>
-
-          <button
-            onClick={fetchShifts}
-            disabled={loading}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-2 transition-all"
-            title="Segarkan Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
           </button>
         </div>
       </div>
@@ -306,7 +297,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
             <button
               key={item.key}
               onClick={() => setPeriodPreset(item.key as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center justify-center ${
                 periodPreset === item.key
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -324,18 +315,18 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
+              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
             />
             <span className="text-xs text-slate-400">s/d</span>
             <input
               type="date"
               value={customEnd}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
+              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
             />
             <button
               onClick={fetchShifts}
-              className="px-3.5 py-1.5 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all"
+              className="h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all flex items-center justify-center cursor-pointer"
             >
               Terapkan
             </button>
@@ -357,7 +348,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               </div>
             </div>
             <div className="mt-3">
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h3 className="text-2xl font-black font-mono text-slate-900 tracking-tight">
                 {summary.totalShiftsAudited} Sesi
               </h3>
               <p className="text-[11px] text-slate-500 mt-1 font-medium">
@@ -377,13 +368,16 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               </div>
             </div>
             <div className="mt-3">
-              <h3 className="text-2xl font-black text-emerald-800 tracking-tight">
+              <h3 className="text-2xl font-black font-mono text-emerald-800 tracking-tight">
                 {summary.matchCount} Shift
               </h3>
               <p className="text-[11px] text-emerald-700 mt-1 font-medium">
-                {summary.totalShiftsAudited > 0
-                  ? ((summary.matchCount / summary.totalShiftsAudited) * 100).toFixed(1)
-                  : 100}% akurasi uang laci fisik
+                <span className="font-mono">
+                  {summary.totalShiftsAudited > 0
+                    ? ((summary.matchCount / summary.totalShiftsAudited) * 100).toFixed(1)
+                    : 100}%
+                </span>{' '}
+                akurasi uang laci fisik
               </p>
             </div>
           </div>
@@ -399,11 +393,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               </div>
             </div>
             <div className="mt-3">
-              <h3 className="text-2xl font-black text-rose-700 tracking-tight">
+              <h3 className="text-2xl font-black font-mono text-rose-700 tracking-tight">
                 -Rp {summary.totalShortAmount.toLocaleString('id-ID')}
               </h3>
               <p className="text-[11px] text-rose-600 mt-1 font-medium">
-                Terjadi pada {summary.shortCount} sesi shift
+                Terjadi pada <span className="font-mono">{summary.shortCount}</span> sesi shift
               </p>
             </div>
           </div>
@@ -425,7 +419,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               </div>
             </div>
             <div className="mt-3">
-              <h3 className={`text-2xl font-black tracking-tight ${
+              <h3 className={`text-2xl font-black font-mono tracking-tight ${
                 summary.netDifference >= 0 ? 'text-emerald-800' : 'text-rose-600'
               }`}>
                 {summary.netDifference >= 0 ? '+' : ''}Rp {summary.netDifference.toLocaleString('id-ID')}
@@ -448,12 +442,12 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               placeholder="Cari kasir, outlet, atau catatan..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900 shadow-xs"
+              className="w-full h-10 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900 shadow-xs"
             />
           </div>
 
           {/* Filter Dropdown Nama Kasir */}
-          <div className="relative w-full sm:w-auto shrink-0 flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xs">
+          <div className="relative w-full sm:w-auto shrink-0 h-10 flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 shadow-xs">
             <User className="w-4 h-4 text-blue-900 shrink-0" />
             <span className="text-xs font-bold text-slate-600 shrink-0">Kasir:</span>
             <select
@@ -484,7 +478,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
         </div>
 
         <span className="text-xs font-bold text-slate-500 self-end sm:self-auto">
-          Total: <strong className="text-slate-900">{filteredShifts.length}</strong> sesi shift
+          Total: <strong className="text-slate-900 font-mono">{filteredShifts.length}</strong> sesi shift
         </span>
       </div>
 
@@ -579,12 +573,12 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       </td>
 
                       {/* Modal Awal */}
-                      <td className="px-5 py-4 text-right whitespace-nowrap font-medium text-slate-700">
+                      <td className="px-5 py-4 text-right whitespace-nowrap font-medium font-mono text-slate-700">
                         Rp {startingCash.toLocaleString('id-ID')}
                       </td>
 
                       {/* Uang Fisik */}
-                      <td className="px-5 py-4 text-right whitespace-nowrap font-semibold text-slate-900">
+                      <td className="px-5 py-4 text-right whitespace-nowrap font-semibold font-mono text-slate-900">
                         {actualCash != null
                           ? `Rp ${actualCash.toLocaleString('id-ID')}`
                           : expectedCash != null
@@ -593,10 +587,10 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       </td>
 
                       {/* Selisih */}
-                      <td className="px-5 py-4 text-right whitespace-nowrap font-black">
+                      <td className="px-5 py-4 text-right whitespace-nowrap font-black font-mono">
                         {diff != null ? (
                           <span
-                            className={`px-2 py-0.5 rounded-lg text-[11px] ${
+                            className={`px-2 py-0.5 rounded-lg text-[11px] font-mono ${
                               isDiffZero
                                 ? 'bg-emerald-50 text-emerald-700'
                                 : isDiffPositive
@@ -615,7 +609,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       <td className="px-5 py-4 text-center whitespace-nowrap">
                         <button
                           onClick={() => handleViewDetail(shift.id)}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1"
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Detail</span>
@@ -705,19 +699,19 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 text-center">
                     <div>
                       <span className="text-[10px] text-slate-400 block font-medium">Modal Awal</span>
-                      <span className="text-xs font-bold text-slate-700">
+                      <span className="text-xs font-bold font-mono text-slate-700">
                         Rp {startingCash.toLocaleString('id-ID')}
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 block font-medium">Kas Sistem</span>
-                      <span className="text-xs font-bold text-slate-700">
+                      <span className="text-xs font-bold font-mono text-slate-700">
                         {expectedCash != null ? `Rp ${expectedCash.toLocaleString('id-ID')}` : '-'}
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 block font-medium">Uang Fisik</span>
-                      <span className="text-xs font-bold text-slate-900">
+                      <span className="text-xs font-bold font-mono text-slate-900">
                         {actualCash != null ? `Rp ${actualCash.toLocaleString('id-ID')}` : '-'}
                       </span>
                     </div>
@@ -725,7 +719,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       <span className="text-[10px] text-slate-400 block font-medium">Selisih Kas</span>
                       {diff != null ? (
                         <span
-                          className={`text-xs font-black ${
+                          className={`text-xs font-black font-mono ${
                             isDiffZero
                               ? 'text-emerald-700'
                               : isDiffPositive
@@ -861,21 +855,21 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Modal Awal</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-900 block mt-0.5">
+                    <span className="text-xs sm:text-sm font-black font-mono text-slate-900 block mt-0.5">
                       Rp {Number(selectedShift.startingCash || 0).toLocaleString('id-ID')}
                     </span>
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Penjualan Tunai</span>
-                    <span className="text-xs sm:text-sm font-black text-emerald-700 block mt-0.5">
+                    <span className="text-xs sm:text-sm font-black font-mono text-emerald-700 block mt-0.5">
                       Rp {Number(selectedShift.stats?.cashSales || 0).toLocaleString('id-ID')}
                     </span>
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Kas Sistem (Expected)</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-900 block mt-0.5">
+                    <span className="text-xs sm:text-sm font-black font-mono text-slate-900 block mt-0.5">
                       {selectedShift.expectedCash != null
                         ? `Rp ${Number(selectedShift.expectedCash).toLocaleString('id-ID')}`
                         : selectedShift.expectedEnding != null
@@ -886,7 +880,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Uang Fisik Aktual</span>
-                    <span className="text-xs sm:text-sm font-black text-slate-900 block mt-0.5">
+                    <span className="text-xs sm:text-sm font-black font-mono text-slate-900 block mt-0.5">
                       {selectedShift.actualCash != null
                         ? `Rp ${Number(selectedShift.actualCash).toLocaleString('id-ID')}`
                         : selectedShift.actualEnding != null
@@ -897,13 +891,13 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Penjualan Non-Tunai</span>
-                    <span className="text-xs sm:text-sm font-black text-blue-700 block mt-0.5">
+                    <span className="text-xs sm:text-sm font-black font-mono text-blue-700 block mt-0.5">
                       Rp {Number(selectedShift.stats?.nonCashSales ?? selectedShift.stats?.qrisSales ?? 0).toLocaleString('id-ID')}
                     </span>
                     {selectedShift.stats?.paymentBreakdown &&
                       Object.keys(selectedShift.stats.paymentBreakdown).filter((k: string) => k !== 'CASH').length > 1 && (
                         <span
-                          className="text-[9px] text-slate-500 font-medium block mt-0.5 truncate"
+                          className="text-[9px] text-slate-500 font-medium font-mono block mt-0.5 truncate"
                           title={Object.entries(selectedShift.stats.paymentBreakdown)
                             .filter(([k]) => k !== 'CASH')
                             .map(([k, v]) => `${k}: Rp ${Number(v).toLocaleString('id-ID')}`)
@@ -920,7 +914,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">Selisih Kas</span>
                     <span
-                      className={`text-xs sm:text-sm font-black block mt-0.5 ${
+                      className={`text-xs sm:text-sm font-black font-mono block mt-0.5 ${
                         modalDiff === 0
                           ? 'text-emerald-700'
                           : (modalDiff || 0) > 0
@@ -943,7 +937,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                     <span>Rekap Item Terjual ({selectedShift.soldItemsSummary?.length || 0} Menu)</span>
                   </h4>
                   {selectedShift.soldItemsSummary && selectedShift.soldItemsSummary.length > 0 && (
-                    <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 font-mono">
                       Total: {selectedShift.soldItemsSummary.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0)} Porsi/Item
                     </span>
                   )}
@@ -975,11 +969,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                               <span>{item.productName}</span>
                             </td>
                             <td className="px-3.5 py-2 text-center">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-extrabold text-[11px]">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-extrabold text-[11px] font-mono">
                                 {item.quantity} pcs
                               </span>
                             </td>
-                            <td className="px-3.5 py-2 text-right font-black text-blue-950">
+                            <td className="px-3.5 py-2 text-right font-black font-mono text-blue-950">
                               Rp {Number(item.totalAmount).toLocaleString('id-ID')}
                             </td>
                           </tr>
@@ -1016,7 +1010,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       ) : (
                         selectedShift.orders.map((ord: any) => (
                           <tr key={ord.id} className="hover:bg-slate-50">
-                            <td className="px-3.5 py-2 font-bold text-slate-800">{ord.invoiceNumber}</td>
+                            <td className="px-3.5 py-2 font-bold font-mono text-slate-800">{ord.invoiceNumber}</td>
                             <td className="px-3.5 py-2 text-slate-500">
                               {new Date(ord.createdAt).toLocaleTimeString('id-ID', {
                                 hour: '2-digit',
@@ -1028,7 +1022,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                                 {ord.paymentMethod || ord.payments?.[0]?.method || 'CASH'}
                               </span>
                             </td>
-                            <td className="px-3.5 py-2 text-right font-black text-blue-900">
+                            <td className="px-3.5 py-2 text-right font-black font-mono text-blue-900">
                               Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
                             </td>
                           </tr>
@@ -1047,7 +1041,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       selectedShift.orders.map((ord: any) => (
                         <div key={ord.id} className="p-3 flex items-center justify-between gap-2 hover:bg-slate-50">
                           <div className="min-w-0">
-                            <span className="font-bold text-xs text-slate-800 block truncate">
+                            <span className="font-bold font-mono text-xs text-slate-800 block truncate">
                               {ord.invoiceNumber}
                             </span>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -1062,7 +1056,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                               </span>
                             </div>
                           </div>
-                          <span className="font-black text-xs text-blue-900 shrink-0 text-right">
+                          <span className="font-black font-mono text-xs text-blue-900 shrink-0 text-right">
                             Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -1097,7 +1091,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                                 minute: '2-digit',
                               })}
                             </td>
-                            <td className="px-3 py-2 text-right font-black text-emerald-700">
+                            <td className="px-3 py-2 text-right font-black font-mono text-emerald-700">
                               Rp {Number(dp.amount).toLocaleString('id-ID')}
                             </td>
                           </tr>

@@ -7,7 +7,6 @@ import {
   Banknote,
   Download,
   Calendar,
-  RefreshCw,
   Printer,
   Percent,
   Lock,
@@ -196,16 +195,16 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
   const fs = data?.financialSummary;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* Subtab Navigation: Laba Rugi vs Arus Kas */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 no-print">
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 no-print w-full sm:w-fit">
         <button
           type="button"
           onClick={() => handleSubTabChange('pnl')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
             activeReportSubTab === 'pnl'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
@@ -214,10 +213,10 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
         <button
           type="button"
           onClick={() => handleSubTabChange('cashflow')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
             activeReportSubTab === 'cashflow'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
           <Banknote className="w-4 h-4" />
@@ -231,133 +230,124 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
         <>
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
-            <TrendingUp className="w-6 h-6 stroke-[2.5] shrink-0" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                Laporan Penjualan &amp; Finansial
-              </h2>
-              {activeOutlet && !activeOutlet.isWarehouse && (
-                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-bold text-[10px]">
-                  <Store className="w-3 h-3 shrink-0" />
-                  <span>{activeOutlet.name}</span>
-                </span>
-              )}
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
+                <TrendingUp className="w-6 h-6 stroke-[2.5] shrink-0" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                    Laporan Penjualan &amp; Finansial
+                  </h2>
+                  {activeOutlet && !activeOutlet.isWarehouse && (
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-bold text-[10px]">
+                      <Store className="w-3 h-3 shrink-0" />
+                      <span>{activeOutlet.name}</span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Rekapitulasi pendapatan omset (*Net Revenue*), arus kas pembayaran kasir, pajak PPN, dan kontribusi kanal penjualan.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Rekapitulasi pendapatan omset (*Net Revenue*), arus kas pembayaran kasir, pajak PPN, dan kontribusi kanal penjualan.
-            </p>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => {
+                  if (isLocked) {
+                    setUpgradeModalOpen(true);
+                    return;
+                  }
+                  window.print();
+                }}
+                disabled={!data && !isLocked}
+                className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isLocked
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Printer className="w-4 h-4" />}
+                <span>Cetak</span>
+                {isLocked && <span className="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded text-[9px] font-black">PRO</span>}
+              </button>
+
+              <button
+                onClick={() => {
+                  if (isLocked) {
+                    setUpgradeModalOpen(true);
+                    return;
+                  }
+                  handleExportCSV();
+                }}
+                disabled={!data && !isLocked}
+                className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer ${
+                  isLocked
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                    : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
+                }`}
+              >
+                {isLocked ? <Lock className="w-4 h-4" /> : <Download className="w-4 h-4 stroke-[2.5]" />}
+                <span>Ekspor CSV</span>
+                {isLocked && <span className="px-1.5 py-0.5 bg-white/20 text-white rounded text-[9px] font-black">PRO</span>}
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => {
-              if (isLocked) {
-                setUpgradeModalOpen(true);
-                return;
-              }
-              window.print();
-            }}
-            disabled={!data && !isLocked}
-            className={`flex-1 sm:flex-initial justify-center px-3.5 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all ${
-              isLocked
-                ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-            }`}
-          >
-            {isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Printer className="w-4 h-4" />}
-            <span>Cetak</span>
-            {isLocked && <span className="px-1 py-0.2 bg-amber-200 text-amber-900 rounded text-[9px] font-black">PRO</span>}
-          </button>
+          {/* Filter Controls Toolbar */}
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">
+            {/* Preset Buttons */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" /> Periode:
+              </span>
+              {[
+                { key: 'today', label: 'Hari Ini' },
+                { key: '7days', label: '7 Hari Terakhir' },
+                { key: '30days', label: '30 Hari Terakhir' },
+                { key: 'thisMonth', label: 'Bulan Ini' },
+                { key: 'custom', label: 'Kustom' },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => setPeriodPreset(item.key as any)}
+                  className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    periodPreset === item.key
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
-          <button
-            onClick={() => {
-              if (isLocked) {
-                setUpgradeModalOpen(true);
-                return;
-              }
-              handleExportCSV();
-            }}
-            disabled={!data && !isLocked}
-            className={`flex-1 sm:flex-initial justify-center px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all ${
-              isLocked
-                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
-            }`}
-          >
-            {isLocked ? <Lock className="w-4 h-4" /> : <Download className="w-4 h-4 stroke-[2.5]" />}
-            <span>Ekspor CSV</span>
-            {isLocked && <span className="px-1 py-0.2 bg-white/20 text-white rounded text-[9px] font-black">PRO</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Controls Toolbar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">
-        {/* Preset Buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" /> Periode:
-          </span>
-          {[
-            { key: 'today', label: 'Hari Ini' },
-            { key: '7days', label: '7 Hari Terakhir' },
-            { key: '30days', label: '30 Hari Terakhir' },
-            { key: 'thisMonth', label: 'Bulan Ini' },
-            { key: 'custom', label: 'Kustom' },
-          ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setPeriodPreset(item.key as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                periodPreset === item.key
-                  ? 'bg-blue-900 text-white shadow-xs'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Custom Range Inputs if custom selected */}
-        {periodPreset === 'custom' && (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
-            />
-            <span className="text-xs text-slate-400">s/d</span>
-            <input
-              type="date"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
-            />
-            <button
-              onClick={fetchReport}
-              className="px-3.5 py-1.5 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all"
-            >
-              Terapkan
-            </button>
+            {/* Custom Range Inputs if custom selected */}
+            {periodPreset === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                />
+                <span className="text-xs text-slate-400 font-bold">s/d</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                />
+                <button
+                  onClick={fetchReport}
+                  className="h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all shadow-xs cursor-pointer"
+                >
+                  Terapkan
+                </button>
+              </div>
+            )}
           </div>
-        )}
-
-        <button
-          onClick={fetchReport}
-          disabled={loading}
-          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors self-end md:self-auto"
-          title="Segarkan data"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
-        </button>
-      </div>
 
       {/* Konten Laporan: Jika akun FREE, tampilkan Teaser Banner Gembok */}
       {isLocked ? (
@@ -503,16 +493,16 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-mono">
                   Rp {fs.totalNetRevenue.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
-                  <span>Gross: Rp {fs.totalGrossSales.toLocaleString('id-ID')}</span>
+                  <span>Gross: <span className="font-mono">Rp {fs.totalGrossSales.toLocaleString('id-ID')}</span></span>
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Rata-rata Belanja (AOV):</span>
-                <strong className="text-slate-800">
+                <strong className="text-slate-800 font-mono">
                   Rp {fs.averageOrderValue.toLocaleString('id-ID')}
                 </strong>
               </div>
@@ -529,7 +519,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-amber-900 tracking-tight">
+                <h3 className="text-2xl font-black text-amber-900 tracking-tight font-mono">
                   Rp {fs.totalCOGS.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
@@ -538,7 +528,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Rasio Beban HPP:</span>
-                <strong className="text-amber-800 font-bold">
+                <strong className="text-amber-800 font-bold font-mono">
                   {fs.totalNetRevenue > 0
                     ? ((fs.totalCOGS / fs.totalNetRevenue) * 100).toFixed(1)
                     : 0}
@@ -558,11 +548,11 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-emerald-800 tracking-tight">
+                <h3 className="text-2xl font-black text-emerald-800 tracking-tight font-mono">
                   Rp {fs.grossProfit.toLocaleString('id-ID')}
                 </h3>
                 <div className="mt-1 flex items-center gap-1.5">
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-mono">
                     Margin: {fs.grossProfitMargin}%
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">(Net - Pajak - HPP)</span>
@@ -587,11 +577,11 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-indigo-950 tracking-tight">
+                <h3 className="text-2xl font-black text-indigo-950 tracking-tight font-mono">
                   Rp {((fs.netOperatingProfit !== undefined ? fs.netOperatingProfit : fs.grossProfit) || 0).toLocaleString('id-ID')}
                 </h3>
                 <div className="mt-1 flex items-center gap-1.5">
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-200">
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-200 font-mono">
                     Net Margin: {fs.netOperatingProfitMargin !== undefined ? fs.netOperatingProfitMargin : fs.grossProfitMargin}%
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">(Laba Kotor - Kas OPEX)</span>
@@ -616,7 +606,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-mono">
                   {fs.totalTransactions.toLocaleString('id-ID')} Faktur
                 </h3>
                 <p className="text-[11px] text-emerald-700 mt-1 font-medium">
@@ -625,7 +615,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Rata-rata Harian:</span>
-                <strong className="text-slate-800">
+                <strong className="text-slate-800 font-mono">
                   {data?.dailyTrends && data.dailyTrends.length > 0
                     ? Math.round(fs.totalTransactions / data.dailyTrends.length)
                     : fs.totalTransactions}{' '}
@@ -645,16 +635,16 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-mono">
                   Rp {(fs.totalTax + fs.totalService).toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                  PPN: Rp {fs.totalTax.toLocaleString('id-ID')}
+                  PPN: <span className="font-mono">Rp {fs.totalTax.toLocaleString('id-ID')}</span>
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Service Charge:</span>
-                <strong className="text-slate-800">
+                <strong className="text-slate-800 font-mono">
                   Rp {fs.totalService.toLocaleString('id-ID')}
                 </strong>
               </div>
@@ -671,7 +661,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-rose-700 tracking-tight">
+                <h3 className="text-2xl font-black text-rose-700 tracking-tight font-mono">
                   Rp {fs.totalDiscounts.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
@@ -680,7 +670,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Rasio Diskon:</span>
-                <strong className="text-rose-600">
+                <strong className="text-rose-600 font-mono">
                   {fs.totalGrossSales > 0
                     ? ((fs.totalDiscounts / fs.totalGrossSales) * 100).toFixed(1)
                     : 0}
@@ -914,25 +904,25 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                             day: 'numeric',
                           })}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-black text-slate-900">
+                        <td className="px-5 py-3.5 text-right font-black font-mono text-slate-900">
                           {d.ordersCount} faktur
                         </td>
-                        <td className="px-5 py-3.5 text-right font-black text-blue-900">
+                        <td className="px-5 py-3.5 text-right font-black font-mono text-blue-900">
                           Rp {d.revenue.toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-bold text-amber-800">
+                        <td className="px-5 py-3.5 text-right font-bold font-mono text-amber-800">
                           Rp {(d.cogs || 0).toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-black text-emerald-700">
+                        <td className="px-5 py-3.5 text-right font-black font-mono text-emerald-700">
                           Rp {(d.grossProfit || 0).toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-emerald-700">
+                        <td className="px-5 py-3.5 text-right font-semibold font-mono text-emerald-700">
                           Rp {d.cashRevenue.toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-blue-700">
+                        <td className="px-5 py-3.5 text-right font-semibold font-mono text-blue-700">
                           Rp {d.qrisRevenue.toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right text-slate-500 font-medium">
+                        <td className="px-5 py-3.5 text-right text-slate-500 font-medium font-mono">
                           Rp {d.ordersCount > 0 ? Math.round(d.revenue / d.ordersCount).toLocaleString('id-ID') : 0}
                         </td>
                       </tr>
@@ -971,14 +961,14 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                           })}
                         </span>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-bold font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
                         {d.ordersCount} Faktur
                       </span>
                     </div>
 
                     <div className="flex items-baseline justify-between pt-1">
                       <span className="text-[11px] text-slate-400 font-medium">Omset Bersih</span>
-                      <span className="text-base font-black text-blue-900">
+                      <span className="text-base font-black font-mono text-blue-900">
                         Rp {d.revenue.toLocaleString('id-ID')}
                       </span>
                     </div>
@@ -987,13 +977,13 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                     <div className="grid grid-cols-2 gap-2 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60 text-center">
                       <div>
                         <span className="text-[10px] text-amber-800 block font-medium">Modal / HPP</span>
-                        <span className="text-xs font-bold text-amber-900">
+                        <span className="text-xs font-bold font-mono text-amber-900">
                           Rp {(d.cogs || 0).toLocaleString('id-ID')}
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-emerald-800 block font-medium">Laba Kotor</span>
-                        <span className="text-xs font-bold text-emerald-800">
+                        <span className="text-xs font-bold font-mono text-emerald-800">
                           Rp {(d.grossProfit || 0).toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -1003,13 +993,13 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                     <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
                       <div>
                         <span className="text-[10px] text-slate-400 block font-medium">Uang Tunai</span>
-                        <span className="text-xs font-bold text-emerald-700">
+                        <span className="text-xs font-bold font-mono text-emerald-700">
                           Rp {d.cashRevenue.toLocaleString('id-ID')}
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block font-medium">QRIS / Non-Tunai</span>
-                        <span className="text-xs font-bold text-blue-700">
+                        <span className="text-xs font-bold font-mono text-blue-700">
                           Rp {d.qrisRevenue.toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -1017,7 +1007,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
 
                     <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
                       <span>Rata-rata Nilai Belanja (AOV):</span>
-                      <strong className="text-slate-800">
+                      <strong className="text-slate-800 font-mono">
                         Rp {d.ordersCount > 0 ? Math.round(d.revenue / d.ordersCount).toLocaleString('id-ID') : 0}
                       </strong>
                     </div>

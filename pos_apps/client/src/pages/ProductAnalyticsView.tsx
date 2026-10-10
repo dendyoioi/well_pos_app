@@ -164,7 +164,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
         <div className="flex items-center gap-3.5 min-w-0">
@@ -199,7 +199,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               window.print();
             }}
             disabled={!data && !isLocked}
-            className={`flex-1 sm:flex-initial justify-center px-3.5 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all ${
+            className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               isLocked
                 ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
@@ -219,7 +219,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               handleExportCSV();
             }}
             disabled={!data && !isLocked}
-            className={`flex-1 sm:flex-initial justify-center px-4 py-2.5 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all ${
+            className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer ${
               isLocked
                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
                 : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
@@ -249,7 +249,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
             <button
               key={item.key}
               onClick={() => setPeriodPreset(item.key as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
                 periodPreset === item.key
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -267,32 +267,23 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
+              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
             />
             <span className="text-xs text-slate-400">s/d</span>
             <input
               type="date"
               value={customEnd}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none"
+              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
             />
             <button
               onClick={fetchReport}
-              className="px-3.5 py-1.5 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all"
+              className="h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all flex items-center justify-center cursor-pointer"
             >
               Terapkan
             </button>
           </div>
         )}
-
-        <button
-          onClick={fetchReport}
-          disabled={loading}
-          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors self-end md:self-auto"
-          title="Segarkan data"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-900' : ''}`} />
-        </button>
       </div>
 
       {/* Konten Laporan: Paywall jika FREE */}
@@ -346,7 +337,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                <h3 className="text-2xl font-black font-mono text-slate-900 tracking-tight">
                   Rp {fs.totalCOGS.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
@@ -355,7 +346,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Rasio HPP Modal:</span>
-                <strong className="text-slate-800">
+                <strong className="text-slate-800 font-mono">
                   {fs.totalNetRevenue > 0
                     ? ((fs.totalCOGS / fs.totalNetRevenue) * 100).toFixed(1)
                     : 0}
@@ -375,16 +366,16 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-emerald-800 tracking-tight">
+                <h3 className="text-2xl font-black font-mono text-emerald-800 tracking-tight">
                   Rp {fs.grossProfit.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-emerald-700 mt-1 font-bold flex items-center gap-1">
-                  <span>Margin Rata-rata: {fs.grossProfitMargin}%</span>
+                  <span>Margin Rata-rata: <span className="font-mono">{fs.grossProfitMargin}%</span></span>
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Laba per Transaksi:</span>
-                <strong className="text-slate-800">
+                <strong className="text-slate-800 font-mono">
                   Rp{' '}
                   {fs.totalTransactions > 0
                     ? Math.round(fs.grossProfit / fs.totalTransactions).toLocaleString('id-ID')
@@ -404,7 +395,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                <h3 className="text-2xl font-black font-mono text-slate-900 tracking-tight">
                   {fs.grossProfitMargin}%
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
@@ -434,11 +425,11 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 </div>
               </div>
               <div className="mt-3">
-                <h3 className="text-2xl font-black text-rose-700 tracking-tight">
+                <h3 className="text-2xl font-black font-mono text-rose-700 tracking-tight">
                   Rp {totalDeadStockValue.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-rose-600 mt-1 font-medium">
-                  Dari {(data?.slowMovingProducts || []).length} produk slow-moving
+                  Dari <span className="font-mono">{(data?.slowMovingProducts || []).length}</span> produk slow-moving
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -527,18 +518,18 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                           <td className="px-5 py-3.5 whitespace-nowrap text-slate-500 font-medium">
                             {p.categoryName}
                           </td>
-                          <td className="px-5 py-3.5 text-right font-black text-slate-900">
+                          <td className="px-5 py-3.5 text-right font-black font-mono text-slate-900">
                             {p.qtySold.toLocaleString('id-ID')}
                           </td>
-                          <td className="px-5 py-3.5 text-right font-semibold text-slate-800">
+                          <td className="px-5 py-3.5 text-right font-semibold font-mono text-slate-800">
                             Rp {p.revenue.toLocaleString('id-ID')}
                           </td>
-                          <td className="px-5 py-3.5 text-right text-slate-500 font-medium">
+                          <td className="px-5 py-3.5 text-right text-slate-500 font-medium font-mono">
                             Rp {p.cost.toLocaleString('id-ID')}
                           </td>
-                          <td className="px-5 py-3.5 text-right font-black text-emerald-700">
+                          <td className="px-5 py-3.5 text-right font-black font-mono text-emerald-700">
                             Rp {p.profit.toLocaleString('id-ID')}{' '}
-                            <span className="text-[10px] text-emerald-600 font-normal ml-1">
+                            <span className="text-[10px] text-emerald-600 font-normal ml-1 font-mono">
                               ({p.profitMargin}%)
                             </span>
                           </td>
@@ -584,7 +575,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                               🥉
                             </span>
                           ) : (
-                            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 inline-flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                            <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 inline-flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 font-mono">
                               #{rankNum}
                             </span>
                           )}
@@ -598,14 +589,14 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                           </div>
                         </div>
 
-                        <span className="text-xs font-black text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full shrink-0">
+                        <span className="text-xs font-black font-mono text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full shrink-0">
                           {p.qtySold.toLocaleString('id-ID')} Terjual
                         </span>
                       </div>
 
                       <div className="flex items-baseline justify-between pt-1">
                         <span className="text-[11px] text-slate-400 font-medium">Total Omset</span>
-                        <span className="text-base font-black text-slate-900">
+                        <span className="text-base font-black font-mono text-slate-900">
                           Rp {p.revenue.toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -614,14 +605,17 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                       <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
                         <div>
                           <span className="text-[10px] text-slate-400 block font-medium">Modal (HPP)</span>
-                          <span className="text-xs font-bold text-slate-600">
+                          <span className="text-xs font-bold font-mono text-slate-600">
                             Rp {p.cost.toLocaleString('id-ID')}
                           </span>
                         </div>
                         <div>
                           <span className="text-[10px] text-slate-400 block font-medium">Laba Bersih &amp; Margin</span>
-                          <span className="text-xs font-black text-emerald-700">
-                            Rp {p.profit.toLocaleString('id-ID')} ({p.profitMargin}%)
+                          <span className="text-xs font-black font-mono text-emerald-700">
+                            Rp {p.profit.toLocaleString('id-ID')}{' '}
+                            <span className="text-[10px] text-emerald-600 font-normal ml-0.5 font-mono">
+                              ({p.profitMargin}%)
+                            </span>
                           </span>
                         </div>
                       </div>
@@ -702,19 +696,19 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                         <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
                           {p.categoryName}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-black text-slate-900">
+                        <td className="px-5 py-3.5 text-right font-black font-mono text-slate-900">
                           {p.currentStock.toLocaleString('id-ID')} unit
                         </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-slate-600">
+                        <td className="px-5 py-3.5 text-right font-semibold font-mono text-slate-600">
                           Rp {p.costPrice.toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-slate-800">
+                        <td className="px-5 py-3.5 text-right font-semibold font-mono text-slate-800">
                           Rp {p.basePrice.toLocaleString('id-ID')}
                         </td>
-                        <td className="px-5 py-3.5 text-right font-bold text-amber-700">
+                        <td className="px-5 py-3.5 text-right font-bold font-mono text-amber-700">
                           {p.qtySold} unit
                         </td>
-                        <td className="px-5 py-3.5 text-right font-black text-rose-600">
+                        <td className="px-5 py-3.5 text-right font-black font-mono text-rose-600">
                           Rp {(p.currentStock * p.costPrice).toLocaleString('id-ID')}
                         </td>
                       </tr>
@@ -751,7 +745,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                         </div>
                       </div>
 
-                      <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-xs font-bold font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
                         {p.qtySold} Terjual
                       </span>
                     </div>
@@ -760,21 +754,21 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                     <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center">
                       <div>
                         <span className="text-[10px] text-slate-400 block font-medium">Sisa Stok Fisik</span>
-                        <span className="text-xs font-bold text-slate-900">
+                        <span className="text-xs font-bold font-mono text-slate-900">
                           {p.currentStock.toLocaleString('id-ID')} unit
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 block font-medium">Modal Mengendap</span>
-                        <span className="text-xs font-black text-rose-600">
+                        <span className="text-xs font-black font-mono text-rose-600">
                           Rp {(p.currentStock * p.costPrice).toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                      <span>Harga Beli (HPP): <strong className="text-slate-700">Rp {p.costPrice.toLocaleString('id-ID')}</strong></span>
-                      <span>Harga Jual: <strong className="text-slate-800">Rp {p.basePrice.toLocaleString('id-ID')}</strong></span>
+                      <span>Harga Beli (HPP): <strong className="text-slate-700 font-mono">Rp {p.costPrice.toLocaleString('id-ID')}</strong></span>
+                      <span>Harga Jual: <strong className="text-slate-800 font-mono">Rp {p.basePrice.toLocaleString('id-ID')}</strong></span>
                     </div>
                   </div>
                 ));

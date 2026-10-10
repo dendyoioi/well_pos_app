@@ -4,7 +4,6 @@ import {
   TrendingDown,
   DollarSign,
   Download,
-  RefreshCw,
   Clock,
   ArrowUpRight,
   ArrowDownRight,
@@ -260,7 +259,7 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
   }, [chartPoints]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* 1. Filter Period & Export Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
         {/* Preset Buttons */}
@@ -276,7 +275,7 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
               key={btn.id}
               type="button"
               onClick={() => setPeriodPreset(btn.id as any)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
                 periodPreset === btn.id
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -295,33 +294,23 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
               />
               <span className="text-slate-400 text-xs">s/d</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
               />
             </div>
           )}
 
           <button
             type="button"
-            onClick={fetchData}
-            disabled={loading}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all cursor-pointer"
-            title="Segarkan Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-
-          <button
-            type="button"
             onClick={handleExportCSV}
             disabled={!summary || loading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Ekspor CSV</span>
@@ -340,22 +329,22 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-emerald-600">
+            <span className="text-2xl font-black font-mono text-emerald-600">
               Rp {(summary?.totalCashInflow ?? 0).toLocaleString('id-ID')}
             </span>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px] text-slate-500">
             <div className="flex justify-between">
               <span>Penjualan Tunai:</span>
-              <span className="font-semibold text-slate-700">Rp {(summary?.totalCashSales ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono text-slate-700">Rp {(summary?.totalCashSales ?? 0).toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between">
               <span>Pelunasan Kasbon:</span>
-              <span className="font-semibold text-emerald-600">Rp {(summary?.totalDebtRepayments ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono text-emerald-600">Rp {(summary?.totalDebtRepayments ?? 0).toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between">
               <span>Kas Masuk Laci:</span>
-              <span className="font-semibold text-slate-700">Rp {(summary?.totalManualCashIn ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono text-slate-700">Rp {(summary?.totalManualCashIn ?? 0).toLocaleString('id-ID')}</span>
             </div>
           </div>
         </div>
@@ -369,18 +358,18 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-rose-600">
+            <span className="text-2xl font-black font-mono text-rose-600">
               Rp {(summary?.totalCashOutflow ?? 0).toLocaleString('id-ID')}
             </span>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px] text-slate-500">
             <div className="flex justify-between">
               <span>Pengeluaran / Petty Cash:</span>
-              <span className="font-semibold text-rose-600">Rp {(summary?.totalCashOut ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono text-rose-600">Rp {(summary?.totalCashOut ?? 0).toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between">
               <span>Refund Tunai:</span>
-              <span className="font-semibold text-slate-700">Rp {(summary?.totalRefunds ?? 0).toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono text-slate-700">Rp {(summary?.totalRefunds ?? 0).toLocaleString('id-ID')}</span>
             </div>
           </div>
         </div>
@@ -396,7 +385,7 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className={`text-2xl font-black ${
+            <span className={`text-2xl font-black font-mono ${
               (summary?.netCashFlow ?? 0) >= 0 ? 'text-blue-900' : 'text-rose-600'
             }`}>
               Rp {(summary?.netCashFlow ?? 0).toLocaleString('id-ID')}
@@ -425,13 +414,13 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-amber-700">
+            <span className="text-2xl font-black font-mono text-amber-700">
               Rp {(summary?.outstandingReceivables ?? 0).toLocaleString('id-ID')}
             </span>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
             <span>Faktur Kasbon:</span>
-            <span className="font-bold text-slate-800">{summary?.unpaidReceivablesCount ?? 0} Transaksi</span>
+            <span className="font-bold font-mono text-slate-800">{summary?.unpaidReceivablesCount ?? 0} Transaksi</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">Potensi kas masuk saat dilunasi</p>
         </div>
@@ -487,25 +476,25 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/60 text-xs">
             <div>
               <span className="text-slate-400 font-bold block text-[11px]">Total Omset Terkumpul</span>
-              <span className="font-black text-slate-900 text-sm block mt-0.5">
+              <span className="font-black text-slate-900 text-sm font-mono block mt-0.5">
                 Rp {performanceData.summary.totalRevenue.toLocaleString('id-ID')}
               </span>
             </div>
             <div>
               <span className="text-slate-400 font-bold block text-[11px]">Rata-rata Transaksi (AOV)</span>
-              <span className="font-black text-blue-900 text-sm block mt-0.5">
+              <span className="font-black text-blue-900 text-sm font-mono block mt-0.5">
                 Rp {performanceData.summary.avgOrderValue.toLocaleString('id-ID')}
               </span>
             </div>
             <div>
               <span className="text-slate-400 font-bold block text-[11px]">Total Transaksi</span>
-              <span className="font-black text-slate-900 text-sm block mt-0.5">
+              <span className="font-black text-slate-900 text-sm font-mono block mt-0.5">
                 {performanceData.summary.totalOrders} Pesanan
               </span>
             </div>
             <div>
               <span className="text-slate-400 font-bold block text-[11px]">Rekor Penjualan Terbaik</span>
-              <span className="font-black text-emerald-600 text-sm block mt-0.5">
+              <span className="font-black text-emerald-600 text-sm font-mono block mt-0.5">
                 Rp {performanceData.summary.bestDay.revenue.toLocaleString('id-ID')}
               </span>
               <span className="text-[10px] text-slate-400 block">{performanceData.summary.bestDay.date}</span>
@@ -681,23 +670,23 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                         year: 'numeric',
                       })}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-slate-700">
+                    <td className="py-3 px-4 text-right font-medium font-mono text-slate-700">
                       Rp {row.cashSales.toLocaleString('id-ID')}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-emerald-600">
+                    <td className="py-3 px-4 text-right font-medium font-mono text-emerald-600">
                       {row.debtRepayments > 0 ? `+Rp ${row.debtRepayments.toLocaleString('id-ID')}` : '-'}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-blue-700">
+                    <td className="py-3 px-4 text-right font-medium font-mono text-blue-700">
                       {row.manualCashIn > 0 ? `+Rp ${row.manualCashIn.toLocaleString('id-ID')}` : '-'}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-rose-600">
+                    <td className="py-3 px-4 text-right font-medium font-mono text-rose-600">
                       {row.cashOut > 0 ? `-Rp ${row.cashOut.toLocaleString('id-ID')}` : '-'}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-slate-500">
+                    <td className="py-3 px-4 text-right font-medium font-mono text-slate-500">
                       {row.refunds > 0 ? `-Rp ${row.refunds.toLocaleString('id-ID')}` : '-'}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className={`font-black ${row.netFlow >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      <span className={`font-black font-mono ${row.netFlow >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {row.netFlow >= 0 ? '+' : ''}Rp {row.netFlow.toLocaleString('id-ID')}
                       </span>
                     </td>
@@ -779,7 +768,7 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
                       <td className="py-3 px-4 text-slate-600 max-w-xs truncate">
                         {m.notes || '-'}
                       </td>
-                      <td className="py-3 px-4 text-right font-black">
+                      <td className="py-3 px-4 text-right font-black font-mono">
                         <span className={isCashIn ? 'text-emerald-600' : 'text-rose-600'}>
                           {isCashIn ? '+' : '-'}Rp {m.amount.toLocaleString('id-ID')}
                         </span>
