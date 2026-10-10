@@ -1965,7 +1965,27 @@ RECORD AUDIT KRUSIAL: PENGUATAN OTORISASI & KEAMANAN API ROUTER-LEVEL (SECURITY 
     • scripts/docs/artifacts/recipes_bom_dropdown_clean.png
 • 4. Status Build: pos_apps/server dan pos_apps/client EXIT CODE 0.
 ===============================================================================
+[10 OKTOBER 2026] STANDARISASI ENTERPRISE UI/UX PELANGGAN, CRM & KASBON (FASE 9)
+===============================================================================
+• 1. Modul Buku Kasbon & Piutang (CustomerDebtsTab.tsx):
+  - Eliminasi tombol reload manual (<RefreshCw />) di toolbar (Rule 16 AGENTS.md).
+  - Standarisasi 4 KPI cards piutang ke font-mono text-xl sm:text-2xl font-black.
+  - Standarisasi toolbar pencarian & filter status ke ketinggian h-10 rounded-xl font-bold.
+  - Implementasi Hybrid Desktop Table & Mobile Card List View berdimensi ramah sentuhan, angka berformat font-mono, dan tombol aksi h-8/h-9 rounded-xl.
+  - Standarisasi Modal Detail & Modal Catat Pelunasan ke pola kanonikal bottom-sheet PWA dengan Sticky Action Footer terpisah dan safe-area padding iPhone.
+• 2. Modul Direktori Pelanggan & Loyalitas Member (CustomersView.tsx):
+  - Subtab Direktori vs Kasbon distandarisasi ke pill container p-1 bg-slate-100 rounded-2xl dengan tombol h-9 px-4.
+  - Tombol aksi primer "+ Tambah Pelanggan Baru" diseragamkan ke h-10 px-4 rounded-xl font-bold bg-blue-900.
+  - 4 KPI summary cards (Total Pelanggan, Pelanggan Loyal, Akumulasi Belanja, Rata-rata/Pelanggan) diformat ke font-mono text-2xl font-black.
+  - Toolbar filter: Search input ke h-10, dropdown urutkan ke h-10 pl-3 pr-8 appearance-none + ChevronDown.
+  - Desktop table & Mobile cards: Format total belanja, poin member, kontak, dan tanggal ke font-mono; tombol aksi desktop w-8 h-8 rounded-xl dan mobile h-9 rounded-xl.
+  - Modal Tambah/Edit Pelanggan: Ubah ke bottom-sheet responsif PWA items-end sm:items-center max-h-[92dvh] sm:max-h-[90vh], input form h-10, dan Sticky Action Footer h-10 terpisah.
+  - Modal Detail Pelanggan: Ubah ke bottom-sheet responsif PWA, subtab riwayat belanja vs poin ke h-9 px-4 rounded-xl, form penyesuaian poin manual h-10, angka-angka finansial berformat font-mono, dan Sticky Action Footer dengan tombol Tutup h-10.
+  - PWA mobile bottom clearance pb-28 sm:pb-16 font-sans terpasang pada kontainer utama.
+• 3. Status Build: pos_apps/server dan pos_apps/client EXIT CODE 0 (Bersih 100%).
+===============================================================================
 ```
+
 
 
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search,
-  RefreshCw,
+  Eye,
   Clock,
   AlertTriangle,
   CheckCircle2,
@@ -199,7 +199,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* 1. KPI Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Piutang Aktif */}
@@ -211,11 +211,11 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-xl sm:text-2xl font-black text-rose-600">
+            <span className="font-mono text-xl sm:text-2xl font-black text-rose-600">
               Rp {(summary?.totalRemaining ?? 0).toLocaleString('id-ID')}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Belum terlunasi di pelanggan</p>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">Belum terlunasi di pelanggan</p>
         </div>
 
         {/* Faktur Belum Lunas */}
@@ -227,12 +227,12 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-black text-amber-700">
+            <span className="font-mono text-2xl font-black text-amber-700">
               {summary?.unpaidCount ?? 0}
             </span>
             <span className="text-xs text-slate-400 font-semibold">Transaksi</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Status Belum Lunas / Cicilan</p>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">Status Belum Lunas / Cicilan</p>
         </div>
 
         {/* Total Terbayar */}
@@ -244,11 +244,11 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-xl sm:text-2xl font-black text-emerald-600">
+            <span className="font-mono text-xl sm:text-2xl font-black text-emerald-600">
               Rp {(summary?.totalPaid ?? 0).toLocaleString('id-ID')}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Berhasil ditagih &amp; masuk kas</p>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">Berhasil ditagih &amp; masuk kas</p>
         </div>
 
         {/* Akumulasi Kasbon */}
@@ -260,11 +260,11 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-xl sm:text-2xl font-black text-slate-900">
+            <span className="font-mono text-xl sm:text-2xl font-black text-slate-900">
               Rp {(summary?.totalDebt ?? 0).toLocaleString('id-ID')}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Akumulasi keseluruhan kasbon</p>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">Akumulasi keseluruhan kasbon</p>
         </div>
       </div>
 
@@ -278,7 +278,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari pelanggan, nomor telepon, atau nomor faktur..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+            className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all"
           />
           {search && (
             <button
@@ -302,7 +302,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
               key={st.key}
               type="button"
               onClick={() => setStatusFilter(st.key)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                 statusFilter === st.key
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -311,16 +311,6 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
               {st.label}
             </button>
           ))}
-
-          <button
-            type="button"
-            onClick={fetchDebts}
-            disabled={loading}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all shrink-0 cursor-pointer"
-            title="Muat Ulang"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 
@@ -351,152 +341,280 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
-              <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Faktur &amp; Tanggal</th>
-                  <th className="py-3 px-4">Pelanggan</th>
-                  <th className="py-3 px-4 text-right">Total Kasbon</th>
-                  <th className="py-3 px-4 text-right">Terbayar</th>
-                  <th className="py-3 px-4 text-right">Sisa Piutang</th>
-                  <th className="py-3 px-4">Jatuh Tempo</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {debts.map((debt) => {
-                  const overdue = isOverdue(debt.dueDate, debt.status);
-                  return (
-                    <tr key={debt.id} className="hover:bg-blue-50/30 transition-colors">
-                      {/* Faktur & Tanggal */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">
-                          {debt.order?.invoiceNumber || debt.id.slice(0, 8)}
-                        </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Calendar className="w-3 h-3 text-slate-400" />
-                          <span>{new Date(debt.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                        </div>
-                        {debt.outlet?.name && (
-                          <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-semibold inline-block mt-0.5">
-                            {debt.outlet.name}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Pelanggan */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">
-                          {debt.customer?.name || 'Pelanggan Toko'}
-                        </div>
-                        {debt.customer?.phone && (
-                          <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-0.5">
-                            <Phone className="w-3 h-3 text-slate-400" />
-                            <span>{debt.customer.phone}</span>
-                            {debt.remainingAmount > 0 && debt.status !== 'PAID' && (
-                              <a
-                                href={getWaLink(debt.customer.phone, debt.customer.name, debt.order?.invoiceNumber, debt.remainingAmount) || '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-0.5 text-emerald-600 hover:text-emerald-700 font-bold ml-1"
-                                title="Kirim Tagihan via WhatsApp"
-                              >
-                                <MessageCircle className="w-3 h-3" />
-                                <span>Tagih</span>
-                              </a>
-                            )}
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-4">Faktur &amp; Tanggal</th>
+                    <th className="py-3 px-4">Pelanggan</th>
+                    <th className="py-3 px-4 text-right">Total Kasbon</th>
+                    <th className="py-3 px-4 text-right">Terbayar</th>
+                    <th className="py-3 px-4 text-right">Sisa Piutang</th>
+                    <th className="py-3 px-4">Jatuh Tempo</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {debts.map((debt) => {
+                    const overdue = isOverdue(debt.dueDate, debt.status);
+                    return (
+                      <tr key={debt.id} className="hover:bg-blue-50/30 transition-colors">
+                        {/* Faktur & Tanggal */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-mono font-bold text-slate-900">
+                            {debt.order?.invoiceNumber || debt.id.slice(0, 8)}
                           </div>
-                        )}
-                      </td>
-
-                      {/* Total Kasbon */}
-                      <td className="py-3.5 px-4 text-right font-medium text-slate-600">
-                        Rp {debt.totalAmount.toLocaleString('id-ID')}
-                      </td>
-
-                      {/* Terbayar */}
-                      <td className="py-3.5 px-4 text-right font-medium text-emerald-600">
-                        Rp {debt.paidAmount.toLocaleString('id-ID')}
-                      </td>
-
-                      {/* Sisa Piutang */}
-                      <td className="py-3.5 px-4 text-right">
-                        <span className={`font-black ${debt.remainingAmount > 0 ? 'text-rose-600 text-sm' : 'text-slate-400'}`}>
-                          Rp {debt.remainingAmount.toLocaleString('id-ID')}
-                        </span>
-                      </td>
-
-                      {/* Jatuh Tempo */}
-                      <td className="py-3.5 px-4">
-                        {debt.dueDate ? (
-                          <div>
-                            <span className={`text-xs font-semibold ${overdue ? 'text-rose-600 font-black' : 'text-slate-600'}`}>
-                              {new Date(debt.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          <div className="font-mono text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            <span>{new Date(debt.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          </div>
+                          {debt.outlet?.name && (
+                            <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-semibold inline-block mt-0.5">
+                              {debt.outlet.name}
                             </span>
-                            {overdue && (
-                              <span className="block text-[10px] text-rose-600 font-black animate-pulse">
-                                Lewat Jatuh Tempo!
+                          )}
+                        </td>
+
+                        {/* Pelanggan */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-900">
+                            {debt.customer?.name || 'Pelanggan Toko'}
+                          </div>
+                          {debt.customer?.phone && (
+                            <div className="flex items-center gap-1 font-mono text-[11px] text-slate-500 mt-0.5">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{debt.customer.phone}</span>
+                              {debt.remainingAmount > 0 && debt.status !== 'PAID' && (
+                                <a
+                                  href={getWaLink(debt.customer.phone, debt.customer.name, debt.order?.invoiceNumber, debt.remainingAmount) || '#'}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-0.5 text-emerald-600 hover:text-emerald-700 font-bold ml-1"
+                                  title="Kirim Tagihan via WhatsApp"
+                                >
+                                  <MessageCircle className="w-3 h-3" />
+                                  <span>Tagih</span>
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Total Kasbon */}
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-600">
+                          Rp {debt.totalAmount.toLocaleString('id-ID')}
+                        </td>
+
+                        {/* Terbayar */}
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600">
+                          Rp {debt.paidAmount.toLocaleString('id-ID')}
+                        </td>
+
+                        {/* Sisa Piutang */}
+                        <td className="py-3.5 px-4 text-right">
+                          <span className={`font-mono font-black ${debt.remainingAmount > 0 ? 'text-rose-600 text-sm' : 'text-slate-400'}`}>
+                            Rp {debt.remainingAmount.toLocaleString('id-ID')}
+                          </span>
+                        </td>
+
+                        {/* Jatuh Tempo */}
+                        <td className="py-3.5 px-4">
+                          {debt.dueDate ? (
+                            <div>
+                              <span className={`font-mono text-xs font-semibold ${overdue ? 'text-rose-600 font-black' : 'text-slate-600'}`}>
+                                {new Date(debt.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                               </span>
+                              {overdue && (
+                                <span className="block text-[10px] text-rose-600 font-black animate-pulse">
+                                  Lewat Jatuh Tempo!
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3.5 px-4 text-center">
+                          {debt.status === 'PAID' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Lunas</span>
+                            </span>
+                          ) : debt.status === 'PARTIAL' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              <Clock className="w-3 h-3" />
+                              <span>Dicicil</span>
+                            </span>
+                          ) : debt.status === 'CANCELLED' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                              <span>Dibatalkan</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Belum Lunas</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Aksi */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetail(debt)}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer flex items-center justify-center"
+                              title="Lihat Rincian Piutang"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {debt.remainingAmount > 0 && debt.status !== 'PAID' && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPay(debt)}
+                                className="h-8 px-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                              >
+                                <DollarSign className="w-3.5 h-3.5" />
+                                <span>Bayar</span>
+                              </button>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
-                      </td>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                      {/* Status */}
-                      <td className="py-3.5 px-4 text-center">
+            {/* Mobile Card List View */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {debts.map((debt) => {
+                const overdue = isOverdue(debt.dueDate, debt.status);
+                return (
+                  <div key={debt.id} className="p-4 space-y-3 hover:bg-slate-50/70 transition-colors">
+                    {/* Header: Invoice & Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="font-mono font-bold text-slate-900 text-xs block">
+                          {debt.order?.invoiceNumber || debt.id.slice(0, 8)}
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-400">
+                          {new Date(debt.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div>
                         {debt.status === 'PAID' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Lunas</span>
                           </span>
                         ) : debt.status === 'PARTIAL' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                             <Clock className="w-3 h-3" />
                             <span>Dicicil</span>
                           </span>
                         ) : debt.status === 'CANCELLED' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
                             <span>Dibatalkan</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                             <AlertTriangle className="w-3 h-3" />
                             <span>Belum Lunas</span>
                           </span>
                         )}
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Aksi */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                    {/* Pelanggan Info */}
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800 block">
+                          {debt.customer?.name || 'Pelanggan Toko'}
+                        </span>
+                        {debt.customer?.phone && (
+                          <span className="font-mono text-[11px] text-slate-500">
+                            {debt.customer.phone}
+                          </span>
+                        )}
+                      </div>
+                      {debt.customer?.phone && debt.remainingAmount > 0 && debt.status !== 'PAID' && (
+                        <a
+                          href={getWaLink(debt.customer.phone, debt.customer.name, debt.order?.invoiceNumber, debt.remainingAmount) || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-xs hover:bg-emerald-100"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>Tagih WA</span>
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Financial Summary Box */}
+                    <div className="grid grid-cols-3 gap-2 p-2.5 bg-slate-50 rounded-xl text-center">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold">Total</span>
+                        <span className="font-mono text-xs font-semibold text-slate-700">
+                          Rp {debt.totalAmount.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold">Terbayar</span>
+                        <span className="font-mono text-xs font-semibold text-emerald-600">
+                          Rp {debt.paidAmount.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold">Sisa</span>
+                        <span className={`font-mono text-xs font-black ${debt.remainingAmount > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                          Rp {debt.remainingAmount.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Due Date & Action */}
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <div className="text-[11px]">
+                        {debt.dueDate ? (
+                          <span className={`font-mono ${overdue ? 'text-rose-600 font-black' : 'text-slate-500 font-medium'}`}>
+                            Tempo: {new Date(debt.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                            {overdue && ' ⚠️'}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Tanpa tempo</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetail(debt)}
+                          className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                        >
+                          Rincian
+                        </button>
+                        {debt.remainingAmount > 0 && debt.status !== 'PAID' && (
                           <button
                             type="button"
-                            onClick={() => handleOpenDetail(debt)}
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                            onClick={() => handleOpenPay(debt)}
+                            className="h-9 px-3.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs"
                           >
-                            Rincian
+                            Bayar
                           </button>
-                          {debt.remainingAmount > 0 && debt.status !== 'PAID' && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPay(debt)}
-                              className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
-                            >
-                              Pelunasan
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Canonical TablePagination */}
@@ -720,7 +838,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl border border-slate-300 font-bold text-xs text-slate-700 hover:bg-slate-100 transition-colors"
+                className="h-10 px-5 rounded-xl border border-slate-300 font-bold text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Tutup
               </button>
@@ -732,7 +850,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
                     setIsDetailModalOpen(false);
                     handleOpenPay(selectedDebtDetail);
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 flex items-center gap-2"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
                 >
                   <DollarSign className="w-4 h-4" />
                   <span>Catat Pelunasan Sekarang</span>
@@ -898,14 +1016,14 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
                   type="button"
                   onClick={() => setIsPayModalOpen(false)}
                   disabled={submittingPay}
-                  className="px-5 py-2.5 rounded-xl border border-slate-300 font-bold text-xs text-slate-700 hover:bg-slate-100 transition-colors"
+                  className="h-10 px-5 rounded-xl border border-slate-300 font-bold text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPay || payAmount <= 0}
-                  className="px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 flex items-center gap-2"
+                  className="h-10 px-6 rounded-xl bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
                 >
                   {submittingPay ? (
                     <>
