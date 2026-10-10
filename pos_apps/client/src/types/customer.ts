@@ -10,6 +10,7 @@ export type PointTxType =
 export interface CustomerOrderSummary {
   id: string;
   invoiceNumber: string;
+  totalAmount?: number;
   grandTotal: number;
   paymentStatus: string;
   createdAt: string;
@@ -52,6 +53,8 @@ export interface Customer {
   updatedAt: string;
   orders?: CustomerOrderSummary[];
   pointLedgers?: CustomerPointLedger[];
+  firstOutlet?: { id?: string; name: string } | null;
+  firstOrderAt?: string | null;
 }
 
 export interface CustomerSummaryStats {

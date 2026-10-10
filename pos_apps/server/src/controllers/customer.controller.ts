@@ -58,9 +58,16 @@ export const getCustomers = async (req: Request, res: Response) => {
       ];
     }
 
-    // Tentukan kolom pengurutan yang aman
-    const validSortFields = ['name', 'points', 'createdAt'];
-    const resolvedSortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    // Tentukan kolom pengurutan yang aman (dukung totalSpent, visitCount, loyaltyPoints, name, createdAt)
+    const validSortFields: Record<string, string> = {
+      name: 'name',
+      createdAt: 'createdAt',
+      totalSpent: 'totalSpent',
+      visitCount: 'visitCount',
+      loyaltyPoints: 'loyaltyPoints',
+      points: 'loyaltyPoints',
+    };
+    const resolvedSortField = validSortFields[sortBy] || 'createdAt';
     const orderBy: any = { [resolvedSortField]: sortOrder };
 
     // Ambil data pelanggan dan total hitungan secara paralel
@@ -96,9 +103,85 @@ export const getCustomers = async (req: Request, res: Response) => {
     const activeRepeatMembers = Array.isArray(repeatMembersCount) ? repeatMembersCount.length : 0;
     const avgSpendPerCustomer = totalCustomers > 0 ? Math.round(totalRevenueFromCustomers / totalCustomers) : 0;
 
+    // Sinkronisasi data agregat pesanan per pelanggan jika ada ketidaksesuaian di DB
+    const customerIds = customers.map((c) => c.id);
+    const [orderAggs, firstOrders] = await Promise.all([
+      customerIds.length > 0 ? prisma.order.groupBy({
+        by: ['customerId'],
+        where: {
+          customerId: { in: customerIds },
+          paymentStatus: PaymentStatus.PAID,
+        },
+        _sum: { totalAmount: true },
+        _count: { id: true },
+      }) : [],
+      customerIds.length > 0 ? prisma.order.findMany({
+        where: {
+          customerId: { in: customerIds },
+        },
+        distinct: ['customerId'],
+        orderBy: [
+          { customerId: 'asc' },
+          { createdAt: 'asc' },
+        ],
+        select: {
+          customerId: true,
+          createdAt: true,
+          outlet: { select: { id: true, name: true } },
+        },
+      }) : [],
+    ]);
+
+    const aggMap = new Map(orderAggs.map((a) => [a.customerId, a]));
+    const firstOutletMap = new Map(firstOrders.map((fo) => [fo.customerId, fo.outlet]));
+
+    let enrichedCustomers = customers.map((c) => {
+      const agg = aggMap.get(c.id);
+      const ordersSpent = Number(agg?._sum?.totalAmount || 0);
+      const ordersVisits = agg?._count?.id || 0;
+
+      const effectiveSpent = Number(c.totalSpent) > 0 ? Number(c.totalSpent) : ordersSpent;
+      const effectiveVisits = c.visitCount > 0 ? c.visitCount : ordersVisits;
+      const effectiveTier = c.tier && c.tier !== 'BRONZE' ? c.tier : loyaltyService.resolveTier(effectiveSpent);
+      const effectivePoints = c.loyaltyPoints > 0 ? c.loyaltyPoints : Math.floor(effectiveSpent / 10000);
+
+      // Sinkronisasi otomatis ke database di background jika kolom statis masih 0 padahal transaksi ada
+      if (ordersSpent > 0 && (Number(c.totalSpent) === 0 || c.visitCount === 0)) {
+        prisma.customer.update({
+          where: { id: c.id },
+          data: {
+            totalSpent: ordersSpent,
+            visitCount: ordersVisits,
+            tier: effectiveTier,
+            ...(c.loyaltyPoints === 0 ? { loyaltyPoints: effectivePoints } : {}),
+          },
+        }).catch((err) => console.error('Failed to sync customer stats:', err));
+      }
+
+      return {
+        ...c,
+        totalSpent: effectiveSpent,
+        visitCount: effectiveVisits,
+        tier: effectiveTier,
+        loyaltyPoints: effectivePoints,
+        firstOutlet: firstOutletMap.get(c.id) || null,
+      };
+    });
+
+    // Urutkan ulang in-memory untuk memastikan ranking top spender & kunjungan 100% presisi
+    if (resolvedSortField === 'totalSpent') {
+      enrichedCustomers.sort((a, b) =>
+        sortOrder === 'asc' ? Number(a.totalSpent) - Number(b.totalSpent) : Number(b.totalSpent) - Number(a.totalSpent)
+      );
+    } else if (resolvedSortField === 'visitCount') {
+      enrichedCustomers.sort((a, b) =>
+        sortOrder === 'asc' ? a.visitCount - b.visitCount : b.visitCount - a.visitCount
+      );
+    }
+
     return res.status(200).json({
       status: 'success',
-      data: customers,
+      data: enrichedCustomers,
       summary: {
         totalCustomers,
         totalRevenueFromCustomers,
@@ -132,26 +215,44 @@ export const getCustomerById = async (req: Request, res: Response) => {
     const user = (req as any).user;
     const tenantId = user?.tenantId;
 
-    const customer = await prisma.customer.findFirst({
-      where: {
-        id,
-        ...(tenantId ? { tenantId } : {}),
-      },
-      include: {
-        orders: {
-          take: 15,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            invoiceNumber: true,
-            totalAmount: true,
-            paymentStatus: true,
-            createdAt: true,
-            outlet: { select: { name: true } },
+    const [customer, paidOrdersAgg, firstOrder] = await Promise.all([
+      prisma.customer.findFirst({
+        where: {
+          id,
+          ...(tenantId ? { tenantId } : {}),
+        },
+        include: {
+          orders: {
+            take: 50,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              invoiceNumber: true,
+              totalAmount: true,
+              paymentStatus: true,
+              createdAt: true,
+              outlet: { select: { name: true } },
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.order.aggregate({
+        where: {
+          customerId: id,
+          paymentStatus: PaymentStatus.PAID,
+        },
+        _sum: { totalAmount: true },
+        _count: { id: true },
+      }),
+      prisma.order.findFirst({
+        where: { customerId: id },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          createdAt: true,
+          outlet: { select: { id: true, name: true } },
+        },
+      }),
+    ]);
 
     if (!customer) {
       return res.status(404).json({
@@ -160,9 +261,44 @@ export const getCustomerById = async (req: Request, res: Response) => {
       });
     }
 
+    const ordersSpent = Number(paidOrdersAgg._sum.totalAmount || 0);
+    const ordersVisits = paidOrdersAgg._count.id || 0;
+    const effectiveSpent = Number(customer.totalSpent) > 0 ? Number(customer.totalSpent) : ordersSpent;
+    const effectiveVisits = customer.visitCount > 0 ? customer.visitCount : ordersVisits;
+    const effectiveTier = customer.tier && customer.tier !== 'BRONZE' ? customer.tier : loyaltyService.resolveTier(effectiveSpent);
+    const effectivePoints = customer.loyaltyPoints > 0 ? customer.loyaltyPoints : Math.floor(effectiveSpent / 10000);
+
+    // Sinkronkan ke database jika kolom statis belum terisi
+    if (ordersSpent > 0 && (Number(customer.totalSpent) === 0 || customer.visitCount === 0)) {
+      prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          totalSpent: ordersSpent,
+          visitCount: ordersVisits,
+          tier: effectiveTier,
+          ...(customer.loyaltyPoints === 0 ? { loyaltyPoints: effectivePoints } : {}),
+        },
+      }).catch((err) => console.error('Failed to sync customer stats:', err));
+    }
+
+    // Format orders agar menyediakan grandTotal dan totalAmount secara konsisten
+    const formattedOrders = customer.orders.map((ord) => ({
+      ...ord,
+      grandTotal: Number(ord.totalAmount),
+    }));
+
     return res.status(200).json({
       status: 'success',
-      data: customer,
+      data: {
+        ...customer,
+        totalSpent: effectiveSpent,
+        visitCount: effectiveVisits,
+        tier: effectiveTier,
+        loyaltyPoints: effectivePoints,
+        orders: formattedOrders,
+        firstOutlet: firstOrder?.outlet || null,
+        firstOrderAt: firstOrder?.createdAt || null,
+      },
     });
   } catch (error) {
     console.error('Error saat mengambil detail pelanggan:', error);

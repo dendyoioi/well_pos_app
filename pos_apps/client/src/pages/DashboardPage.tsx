@@ -672,7 +672,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'promotions' ? (
           <PromotionsView />
         ) : activeTab === 'staff_users' || activeTab === 'users' ? (
-          <UsersView onNavigateToRoles={() => setActiveTab('staff_roles')} />
+          <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
         ) : activeTab === 'staff_roles' ? (
           <StaffRolesView onBackToStaffList={() => setActiveTab('staff_users')} />
         ) : activeTab === 'settings_receipt' ? (
@@ -1939,7 +1939,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'reports' ? (
           <FinancialReportView activeOutlet={activeOutlet} />
         ) : activeTab === 'users' ? (
-          <UsersView onNavigateToRoles={() => setActiveTab('staff_roles')} />
+          <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
         ) : activeTab === 'warehouses' ? (
           <WarehousesView
             activeOutletId={activeOutlet?.id}

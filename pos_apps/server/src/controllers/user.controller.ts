@@ -82,11 +82,15 @@ export const getUsers = async (req: Request, res: Response) => {
       },
     });
 
+    // Temukan akun pendaftar awal (prioritas role OWNER, atau user pertama yang dibuat)
+    const initialOwnerUser = users.find((u) => u.role === Role.OWNER) || users[0];
+
     // Sanitize: jangan expose hash sensitif ke client
     const sanitized = users.map(({ pinHash, passwordHash, ...u }) => ({
       ...u,
       hasPin: pinHash !== null,
       hasPassword: passwordHash !== null,
+      isInitialOwner: initialOwnerUser ? u.id === initialOwnerUser.id : false,
     }));
 
     return res.status(200).json({
@@ -279,16 +283,24 @@ export const updateUser = async (req: Request, res: Response) => {
     );
     const currentRole = currentUserRows?.[0]?.role as Role | undefined;
 
-    // Tentukan role yang akan disimpan — jaga agar OWNER tidak bisa di-downgrade via form biasa
+    // Tentukan role yang akan disimpan — jaga agar OWNER / pendaftar awal tidak bisa di-downgrade atau dinonaktifkan
+    const initialOwnerUser = await prisma.user.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
+    const isInitialOwner = currentRole === Role.OWNER || (initialOwnerUser && id === initialOwnerUser.id);
+
     let targetRole: Role | undefined = undefined;
-    if (role) {
-      const mappedRole = mapToSystemRole(role);
-      // Jika user saat ini OWNER, pertahankan role OWNER (tidak boleh diubah dari form staf)
-      if (currentRole === Role.OWNER) {
-        targetRole = Role.OWNER;
-      } else {
-        targetRole = mappedRole;
+    if (isInitialOwner) {
+      targetRole = Role.OWNER;
+      if (isActive === false) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Akun Pemilik Usaha / Pendaftar Awal utama tidak dapat dinonaktifkan.',
+        });
       }
+    } else if (role) {
+      targetRole = mapToSystemRole(role);
     }
 
     const updateData: any = {};
@@ -399,11 +411,16 @@ export const deleteUser = async (req: Request, res: Response) => {
       });
     }
 
-    // Pemilik Usaha (Owner) tidak dapat dinonaktifkan atau dihapus
-    if (user.role === Role.OWNER) {
+    // Pemilik Usaha (Owner) utama / pendaftar awal tidak dapat dinonaktifkan atau dihapus dari Backoffice
+    const initialOwnerUser = await prisma.user.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (user.role === Role.OWNER || (initialOwnerUser && user.id === initialOwnerUser.id)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Akun Pemilik Usaha (Owner) utama tidak dapat dinonaktifkan atau dihapus.',
+        message: 'Akun Pemilik Usaha / Pendaftar Awal utama tidak dapat dinonaktifkan atau dihapus. Penghapusan akun hanya dapat dilakukan melalui portal SuperAdmin.',
       });
     }
 

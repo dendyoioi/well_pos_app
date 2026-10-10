@@ -160,6 +160,34 @@ export const SCHEMA_PATCHES: SchemaPatch[] = [
       UPDATE "saas_promos" SET "max_discount" = NULL WHERE "type" != 'DISCOUNT_PERCENT';
     `,
   },
+  {
+    id: '20261010_01_sync_customer_lifetime_stats',
+    description: 'Sinkronisasi total_spent, visit_count, tier, dan loyalty_points pelanggan dari transaksi riil orders (CRM)',
+    sql: `UPDATE "customers" c
+SET 
+  "total_spent" = sub.total_spent,
+  "visit_count" = sub.visit_count,
+  "tier" = CASE
+    WHEN sub.total_spent >= 15000000 THEN 'PLATINUM'::"CustomerTier"
+    WHEN sub.total_spent >= 5000000 THEN 'GOLD'::"CustomerTier"
+    WHEN sub.total_spent >= 1000000 THEN 'SILVER'::"CustomerTier"
+    ELSE 'BRONZE'::"CustomerTier"
+  END,
+  "loyalty_points" = CASE 
+    WHEN c.loyalty_points = 0 THEN FLOOR(sub.total_spent / 10000)
+    ELSE c.loyalty_points 
+  END
+FROM (
+  SELECT 
+    customer_id, 
+    SUM(grand_total) as total_spent, 
+    COUNT(id) as visit_count 
+  FROM "orders" 
+  WHERE customer_id IS NOT NULL AND payment_status = 'PAID'
+  GROUP BY customer_id
+) sub
+WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.loyalty_points = 0);`,
+  },
 ];
 
 /**

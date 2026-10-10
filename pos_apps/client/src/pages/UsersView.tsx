@@ -13,7 +13,7 @@ import {
   Mail,
   UserCheck,
   Search,
-  RefreshCw,
+  ChevronDown,
   Store,
   ArrowLeft,
   Sparkles,
@@ -22,6 +22,7 @@ import {
   Hash,
   LogOut,
   Clock,
+  Crown,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
@@ -42,6 +43,7 @@ interface StaffUser {
   createdAt: string;
   outletId?: string | null;
   canCashOut?: boolean;
+  isInitialOwner?: boolean;
   outlet?: {
     id: string;
     name: string;
@@ -49,6 +51,7 @@ interface StaffUser {
 }
 
 interface UsersViewProps {
+  activeOutlet?: Outlet | null;
   onNavigateToRoles?: () => void;
 }
 
@@ -63,7 +66,7 @@ const ROLE_ID_TO_SYSTEM_ENUM: Record<string, string> = {
   'role-waiter': 'WAITER',
 };
 
-export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
+export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateToRoles }) => {
   const dialog = useDialog();
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -84,11 +87,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
   const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
   const [originalUserCode, setOriginalUserCode] = useState<string>('');
 
-  // Form State matching Screenshot 3
+  // Form State
   const [formData, setFormData] = useState({
     name: '',
     userCode: '',
-    loginAccountType: 'EMAIL' as 'EMAIL' | 'CUSTOMER_ID',
     email: '',
     password: '',
     pin: '',
@@ -169,17 +171,23 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
   }, []);
 
   const handleOpenCreateForm = () => {
-    const generatedId = Math.floor(10000 + Math.random() * 90000).toString();
     setSelectedUser(null);
+    const defaultCreateRole = (() => {
+      const cashier = roles.find((r) => (ROLE_ID_TO_SYSTEM_ENUM[r.id] || r.name.toUpperCase()) === 'CASHIER');
+      if (cashier) return 'CASHIER';
+      const nonOwner = roles.find((r) => !['OWNER', 'ADMIN'].includes(ROLE_ID_TO_SYSTEM_ENUM[r.id] || r.name.toUpperCase()));
+      if (nonOwner) return ROLE_ID_TO_SYSTEM_ENUM[nonOwner.id] || nonOwner.name.toUpperCase();
+      return roles.length > 0 ? (ROLE_ID_TO_SYSTEM_ENUM[roles[0].id] || roles[0].name.toUpperCase()) : 'CASHIER';
+    })();
+
     setFormData({
       name: '',
-      userCode: generatedId,
-      loginAccountType: 'EMAIL',
+      userCode: '',
       email: '',
       password: '',
       pin: '',
-      role: roles.length > 0 ? roles[0].name : 'CASHIER',
-      outletId: outlets.length > 0 ? outlets[0].id : '',
+      role: defaultCreateRole,
+      outletId: activeOutlet?.id || (outlets.length > 0 ? outlets[0].id : ''),
       canCashOut: false,
       isActive: true,
     });
@@ -195,7 +203,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
     setFormData({
       name: u.name,
       userCode: existingCode,
-      loginAccountType: 'EMAIL',
       email: u.email,
       password: '',
       pin: '',
@@ -222,7 +229,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
     // Validasi userCode: format 5 digit hanya wajib saat CREATE atau saat EDIT dengan kode baru
     const isUserCodeChanged = formData.userCode.trim() !== originalUserCode;
     if (formMode === 'CREATE') {
-      if (!formData.userCode.trim()) return setFormError('ID Staf (5 digit) wajib diisi');
+      if (!formData.userCode.trim()) return setFormError('ID Staf (5 digit) wajib diisi. Masukkan 5 digit atau klik Buat');
       if (!/^\d{5}$/.test(formData.userCode)) {
         return setFormError('ID Staf harus berupa 5 digit angka murni (contoh: 24589)');
       }
@@ -233,7 +240,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
       }
     }
 
-    if (formData.loginAccountType === 'EMAIL' && !formData.email.trim()) {
+    if (!formData.email.trim()) {
       return setFormError('Email login wajib diisi');
     }
 
@@ -372,7 +379,23 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
     }
   };
 
+  const checkIsInitialOwner = (u: StaffUser) => {
+    if (u.isInitialOwner !== undefined) return u.isInitialOwner;
+    if (u.role === 'OWNER') return true;
+    if (staffList.length > 0 && staffList[0].id === u.id && ['OWNER', 'ADMIN'].includes(u.role)) return true;
+    return false;
+  };
+
   const handleDeleteUser = async (u: StaffUser) => {
+    if (checkIsInitialOwner(u)) {
+      dialog.alert({
+        title: 'Akun Pendaftar Awal',
+        message: 'Akun Pemilik Usaha / Pendaftar Awal utama tidak dapat dinonaktifkan atau dihapus. Penghapusan akun hanya dapat dilakukan melalui portal SuperAdmin.',
+        variant: 'warning',
+      });
+      return;
+    }
+
     const ok = await dialog.confirm({
       title: 'Nonaktifkan Akun Staf',
       message: `Yakin ingin menonaktifkan akun staf ${u.name} (${u.role})? Staf ini tidak akan dapat login ke mesin kasir maupun backoffice.`,
@@ -494,6 +517,15 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           </div>
         )}
 
+        {formMode === 'EDIT' && selectedUser && checkIsInitialOwner(selectedUser) && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-3">
+            <span className="text-xl">👑</span>
+            <div>
+              <span className="font-black text-amber-950">Akun Pendaftar Awal (Pemilik Utama):</span> Akun ini berstatus pendaftar awal usaha dan tidak dapat dihapus atau dinonaktifkan dari Backoffice toko. Penghapusan akun hanya dapat dilakukan melalui portal SuperAdmin.
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleFormSubmit} className="space-y-6">
           {/* CARD 1: INFORMASI DASAR */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
@@ -523,6 +555,67 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
               </div>
             </div>
 
+            {/* Peran Staf + Tombol Tambah Peran (Ditempatkan sebelum ID Staf agar ID langsung sinkron) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Peran <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <select
+                    value={formData.role}
+                    disabled={formMode === 'EDIT' && !!selectedUser && checkIsInitialOwner(selectedUser)}
+                    onChange={(e) => {
+                      const newRole = e.target.value;
+                      setFormData((prev) => ({ ...prev, role: newRole }));
+                      if (formMode === 'CREATE' && formData.userCode) {
+                        generateRandomStaffId(newRole);
+                      }
+                    }}
+                    className="w-full pl-4 pr-10 py-3 appearance-none bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {roles.length > 0 ? (
+                      roles.map((r) => {
+                        // Gunakan system enum sebagai value agar cocok dengan formData.role dari DB
+                        const systemEnum = ROLE_ID_TO_SYSTEM_ENUM[r.id] || r.name.toUpperCase();
+                        return (
+                          <option key={r.id} value={systemEnum}>
+                            {r.name} {!r.status ? '(Nonaktif)' : ''}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <option value="CASHIER">Kasir Toko</option>
+                        <option value="WAREHOUSE">Staf Gudang</option>
+                        <option value="SUPERVISOR">Supervisor / Manajer</option>
+                        <option value="KITCHEN">Barista &amp; Kru Dapur</option>
+                        <option value="OWNER">Pemilik Usaha (Owner)</option>
+                      </>
+                    )}
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+
+                {!(formMode === 'EDIT' && !!selectedUser && checkIsInitialOwner(selectedUser)) && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToRoles}
+                    className="px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs rounded-2xl transition-colors shrink-0 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    title="Buka Akses & Peran untuk Menambah Peran Baru"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-blue-700" />
+                    <span>Tambah</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {formMode === 'EDIT' && selectedUser && checkIsInitialOwner(selectedUser)
+                  ? '🔒 Peran akun pendaftar awal terkunci permanen sebagai Pemilik Usaha (Owner).'
+                  : 'Wewenang fitur seperti batasan diskon kasir dan menu yang bisa dibuka diatur di modul Peran.'}
+              </p>
+            </div>
+
             {/* ID Staf + Tombol Buat */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -550,7 +643,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                   <button
                     type="button"
                     onClick={() => generateRandomStaffId()}
-                    className="px-5 py-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs rounded-2xl transition-colors shrink-0 shadow-xs flex items-center gap-1.5"
+                    className="px-5 py-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs rounded-2xl transition-colors shrink-0 shadow-xs flex items-center gap-1.5 cursor-pointer"
                     title="Generate ID 5-Digit Sesuai Peran Otomatis"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-blue-700" />
@@ -563,37 +656,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                   ? 'Standar 5-digit: 0000x (Owner), 1000x (Kasir), 2000x (SPV), 3000x (Gudang) untuk kemudahan login numpad kasir POS.'
                   : 'ID Staf 5-digit angka. Kosongkan atau biarkan untuk mempertahankan ID yang ada.'}
               </p>
-            </div>
-
-            {/* Akun Login */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Akun Login <span className="text-rose-500">*</span>
-              </label>
-              <div className="flex items-center gap-6">
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="loginAccountType"
-                    value="EMAIL"
-                    checked={formData.loginAccountType === 'EMAIL'}
-                    onChange={() => setFormData({ ...formData, loginAccountType: 'EMAIL' })}
-                    className="w-4 h-4 text-blue-900 focus:ring-blue-900 cursor-pointer"
-                  />
-                  <span className="text-xs font-bold text-slate-800">Email</span>
-                </label>
-                <label className="inline-flex items-center gap-2 cursor-pointer opacity-50" title="Fitur ID Pelanggan segera hadir">
-                  <input
-                    type="radio"
-                    name="loginAccountType"
-                    value="CUSTOMER_ID"
-                    checked={formData.loginAccountType === 'CUSTOMER_ID'}
-                    disabled
-                    className="w-4 h-4 text-blue-900 focus:ring-blue-900 cursor-not-allowed"
-                  />
-                  <span className="text-xs font-medium text-slate-500">ID Pelanggan (Segera)</span>
-                </label>
-              </div>
             </div>
 
             {/* Input Email */}
@@ -702,53 +764,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                 Digunakan untuk login cepat dan otorisasi buka kasir pada aplikasi POS tablet/handheld.
               </p>
             </div>
-
-            {/* Peran Staf + Tombol Tambah Peran */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Peran <span className="text-rose-500">*</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
-                >
-                  {roles.length > 0 ? (
-                    roles.map((r) => {
-                      // Gunakan system enum sebagai value agar cocok dengan formData.role dari DB
-                      const systemEnum = ROLE_ID_TO_SYSTEM_ENUM[r.id] || r.name.toUpperCase();
-                      return (
-                        <option key={r.id} value={systemEnum}>
-                          {r.name} {!r.status ? '(Nonaktif)' : ''}
-                        </option>
-                      );
-                    })
-                  ) : (
-                    <>
-                      <option value="CASHIER">Kasir Toko</option>
-                      <option value="WAREHOUSE">Staf Gudang</option>
-                      <option value="SUPERVISOR">Supervisor / Manajer</option>
-                      <option value="KITCHEN">Barista &amp; Kru Dapur</option>
-                      <option value="OWNER">Pemilik Usaha (Owner)</option>
-                    </>
-                  )}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={onNavigateToRoles}
-                  className="px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs rounded-2xl transition-colors shrink-0 shadow-xs flex items-center gap-1.5"
-                  title="Buka Akses & Peran untuk Menambah Peran Baru"
-                >
-                  <Plus className="w-3.5 h-3.5 text-blue-700" />
-                  <span>Tambah</span>
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Wewenang fitur seperti batasan diskon kasir dan menu yang bisa dibuka diatur di modul Peran.
-              </p>
-            </div>
           </div>
 
           {/* CARD 2: PENGATURAN LANJUTAN */}
@@ -764,11 +779,11 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                 Penugasan Outlet Toko
               </label>
               <div className="relative">
-                <Store className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Store className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <select
                   value={formData.outletId}
                   onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
-                  className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
+                  className="w-full pl-9 pr-10 py-3 appearance-none bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
                 >
                   <option value="">Semua Toko (Akses Pusat / Bebas Buka Kasir di Semua Outlet)</option>
                   {outlets.map((o) => (
@@ -777,6 +792,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                     </option>
                   ))}
                 </select>
+                <ChevronDown className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
                 Kunci petugas ke toko tertentu agar hanya dapat melakukan shift dan penjualan di outlet tersebut.
@@ -789,13 +805,23 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                 <input
                   type="checkbox"
                   checked={formData.isActive}
+                  disabled={formMode === 'EDIT' && !!selectedUser && checkIsInitialOwner(selectedUser)}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-4 h-4 text-blue-900 rounded-md border-slate-300 focus:ring-blue-900 cursor-pointer"
+                  className="w-4 h-4 text-blue-900 rounded-md border-slate-300 focus:ring-blue-900 cursor-pointer disabled:opacity-50"
                 />
                 <div>
-                  <div className="text-xs font-bold text-slate-900">Akun Staf Aktif</div>
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                    <span>Akun Staf Aktif</span>
+                    {formMode === 'EDIT' && selectedUser && checkIsInitialOwner(selectedUser) && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded-full border border-amber-200">
+                        🔒 Wajib Aktif (Pendaftar Awal)
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[11px] text-slate-500">
-                    Staf dapat melakukan login ke POS dan mengakses backoffice sesuai perannya.
+                    {formMode === 'EDIT' && selectedUser && checkIsInitialOwner(selectedUser)
+                      ? 'Akun pendaftar awal wajib selalu aktif untuk kelangsungan operasional dan wewenang bisnis.'
+                      : 'Staf dapat melakukan login ke POS dan mengakses backoffice sesuai perannya.'}
                   </div>
                 </div>
               </label>
@@ -858,7 +884,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
   // RENDER: LIST VIEW
   // ==========================================
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* Header & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
@@ -880,7 +906,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
             type="button"
             onClick={handleRevokeAllSessions}
             disabled={revokingAll || staffList.length === 0}
-            className="flex-1 sm:flex-initial justify-center px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-initial h-10 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             title="Keluarkan paksa seluruh kasir & staf di semua tablet toko"
           >
             <LogOut className="w-4 h-4 text-amber-600" />
@@ -890,7 +916,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           {onNavigateToRoles && (
             <button
               onClick={onNavigateToRoles}
-              className="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial h-10 px-4 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Shield className="w-4 h-4 text-blue-900" />
               <span>Akses & Peran</span>
@@ -898,8 +924,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
           )}
 
           <button
+            type="button"
             onClick={handleOpenCreateForm}
-            className="flex-1 sm:flex-initial justify-center px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+            className="flex-1 sm:flex-initial h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
           >
             <UserPlus className="w-4 h-4" />
             <span>Tambah Staf</span>
@@ -907,31 +934,31 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
         </div>
       </div>
 
-      {/* Sub-tab Navigation */}
-      <div className="flex border-b border-slate-200 gap-2">
+      {/* Sub-tab Navigation Kanonikal */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200/60 w-fit max-w-full overflow-x-auto">
         <button
           type="button"
           onClick={() => setMainTab('USERS')}
-          className={`py-3 px-5 font-bold text-xs sm:text-sm border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             mainTab === 'USERS'
-              ? 'border-blue-900 text-blue-900 bg-white shadow-2xs rounded-t-2xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-transparent'
           }`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-3.5 h-3.5" />
           <span>Daftar Akun &amp; Wewenang Staf</span>
         </button>
 
         <button
           type="button"
           onClick={() => setMainTab('ATTENDANCE')}
-          className={`py-3 px-5 font-bold text-xs sm:text-sm border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             mainTab === 'ATTENDANCE'
-              ? 'border-blue-900 text-blue-900 bg-white shadow-2xs rounded-t-2xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-transparent'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-3.5 h-3.5" />
           <span>Rekapitulasi Absensi &amp; Jam Kerja</span>
         </button>
       </div>
@@ -942,117 +969,109 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
         <>
           {/* Metric Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
-          <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Total Petugas</span>
-            <div className="text-2xl font-black text-blue-950 mt-1">{totalStaff}</div>
-            <p className="text-[11px] text-slate-400 mt-0.5 truncate">Semua peran terdata</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
-            <Users className="w-5 h-5 shrink-0" />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
-          <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Kasir Aktif</span>
-            <div className="text-2xl font-black text-blue-900 mt-1">{activeCashiers}</div>
-            <p className="text-[11px] text-blue-600 mt-0.5 truncate">Akses mesin POS</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
-            <KeyRound className="w-5 h-5 shrink-0" />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
-          <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Staf Gudang</span>
-            <div className="text-2xl font-black text-sky-900 mt-1">{activeWarehouse}</div>
-            <p className="text-[11px] text-sky-600 mt-0.5 truncate">Akses mutasi stok</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-900 flex items-center justify-center font-bold shrink-0">
-            <UserCheck className="w-5 h-5 shrink-0" />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
-          <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-500 uppercase truncate block">Admin &amp; Spv</span>
-            <div className="text-2xl font-black text-purple-950 mt-1">{activeAdmins}</div>
-            <p className="text-[11px] text-purple-600 mt-0.5 truncate">Audit &amp; finansial</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center font-bold shrink-0">
-            <Shield className="w-5 h-5 shrink-0" />
-          </div>
-        </div>
-      </div>
-
-      {/* Filter & Search Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari ID staf, nama, email, atau PIN..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
-            />
-          </div>
-
-          {/* Filter Berdasarkan Outlet Toko */}
-          {outlets.length > 1 && (
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <span className="text-xs font-bold text-slate-500 shrink-0">Toko:</span>
-              <select
-                value={outletFilter}
-                onChange={(e) => setOutletFilter(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
-              >
-                <option value="ALL">Semua Toko (Semua)</option>
-                {outlets.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    📍 {o.name}
-                  </option>
-                ))}
-              </select>
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate block">Total Petugas</span>
+                <div className="text-2xl font-black font-mono text-blue-950 mt-1">{totalStaff}</div>
+                <p className="text-[11px] text-slate-400 mt-0.5 truncate">Semua peran terdata</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0">
+                <Users className="w-5 h-5 shrink-0" />
+              </div>
             </div>
-          )}
-        </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
-          {['ALL', 'CASHIER', 'WAREHOUSE', 'SUPERVISOR', 'ADMIN'].map((r) => (
-            <button
-              key={r}
-              onClick={() => setRoleFilter(r)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
-                roleFilter === r
-                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {r === 'ALL'
-                ? 'Semua Peran'
-                : r === 'CASHIER'
-                ? 'Kasir'
-                : r === 'WAREHOUSE'
-                ? 'Gudang'
-                : r === 'SUPERVISOR'
-                ? 'Supervisor'
-                : 'Admin'}
-            </button>
-          ))}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate block">Kasir Aktif</span>
+                <div className="text-2xl font-black font-mono text-blue-900 mt-1">{activeCashiers}</div>
+                <p className="text-[11px] text-blue-600 mt-0.5 truncate">Akses mesin POS</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold shrink-0">
+                <KeyRound className="w-5 h-5 shrink-0" />
+              </div>
+            </div>
 
-          <button
-            onClick={fetchData}
-            title="Refresh Data"
-            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div>
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate block">Staf Gudang</span>
+                <div className="text-2xl font-black font-mono text-sky-900 mt-1">{activeWarehouse}</div>
+                <p className="text-[11px] text-sky-600 mt-0.5 truncate">Akses mutasi stok</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-900 flex items-center justify-center font-bold shrink-0">
+                <UserCheck className="w-5 h-5 shrink-0" />
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate block">Admin &amp; Spv</span>
+                <div className="text-2xl font-black font-mono text-purple-950 mt-1">{activeAdmins}</div>
+                <p className="text-[11px] text-purple-600 mt-0.5 truncate">Audit &amp; finansial</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center font-bold shrink-0">
+                <Shield className="w-5 h-5 shrink-0" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filter & Search Toolbar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari ID staf, nama, email, atau PIN..."
+                  className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                />
+              </div>
+
+              {/* Filter Berdasarkan Outlet Toko */}
+              {outlets.length > 1 && (
+                <div className="relative w-full sm:w-auto">
+                  <select
+                    value={outletFilter}
+                    onChange={(e) => setOutletFilter(e.target.value)}
+                    className="w-full sm:w-auto h-10 pl-3 pr-8 appearance-none bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
+                  >
+                    <option value="ALL">Semua Toko (Semua)</option>
+                    {outlets.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        📍 {o.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+              {['ALL', 'CASHIER', 'WAREHOUSE', 'SUPERVISOR', 'ADMIN'].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRoleFilter(r)}
+                  className={`h-10 px-3.5 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer ${
+                    roleFilter === r
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {r === 'ALL'
+                    ? 'Semua Peran'
+                    : r === 'CASHIER'
+                    ? 'Kasir'
+                    : r === 'WAREHOUSE'
+                    ? 'Gudang'
+                    : r === 'SUPERVISOR'
+                    ? 'Supervisor'
+                    : 'Admin'}
+                </button>
+              ))}
+            </div>
+          </div>
 
       {/* Staff Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1066,7 +1085,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                 <th className="py-3.5 px-6">Email Login</th>
                 <th className="py-3.5 px-6">Peran (Role)</th>
                 <th className="py-3.5 px-6">Penugasan Toko</th>
-                <th className="py-3.5 px-6">PIN Cepat</th>
                 <th className="py-3.5 px-6">Status Akun</th>
                 <th className="py-3.5 px-6 text-right">Aksi</th>
               </tr>
@@ -1074,14 +1092,14 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="inline-block w-6 h-6 border-2 border-blue-900 border-t-transparent rounded-full animate-spin mb-2" />
                     <p className="font-semibold text-xs">Memuat daftar staf...</p>
                   </td>
                 </tr>
               ) : filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
                     Tidak ditemukan staf dengan kriteria tersebut.
                   </td>
                 </tr>
@@ -1089,27 +1107,56 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                 paginatedStaff.map((u) => {
                   const badge = getRoleBadge(u.role);
                   const outletName = u.outlet?.name || outlets.find((o) => o.id === u.outletId)?.name;
+                  const isInitial = checkIsInitialOwner(u);
 
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={u.id}
+                      className={`transition-colors ${
+                        isInitial
+                          ? 'bg-amber-50/50 hover:bg-amber-100/50'
+                          : 'hover:bg-slate-50/80'
+                      }`}
+                    >
                       {/* ID Staf */}
                       <td className="py-3.5 px-6">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-slate-100 text-blue-950 font-mono font-black text-xs border border-slate-200">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-xl font-mono font-black text-xs border ${
+                          isInitial
+                            ? 'bg-amber-100/80 text-amber-950 border-amber-300/80'
+                            : 'bg-slate-100 text-blue-950 border-slate-200'
+                        }`}>
                           #{u.userCode || '—'}
                         </span>
                       </td>
 
                       {/* Nama Petugas */}
                       <td className="py-3.5 px-6">
-                        <div className="font-bold text-blue-950 flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 font-black flex items-center justify-center text-xs border border-blue-100">
-                            {u.name.charAt(0).toUpperCase()}
+                        <div>
+                          <div className="font-bold text-blue-950 flex items-center gap-1.5">
+                            <span>{u.name}</span>
+                            {isInitial && (
+                              <div className="relative group/owner inline-flex items-center">
+                                <span
+                                  tabIndex={0}
+                                  title="Pendaftar Awal (Pemilik Utama)"
+                                  aria-label="Pendaftar Awal (Pemilik Utama)"
+                                  className="w-5 h-5 rounded-md bg-amber-100 text-amber-800 inline-flex items-center justify-center border border-amber-300/80 cursor-help transition-transform hover:scale-110 shadow-2xs"
+                                >
+                                  <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-700" />
+                                </span>
+                                {/* Tooltip on hover */}
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/owner:flex flex-col items-center z-30 pointer-events-none whitespace-nowrap">
+                                  <div className="bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-lg border border-slate-700/50 flex items-center gap-1.5">
+                                    <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                    <span>Pendaftar Awal (Pemilik Utama)</span>
+                                  </div>
+                                  <div className="w-2 h-2 bg-slate-900 rotate-45 -mt-1" />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <div>{u.name}</div>
-                            <div className="text-[11px] text-slate-400 font-normal">
-                              Dibuat: {new Date(u.createdAt).toLocaleDateString('id-ID')}
-                            </div>
+                          <div className="text-[11px] text-slate-400 font-normal">
+                            Dibuat: {new Date(u.createdAt).toLocaleDateString('id-ID')}
                           </div>
                         </div>
                       </td>
@@ -1151,19 +1198,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                         )}
                       </td>
 
-                      {/* PIN Cepat */}
-                      <td className="py-3.5 px-6">
-                        {u.hasPin ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xs font-mono font-bold tracking-widest">
-                            ••••••
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
-                            Belum set
-                          </span>
-                        )}
-                      </td>
-
                       {/* Status Akun */}
                       <td className="py-3.5 px-6">
                         {u.isActive ? (
@@ -1185,25 +1219,27 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                           <button
                             onClick={() => handleRevokeUserSession(u)}
                             disabled={revokingUserId === u.id}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600 transition-colors cursor-pointer"
+                            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600 transition-colors flex items-center justify-center cursor-pointer disabled:opacity-50"
                             title="Cabut Sesi Perangkat (Force Logout)"
                           >
                             <LogOut className="w-4 h-4 text-amber-600" />
                           </button>
                           <button
                             onClick={() => handleOpenEditForm(u)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 transition-colors"
+                            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
                             title="Edit Data Staf & Peran"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(u)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition-colors"
-                            title="Hapus / Nonaktifkan Staf"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {!checkIsInitialOwner(u) && (
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
+                              title="Hapus / Nonaktifkan Staf"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1229,19 +1265,30 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
             paginatedStaff.map((u) => {
               const badge = getRoleBadge(u.role);
               const outletName = u.outlet?.name || outlets.find((o) => o.id === u.outletId)?.name;
+              const isInitial = checkIsInitialOwner(u);
 
               return (
-                <div key={u.id} className="p-4 space-y-3">
+                <div
+                  key={u.id}
+                  className={`p-4 space-y-3 transition-colors ${
+                    isInitial ? 'bg-amber-50/40 border-l-4 border-l-amber-400' : ''
+                  }`}
+                >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 font-black flex items-center justify-center text-xs border border-blue-100 shrink-0">
-                        {u.name.charAt(0).toUpperCase()}
+                    <div>
+                      <div className="font-bold text-blue-950 text-sm flex items-center gap-1.5 flex-wrap">
+                        <span>{u.name}</span>
+                        {isInitial && (
+                          <span
+                            title="Pendaftar Awal (Pemilik Utama)"
+                            className="w-5 h-5 rounded-md bg-amber-100 text-amber-800 inline-flex items-center justify-center border border-amber-300/80 shadow-2xs"
+                          >
+                            <Crown className="w-3.5 h-3.5 fill-amber-500 text-amber-700" />
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <div className="font-bold text-blue-950 text-sm">{u.name}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">
-                          #{u.userCode || '—'}
-                        </div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        #{u.userCode || '—'}
                       </div>
                     </div>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${badge.color}`}>
@@ -1249,20 +1296,14 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Toko</span>
-                      <span className="font-bold text-slate-700 truncate block">
+                  <div className="flex flex-col gap-1.5 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Toko</span>
+                      <span className="font-bold text-slate-700 truncate">
                         {outletName || 'Semua Toko'}
                       </span>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase block">PIN Cepat</span>
-                      <span className="font-mono font-bold text-slate-700 block">
-                        {u.hasPin ? '••••••' : 'Belum set'}
-                      </span>
-                    </div>
-                    <div className="col-span-2 flex items-center justify-between pt-1 border-t border-slate-200/60">
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
                       <div className="flex items-center gap-1.5 truncate text-slate-500 text-[11px]">
                         <Mail className="w-3 h-3 text-slate-400 shrink-0" />
                         <span className="truncate">{u.email}</span>
@@ -1295,7 +1336,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                       type="button"
                       onClick={() => handleRevokeUserSession(u)}
                       disabled={revokingUserId === u.id}
-                      className="py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="h-9 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                       title="Cabut Sesi Perangkat"
                     >
                       <LogOut className="w-3.5 h-3.5 text-amber-600" />
@@ -1304,19 +1345,21 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigateToRoles }) => {
                     <button
                       type="button"
                       onClick={() => handleOpenEditForm(u)}
-                      className="flex-1 py-2 px-3 bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="flex-1 h-9 px-3 bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                       <span>Ubah Data Staf</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteUser(u)}
-                      className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                      title="Hapus Staf"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {!checkIsInitialOwner(u) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteUser(u)}
+                        className="h-9 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        title="Hapus Staf"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

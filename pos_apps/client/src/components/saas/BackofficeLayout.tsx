@@ -37,6 +37,52 @@ import { api, type PlatformNotification } from '../../services/api';
 import { FloatingGuideWidget } from '../ui/FloatingGuideWidget';
 import { PwaInstallButton } from '../PwaInstallBanner';
 
+export const TAB_TO_GROUP_MAP: Record<string, string> = {
+  // Menu & Produk
+  products: 'menu_produk',
+  categories: 'menu_produk',
+  modifiers: 'menu_produk',
+  recipes: 'menu_produk',
+
+  // Buku Menu QR
+  qr_tables: 'buku_menu',
+  qr_settings: 'buku_menu',
+  qr_orders: 'buku_menu',
+  qr_guest_menu: 'buku_menu',
+
+  // Bahan Baku & Stok
+  inventory: 'stok',
+  warehouses: 'stok',
+  stock_movements: 'stok',
+  purchase_orders: 'stok',
+  transfers: 'stok',
+  suppliers: 'stok',
+
+  // Laporan & Keuangan
+  reports: 'laporan',
+  shifts: 'laporan',
+  product_analytics: 'laporan',
+
+  // Promosi & Diskon
+  promotions: 'promosi',
+
+  // Pelanggan & Kasbon
+  customers: 'pelanggan',
+
+  // Manajemen Staf
+  staff_users: 'staf',
+  staff_roles: 'staf',
+  users: 'staf',
+
+  // Pengaturan Resto & Outlet
+  settings_receipt: 'pengaturan',
+  settings_taxes: 'pengaturan',
+  settings_payment: 'pengaturan',
+  settings_channels: 'pengaturan',
+  settings_loyalty: 'pengaturan',
+  outlets: 'pengaturan',
+};
+
 interface BackofficeLayoutProps {
   user: User;
   outlets: Outlet[];
@@ -63,17 +109,37 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   // Hak Akses Panduan: Hanya Owner dan Supervisor yang dapat mengakses SOP / Panduan
   const canViewGuide = user && (user.role === 'OWNER' || user.role === 'ADMIN' || user.role === 'SUPERVISOR');
 
+  // Induk grup accordion dari halaman aktif saat ini
+  const activeParentGroup = TAB_TO_GROUP_MAP[activeTab];
+
   // Accordion state for sidebar groups (F&B Centric)
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    menu_produk: true,
-    buku_menu: false,
-    stok: false,
-    laporan: false,
-    promosi: false,
-    pelanggan: false,
-    staf: false,
-    pengaturan: false,
+  // Menjamin menu grup dari halaman aktif selalu terbuka secara default
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initialGroup = TAB_TO_GROUP_MAP[activeTab];
+    return {
+      menu_produk: initialGroup === 'menu_produk' || !initialGroup,
+      buku_menu: initialGroup === 'buku_menu',
+      stok: initialGroup === 'stok',
+      laporan: initialGroup === 'laporan',
+      promosi: initialGroup === 'promosi',
+      pelanggan: initialGroup === 'pelanggan',
+      staf: initialGroup === 'staf',
+      pengaturan: initialGroup === 'pengaturan',
+      ...(initialGroup ? { [initialGroup]: true } : {}),
+    };
   });
+
+  // Sinkronisasi otomatis: Saat user berpindah halaman/tab, buka grup accordion terkait
+  useEffect(() => {
+    const currentGroup = TAB_TO_GROUP_MAP[activeTab];
+    if (currentGroup) {
+      setOpenGroups((prev) => {
+        if (prev[currentGroup]) return prev;
+        return { ...prev, [currentGroup]: true };
+      });
+    }
+  }, [activeTab]);
+
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
@@ -132,13 +198,43 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
   const unreadCount = notifications.filter((n) => !readNotifIds.includes(n.id)).length;
 
+  // Anti-Collapse Policy: Jika menu grup tersebut menampung halaman yang sedang aktif,
+  // Dilarang meng-collapse agar user tidak kehilangan konteks navigasi halaman
   const toggleGroup = (group: string) => {
+    const currentGroup = TAB_TO_GROUP_MAP[activeTab];
+    if (group === currentGroup && openGroups[group]) {
+      return; // Tetap aktif dan terbuka jika sedang berada di halaman tersebut
+    }
     setOpenGroups((prev) => ({ ...prev, [group]: !prev[group] }));
   };
+
+  const [currentSubTab, setCurrentSubTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('subtab') || '';
+    }
+    return '';
+  });
+
+  useEffect(() => {
+    const handleSubTabSync = (e: any) => {
+      if (e?.detail) {
+        setCurrentSubTab(e.detail === 'directory' ? '' : e.detail);
+      } else if (typeof window !== 'undefined') {
+        setCurrentSubTab(new URLSearchParams(window.location.search).get('subtab') || '');
+      }
+    };
+    window.addEventListener('wellpos:subtab_change', handleSubTabSync);
+    window.addEventListener('popstate', handleSubTabSync);
+    return () => {
+      window.removeEventListener('wellpos:subtab_change', handleSubTabSync);
+      window.removeEventListener('popstate', handleSubTabSync);
+    };
+  }, []);
 
   const renderNavContent = (onItemClick?: () => void) => {
     const handleSelectTab = (tab: any, subtab?: string) => {
       onTabChange(tab);
+      setCurrentSubTab(subtab || '');
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.set('tab', tab);
@@ -148,6 +244,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           url.searchParams.delete('subtab');
         }
         window.history.replaceState({}, '', url.toString());
+        window.dispatchEvent(new CustomEvent('wellpos:subtab_change', { detail: subtab || 'directory' }));
       }
       onItemClick?.();
     };
@@ -359,47 +456,65 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('menu_produk')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'menu_produk'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <UtensilsCrossed className="w-4 h-4 text-slate-500" />
+              <UtensilsCrossed className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'menu_produk' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Menu &amp; Produk</span>
             </span>
-            {openGroups.menu_produk ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.menu_produk ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'menu_produk' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.menu_produk && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('products')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'products' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'products'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Daftar Menu
+                <span>Daftar Menu</span>
               </button>
               <button
                 onClick={() => handleSelectTab('categories')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'categories' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'categories'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Kategori Menu
+                <span>Kategori Menu</span>
               </button>
               <button
                 onClick={() => handleSelectTab('modifiers')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'modifiers' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'modifiers'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Modifier &amp; Topping
+                <span>Modifier &amp; Topping</span>
               </button>
               <button
                 onClick={() => handleSelectTab('recipes')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'recipes' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'recipes'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Resep &amp; Bahan (BOM)
+                <span>Resep &amp; Bahan (BOM)</span>
               </button>
             </div>
           )}
@@ -409,48 +524,70 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('buku_menu')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'buku_menu'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <QrCode className="w-4 h-4 text-slate-500" />
+              <QrCode className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'buku_menu' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Buku Menu QR</span>
             </span>
-            {openGroups.buku_menu ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.buku_menu ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'buku_menu' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.buku_menu && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('qr_tables')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'qr_tables' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'qr_tables'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Daftar Meja &amp; QR
+                <span>Daftar Meja &amp; QR</span>
               </button>
               <button
                 onClick={() => handleSelectTab('qr_settings')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'qr_settings' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'qr_settings'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Pengaturan Buku Menu
+                <span>Pengaturan Buku Menu</span>
               </button>
               <button
                 onClick={() => handleSelectTab('qr_orders')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'qr_orders' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'qr_orders'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Pesanan Mandiri Masuk
+                <span>Pesanan Mandiri Masuk</span>
               </button>
               <button
                 onClick={() => handleSelectTab('qr_guest_menu')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors flex items-center justify-between ${
-                  activeTab === 'qr_guest_menu' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'qr_guest_menu'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
                 <span>Tampilan Menu Tamu</span>
-                <span className="text-[10px] bg-blue-100 text-blue-900 font-extrabold px-1.5 py-0.5 rounded-full">Pratinjau</span>
+                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
+                  activeTab === 'qr_guest_menu' ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-900'
+                }`}>
+                  Pratinjau
+                </span>
               </button>
             </div>
           )}
@@ -460,63 +597,85 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('stok')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'stok'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <Boxes className="w-4 h-4 text-slate-500" />
+              <Boxes className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Bahan Baku &amp; Stok</span>
             </span>
-            {openGroups.stok ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.stok ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.stok && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('inventory')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'inventory' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'inventory'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Stok Bahan Baku
+                <span>Stok Bahan Baku</span>
               </button>
               <button
                 onClick={() => handleSelectTab('warehouses')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'warehouses' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'warehouses'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Kelola Gudang
+                <span>Kelola Gudang</span>
               </button>
               <button
                 onClick={() => handleSelectTab('purchase_orders')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'purchase_orders' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'purchase_orders'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Pengadaan (PO)
+                <span>Pengadaan (PO)</span>
               </button>
               <button
                 onClick={() => handleSelectTab('transfers')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'transfers' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'transfers'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Transfer Antar Toko
+                <span>Transfer Antar Toko</span>
               </button>
               <button
                 onClick={() => handleSelectTab('stock_movements')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'stock_movements' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'stock_movements'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Riwayat Mutasi Stok
+                <span>Riwayat Mutasi Stok</span>
               </button>
               <button
                 onClick={() => handleSelectTab('suppliers')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'suppliers' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'suppliers'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Pemasok / Supplier
+                <span>Pemasok / Supplier</span>
               </button>
             </div>
           )}
@@ -526,11 +685,13 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => handleSelectTab('orders')}
-            className={`w-full text-left px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors ${
-              activeTab === 'orders' ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-slate-100'
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-colors ${
+              activeTab === 'orders' || activeTab === 'payment_items'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
-            <Receipt className="w-4 h-4 text-slate-500" />
+            <Receipt className={`w-4 h-4 shrink-0 ${activeTab === 'orders' || activeTab === 'payment_items' ? 'text-white' : 'text-slate-500'}`} />
             <span>Riwayat Transaksi</span>
           </button>
         </div>
@@ -539,39 +700,55 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('laporan')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'laporan'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-slate-500" />
+              <BarChart3 className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'laporan' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Laporan &amp; Keuangan</span>
             </span>
-            {openGroups.laporan ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.laporan ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'laporan' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.laporan && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('reports')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'reports' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'reports'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Laporan Penjualan &amp; Finansial
+                <span>Laporan Penjualan &amp; Finansial</span>
               </button>
               <button
                 onClick={() => handleSelectTab('shifts')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'shifts' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'shifts'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Rekap Shift Kasir (X/Z)
+                <span>Rekap Shift Kasir (X/Z)</span>
               </button>
               <button
                 onClick={() => handleSelectTab('product_analytics')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'product_analytics' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'product_analytics'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Analisis Menu &amp; HPP
+                <span>Analisis Menu &amp; HPP</span>
               </button>
             </div>
           )}
@@ -581,23 +758,35 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('promosi')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'promosi'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <Tag className="w-4 h-4 text-slate-500" />
+              <Tag className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Promosi &amp; Diskon</span>
             </span>
-            {openGroups.promosi ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.promosi ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.promosi && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('promotions')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'promotions' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'promotions'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Diskon &amp; Voucher
+                <span>Diskon &amp; Voucher</span>
               </button>
             </div>
           )}
@@ -607,35 +796,45 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('pelanggan')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'pelanggan'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-500" />
+              <Users className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Pelanggan &amp; Kasbon</span>
             </span>
-            {openGroups.pelanggan ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.pelanggan ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.pelanggan && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('customers', 'directory')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'customers' && (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('subtab') !== 'debts')
-                    ? 'bg-blue-50 text-blue-900 font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'customers' && currentSubTab !== 'debts'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Direktori Pelanggan
+                <span>Direktori Pelanggan</span>
               </button>
               <button
                 onClick={() => handleSelectTab('customers', 'debts')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'customers' && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('subtab') === 'debts'
-                    ? 'bg-blue-50 text-blue-900 font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'customers' && currentSubTab === 'debts'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Buku Kasbon &amp; Piutang
+                <span>Buku Kasbon &amp; Piutang</span>
               </button>
             </div>
           )}
@@ -645,31 +844,45 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('staf')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'staf'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-500" />
+              <Users className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Manajemen Staf</span>
             </span>
-            {openGroups.staf ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.staf ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.staf && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('staff_users')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'staff_users' || activeTab === 'users' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'staff_users' || activeTab === 'users'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Kelola Staf
+                <span>Kelola Staf</span>
               </button>
               <button
                 onClick={() => handleSelectTab('staff_roles')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'staff_roles' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'staff_roles'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Akses &amp; Peran
+                <span>Akses &amp; Peran</span>
               </button>
             </div>
           )}
@@ -679,63 +892,85 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('pengaturan')}
-            className="w-full text-left px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 font-bold flex items-center justify-between"
+            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              activeParentGroup === 'pengaturan'
+                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
           >
             <span className="flex items-center gap-2">
-              <Settings className="w-4 h-4 text-slate-500" />
+              <Settings className={`w-4 h-4 shrink-0 transition-colors ${
+                activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-500'
+              }`} />
               <span>Pengaturan Resto</span>
             </span>
-            {openGroups.pengaturan ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {openGroups.pengaturan ? (
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-400'}`} />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            )}
           </button>
           {openGroups.pengaturan && (
             <div className="pl-8 pr-2 py-1 space-y-1">
               <button
                 onClick={() => handleSelectTab('settings_receipt')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'settings_receipt' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'settings_receipt'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Format Struk Kasir
+                <span>Format Struk Kasir</span>
               </button>
               <button
                 onClick={() => handleSelectTab('settings_taxes')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'settings_taxes' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'settings_taxes'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Pajak (PB1) &amp; Biaya Layanan
+                <span>Pajak (PB1) &amp; Biaya Layanan</span>
               </button>
               <button
                 onClick={() => handleSelectTab('settings_payment')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'settings_payment' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'settings_payment'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Metode Pembayaran &amp; QRIS
+                <span>Metode Pembayaran &amp; QRIS</span>
               </button>
               <button
                 onClick={() => handleSelectTab('settings_channels')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'settings_channels' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'settings_channels'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Kanal Penjualan &amp; Mitra
+                <span>Kanal Penjualan &amp; Mitra</span>
               </button>
               <button
                 onClick={() => handleSelectTab('settings_loyalty')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'settings_loyalty' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'settings_loyalty'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Program Loyalitas &amp; Poin
+                <span>Program Loyalitas &amp; Poin</span>
               </button>
               <button
                 onClick={() => handleSelectTab('outlets')}
-                className={`w-full text-left py-1.5 px-2 rounded-lg transition-colors ${
-                  activeTab === 'outlets' ? 'bg-blue-50 text-blue-900 font-bold' : 'text-slate-600 hover:text-slate-900'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  activeTab === 'outlets'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                Profil &amp; Outlet Toko
+                <span>Profil &amp; Outlet Toko</span>
               </button>
             </div>
           )}

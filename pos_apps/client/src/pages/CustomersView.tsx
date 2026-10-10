@@ -58,24 +58,26 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
         url.searchParams.delete('subtab');
       }
       window.history.replaceState({}, '', url.toString());
+      window.dispatchEvent(new CustomEvent('wellpos:subtab_change', { detail: tab }));
     }
   };
 
   useEffect(() => {
-    const checkSubTab = () => {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const sub = params.get('subtab');
-        if (sub === 'debts') {
-          setActiveSubTab('debts');
-        } else {
-          setActiveSubTab('directory');
-        }
+    const checkSubTab = (e?: any) => {
+      const sub = e?.detail || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subtab') : 'directory');
+      if (sub === 'debts') {
+        setActiveSubTab('debts');
+      } else {
+        setActiveSubTab('directory');
       }
     };
     checkSubTab();
     window.addEventListener('popstate', checkSubTab);
-    return () => window.removeEventListener('popstate', checkSubTab);
+    window.addEventListener('wellpos:subtab_change', checkSubTab);
+    return () => {
+      window.removeEventListener('popstate', checkSubTab);
+      window.removeEventListener('wellpos:subtab_change', checkSubTab);
+    };
   }, []);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -681,13 +683,20 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                         </span>
                       </td>
 
-                      {/* Tanggal Terdaftar */}
+                      {/* Tanggal Terdaftar & Toko Asal */}
                       <td className="py-3.5 px-4 font-mono text-xs text-slate-500 font-medium">
-                        {new Date(c.createdAt).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        <div>
+                          {new Date(c.createdAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </div>
+                        {c.firstOutlet && (
+                          <div className="text-[10px] text-blue-900 font-semibold truncate max-w-[140px] mt-0.5" title={`Toko Pendaftaran: ${c.firstOutlet.name}`}>
+                            📍 {c.firstOutlet.name}
+                          </div>
+                        )}
                       </td>
 
                       {/* Aksi */}
@@ -1004,9 +1013,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                         {selectedCustomer.code}
                       </span>
                     )}
-                    <span className="text-xs text-slate-400">
-                      Terdaftar sejak {new Date(selectedCustomer.createdAt).toLocaleDateString('id-ID')}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap text-xs text-slate-400">
+                      <span>Terdaftar sejak {new Date(selectedCustomer.createdAt).toLocaleDateString('id-ID')}</span>
+                      {selectedCustomer.firstOutlet && (
+                        <span className="inline-flex items-center gap-1 font-semibold text-blue-900 bg-blue-50 px-2 py-0.5 rounded-full text-[11px]">
+                          📍 Toko Pendaftaran: {selectedCustomer.firstOutlet.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1267,7 +1281,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                                 })}
                               </td>
                               <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900">
-                                Rp {Number(ord.grandTotal).toLocaleString('id-ID')}
+                                Rp {Number(ord.totalAmount ?? ord.grandTotal ?? 0).toLocaleString('id-ID')}
                               </td>
                             </tr>
                           ))}
