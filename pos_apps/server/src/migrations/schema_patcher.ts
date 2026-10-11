@@ -188,6 +188,29 @@ FROM (
 ) sub
 WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.loyalty_points = 0);`,
   },
+  {
+    id: '20261011_02_promotion_items_and_scope',
+    description: 'Menambahkan kolom scope pada tabel promotions dan tabel promotion_items untuk katalog diskon produk/item terkelola',
+    sql: `
+      ALTER TABLE "promotions" ADD COLUMN IF NOT EXISTS "scope" VARCHAR(50) DEFAULT 'ORDER';
+      CREATE INDEX IF NOT EXISTS "promotions_tenant_id_scope_idx" ON "promotions"("tenant_id", "scope");
+
+      CREATE TABLE IF NOT EXISTS "promotion_items" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "promotion_id" TEXT NOT NULL REFERENCES "promotions"("id") ON DELETE CASCADE,
+        "product_id" TEXT NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
+        "variant_id" TEXT REFERENCES "product_variants"("id") ON DELETE CASCADE,
+        "discount_type" "DiscountType",
+        "discount_value" DECIMAL(15, 2),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "promotion_items_tenant_id_promotion_id_idx" ON "promotion_items"("tenant_id", "promotion_id");
+      CREATE INDEX IF NOT EXISTS "promotion_items_tenant_id_product_id_idx" ON "promotion_items"("tenant_id", "product_id");
+      CREATE INDEX IF NOT EXISTS "promotion_items_tenant_id_variant_id_idx" ON "promotion_items"("tenant_id", "variant_id");
+    `,
+  },
 ];
 
 /**

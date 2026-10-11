@@ -7,7 +7,7 @@ import type { Customer } from '../types/customer';
 import type { Outlet, OutletFee } from '../types/outlet';
 import { normalizeOutletFees } from '../types/outlet';
 import type { QrTable, QrLiveOrder } from '../types/qr_menu';
-import type { Promotion } from '../types/promotion';
+import type { Promotion, ActiveItemDiscount } from '../types/promotion';
 import { formatRupiah } from '../utils/currency';
 import {
   PosHeader,
@@ -156,6 +156,40 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [globalDiscount, setGlobalDiscount] = useState<number>(0);
   const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
+  const [activeItemDiscounts, setActiveItemDiscounts] = useState<ActiveItemDiscount[]>([]);
+
+  // Helper kalkulasi diskon item otomatis dari program promo aktif
+  const calculateItemPromoDiscount = useCallback(
+    (product: Product, variantId?: string | null, customPrice?: number) => {
+      if (!activeItemDiscounts || activeItemDiscounts.length === 0) return 0;
+
+      // Cari promo yang cocok: prioritaskan varian spesifik lalu produk utama
+      const matched = activeItemDiscounts.find((promo) => {
+        if (promo.productId !== product.id) return false;
+        if (variantId && promo.variantId) {
+          return promo.variantId === variantId;
+        }
+        if (!promo.variantId) {
+          return true;
+        }
+        return false;
+      });
+
+      if (!matched) return 0;
+
+      const basePrice = customPrice ?? Number(product.price || product.basePrice || 0);
+      if (basePrice <= 0) return 0;
+
+      let discount = 0;
+      if (matched.discountType === 'PERCENTAGE') {
+        discount = Math.round((basePrice * Number(matched.discountValue)) / 100);
+      } else {
+        discount = Math.min(basePrice, Number(matched.discountValue));
+      }
+      return Math.max(0, discount);
+    },
+    [activeItemDiscounts]
+  );
   const [voucherModalOpen, setVoucherModalOpen] = useState<boolean>(false);
   const [splitBillModalOpen, setSplitBillModalOpen] = useState<boolean>(false);
   const [cameraScannerOpen, setCameraScannerOpen] = useState<boolean>(false);
@@ -646,9 +680,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     try {
       setLoading(true);
       const outletIdToUse = targetOutletId || activeOutlet?.id;
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, catRes, itemPromoRes] = await Promise.all([
         api.getProducts({ outletId: outletIdToUse }),
         api.getCategories(outletIdToUse, 'true', true),
+        api.getActiveItemDiscounts(),
       ]);
 
       if (prodRes.status === 'success' && prodRes.data) {
@@ -656,6 +691,9 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       }
       if (catRes.status === 'success' && catRes.data) {
         setCategories(catRes.data);
+      }
+      if (itemPromoRes.status === 'success' && itemPromoRes.data) {
+        setActiveItemDiscounts(itemPromoRes.data);
       }
     } catch (err) {
       console.error('Gagal memuat produk & kategori:', err);
@@ -949,7 +987,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             : item
         );
       } else {
-        return [...prev, { product, quantity: 1, discountAmount: 0 }];
+        const promoDisc = calculateItemPromoDiscount(product);
+        return [...prev, { product, quantity: 1, discountAmount: promoDisc }];
       }
     });
   };
@@ -989,13 +1028,14 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   }) => {
     const { product, selectedOptions, note, finalPrice } = payload;
     const cartItemId = `${product.id}_${Date.now()}`;
+    const promoDisc = calculateItemPromoDiscount(product, null, finalPrice);
     setCart((prev) => [
       ...prev,
       {
         cartItemId,
         product,
         quantity: 1,
-        discountAmount: 0,
+        discountAmount: promoDisc,
         selectedModifiers: selectedOptions,
         itemNote: note,
         customPrice: finalPrice,
@@ -1930,6 +1970,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           allowedTabs={allowedTabs}
           currentUser={currentUser}
           onOpenBarcodeScanner={() => setCameraScannerOpen(true)}
+          activeItemDiscounts={activeItemDiscounts}
           isOnline={isOnline}
           pendingOfflineCount={pendingOfflineCount}
           isSyncingQueue={isSyncingQueue}
@@ -2066,6 +2107,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                 viewMode={viewMode}
                 loading={loading}
                 cartProductQuantities={cartProductQuantities}
+                activeItemDiscounts={activeItemDiscounts}
               />
             </div>
 

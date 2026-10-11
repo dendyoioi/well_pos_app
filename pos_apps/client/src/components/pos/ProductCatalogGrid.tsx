@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Package, Layers, Utensils } from 'lucide-react';
 import type { Product } from '../../types/product';
+import type { ActiveItemDiscount } from '../../types/promotion';
 
 export interface ProductCatalogGridProps {
   products: Product[];
@@ -8,6 +9,7 @@ export interface ProductCatalogGridProps {
   viewMode: 'grid' | 'compact';
   loading: boolean;
   cartProductQuantities?: Map<string, number>;
+  activeItemDiscounts?: ActiveItemDiscount[];
 }
 
 export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
@@ -16,6 +18,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
   viewMode,
   loading,
   cartProductQuantities,
+  activeItemDiscounts,
 }) => {
   if (loading) {
     return (
@@ -48,6 +51,13 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
         <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
           {products.map((product) => {
             const price = product.price || product.basePrice || 0;
+            const itemPromo = activeItemDiscounts?.find((d) => d.productId === product.id && !d.variantId);
+            const promoDisc = itemPromo
+              ? itemPromo.discountType === 'PERCENTAGE'
+                ? Math.round((price * itemPromo.discountValue) / 100)
+                : Math.min(price, itemPromo.discountValue)
+              : 0;
+            const discountedPrice = Math.max(0, price - promoDisc);
             const hasModifiers = (product.modifiers?.length || 0) > 0;
             const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
             const stock = product.stock ?? 0;
@@ -95,6 +105,11 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                       <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                         {product.name}
                       </h4>
+                      {itemPromo && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                          Promo {itemPromo.discountType === 'PERCENTAGE' ? `-${itemPromo.discountValue}%` : `-Rp ${itemPromo.discountValue.toLocaleString('id-ID')}`}
+                        </span>
+                      )}
                       {hasModifiers && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200 shadow-2xs">
                           <Layers className="w-2.5 h-2.5" />
@@ -115,10 +130,22 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
 
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="text-right">
-                    <p className="text-xs sm:text-sm font-black text-slate-900 whitespace-nowrap flex items-baseline justify-end">
-                      <span className="text-[11px] font-bold text-slate-500 mr-0.5 select-none">Rp</span>
-                      <span className="tabular-nums font-mono">{price.toLocaleString('id-ID')}</span>
-                    </p>
+                    {itemPromo ? (
+                      <div>
+                        <span className="text-[10px] line-through text-slate-400 font-mono leading-none block">
+                          Rp {price.toLocaleString('id-ID')}
+                        </span>
+                        <p className="text-xs sm:text-sm font-black text-emerald-800 whitespace-nowrap flex items-baseline justify-end mt-0.5">
+                          <span className="text-[11px] font-bold text-emerald-600 mr-0.5 select-none">Rp</span>
+                          <span className="tabular-nums font-mono">{discountedPrice.toLocaleString('id-ID')}</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs sm:text-sm font-black text-slate-900 whitespace-nowrap flex items-baseline justify-end">
+                        <span className="text-[11px] font-bold text-slate-500 mr-0.5 select-none">Rp</span>
+                        <span className="tabular-nums font-mono">{price.toLocaleString('id-ID')}</span>
+                      </p>
+                    )}
                     <p className="text-[10px] text-slate-500 font-medium">
                       {isUnlimited ? (isComposite ? 'Tersedia (Olahan F&B)' : 'Tersedia') : `Stok: ${stock}`}
                     </p>
@@ -149,6 +176,13 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3.5">
         {products.map((product) => {
           const price = product.price || product.basePrice || 0;
+          const itemPromo = activeItemDiscounts?.find((d) => d.productId === product.id && !d.variantId);
+          const promoDisc = itemPromo
+            ? itemPromo.discountType === 'PERCENTAGE'
+              ? Math.round((price * itemPromo.discountValue) / 100)
+              : Math.min(price, itemPromo.discountValue)
+            : 0;
+          const discountedPrice = Math.max(0, price - promoDisc);
           const hasModifiers = (product.modifiers?.length || 0) > 0;
           const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
           const stock = product.stock ?? 0;
@@ -203,8 +237,17 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                   </div>
                 )}
 
-                {/* Badge Modifier (Top-Right) */}
-                {hasModifiers && (
+                {/* Badge Promo Diskon Item */}
+                {itemPromo && (
+                  <div className="absolute top-1.5 right-1.5 pointer-events-none z-10">
+                    <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-xs">
+                      {itemPromo.discountType === 'PERCENTAGE' ? `-${itemPromo.discountValue}%` : `-Rp ${itemPromo.discountValue.toLocaleString('id-ID')}`}
+                    </span>
+                  </div>
+                )}
+
+                {/* Badge Modifier (Top-Right, shifted if promo exists) */}
+                {hasModifiers && !itemPromo && (
                   <div className="absolute top-1.5 right-1.5 pointer-events-none">
                     <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-xs">
                       <Layers className="w-2.5 h-2.5 text-violet-300" />
@@ -237,14 +280,30 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
               {/* Harga & Tombol Tambah */}
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5 mt-auto">
                 <div className="flex flex-col min-w-0 flex-1">
-                  <p className="text-xs sm:text-[13px] font-black text-slate-900 tracking-tight leading-none whitespace-nowrap flex items-baseline">
-                    <span className="text-[10px] font-bold text-slate-500 mr-0.5 select-none">
-                      Rp
-                    </span>
-                    <span className="tabular-nums font-mono truncate">
-                      {price.toLocaleString('id-ID')}
-                    </span>
-                  </p>
+                  {itemPromo ? (
+                    <div>
+                      <span className="text-[10px] line-through text-slate-400 font-mono leading-none block">
+                        Rp {price.toLocaleString('id-ID')}
+                      </span>
+                      <p className="text-xs sm:text-[13px] font-black text-emerald-800 tracking-tight leading-none whitespace-nowrap flex items-baseline mt-0.5">
+                        <span className="text-[10px] font-bold text-emerald-600 mr-0.5 select-none">
+                          Rp
+                        </span>
+                        <span className="tabular-nums font-mono truncate">
+                          {discountedPrice.toLocaleString('id-ID')}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs sm:text-[13px] font-black text-slate-900 tracking-tight leading-none whitespace-nowrap flex items-baseline">
+                      <span className="text-[10px] font-bold text-slate-500 mr-0.5 select-none">
+                        Rp
+                      </span>
+                      <span className="tabular-nums font-mono truncate">
+                        {price.toLocaleString('id-ID')}
+                      </span>
+                    </p>
+                  )}
                   {isUnlimited ? (
                     <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 font-semibold mt-1 truncate">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />

@@ -37,13 +37,12 @@ import { ORDER_CHANNEL_LABELS } from '../../types/order';
 import type { Customer } from '../../types/customer';
 import type { Outlet, OutletFee, SalesChannelConfig } from '../../types/outlet';
 import { normalizeSalesChannels } from '../../types/outlet';
-import type { Promotion } from '../../types/promotion';
+import type { Promotion, ActiveItemDiscount } from '../../types/promotion';
 import type { Shift } from '../../types/shift';
 import type { QrTable } from '../../types/qr_menu';
 import { PwaInstallButton } from '../PwaInstallBanner';
 import { BluetoothSettingsModal } from './BluetoothSettingsModal';
 import { useBluetoothPrinter } from '../../hooks/useBluetoothPrinter';
-import { CurrencyInput } from '../ui/CurrencyInput';
 
 export interface PosMobileViewProps {
   activeOutlet: Outlet | null | undefined;
@@ -116,6 +115,7 @@ export interface PosMobileViewProps {
   pendingOfflineCount?: number;
   isSyncingQueue?: boolean;
   onSyncOfflineQueue?: () => void;
+  activeItemDiscounts?: ActiveItemDiscount[];
   /** Callback ubah / tambah catatan item pesanan kasir */
   onUpdateItemNote?: (index: number, note: string) => void;
   /** Callback ubah / tambah diskon item pesanan kasir */
@@ -188,8 +188,9 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   allowedTabs,
   currentUser,
   onOpenBarcodeScanner,
+  activeItemDiscounts,
   onUpdateItemNote,
-  onUpdateItemDiscount,
+  onUpdateItemDiscount: _onUpdateItemDiscount,
 }) => {
   // Mobile UI States
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -200,11 +201,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   const [editingMobileNoteIdx, setEditingMobileNoteIdx] = useState<number | null>(null);
   const [tempMobileNoteText, setTempMobileNoteText] = useState('');
 
-  // Mobile Item Discount States
-  const [editingMobileDiscountIdx, setEditingMobileDiscountIdx] = useState<number | null>(null);
-  const [mobileDiscountType, setMobileDiscountType] = useState<'PERCENT' | 'NOMINAL'>('PERCENT');
-  const [mobileDiscountPercent, setMobileDiscountPercent] = useState<number>(10);
-  const [mobileDiscountNominal, setMobileDiscountNominal] = useState<number>(0);
+
   const btPrinter = useBluetoothPrinter();
 
   // Deteksi khusus apakah sedang berjalan sebagai PWA Standalone di iPhone / Handheld
@@ -490,6 +487,13 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
           <div className="grid grid-cols-2 gap-2">
             {filteredProducts.map((product) => {
               const price = product.price || product.basePrice || 0;
+              const itemPromo = activeItemDiscounts?.find((d) => d.productId === product.id && !d.variantId);
+              const promoDisc = itemPromo
+                ? itemPromo.discountType === 'PERCENTAGE'
+                  ? Math.round((price * itemPromo.discountValue) / 100)
+                  : Math.min(price, itemPromo.discountValue)
+                : 0;
+              const discountedPrice = Math.max(0, price - promoDisc);
               const hasModifiers = (product.modifiers?.length || 0) > 0;
               const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
               const stock = product.stock ?? 0;
@@ -538,8 +542,15 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                       </div>
                     )}
 
+                    {/* Promo Tag */}
+                    {itemPromo && (
+                      <span className="absolute top-1 right-1 bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs z-10">
+                        {itemPromo.discountType === 'PERCENTAGE' ? `-${itemPromo.discountValue}%` : `-Rp ${itemPromo.discountValue.toLocaleString('id-ID')}`}
+                      </span>
+                    )}
+
                     {/* Modifier Tag */}
-                    {hasModifiers && (
+                    {hasModifiers && !itemPromo && (
                       <span className="absolute bottom-1 right-1 bg-slate-900/80 text-violet-300 text-[8px] font-black px-1 py-0.2 rounded">
                         Varian
                       </span>
@@ -566,9 +577,20 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                     </div>
 
                     <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
-                      <span className="font-black text-xs text-blue-950">
-                        Rp {price.toLocaleString('id-ID')}
-                      </span>
+                      {itemPromo ? (
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[9px] line-through text-slate-400 font-mono leading-none">
+                            Rp {price.toLocaleString('id-ID')}
+                          </span>
+                          <span className="font-black text-xs text-emerald-800 leading-none mt-0.5">
+                            Rp {discountedPrice.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="font-black text-xs text-blue-950">
+                          Rp {price.toLocaleString('id-ID')}
+                        </span>
+                      )}
                       <button
                         type="button"
                         className="w-6 h-6 rounded-lg bg-blue-900 text-white flex items-center justify-center active:bg-blue-950 shadow-2xs"
@@ -954,135 +976,13 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                               )
                             )}
 
-                            {/* Tombol / Badge Diskon Item Mobile */}
+                            {/* Badge Promo Diskon Item Mobile (Menu Promo & Diskon) */}
                             {item.discountAmount && item.discountAmount > 0 ? (
                               <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded text-[10px] font-bold">
-                                <Tag className="w-2.5 h-2.5 text-emerald-600" />
-                                <span>Disc: -Rp {item.discountAmount.toLocaleString('id-ID')}/pcs</span>
-                                {onUpdateItemDiscount && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingMobileDiscountIdx(index);
-                                      setMobileDiscountType('NOMINAL');
-                                      setMobileDiscountNominal(item.discountAmount);
-                                      setMobileDiscountPercent(Math.round((item.discountAmount / itemPrice) * 100) || 10);
-                                    }}
-                                    className="text-emerald-700 hover:text-emerald-950 font-bold ml-0.5"
-                                  >
-                                    ✏️
-                                  </button>
-                                )}
-                                {onUpdateItemDiscount && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onUpdateItemDiscount(index, 0)}
-                                    className="text-emerald-700 hover:text-rose-600 font-bold ml-0.5"
-                                  >
-                                    ✕
-                                  </button>
-                                )}
+                                <Tag className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                <span>Promo: -Rp {item.discountAmount.toLocaleString('id-ID')}/pcs</span>
                               </div>
-                            ) : (
-                              onUpdateItemDiscount && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingMobileDiscountIdx(index);
-                                    setMobileDiscountType('PERCENT');
-                                    setMobileDiscountPercent(10);
-                                    setMobileDiscountNominal(Math.round(itemPrice * 0.1));
-                                  }}
-                                  className="text-[9px] text-slate-400 hover:text-emerald-700 font-medium hover:underline flex items-center gap-0.5"
-                                >
-                                  <Tag className="w-2.5 h-2.5 text-emerald-600" />
-                                  <span>+ Diskon</span>
-                                </button>
-                              )
-                            )}
-                          </div>
-                        )}
-
-                        {/* Inline Item Discount Edit Mode Mobile */}
-                        {editingMobileDiscountIdx === index && (
-                          <div className="mt-1 p-2 bg-emerald-50 border border-emerald-300 rounded-xl space-y-1.5 animate-fadeIn text-[11px]">
-                            <div className="flex items-center justify-between">
-                              <span className="font-extrabold text-[10px] text-emerald-950 flex items-center gap-1">
-                                <Tag className="w-2.5 h-2.5 text-emerald-700" /> Diskon Item
-                              </span>
-                              <div className="flex bg-white rounded-lg p-0.5 border border-emerald-200 text-[9px]">
-                                <button
-                                  type="button"
-                                  onClick={() => setMobileDiscountType('PERCENT')}
-                                  className={`px-1.5 py-0.5 rounded font-bold cursor-pointer transition-colors ${
-                                    mobileDiscountType === 'PERCENT' ? 'bg-emerald-700 text-white' : 'text-slate-600'
-                                  }`}
-                                >
-                                  %
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setMobileDiscountType('NOMINAL')}
-                                  className={`px-1.5 py-0.5 rounded font-bold cursor-pointer transition-colors ${
-                                    mobileDiscountType === 'NOMINAL' ? 'bg-emerald-700 text-white' : 'text-slate-600'
-                                  }`}
-                                >
-                                  Rp
-                                </button>
-                              </div>
-                            </div>
-
-                            {mobileDiscountType === 'PERCENT' ? (
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={mobileDiscountPercent}
-                                  onChange={(e) => setMobileDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                                  className="w-12 px-1.5 py-0.5 bg-white border border-emerald-300 rounded text-xs font-black text-emerald-950 outline-none text-right"
-                                  autoFocus
-                                />
-                                <span className="font-bold text-emerald-900">%</span>
-                                <span className="text-[9px] text-emerald-700 font-medium truncate ml-1">
-                                  (-Rp {Math.round((itemPrice * mobileDiscountPercent) / 100).toLocaleString('id-ID')})
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="w-28">
-                                <CurrencyInput
-                                  value={mobileDiscountNominal}
-                                  onChange={(val) => setMobileDiscountNominal(Math.min(itemPrice, Math.max(0, val)))}
-                                  inputClassName="py-0.5 text-[11px] font-bold text-right pl-10 rounded bg-white border-emerald-300"
-                                  prefixClassName="text-[9px] py-0.5 px-1"
-                                  placeholder="0"
-                                />
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-1 justify-end pt-0.5">
-                              <button
-                                type="button"
-                                onClick={() => setEditingMobileDiscountIdx(null)}
-                                className="px-1.5 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-800"
-                              >
-                                Batal
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const finalDisc =
-                                    mobileDiscountType === 'PERCENT'
-                                      ? Math.round((itemPrice * mobileDiscountPercent) / 100)
-                                      : Math.min(itemPrice, mobileDiscountNominal);
-                                  onUpdateItemDiscount?.(index, finalDisc);
-                                  setEditingMobileDiscountIdx(null);
-                                }}
-                                className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-700 hover:bg-emerald-800 text-white"
-                              >
-                                Terapkan
-                              </button>
-                            </div>
+                            ) : null}
                           </div>
                         )}
                       </div>

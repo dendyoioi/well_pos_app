@@ -2114,11 +2114,19 @@ export const api = {
   // ==========================================
   // PROMOTIONS & VOUCHERS
   // ==========================================
-  getPromotions: async (params?: { search?: string; isActive?: boolean }): Promise<{ status: string; data?: { promotions: Promotion[]; total: number } | Promotion[]; message?: string }> => {
+  getPromotions: async (params?: { search?: string; isActive?: boolean; scope?: 'ORDER' | 'ITEM' }): Promise<{ status: string; data?: { promotions: Promotion[]; total: number } | Promotion[]; message?: string }> => {
     const query = new URLSearchParams();
     if (params?.search) query.append('search', params.search);
     if (params?.isActive !== undefined) query.append('isActive', String(params.isActive));
+    if (params?.scope) query.append('scope', params.scope);
     const res = await fetch(`/api/promotions?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getActiveItemDiscounts: async (): Promise<{ status: string; data?: import('../types/promotion').ActiveItemDiscount[]; message?: string }> => {
+    const res = await fetch('/api/promotions/active-items', {
       headers: authHeader(),
     });
     return res.json();
@@ -2156,7 +2164,7 @@ export const api = {
     return res.json();
   },
 
-  getPromotionById: async (id: string): Promise<{ status: string; data?: Promotion & { usages?: any[] }; message?: string }> => {
+  getPromotionById: async (id: string): Promise<{ status: string; data?: Promotion & { usages?: any[]; items?: any[] }; message?: string }> => {
     const res = await fetch(`/api/promotions/${id}`, {
       headers: authHeader(),
     });
@@ -2462,6 +2470,7 @@ export const supplierApi = {
 
 export const promotionApi = {
   getPromotions: api.getPromotions,
+  getActiveItemDiscounts: api.getActiveItemDiscounts,
   getPromotionById: api.getPromotionById,
   createPromotion: api.createPromotion,
   updatePromotion: api.updatePromotion,

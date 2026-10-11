@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import {
   getPromotions,
   getPromotionById,
+  getActiveItemDiscounts,
   createPromotion,
   updatePromotion,
   deletePromotion,
@@ -14,6 +15,7 @@ export const promotionRouter = Router();
 
 // Read-only promo & validasi kupon (Kasir memerlukan ini untuk checkout nota)
 promotionRouter.get('/', authenticate, getPromotions);
+promotionRouter.get('/active-items', authenticate, getActiveItemDiscounts);
 promotionRouter.get('/:id', authenticate, getPromotionById);
 promotionRouter.post('/validate', authenticate, validatePromotion);
 

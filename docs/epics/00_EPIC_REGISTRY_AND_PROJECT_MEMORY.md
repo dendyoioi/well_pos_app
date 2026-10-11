@@ -521,6 +521,7 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   - Customer Database & Tiering: Profil pelanggan, riwayat belanja, akumulasi poin, badge tier keanggotaan (Bronze, Silver, Gold, Platinum), mutasi buku besar poin (`CustomerPointLedger`), dan form penyesuaian poin manual.
   - Tiers & Rewards POS: Slider/input penukaran poin langsung di kasir (1 Poin = Rp 100), terkunci otomatis jika outlet mematikan fitur loyalitas.
   - Promo Engine: Master voucher diskon persen/nominal, kuota pemakaian, batas minimal belanja, tombol saklar toggle cepat aktif/nonaktif, dan modal audit riwayat pemakaian voucher (`usages` log).
+  - Diskon Produk / Item Terjadwal & Anti-Diskon Sembarang Kasir (2026-10-11): Pengaturan promo item sentral via Backoffice (Dual Tab "Voucher Transaksi" vs "Diskon Produk / Item") dengan periode tanggal aktif, tabel seleksi item/varian, kalkulasi diskon otomatis di katalog & keranjang kasir (`🏷️ Promo Item: -Rp X/pcs`), serta eliminasi total tombol input manual diskon sembarang kasir.
   - Struk Digital: Pengiriman otomatis invoice PDF struk via Email dan integrasi WhatsApp gateway dengan rincian poin diperoleh dan poin ditukarkan.
 
 #### 📊 EPIC-09: Financial Analytics, Real-Time COGS/HPP & Business Intelligence

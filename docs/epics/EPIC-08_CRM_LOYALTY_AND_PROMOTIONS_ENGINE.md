@@ -159,3 +159,24 @@ EPIC-08 telah rampung 100% dengan paritas penuh di seluruh layer:
 3. Integrasi POS Terminal Checkout mendukung voucher diskon dan penukaran poin langsung.
 4. Digital receipt WhatsApp dan HTML view siap pakai.
 5. Zero TypeScript errors pada server maupun client build.
+
+---
+
+### 7. ADDENDUM: DISKON TERJADWAL PER ITEM / PRODUK & KEBIJAKAN ANTI-DISKON SEMBARANG KASIR (2026-10-11)
+
+#### 7.1 Latar Belakang & Masalah Bisnis
+Sebelumnya, diskon per item dapat dimasukkan secara ad-hoc dan manual oleh kasir di keranjang POS tanpa batasan jadwal atau verifikasi pemilik toko. Hal ini berisiko fraud/kebocoran kas kasir dan menyulitkan pelacakan kampanye promosi terencana.
+
+#### 7.2 Solusi & Arsitektur Fitur
+1. **Model Relasi Database Baru (`promotion_items`)**:
+   - Menambahkan kolom `scope` (`ORDER` vs `ITEM`) pada model `promotions`.
+   - Membuat entitas `promotion_items` (`id`, `tenant_id`, `promotion_id`, `product_id`, `variant_id`, `discount_type`, `discount_value`).
+   - Eksekusi aman via `SchemaPatcher` (`20261011_02_promotion_items_and_scope`) langsung ke database lokal dan Supabase remote cloud (`npm run db:remote:patch`).
+2. **Backoffice Promo & Diskon (`PromotionsView.tsx`)**:
+   - Dual Tab Navigasi: **"Voucher Transaksi (Nota)"** vs **"Diskon Produk / Item"**.
+   - Bottom-sheet form responsif untuk memilih multi-produk/varian terdiskon, filter kategori, penyesuaian nominal override per item, serta simulasi harga bersih live.
+   - Konfigurasi periode jadwal aktif (`startDate` s.d `endDate`) yang ketat.
+3. **POS Terminal Auto-Discount (`PosTerminalView.tsx`, `ProductCatalogGrid.tsx`, `OrderCartSidebar.tsx`, `PosMobileView.tsx`)**:
+   - Endpoint terisolasi `GET /api/promotions/active-items` dimuat otomatis saat kasir membuka terminal.
+   - Penambahan produk/varian ke keranjang secara otomatis menerapkan potongan diskon terjadwal, menampilkan badge `🏷️ Promo Item: -Rp X/pcs`, serta harga coret (*struck-through price*).
+   - **Zero Arbitrary Cashier Discount**: Tombol input manual diskon sembarang kasir dihapus total dari keranjang desktop dan mobile. Seluruh diskon item wajib terdaftar resmi di menu Promo & Diskon.

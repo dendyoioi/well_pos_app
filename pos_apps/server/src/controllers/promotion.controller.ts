@@ -4,10 +4,18 @@ import { prisma } from '../config/prisma';
 import { promotionService } from '../services/promotion.service';
 import { DiscountType } from '@prisma/client';
 
+const promotionItemInputSchema = z.object({
+  productId: z.string().min(1, 'Product ID wajib diisi'),
+  variantId: z.string().optional().nullable(),
+  discountType: z.nativeEnum(DiscountType).optional().nullable(),
+  discountValue: z.number().positive('Nilai diskon item harus > 0').optional().nullable(),
+});
+
 const createPromotionSchema = z.object({
   code: z.string().min(1, 'Kode promo wajib diisi').max(50).transform((val) => val.trim().toUpperCase()),
   name: z.string().min(1, 'Nama promo wajib diisi').max(150),
   description: z.string().optional().nullable(),
+  scope: z.enum(['ORDER', 'ITEM']).default('ORDER'),
   discountType: z.nativeEnum(DiscountType),
   discountValue: z.number().positive('Nilai diskon harus > 0'),
   minOrderAmount: z.number().min(0).default(0),
@@ -17,6 +25,7 @@ const createPromotionSchema = z.object({
   startDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
   endDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
   isActive: z.boolean().default(true),
+  items: z.array(promotionItemInputSchema).optional(),
 });
 
 const updatePromotionSchema = createPromotionSchema.partial();
@@ -34,13 +43,17 @@ export const getPromotions = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant context is required' });
     }
 
-    const { isActive, search, page = '1', limit = '20' } = req.query;
+    const { isActive, scope, search, page = '1', limit = '20' } = req.query;
     const where: any = { tenantId };
 
     if (isActive === 'true') {
       where.isActive = true;
     } else if (isActive === 'false') {
       where.isActive = false;
+    }
+
+    if (scope && (scope === 'ORDER' || scope === 'ITEM')) {
+      where.scope = scope;
     }
 
     if (search && typeof search === 'string') {
@@ -61,7 +74,13 @@ export const getPromotions = async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' },
         include: {
           _count: {
-            select: { usages: true },
+            select: { usages: true, items: true },
+          },
+          items: {
+            include: {
+              product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+              variant: { select: { id: true, name: true, price: true, sku: true } },
+            },
           },
         },
       }),
@@ -103,7 +122,13 @@ export const getPromotionById = async (req: Request, res: Response) => {
             order: { select: { id: true, invoiceNumber: true, totalAmount: true } },
           },
         },
-        _count: { select: { usages: true } },
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+            variant: { select: { id: true, name: true, price: true, sku: true } },
+          },
+        },
+        _count: { select: { usages: true, items: true } },
       },
     });
 
@@ -146,6 +171,7 @@ export const createPromotion = async (req: Request, res: Response) => {
         code: validatedData.code,
         name: validatedData.name,
         description: validatedData.description,
+        scope: validatedData.scope,
         discountType: validatedData.discountType,
         discountValue: validatedData.discountValue,
         minOrderAmount: validatedData.minOrderAmount,
@@ -155,6 +181,23 @@ export const createPromotion = async (req: Request, res: Response) => {
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
         isActive: validatedData.isActive,
+        items: validatedData.items && validatedData.items.length > 0 ? {
+          create: validatedData.items.map((it) => ({
+            tenantId,
+            productId: it.productId,
+            variantId: it.variantId || null,
+            discountType: it.discountType || validatedData.discountType,
+            discountValue: it.discountValue !== undefined && it.discountValue !== null ? it.discountValue : validatedData.discountValue,
+          })),
+        } : undefined,
+      },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+            variant: { select: { id: true, name: true, price: true, sku: true } },
+          },
+        },
       },
     });
 
@@ -200,13 +243,55 @@ export const updatePromotion = async (req: Request, res: Response) => {
       }
     }
 
-    const updated = await prisma.promotion.update({
-      where: { id },
-      data: {
-        ...validatedData,
-        startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
-        endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      if (validatedData.items !== undefined) {
+        await tx.promotionItem.deleteMany({
+          where: { promotionId: id, tenantId },
+        });
+
+        if (validatedData.items.length > 0) {
+          const effectiveDiscountType = validatedData.discountType || promotion.discountType;
+          const effectiveDiscountValue = validatedData.discountValue !== undefined ? validatedData.discountValue : Number(promotion.discountValue);
+
+          await tx.promotionItem.createMany({
+            data: validatedData.items.map((it) => ({
+              tenantId,
+              promotionId: id,
+              productId: it.productId,
+              variantId: it.variantId || null,
+              discountType: it.discountType || effectiveDiscountType,
+              discountValue: it.discountValue !== undefined && it.discountValue !== null ? it.discountValue : effectiveDiscountValue,
+            })),
+          });
+        }
+      }
+
+      return await tx.promotion.update({
+        where: { id },
+        data: {
+          code: validatedData.code,
+          name: validatedData.name,
+          description: validatedData.description,
+          scope: validatedData.scope,
+          discountType: validatedData.discountType,
+          discountValue: validatedData.discountValue,
+          minOrderAmount: validatedData.minOrderAmount,
+          maxDiscountAmount: validatedData.maxDiscountAmount,
+          usageLimit: validatedData.usageLimit,
+          perCustomerLimit: validatedData.perCustomerLimit,
+          startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
+          endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
+          isActive: validatedData.isActive,
+        },
+        include: {
+          items: {
+            include: {
+              product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+              variant: { select: { id: true, name: true, price: true, sku: true } },
+            },
+          },
+        },
+      });
     });
 
     return res.status(200).json({ status: 'success', data: updated });
@@ -291,5 +376,74 @@ export const validatePromotion = async (req: Request, res: Response) => {
     }
     console.error('Error in validatePromotion:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memvalidasi promo', error: error.message });
+  }
+};
+
+export const getActiveItemDiscounts = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || (req.headers['x-tenant-id'] as string);
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant context is required' });
+    }
+
+    const now = new Date();
+    const activePromotions = await prisma.promotion.findMany({
+      where: {
+        tenantId,
+        scope: 'ITEM',
+        isActive: true,
+        startDate: { lte: now },
+        endDate: { gte: now },
+      },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true, imageUrl: true } },
+            variant: { select: { id: true, name: true, price: true, sku: true } },
+          },
+        },
+      },
+    });
+
+    // Flatten into clean item discount rule lookup array for POS Terminal
+    const itemDiscounts: Array<{
+      promotionId: string;
+      promotionName: string;
+      promotionCode: string;
+      productId: string;
+      productName?: string;
+      variantId?: string | null;
+      variantName?: string | null;
+      discountType: string;
+      discountValue: number;
+      startDate: Date;
+      endDate: Date;
+    }> = [];
+
+    for (const promo of activePromotions) {
+      for (const item of promo.items) {
+        itemDiscounts.push({
+          promotionId: promo.id,
+          promotionName: promo.name,
+          promotionCode: promo.code,
+          productId: item.productId,
+          productName: item.product?.name,
+          variantId: item.variantId,
+          variantName: item.variant?.name,
+          discountType: item.discountType || promo.discountType,
+          discountValue: Number(item.discountValue !== null && item.discountValue !== undefined ? item.discountValue : promo.discountValue),
+          startDate: promo.startDate,
+          endDate: promo.endDate,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: itemDiscounts,
+    });
+  } catch (error: any) {
+    console.error('Error in getActiveItemDiscounts:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil diskon item aktif', error: error.message });
   }
 };
