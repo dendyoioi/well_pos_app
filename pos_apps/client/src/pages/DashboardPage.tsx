@@ -241,7 +241,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'outlets',
     'guide',
   ],
-  KITCHEN: ['pos', 'recipes'],
+  KITCHEN: ['qr_orders', 'recipes', 'overview'],
   WAITER: ['pos', 'orders', 'qr_orders'],
 };
 
@@ -251,7 +251,7 @@ const DEFAULT_TAB: Record<UserRole, TabKey> = {
   SUPERVISOR: 'overview',
   ADMIN: 'overview',
   OWNER: 'overview',
-  KITCHEN: 'pos',
+  KITCHEN: 'qr_orders',
   WAITER: 'pos',
 };
 
@@ -1847,6 +1847,65 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       </div>
                       <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
                         <span>Lihat Katalog</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </>
+                ) : user.role === 'KITCHEN' ? (
+                  <>
+                    <div
+                      onClick={() => setActiveTab('qr_orders')}
+                      className="p-6 rounded-2xl bg-white border-2 border-amber-600 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-3 font-bold">
+                          1
+                        </div>
+                        <h4 className="font-bold text-amber-950 text-base">Pesanan Masak Live (KDS)</h4>
+                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                          Pantau tiket pesanan masuk per meja secara real-time, ubah status ke Sedang Dimasak, dan tandai saat hidangan Siap Saji.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-extrabold flex items-center justify-between">
+                        <span>Buka Antrean Dapur</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setActiveTab('recipes')}
+                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                          2
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-base">Formula Resep &amp; BOM</h4>
+                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                          Periksa standar takaran gramatur bahan baku, komposisi saus, dan SOP konsistensi rasa setiap menu minuman/makanan.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
+                        <span>Lihat Resep &amp; BOM</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setActiveTab('qr_orders')}
+                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                          3
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-base">Koordinasi Pramusaji</h4>
+                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                          Tandai pesanan Selesai saat hidangan telah diantar ke meja tamu pelanggan untuk memperbarui status kasir otomatis.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
+                        <span>Monitor Antrean</span>
                         <ArrowRight className="w-4 h-4" />
                       </div>
                     </div>

@@ -125,6 +125,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       case 'SUPERVISOR': return 'Supervisor';
       case 'CASHIER': return 'Kasir';
       case 'WAREHOUSE': return 'Gudang';
+      case 'KITCHEN': return 'Dapur (KDS)';
+      case 'WAITER': return 'Pramusaji';
       default: return role;
     }
   };
@@ -548,6 +550,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                                       ? 'bg-amber-100 text-amber-800 border border-amber-200'
                                       : c.role === 'SUPERVISOR'
                                       ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                      : c.role === 'KITCHEN'
+                                      ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                                      : c.role === 'WAREHOUSE'
+                                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
                                       : 'bg-blue-100 text-blue-800 border border-blue-200'
                                   }`}
                                 >
@@ -576,6 +582,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                                     ? 'bg-amber-100 text-amber-800'
                                     : selectedCashier.role === 'SUPERVISOR'
                                     ? 'bg-purple-100 text-purple-800'
+                                    : selectedCashier.role === 'KITCHEN'
+                                    ? 'bg-orange-100 text-orange-800'
+                                    : selectedCashier.role === 'WAREHOUSE'
+                                    ? 'bg-indigo-100 text-indigo-800'
                                     : 'bg-blue-200/80 text-blue-900'
                                 }`}
                               >

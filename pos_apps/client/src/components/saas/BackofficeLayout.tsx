@@ -30,6 +30,7 @@ import {
   Sparkles,
   ShieldAlert,
   BookOpen,
+  ChefHat,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -249,9 +250,70 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
       onItemClick?.();
     };
 
-    if (activeOutlet?.isWarehouse) {
+    // 1. ISOLASI TOTAL ROLE KITCHEN (DAPUR & KDS SAJA)
+    if (user.role === 'KITCHEN') {
       return (
-        /* MODE KHUSUS GUDANG (LOGISTIK & PASOKAN PUSAT) */
+        <div className="space-y-3">
+          {/* Banner Status Mode Dapur */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/80 shadow-xs space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <ChefHat className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">
+                  Mode Dapur (KDS)
+                </div>
+                <div className="text-xs font-black text-slate-900 truncate">
+                  {activeOutlet?.name || 'Dapur Resto'}
+                </div>
+              </div>
+            </div>
+            <p className="text-[10.5px] text-amber-900/80 leading-snug">
+              Antarmuka terisolasi staf dapur: pantau antrean pesanan masak dan takaran formula resep.
+            </p>
+          </div>
+
+          {/* Navigasi Khusus Dapur */}
+          <div className="space-y-1">
+            <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              Operasional Dapur
+            </div>
+            <button
+              onClick={() => handleSelectTab('qr_orders')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'qr_orders'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-amber-50/60'
+              }`}
+            >
+              <ChefHat className="w-4 h-4 shrink-0" />
+              <span>Pesanan Masak (KDS)</span>
+            </button>
+            <button
+              onClick={() => handleSelectTab('recipes')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'recipes'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-amber-50/60'
+              }`}
+            >
+              <UtensilsCrossed className="w-4 h-4 shrink-0" />
+              <span>Formula Resep &amp; BOM</span>
+            </button>
+          </div>
+
+          {/* Akses Cepat PWA di Dapur */}
+          <div className="pt-3 mt-3 border-t border-amber-200/80">
+            <PwaInstallButton className="w-full justify-center" />
+          </div>
+        </div>
+      );
+    }
+
+    // 2. ISOLASI MODE GUDANG (LOGISTIK & PASOKAN PUSAT)
+    if (activeOutlet?.isWarehouse || user.role === 'WAREHOUSE') {
+      return (
         <div className="space-y-3">
           {/* Banner Status Mode Gudang */}
           <div className="p-3 rounded-2xl bg-indigo-50/90 border border-indigo-200/80 shadow-xs space-y-2">
@@ -264,23 +326,26 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   Mode Gudang Aktif
                 </div>
                 <div className="text-xs font-black text-slate-900 truncate">
-                  {activeOutlet.name}
+                  {activeOutlet?.name || 'Gudang Pusat'}
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => {
-                const storeOutlets = outlets.filter((o) => !o.isWarehouse);
-                if (storeOutlets.length > 0) {
-                  onSelectOutlet(storeOutlets[0].id);
-                  handleSelectTab('overview');
-                }
-              }}
-              className="w-full py-1.5 px-2.5 rounded-xl bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-950 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs"
-            >
-              <Store className="w-3.5 h-3.5 text-indigo-700" />
-              <span>Beralih ke Toko Penjualan</span>
-            </button>
+            {/* Tombol Beralih hanya untuk Owner/Admin/Spv */}
+            {(user.role === 'ADMIN' || user.role === 'OWNER' || user.role === 'SUPERVISOR') && (
+              <button
+                onClick={() => {
+                  const storeOutlets = outlets.filter((o) => !o.isWarehouse);
+                  if (storeOutlets.length > 0) {
+                    onSelectOutlet(storeOutlets[0].id);
+                    handleSelectTab('overview');
+                  }
+                }}
+                className="w-full py-1.5 px-2.5 rounded-xl bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-950 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              >
+                <Store className="w-3.5 h-3.5 text-indigo-700" />
+                <span>Beralih ke Toko Penjualan</span>
+              </button>
+            )}
           </div>
 
           {/* 1. Logistik & Persediaan */}
@@ -401,6 +466,95 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
           {/* Akses Cepat Pasang PWA di Sidebar Gudang */}
           <div className="pt-3 mt-3 border-t border-indigo-200/80">
+            <PwaInstallButton className="w-full justify-center" />
+          </div>
+        </div>
+      );
+    }
+
+    // 3. ISOLASI ROLE CASHIER (OPERASIONAL KASIR & NOTA)
+    if (user.role === 'CASHIER') {
+      return (
+        <div className="space-y-3">
+          {/* Banner Status Mode Kasir */}
+          <div className="p-3 rounded-2xl bg-blue-50/90 border border-blue-200/80 shadow-xs space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Store className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-black uppercase tracking-wider text-blue-700">
+                  Operasional Kasir
+                </div>
+                <div className="text-xs font-black text-slate-900 truncate">
+                  {activeOutlet?.name || 'Toko Kasir'}
+                </div>
+              </div>
+            </div>
+            <p className="text-[10.5px] text-blue-900/80 leading-snug">
+              Akses khusus staf kasir: transaksi penjualan, riwayat nota, rekap shift, dan buku kasbon.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <button
+              onClick={() => handleSelectTab('pos')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'pos'
+                  ? 'bg-blue-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Store className="w-4 h-4 shrink-0" />
+              <span>Terminal Kasir POS (F4)</span>
+            </button>
+            <button
+              onClick={() => handleSelectTab('orders')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'orders' || activeTab === 'payment_items'
+                  ? 'bg-blue-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Receipt className="w-4 h-4 shrink-0" />
+              <span>Riwayat Transaksi Nota</span>
+            </button>
+            <button
+              onClick={() => handleSelectTab('shifts')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'shifts'
+                  ? 'bg-blue-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4 shrink-0" />
+              <span>Shift Kasir (X/Z Report)</span>
+            </button>
+            <button
+              onClick={() => handleSelectTab('customers', 'directory')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'customers'
+                  ? 'bg-blue-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              <span>Pelanggan &amp; Kasbon</span>
+            </button>
+            <button
+              onClick={() => handleSelectTab('qr_orders')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeTab === 'qr_orders'
+                  ? 'bg-blue-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <QrCode className="w-4 h-4 shrink-0" />
+              <span>Pesanan Mandiri QR</span>
+            </button>
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-slate-200">
             <PwaInstallButton className="w-full justify-center" />
           </div>
         </div>
