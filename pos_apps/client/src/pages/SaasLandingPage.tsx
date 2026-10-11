@@ -55,10 +55,24 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
-  // Konfigurasi dinamis biaya pendaftaran & bonus token dari platform
-  const [platformConfig, setPlatformConfig] = useState({
+  // Konfigurasi dinamis biaya pendaftaran, token, dan paket katalog dari platform
+  const [platformConfig, setPlatformConfig] = useState<{
+    registrationFee: number;
+    registrationBonusTokens: number;
+    tokenPrice: number;
+    minTokenPurchase: number;
+    packages: any[];
+  }>({
     registrationFee: 99000,
     registrationBonusTokens: 100,
+    tokenPrice: 100,
+    minTokenPurchase: 250,
+    packages: [
+      { id: 'pkg-starter-250', name: 'Starter 250', tokens: 250, label: 'Starter 250', price: 25000, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
+      { id: 'pkg-basic-1000', name: 'Basic 500', tokens: 500, label: 'Basic 500', price: 37500, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
+      { id: 'pkg-pro-2500', name: 'Pro 1.500', tokens: 1500, label: 'Pro 1.500', price: 90000, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
+      { id: 'pkg-enterprise-5000', name: 'Enterprise 5.000', tokens: 5000, label: 'Enterprise 5.000', price: 225000, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
+    ],
   });
 
   // State Kalkulator Efisiensi Biaya Token Live
@@ -226,10 +240,15 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   useEffect(() => {
     api.getPublicPlatformConfig().then((res) => {
       if (res.status === 'success' && res.data) {
-        setPlatformConfig({
-          registrationFee: typeof res.data.registrationFee === 'number' ? res.data.registrationFee : 99000,
-          registrationBonusTokens: typeof res.data.registrationBonusTokens === 'number' ? res.data.registrationBonusTokens : 100,
-        });
+        const data = res.data;
+        setPlatformConfig((prev) => ({
+          ...prev,
+          registrationFee: typeof data.registrationFee === 'number' ? data.registrationFee : prev.registrationFee,
+          registrationBonusTokens: typeof data.registrationBonusTokens === 'number' ? data.registrationBonusTokens : prev.registrationBonusTokens,
+          tokenPrice: typeof data.tokenPrice === 'number' ? data.tokenPrice : prev.tokenPrice,
+          minTokenPurchase: typeof data.minTokenPurchase === 'number' ? data.minTokenPurchase : prev.minTokenPurchase,
+          packages: Array.isArray(data.packages) && data.packages.length > 0 ? data.packages : prev.packages,
+        }));
       }
     }).catch((err) => console.error('Gagal mengambil info konfigurasi platform:', err));
   }, []);
@@ -1073,44 +1092,60 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   </p>
 
                   <div className="mt-5 space-y-3">
-                    {/* Paket 1 */}
-                    <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 bg-slate-50/70 transition-all flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900">Paket Pemula</span>
-                          <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-semibold">500 Struk</span>
-                        </div>
-                        <span className="text-[11px] text-slate-500">Hanya ~Rp 100 per transaksi</span>
-                      </div>
-                      <span className="font-black text-sm text-slate-900">Rp 50.000</span>
-                    </div>
+                    {platformConfig.packages.map((pkg: any, idx: number) => {
+                      const isPop = Boolean(pkg.isPopular);
+                      const badgeText = pkg.badge || (isPop ? 'Paling Dipilih' : null);
+                      const priceNum = typeof pkg.price === 'number' && pkg.price > 0 ? pkg.price : (pkg.tokens * platformConfig.tokenPrice);
+                      const pricePerTx = Math.round(priceNum / pkg.tokens);
 
-                    {/* Paket 2 - Populer */}
-                    <div className="p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50/50 shadow-xs flex items-center justify-between relative">
-                      <div className="absolute -top-2.5 right-4 bg-blue-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
-                        Paling Dipilih
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900">Paket Laris Manis</span>
-                          <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-bold">2.000 Struk</span>
+                      return (
+                        <div
+                          key={pkg.id || `${pkg.tokens}-${idx}`}
+                          className={`p-3.5 rounded-xl transition-all flex items-center justify-between relative ${
+                            isPop
+                              ? 'border-2 border-blue-600 bg-blue-50/50 shadow-xs'
+                              : 'border border-slate-200 hover:border-blue-400 bg-slate-50/70'
+                          }`}
+                        >
+                          {badgeText && (
+                            <div
+                              className={`absolute -top-2.5 right-4 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-xs ${
+                                isPop ? 'bg-blue-600' : 'bg-slate-700'
+                              }`}
+                            >
+                              {badgeText}
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-slate-900">{pkg.name || pkg.label}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                                  isPop ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'
+                                }`}
+                              >
+                                {Number(pkg.tokens).toLocaleString('id-ID')} Struk
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[11px] font-medium block mt-0.5 ${
+                                isPop ? 'text-blue-700' : 'text-slate-500'
+                              }`}
+                            >
+                              Hanya ~Rp {pricePerTx} per transaksi
+                              {pkg.description ? ` • ${pkg.description}` : ''}
+                            </span>
+                          </div>
+                          <span
+                            className={`font-black font-mono ${
+                              isPop ? 'text-base text-blue-950' : 'text-sm text-slate-900'
+                            }`}
+                          >
+                            Rp {priceNum.toLocaleString('id-ID')}
+                          </span>
                         </div>
-                        <span className="text-[11px] text-blue-700 font-medium">Hanya ~Rp 75 per transaksi</span>
-                      </div>
-                      <span className="font-black text-base text-blue-950">Rp 150.000</span>
-                    </div>
-
-                    {/* Paket 3 */}
-                    <div className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 bg-slate-50/70 transition-all flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900">Paket Grosir Rame</span>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-semibold">5.000 Struk</span>
-                        </div>
-                        <span className="text-[11px] text-emerald-700 font-medium">Hanya ~Rp 60 per transaksi (Super Hemat)</span>
-                      </div>
-                      <span className="font-black text-sm text-slate-900">Rp 300.000</span>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1123,7 +1158,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
             {/* KALKULATOR PENGHEMATAN TOKEN LIVE (INTERAKTIF) */}
             {(() => {
               const monthlyTx = dailyTransactions * 30;
-              const perTxRate = monthlyTx <= 500 ? 100 : monthlyTx <= 2000 ? 75 : 60;
+              const perTxRate = monthlyTx <= 250 ? 100 : monthlyTx <= 500 ? 75 : monthlyTx <= 1500 ? 60 : 45;
               const wellPosCost = monthlyTx * perTxRate;
               const competitorCost = 249000;
               const savings = Math.max(0, competitorCost - wellPosCost);
