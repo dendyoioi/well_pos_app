@@ -14,6 +14,7 @@ import {
   getPublicPublishedPromos,
   getTenantNotifications,
   handleBillingWebhook,
+  cancelSubscriptionInvoice,
 } from '../controllers/saas.controller';
 import {
   handlePakasirWebhook,
@@ -51,6 +52,7 @@ saasRouter.get('/notifications', authenticate, tenantContext, getTenantNotificat
 // Endpoint Tagihan & Invoice Langganan
 saasRouter.post('/invoices', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), createSubscriptionInvoice);
 saasRouter.get('/invoices', authenticate, tenantContext, getSubscriptionInvoices);
+saasRouter.post('/invoices/:invoiceNumber/cancel', authenticate, tenantContext, authorize(Role.OWNER, Role.ADMIN), cancelSubscriptionInvoice);
 
 // Endpoint Callback Webhook Payment Gateway (Public)
 saasRouter.post('/billing/webhook', handleBillingWebhook);

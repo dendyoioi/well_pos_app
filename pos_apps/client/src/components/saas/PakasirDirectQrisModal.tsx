@@ -46,8 +46,18 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
   const [simulating, setSimulating] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Menunggu pembayaran Anda...');
 
+  // Reset status setiap kali modal dibuka atau nomor faktur berganti
+  useEffect(() => {
+    if (isOpen) {
+      setIsPaid(false);
+      setChecking(false);
+      setSimulating(false);
+      setStatusMessage('Menunggu pembayaran Anda...');
+    }
+  }, [isOpen, invoiceNumber]);
+
   const handleSimulatePayment = async () => {
-    if (!invoiceNumber || isPaid) return;
+    if (!invoiceNumber) return;
     setSimulating(true);
     try {
       const res = await api.simulatePakasirSandboxPayment(invoiceNumber);
@@ -75,7 +85,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 
   // Check invoice status
   const checkStatus = async (silent: boolean = false) => {
-    if (!invoiceNumber || isPaid) return;
+    if (!invoiceNumber) return;
     if (!silent) setChecking(true);
 
     try {
@@ -84,6 +94,8 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
         setIsPaid(true);
         setStatusMessage('Pembayaran berhasil diverifikasi!');
         if (onSuccess) onSuccess();
+      } else {
+        setIsPaid(false);
       }
     } catch (err) {
       if (!silent) console.error('Error saat cek status pembayaran:', err);
@@ -92,9 +104,9 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     }
   };
 
-  // Auto-polling status setiap 4 detik saat modal terbuka
+  // Auto-polling status setiap 4 detik saat modal terbuka & belum lunas
   useEffect(() => {
-    if (!isOpen || isPaid || !invoiceNumber) return;
+    if (!isOpen || !invoiceNumber) return;
 
     // Cek awal
     checkStatus(true);
@@ -104,7 +116,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [isOpen, isPaid, invoiceNumber]);
+  }, [isOpen, invoiceNumber]);
 
   if (!isOpen) return null;
 

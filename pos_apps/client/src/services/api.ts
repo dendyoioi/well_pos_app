@@ -1357,6 +1357,14 @@ export const api = {
     return res.json();
   },
 
+  cancelInvoice: async (invoiceNumber: string): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch(`/api/saas/invoices/${encodeURIComponent(invoiceNumber)}/cancel`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
   topUpTokens: async (data: {
     tokenAmount: number;
     promoCode?: string;

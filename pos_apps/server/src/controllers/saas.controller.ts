@@ -1216,6 +1216,9 @@ export const getSubscriptionInvoices = async (req: Request, res: Response) => {
           dueDate: inv.dueDate,
           paidAt: inv.paidAt,
           status: inv.status,
+          qrString: inv.qrString,
+          externalTxnId: inv.externalTxnId,
+          paymentGateway: inv.paymentGateway,
           paymentUrl: inv.paymentUrl,
           payments: inv.payments,
           createdAt: inv.createdAt,
@@ -1227,6 +1230,69 @@ export const getSubscriptionInvoices = async (req: Request, res: Response) => {
     return res.status(500).json({
       status: 'error',
       message: 'Gagal mengambil riwayat invoice tenant',
+    });
+  }
+};
+
+/**
+ * Batalkan Tagihan / Faktur Berstatus UNPAID
+ * @route POST /api/saas/invoices/:invoiceNumber/cancel
+ */
+export const cancelSubscriptionInvoice = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { invoiceNumber } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Konteks tenant tidak ditemukan' });
+    }
+
+    if (!invoiceNumber) {
+      return res.status(400).json({ status: 'error', message: 'Nomor invoice wajib disertakan' });
+    }
+
+    const invoice = await prisma.saaSInvoice.findFirst({
+      where: {
+        invoiceNumber,
+        tenantId,
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ status: 'error', message: `Invoice ${invoiceNumber} tidak ditemukan` });
+    }
+
+    if (invoice.status === InvoiceStatus.PAID) {
+      return res.status(400).json({ status: 'error', message: 'Tagihan yang sudah lunas tidak dapat dibatalkan' });
+    }
+
+    if (invoice.status === InvoiceStatus.VOID) {
+      return res.status(200).json({ status: 'success', message: 'Tagihan sudah berstatus dibatalkan sebelumnya' });
+    }
+
+    const updated = await prisma.saaSInvoice.update({
+      where: { id: invoice.id },
+      data: {
+        status: InvoiceStatus.VOID,
+        notes: `${invoice.notes || ''} (Dibatalkan Pengguna)`.trim(),
+      },
+    });
+
+    // Panggil pembatalan ke API Pakasir jika order ID terdaftar
+    if (invoice.externalTxnId) {
+      pakasirService.cancelTransaction(invoice.invoiceNumber).catch(() => {});
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Tagihan ${invoiceNumber} berhasil dibatalkan`,
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error saat membatalkan invoice langganan:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Gagal membatalkan tagihan',
     });
   }
 };

@@ -13,6 +13,8 @@ import {
   Receipt,
   Sparkles,
   Info,
+  QrCode,
+  Ban,
 } from 'lucide-react';
 import type { User } from '../types/auth';
 import type { Outlet } from '../types/outlet';
@@ -201,6 +203,54 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
       });
     } finally {
       setIsSubmittingTopUp(false);
+    }
+  };
+
+  const [cancellingInvoiceNumber, setCancellingInvoiceNumber] = useState<string | null>(null);
+
+  const handlePayInvoice = (inv: any) => {
+    // Zero Stacked Modals Policy: tutup modal detail jika sedang dibuka
+    setSelectedInvoiceModal(null);
+    setQrisModalData({
+      invoiceNumber: inv.invoiceNumber,
+      amount: Number(inv.amount),
+      tokenAmount: Number(inv.tokenAmount || 0),
+      qrString: inv.qrString || '',
+    });
+    setIsQrisModalOpen(true);
+  };
+
+  const handleCancelInvoice = async (inv: any) => {
+    const isConfirmed = window.confirm(
+      `Batalkan tagihan ${inv.invoiceNumber}? Tagihan dan kode QRIS aktif untuk pesanan kuota ini akan ditutup secara permanen.`
+    );
+    if (!isConfirmed) return;
+
+    setCancellingInvoiceNumber(inv.invoiceNumber);
+    try {
+      const res = await api.cancelInvoice(inv.invoiceNumber);
+      if (res.status === 'success') {
+        setActionFeedback({
+          message: res.message || `Faktur ${inv.invoiceNumber} berhasil dibatalkan.`,
+          type: 'success',
+        });
+        if (selectedInvoiceModal?.invoiceNumber === inv.invoiceNumber) {
+          setSelectedInvoiceModal(null);
+        }
+        await fetchSubscriptionAndInvoices();
+      } else {
+        setActionFeedback({
+          message: res.message || 'Gagal membatalkan tagihan',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      setActionFeedback({
+        message: err.message || 'Terjadi kesalahan sistem saat membatalkan tagihan',
+        type: 'error',
+      });
+    } finally {
+      setCancellingInvoiceNumber(null);
     }
   };
 
@@ -521,19 +571,48 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
                             inv.status === 'PAID'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : inv.status === 'VOID'
+                              ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
                           }`}
                         >
-                          {inv.status === 'PAID' ? '✔ LUNAS' : '⏳ MENUNGGU'}
+                          {inv.status === 'PAID'
+                            ? '✔ LUNAS'
+                            : inv.status === 'VOID'
+                            ? '✖ DIBATALKAN'
+                            : '⏳ MENUNGGU'}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <button
-                          onClick={() => setSelectedInvoiceModal(inv)}
-                          className="h-8 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center"
-                        >
-                          Lihat Faktur
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                          {inv.status !== 'PAID' && inv.status !== 'VOID' && (
+                            <>
+                              <button
+                                onClick={() => handlePayInvoice(inv)}
+                                className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                                title="Pindai Ulang Kode QRIS"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>Bayar QRIS</span>
+                              </button>
+                              <button
+                                onClick={() => handleCancelInvoice(inv)}
+                                disabled={cancellingInvoiceNumber === inv.invoiceNumber}
+                                className="h-8 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                title="Batalkan Tagihan"
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                                <span>Batal</span>
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => setSelectedInvoiceModal(inv)}
+                            className="h-8 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center"
+                          >
+                            Lihat Faktur
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -556,10 +635,16 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
                         inv.status === 'PAID'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : inv.status === 'VOID'
+                          ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}
                     >
-                      {inv.status === 'PAID' ? '✔ LUNAS' : '⏳ MENUNGGU'}
+                      {inv.status === 'PAID'
+                        ? '✔ LUNAS'
+                        : inv.status === 'VOID'
+                        ? '✖ DIBATALKAN'
+                        : '⏳ MENUNGGU'}
                     </span>
                   </div>
 
@@ -581,18 +666,39 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     )}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Tagihan</span>
                       <span className="font-black text-sm text-slate-900">{formatRupiah(Number(inv.amount))}</span>
                     </div>
-                    <button
-                      onClick={() => setSelectedInvoiceModal(inv)}
-                      className="h-9 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Receipt className="w-3.5 h-3.5" />
-                      <span>Lihat Faktur</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {inv.status !== 'PAID' && inv.status !== 'VOID' && (
+                        <>
+                          <button
+                            onClick={() => handlePayInvoice(inv)}
+                            className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>Bayar</span>
+                          </button>
+                          <button
+                            onClick={() => handleCancelInvoice(inv)}
+                            disabled={cancellingInvoiceNumber === inv.invoiceNumber}
+                            className="h-9 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                            title="Batalkan Tagihan"
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => setSelectedInvoiceModal(inv)}
+                        className="h-9 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>Faktur</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -944,9 +1050,15 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border uppercase ${
                       selectedInvoiceModal.status === 'PAID'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : selectedInvoiceModal.status === 'VOID'
+                        ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
-                      {selectedInvoiceModal.status === 'PAID' ? '✔ PAID' : '⏳ PENDING'}
+                      {selectedInvoiceModal.status === 'PAID'
+                        ? '✔ PAID'
+                        : selectedInvoiceModal.status === 'VOID'
+                        ? '✖ DIBATALKAN'
+                        : '⏳ PENDING'}
                     </span>
                   </div>
                 </div>
@@ -1050,7 +1162,28 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
             </div>
 
             {/* Sticky Action Footer with Safe Area Padding */}
-            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex items-center gap-3 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex items-center gap-2 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] flex-wrap">
+              {selectedInvoiceModal.status !== 'PAID' && selectedInvoiceModal.status !== 'VOID' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handlePayInvoice(selectedInvoiceModal)}
+                    className="flex-1 sm:flex-initial h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Bayar QRIS Sekarang</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCancelInvoice(selectedInvoiceModal)}
+                    disabled={cancellingInvoiceNumber === selectedInvoiceModal.invoiceNumber}
+                    className="h-10 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Batalkan Tagihan</span>
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => window.print()}
