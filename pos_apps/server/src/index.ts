@@ -25,6 +25,7 @@ import { attendanceRouter } from './routes/attendance.routes';
 import { prisma } from './config/prisma';
 
 import { securityHeaders, authRateLimiter } from './middlewares/security.middleware';
+import { maintenanceMiddleware } from './middlewares/maintenance.middleware';
 
 // Muat environment variables dari .env
 dotenv.config();
@@ -63,6 +64,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Mode Pemeliharaan Global Interceptor (Bypass /api/health dan /api/platform)
+app.use(maintenanceMiddleware);
 
 // Routing API
 app.use('/api/health', healthRouter);

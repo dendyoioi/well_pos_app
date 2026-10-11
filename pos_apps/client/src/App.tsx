@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { SaasLandingPage } from './pages/SaasLandingPage';
 import { SuperadminDashboardPage } from './pages/SuperadminDashboardPage';
 import { CustomerQrMenuView } from './pages/CustomerQrMenuView';
+import { MaintenancePage } from './pages/MaintenancePage';
 import { api, authStorage } from './services/api';
 import type { User } from './types/auth';
 import { DialogProvider } from './context/DialogContext';
@@ -89,6 +90,38 @@ export const App: React.FC = () => {
     if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) return 'superadmin';
     return 'landing';
   });
+
+  const [systemStatus, setSystemStatus] = useState<{
+    maintenanceMode: boolean;
+    maintenanceMessage: string;
+    estimatedEndTime: string | null;
+  }>({
+    maintenanceMode: false,
+    maintenanceMessage: '',
+    estimatedEndTime: null,
+  });
+
+  // Polling status mode pemeliharaan sistem
+  useEffect(() => {
+    const checkSystemStatus = async () => {
+      try {
+        const res = await api.getSystemStatus();
+        if (res.status === 'success' && res.data) {
+          setSystemStatus({
+            maintenanceMode: Boolean(res.data.maintenanceMode),
+            maintenanceMessage: res.data.maintenanceMessage || '',
+            estimatedEndTime: res.data.estimatedEndTime || null,
+          });
+        }
+      } catch {
+        // Abaikan kegagalan jaringan
+      }
+    };
+
+    checkSystemStatus();
+    const interval = setInterval(checkSystemStatus, 25000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Listen to hash changes for deep linking
   useEffect(() => {
@@ -188,6 +221,21 @@ export const App: React.FC = () => {
           <span className="font-semibold text-blue-950">Memuat Well POS...</span>
         </div>
       </div>
+    );
+  }
+
+  // JIKA MODE PEMELIHARAAN AKTIF DAN BUKAN HALAMAN SUPERADMIN, BLOKIR KE MAINTENANCE PAGE
+  if (systemStatus.maintenanceMode && viewMode !== 'superadmin') {
+    return (
+      <ErrorBoundary>
+        <MaintenancePage
+          maintenanceInfo={systemStatus}
+          onGoToSuperadmin={() => navigateTo('superadmin')}
+          onMaintenanceResolved={() =>
+            setSystemStatus((prev) => ({ ...prev, maintenanceMode: false }))
+          }
+        />
+      </ErrorBoundary>
     );
   }
 

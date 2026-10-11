@@ -32,9 +32,15 @@ import {
   getPlatformWhatsAppSettings,
   updatePlatformWhatsAppSettings,
   testPlatformWhatsAppConnection,
+  getSystemStatus,
+  getMaintenanceConfig,
+  updateMaintenanceMode,
 } from '../controllers/platform.controller';
 
 export const platformRouter = Router();
+
+// Rute Publik (Status Operasional Sistem Global)
+platformRouter.get('/system-status', getSystemStatus);
 
 // Login Superadmin Platform
 platformRouter.post('/auth/login', loginPlatformUser);
@@ -87,6 +93,10 @@ platformRouter.delete('/notifications/:id', authenticatePlatform, deletePlatform
 
 // Rute Lifecycle Worker & Auto-Suspension Trigger
 platformRouter.post('/subscriptions/evaluate-lifecycle', authenticatePlatform, triggerLicenseLifecycleEvaluation);
+
+// Rute Mode Pemeliharaan (Maintenance Mode) Platform
+platformRouter.get('/system/maintenance', authenticatePlatform, getMaintenanceConfig);
+platformRouter.post('/system/maintenance', authenticatePlatform, updateMaintenanceMode);
 
 export default platformRouter;
 

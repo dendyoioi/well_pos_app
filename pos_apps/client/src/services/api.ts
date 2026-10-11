@@ -147,6 +147,20 @@ const platformAuthHeader = (): Record<string, string> => {
 };
 
 export const api = {
+  getSystemStatus: async (): Promise<{
+    status: string;
+    data?: {
+      maintenanceMode: boolean;
+      maintenanceMessage: string;
+      estimatedEndTime: string | null;
+      activatedAt: string | null;
+    };
+    message?: string;
+  }> => {
+    const res = await fetch('/api/platform/system-status');
+    return res.json();
+  },
+
   // ----------------------------------------------------
   // AUTENTIKASI
   // ----------------------------------------------------
@@ -1737,6 +1751,42 @@ export const api = {
     const res = await fetch(`/api/platform/notifications/${id}`, {
       method: 'DELETE',
       headers: platformAuthHeader(),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // MODE PEMELIHARAAN SISTEM (MAINTENANCE MODE)
+  // ----------------------------------------------------
+  getMaintenanceConfig: async (): Promise<{
+    status: string;
+    data?: {
+      maintenanceMode: boolean;
+      maintenanceMessage: string;
+      estimatedEndTime: string | null;
+      activatedAt: string | null;
+      activatedBy: string | null;
+    };
+    message?: string;
+  }> => {
+    const res = await fetch('/api/platform/system/maintenance', {
+      headers: platformAuthHeader(),
+    });
+    return res.json();
+  },
+
+  updateMaintenanceMode: async (data: {
+    enabled: boolean;
+    message?: string;
+    estimatedEndTime?: string | null;
+  }): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch('/api/platform/system/maintenance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...platformAuthHeader(),
+      },
+      body: JSON.stringify(data),
     });
     return res.json();
   },

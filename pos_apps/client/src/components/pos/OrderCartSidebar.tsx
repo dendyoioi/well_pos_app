@@ -766,7 +766,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                           >
                             {t.section || t.name || 'Resto'}
                           </span>
-                          {t.capacity && (
+                          {Number(t.capacity || 0) > 0 ? (
                             <span
                               className={`text-[8px] font-bold px-1 rounded ${
                                 isSelected ? 'bg-blue-800 text-blue-100' : 'bg-slate-100 text-slate-500'
@@ -774,7 +774,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                             >
                               {t.capacity}P
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       )}
                     </div>

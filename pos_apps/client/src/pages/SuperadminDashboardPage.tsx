@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldAlert,
+  Activity,
   Store,
   Lock,
   Mail,
@@ -359,6 +360,30 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   });
 
   // ----------------------------------------------------
+  // MODE PEMELIHARAAN SISTEM (MAINTENANCE MODE)
+  // ----------------------------------------------------
+  const [maintenanceState, setMaintenanceState] = useState<{
+    maintenanceMode: boolean;
+    maintenanceMessage: string;
+    estimatedEndTime: string | null;
+    activatedAt: string | null;
+    activatedBy: string | null;
+  }>({
+    maintenanceMode: false,
+    maintenanceMessage: '',
+    estimatedEndTime: null,
+    activatedAt: null,
+    activatedBy: null,
+  });
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [maintenanceForm, setMaintenanceForm] = useState({
+    enabled: false,
+    message: '',
+    estimatedEndTime: '',
+  });
+  const [savingMaintenance, setSavingMaintenance] = useState(false);
+
+  // ----------------------------------------------------
   // MODAL 2: UBAH & TOP-UP KUOTA TOKEN TRANSAKSI
   // ----------------------------------------------------
   const [subModalOpen, setSubModalOpen] = useState(false);
@@ -462,7 +487,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       setActionFeedback(null);
     }
     try {
-      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes, notifsRes, waRes] = await Promise.all([
+      const [dashRes, tenantsRes, plansRes, invoicesRes, usersRes, promosRes, paymentRes, notifsRes, waRes, maintRes] = await Promise.all([
         api.getPlatformDashboard(),
         api.getPlatformTenants({ search: searchQuery, status: statusFilter }),
         api.getPlatformPlans(),
@@ -472,6 +497,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         api.getPlatformPaymentSettings(),
         api.getPlatformNotifications(),
         api.getPlatformWhatsAppSettings().catch(() => null),
+        api.getMaintenanceConfig().catch(() => null),
       ]);
 
       if (dashRes.status === 'success') {
@@ -497,6 +523,16 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
       }
       if (waRes && waRes.status === 'success' && waRes.data) {
         setWaSettings(waRes.data);
+      }
+      if (maintRes && maintRes.status === 'success' && maintRes.data) {
+        const md = maintRes.data;
+        setMaintenanceState(md);
+        setMaintenanceForm((prev) => ({
+          ...prev,
+          enabled: md.maintenanceMode,
+          message: md.maintenanceMessage || '',
+          estimatedEndTime: md.estimatedEndTime || '',
+        }));
       }
       if (paymentRes.status === 'success' && paymentRes.data) {
         const d = paymentRes.data;
@@ -587,6 +623,54 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     platformStorage.clearSession();
     setIsLoggedIn(false);
     setCurrentUser(null);
+  };
+
+  const handleSaveMaintenance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingMaintenance(true);
+    try {
+      const res = await api.updateMaintenanceMode({
+        enabled: maintenanceForm.enabled,
+        message: maintenanceForm.message,
+        estimatedEndTime: maintenanceForm.estimatedEndTime || null,
+      });
+      if (res.status === 'success' && res.data) {
+        setMaintenanceState(res.data);
+        setIsMaintenanceModalOpen(false);
+        setActionFeedback(
+          maintenanceForm.enabled
+            ? 'Mode Pemeliharaan BERHASIL DIAKTIFKAN. Seluruh akses publik dan tenant diblokir.'
+            : 'Mode Pemeliharaan BERHASIL DIMATIKAN. Seluruh layanan Well POS kembali online normal.'
+        );
+      } else {
+        showAlert('Gagal Menyimpan', res.message || 'Gagal mengubah mode pemeliharaan', 'error');
+      }
+    } catch (err: any) {
+      showAlert('Kesalahan Sistem', err.message || 'Terjadi kesalahan jaringan', 'error');
+    } finally {
+      setSavingMaintenance(false);
+    }
+  };
+
+  const handleQuickToggleOff = () => {
+    showConfirm({
+      title: 'Matikan Mode Pemeliharaan?',
+      message: 'Layanan akan segera dibuka kembali untuk seluruh kasir, pemilik toko, buku menu QR, dan halaman publik.',
+      confirmText: 'Ya, Kembalikan Online Sekarang',
+      variant: 'emerald',
+      onConfirm: async () => {
+        try {
+          const res = await api.updateMaintenanceMode({ enabled: false });
+          if (res.status === 'success' && res.data) {
+            setMaintenanceState(res.data);
+            setMaintenanceForm((prev) => ({ ...prev, enabled: false }));
+            setActionFeedback('Mode Pemeliharaan dinonaktifkan. Seluruh layanan Well POS kembali online.');
+          }
+        } catch (err: any) {
+          showAlert('Kesalahan', err.message || 'Gagal mengubah status', 'error');
+        }
+      },
+    });
   };
 
   // Approve a PENDING tenant into ACTIVE / TRIAL
@@ -2104,11 +2188,44 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
           {/* Right: Operational Status, Realtime Refresh & Quick Links */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Live Operational Status */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-xs text-emerald-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="font-semibold text-[11px]">Sistem Normal</span>
-            </div>
+            {/* Live Operational Status / Mode Pemeliharaan Platform */}
+            {maintenanceState.maintenanceMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMaintenanceForm({
+                    enabled: false,
+                    message: maintenanceState.maintenanceMessage,
+                    estimatedEndTime: maintenanceState.estimatedEndTime || '',
+                  });
+                  setIsMaintenanceModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-950/90 hover:bg-rose-900 border border-rose-500/80 text-xs text-rose-300 transition-all cursor-pointer shadow-lg animate-pulse"
+                title="Mode Pemeliharaan sedang aktif! Klik untuk mengelola atau menonaktifkan"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                <span className="font-black text-[11px] text-white">MAINTENANCE AKTIF</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setMaintenanceForm({
+                    enabled: true,
+                    message:
+                      maintenanceState.maintenanceMessage ||
+                      'Sistem Well POS sedang dalam peningkatan dan pemeliharaan berkala untuk meningkatkan stabilitas serta performa layanan. Seluruh operasional kasir dan halaman publik ditangguhkan sementara.',
+                    estimatedEndTime: '',
+                  });
+                  setIsMaintenanceModalOpen(true);
+                }}
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-800/60 text-xs text-emerald-300 transition-all cursor-pointer"
+                title="Sistem Online Normal. Klik untuk mengaktifkan Mode Pemeliharaan"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="font-semibold text-[11px]">Sistem Online</span>
+              </button>
+            )}
 
             {/* Quick Link to POS Kasir */}
             <button
@@ -2137,6 +2254,45 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
         {/* Main Content Area */}
         <main className="px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6 max-w-[1600px] mx-auto">
+          {/* Warning Banner: Mode Pemeliharaan Aktif */}
+          {maintenanceState.maintenanceMode && (
+            <div className="p-4 bg-amber-950/90 border-2 border-amber-500 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200 shadow-xl">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-black text-amber-300 text-sm flex items-center gap-2">
+                    <span>MODE PEMELIHARAAN (MAINTENANCE MODE) SEDANG AKTIF!</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/40">
+                      Publik &amp; Merchant Dihadang
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-300/90 mt-0.5">
+                    {maintenanceState.maintenanceMessage}
+                    {maintenanceState.estimatedEndTime ? ` (Estimasi Selesai: ${maintenanceState.estimatedEndTime})` : ''}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsMaintenanceModalOpen(true)}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Kelola Pesan
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickToggleOff}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all shadow-md cursor-pointer active:scale-98"
+                >
+                  Matikan Sekarang (Go Online)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Action Feedback Banner */}
           {actionFeedback && (
             <div className="p-4 bg-emerald-950/80 border border-emerald-800/80 rounded-2xl flex items-center justify-between text-xs text-emerald-300 animate-fade-in shadow-lg">
@@ -7239,6 +7395,170 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     <>
                       <Bell className="w-3.5 h-3.5" />
                       <span>Terbitkan Notifikasi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: PENGATURAN MODE PEMELIHARAAN (MAINTENANCE MODE)
+      ========================================================================= */}
+      {isMaintenanceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsMaintenanceModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 flex items-center gap-3 pr-12">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+                maintenanceForm.enabled
+                  ? 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
+                  : 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
+              }`}>
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Mode Pemeliharaan (Maintenance)</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Kontrol darurat pemeliharaan platform Well POS secara menyeluruh.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveMaintenance} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4">
+                {/* Switch Activation Card */}
+                <div className={`p-4 rounded-2xl border transition-all ${
+                  maintenanceForm.enabled
+                    ? 'bg-rose-950/40 border-rose-600/60'
+                    : 'bg-slate-950/60 border-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full shrink-0 ${
+                        maintenanceForm.enabled ? 'bg-rose-500 animate-pulse' : 'bg-slate-600'
+                      }`} />
+                      <div>
+                        <div className="font-bold text-white text-sm">
+                          {maintenanceForm.enabled ? 'Status: Pemeliharaan AKTIF' : 'Status: Pemeliharaan NONAKTIF'}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {maintenanceForm.enabled
+                            ? 'Akses publik, buku menu QR, dan kasir ditutup dengan halaman 503.'
+                            : 'Platform berjalan normal dan dapat diakses oleh seluruh pengguna.'}
+                        </p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={maintenanceForm.enabled}
+                        onChange={(e) =>
+                          setMaintenanceForm((prev) => ({ ...prev, enabled: e.target.checked }))
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-12 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600" />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Impact Notice */}
+                <div className="p-3.5 bg-blue-950/40 border border-blue-800/60 rounded-xl text-xs text-blue-200/90 space-y-1">
+                  <div className="font-bold text-blue-300 flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Catatan Akses Selama Pemeliharaan:</span>
+                  </div>
+                  <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-blue-200/80">
+                    <li>Superadmin tetap dapat login dan mengakses dashboard untuk pemantauan.</li>
+                    <li>Permintaan API dari merchant akan menerima respon HTTP 503 dengan pesan yang Anda atur.</li>
+                    <li>Frontend akan menampilkan antarmuka darurat pemeliharaan yang ramah kepada pengguna.</li>
+                  </ul>
+                </div>
+
+                {/* Maintenance Message */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Pesan Pemeliharaan ke Publik: <span className="text-rose-400">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={maintenanceForm.message}
+                    onChange={(e) =>
+                      setMaintenanceForm((prev) => ({ ...prev, message: e.target.value }))
+                    }
+                    placeholder="Contoh: Sistem Well POS sedang dalam peningkatan berkala..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 outline-none focus:border-amber-500 font-medium resize-none leading-relaxed"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Pesan ini akan dibaca oleh pengunjung landing page, pelanggan QR self-order, dan kasir toko.
+                  </p>
+                </div>
+
+                {/* Estimated End Time */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Estimasi Selesai (Opsional):
+                  </label>
+                  <input
+                    type="text"
+                    value={maintenanceForm.estimatedEndTime}
+                    onChange={(e) =>
+                      setMaintenanceForm((prev) => ({ ...prev, estimatedEndTime: e.target.value }))
+                    }
+                    placeholder="Contoh: Pukul 02:00 WIB / 30 Menit ke depan"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-amber-500 font-semibold"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Teks perkiraan waktu selesai untuk memberikan kepastian kepada pelanggan.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsMaintenanceModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMaintenance}
+                  className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold shadow-lg flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                    maintenanceForm.enabled
+                      ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
+                      : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                  }`}
+                >
+                  {savingMaintenance ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : maintenanceForm.enabled ? (
+                    <>
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>Aktifkan Mode Pemeliharaan</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Simpan &amp; Buka Layanan Normal</span>
                     </>
                   )}
                 </button>

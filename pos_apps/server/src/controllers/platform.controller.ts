@@ -9,6 +9,7 @@ import { TenantStatus, Role, InvoiceStatus, PlatformRole, Prisma } from '@prisma
 import { billingService } from '../services/billing.service';
 import { licenseWorkerService } from '../services/licenseWorker.service';
 import { whatsAppService } from '../services/whatsapp.service';
+import { systemConfigService } from '../services/system_config.service';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -1945,6 +1946,95 @@ export const deletePlatformNotification = async (req: Request, res: Response) =>
   } catch (error) {
     console.error('Error deleting platform notification:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal menghapus notifikasi platform' });
+  }
+};
+
+/**
+ * Controller: Ambil status global sistem (Public, tanpa otentikasi)
+ * @route GET /api/platform/system-status
+ */
+export const getSystemStatus = async (_req: Request, res: Response) => {
+  try {
+    const config = systemConfigService.getConfig();
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        maintenanceMode: config.maintenanceMode,
+        maintenanceMessage: config.maintenanceMessage,
+        estimatedEndTime: config.estimatedEndTime,
+        activatedAt: config.activatedAt,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Gagal memuat status sistem',
+    });
+  }
+};
+
+/**
+ * Controller: Ambil konfigurasi pemeliharaan lengkap (Superadmin Only)
+ * @route GET /api/platform/system/maintenance
+ */
+export const getMaintenanceConfig = async (_req: Request, res: Response) => {
+  try {
+    const config = systemConfigService.getConfig();
+    return res.status(200).json({
+      status: 'success',
+      data: config,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Gagal memuat konfigurasi pemeliharaan sistem',
+    });
+  }
+};
+
+const updateMaintenanceSchema = z.object({
+  enabled: z.boolean(),
+  message: z.string().optional(),
+  estimatedEndTime: z.string().nullable().optional(),
+});
+
+/**
+ * Controller: Ubah Mode Pemeliharaan (Superadmin Only)
+ * @route POST /api/platform/system/maintenance
+ */
+export const updateMaintenanceMode = async (req: Request, res: Response) => {
+  try {
+    const parse = updateMaintenanceSchema.safeParse(req.body);
+    if (!parse.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi input pemeliharaan gagal',
+        errors: parse.error.flatten().fieldErrors,
+      });
+    }
+
+    const { enabled, message, estimatedEndTime } = parse.data;
+    const operatorName = (req as any).platformUser?.name || 'Superadmin';
+
+    const updated = systemConfigService.updateMaintenance(
+      enabled,
+      message,
+      estimatedEndTime,
+      operatorName
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: enabled
+        ? 'Mode Pemeliharaan berhasil diaktifkan. Seluruh akses publik & merchant ditangguhkan.'
+        : 'Mode Pemeliharaan dinonaktifkan. Seluruh layanan Well POS kembali online.',
+      data: updated,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Gagal memperbarui mode pemeliharaan sistem',
+    });
   }
 };
 
