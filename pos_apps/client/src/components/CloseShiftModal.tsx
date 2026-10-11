@@ -265,20 +265,20 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
 
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-600">Modal Awal Kas:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-mono font-bold text-slate-900">
                     Rp {startingCash.toLocaleString('id-ID')}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-600">(+) Penjualan Tunai:</span>
-                  <span className="font-bold text-emerald-700">
+                  <span className="font-mono font-bold text-emerald-700">
                     Rp {cashSales.toLocaleString('id-ID')}
                   </span>
                 </div>
                 {totalDebtCashIn > 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-emerald-700 font-semibold">(+) Pelunasan Kasbon Tunai:</span>
-                    <span className="font-bold text-emerald-700">
+                    <span className="font-mono font-bold text-emerald-700">
                       Rp {totalDebtCashIn.toLocaleString('id-ID')}
                     </span>
                   </div>
@@ -286,7 +286,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 {totalCashIn > 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-600">(+) Kas Masuk Tambahan:</span>
-                    <span className="font-bold text-emerald-600">
+                    <span className="font-mono font-bold text-emerald-600">
                       Rp {totalCashIn.toLocaleString('id-ID')}
                     </span>
                   </div>
@@ -294,14 +294,14 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 {totalCashOut > 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-rose-600 font-semibold">(-) Pengeluaran Kasir (Kas Keluar):</span>
-                    <span className="font-bold text-rose-600">
+                    <span className="font-mono font-bold text-rose-600">
                       - Rp {totalCashOut.toLocaleString('id-ID')}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-xs pt-2 border-t border-slate-200 font-extrabold">
                   <span className="text-slate-900">Total Seharusnya Ada di Laci:</span>
-                  <span className="text-sm text-blue-900">
+                  <span className="text-sm font-mono font-black text-blue-900">
                     Rp {expectedCash.toLocaleString('id-ID')}
                   </span>
                 </div>
@@ -485,7 +485,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                                 value={count === 0 ? '' : count}
                                 onChange={(e) => handleDenomChange(item.value, e.target.value)}
                                 placeholder="0"
-                                className="w-16 px-2 py-1.5 text-center text-xs font-bold text-slate-900 bg-white border border-slate-300 focus:border-blue-900 focus:ring-1 focus:ring-blue-900 rounded-lg outline-none"
+                                className="h-9 w-16 px-2 text-center text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 focus:border-blue-900 focus:ring-1 focus:ring-blue-900 rounded-lg outline-none"
                               />
                               <span className="text-[10px] text-slate-500 font-medium">
                                 {item.type === 'coin' ? 'koin' : 'lbr'}
@@ -512,7 +512,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                   label="Hitungan Fisik Uang Tunai di Laci (Actual Cash)"
                   value={actualCash}
                   onChange={(val) => setActualCash(val)}
-                  inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
+                  inputClassName="py-3 text-lg font-mono font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
                   prefixClassName="text-sm font-extrabold"
                   placeholder="0"
                 />
@@ -545,7 +545,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                       : 'Status Kas: KURANG (DEFISIT)'}
                   </span>
                 </div>
-                <span className="text-sm font-black">
+                <span className="text-sm font-mono font-black">
                   {difference > 0 ? '+' : ''}Rp {difference.toLocaleString('id-ID')}
                 </span>
               </div>
@@ -582,7 +582,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Contoh: Ada uang kembalian receh belum ditukar"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
                 />
               </div>
             </div>
@@ -592,14 +592,14 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={loading || unpaidOrdersInShift.length > 0}
-                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 title={unpaidOrdersInShift.length > 0 ? 'Selesaikan tagihan belum bayar terlebih dahulu' : 'Kunci & Tutup Shift'}
               >
                 <Lock className="w-4 h-4 stroke-[2.5]" />
@@ -834,14 +834,14 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
             <div className="p-4 sm:px-6 bg-white border-t border-slate-200 flex items-center justify-center gap-3 no-print shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] w-full">
               <button
                 onClick={handlePrint}
-                className="flex-1 max-w-[180px] py-2.5 rounded-xl border-2 border-blue-900 text-blue-950 font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="h-10 flex-1 max-w-[180px] rounded-xl border-2 border-blue-900 text-blue-950 font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Z-Report</span>
               </button>
               <button
                 onClick={handleFinish}
-                className="flex-1 max-w-[180px] py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="h-10 flex-1 max-w-[180px] bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Selesai</span>
                 <ArrowRight className="w-4 h-4" />

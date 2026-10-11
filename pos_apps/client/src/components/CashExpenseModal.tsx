@@ -187,7 +187,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
               <button
                 type="button"
                 onClick={() => setMovementType('CASH_OUT')}
-                className={`py-2 sm:py-2.5 px-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
+                className={`h-10 px-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
                   movementType === 'CASH_OUT'
                     ? 'bg-white text-rose-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -199,7 +199,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
               <button
                 type="button"
                 onClick={() => setMovementType('CASH_IN')}
-                className={`py-2 sm:py-2.5 px-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all ${
+                className={`h-10 px-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
                   movementType === 'CASH_IN'
                     ? 'bg-white text-emerald-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -219,7 +219,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
                 value={amount}
                 onChange={setAmount}
                 placeholder="Rp 0"
-                className="w-full text-base sm:text-lg font-black text-slate-900 bg-white border border-slate-200 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="w-full text-base sm:text-lg font-mono font-black text-slate-900 bg-white border border-slate-200 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
               />
               <p className="text-[11px] text-slate-400 mt-1">
                 {movementType === 'CASH_OUT'
@@ -240,9 +240,9 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
                     key={cat}
                     type="button"
                     onClick={() => setCategory(cat)}
-                    className={`px-3 py-2 text-xs font-bold rounded-xl border text-left transition-all ${
+                    className={`h-10 px-3 text-xs font-bold rounded-xl border flex items-center transition-all cursor-pointer ${
                       category === cat
-                        ? 'bg-blue-950 text-white border-blue-950 shadow-xs'
+                        ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -257,7 +257,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
                   placeholder="Ketik kategori pengeluaran kustom..."
-                  className="w-full mt-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="h-10 w-full mt-2 px-4 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
                 />
               )}
             </div>
@@ -273,7 +273,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Contoh: Iuran sampah RT bulan September, beli es batu kristal 2 pack, dll."
-                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="h-10 w-full px-4 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
                 required
               />
             </div>
@@ -283,7 +283,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
               <button
                 type="submit"
                 disabled={submitting || amount <= 0}
-                className="w-full sm:w-auto px-6 py-3 bg-blue-950 hover:bg-blue-900 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                className="h-10 w-full sm:w-auto px-6 bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
               >
                 {submitting ? (
                   <>
@@ -388,7 +388,7 @@ export const CashExpenseModal: React.FC<CashExpenseModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-colors shadow-2xs"
+            className="h-9 px-5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl transition-colors shadow-2xs cursor-pointer"
           >
             Tutup
           </button>

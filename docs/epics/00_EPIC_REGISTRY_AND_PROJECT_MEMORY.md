@@ -465,7 +465,7 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Modal Tambah & Edit Toko dirombak ke pola kanonikal bottom-sheet PWA, dropdown gudang pasokan dengan ChevronDown, dan status operasional toko via toggle pill switch.
   └── 7. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server, serta 14 patch skema database verified 100% di Supabase remote.
 ===============================================================
-[2026-10-11] FASE 12: ROLE CASHIER — KASIR FRONTLINER EXPERIENCE (TAHAP 12.1 SELESAI)
+[2026-10-11] FASE 12: ROLE CASHIER — KASIR FRONTLINER EXPERIENCE (TAHAP 12.1 & 12.2 SELESAI PENUH)
   ├── 1. Tahap 12.1: Terminal Kasir POS & Checkout Experience (PosTerminalView, OrderCartSidebar, PosMobileView, PaymentModal, ProductCatalogGrid, ProductModifierModal):
   │   - Modal Pembayaran Kasir (PaymentModal.tsx): Total Tagihan Banner diformat font-mono font-black, tombol pecahan cepat (quick cash bills: Rp 10.000, Rp 20.000, Rp 50.000, Rp 100.000, Uang Pas) diformat h-10 font-mono font-bold, CurrencyInput font-mono, dan Uang Kembalian kasir diformat besar text-2xl font-black font-mono emerald (atau minus merah jika kurang).
   │   - Split Payment & Kasbon (PaymentModal.tsx): Nilai porsi QRIS, input uang fisik diterima, kembalian tunai split, dan tombol batas jatuh tempo kasbon (+7, +14, +30 hari) diformat font-mono font-bold dengan date input h-10.
@@ -475,7 +475,22 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Input ID Pesanan Driver Mitra Online Delivery (OrderCartSidebar.tsx): Ditingkatkan ke h-10 font-mono font-black uppercase dengan tracking luas untuk integrasi GoFood/GrabFood/ShopeeFood.
   │   - Katalog Menu & Modal Modifier (ProductCatalogGrid.tsx & ProductModifierModal.tsx): Harga katalog grid & compact view diformat font-mono tabular-nums; modal varian memformat harga dasar, delta opsi modifier, total harga unit dengan font-mono font-black, serta input catatan h-10.
   │   - Mobile Cart Drawer (PosMobileView.tsx): Stepper kuantitas font-mono, harga item font-mono, ringkasan tagihan font-mono, dan inline catatan item terintegrasi.
-  └── 2. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server, database verified 100% up-to-date.
+  ├── 2. Tahap 12.2: Modal & Alur Shift Kasir (StartShiftModal.tsx, CloseShiftModal.tsx, CashExpenseModal.tsx):
+  │   - Modal Buka Shift (StartShiftModal.tsx): Tombol pecahan cepat (Rp 50.000, Rp 100.000, Rp 200.000, Rp 500.000) berukuran kanonikal h-10 font-mono font-bold active:scale-95, CurrencyInput modal awal font-mono font-bold, input catatan h-10, tombol aksi submit h-10 px-5 bg-blue-900, dan Sticky Action Footer mobile dengan iPhone safe area padding (Rule 10 AGENTS.md).
+  │   - Modal Tutup Shift & Z-Report (CloseShiftModal.tsx):
+  │       * Step 1 (Rekap Sistem): Nominal box sistem (Modal Awal, Penjualan Tunai, Pelunasan Kasbon, Kas Masuk, Kas Keluar, Kas Seharusnya) diformat rapi ke font-mono font-bold / font-black.
+  │       * Kalkulator Pecahan Kas: Input lembar/koin berdimensi h-9 w-16 text-center font-mono font-bold, subtotal per pecahan font-mono, total hitungan pecahan font-mono font-black.
+  │       * Hitungan Fisik & Realtime Difference: CurrencyInput font-mono font-black; Realtime Difference Badge selisih kas diformat font-mono font-black text-sm (+/- Rp).
+  │       * Lock on Unpaid Orders (Rule 15 AGENTS.md): Tagihan belum lunas (Open Tab) memunculkan peringatan keras dengan nomor nota & total tagihan font-mono font-bold.
+  │       * Input catatan serah terima kasir h-10, tombol aksi Batal dan Kunci Tutup Shift h-10 px-5.
+  │       * Step 2 (Z-Report Thermal Slip): Mematuhi Rule 13 AGENTS.md (Pure financial summary slip, zero transaction item rows), tombol aksi Cetak Z-Report dan Selesai distandarisasi ke h-10.
+  │   - Modal Pengeluaran Kasir / Petty Cash (CashExpenseModal.tsx):
+  │       * Tab Tipe Mutasi Kas Keluar vs Kas Masuk diseragamkan ke h-10 font-extrabold.
+  │       * CurrencyInput nominal mutasi diformat font-mono font-black.
+  │       * Tombol preset kategori keperluan diseragamkan ke h-10 font-bold; input kategori kustom & input keterangan bukti audit diseragamkan ke h-10.
+  │       * Tombol Simpan Pengeluaran / Kas Masuk diseragamkan ke h-10 px-6 bg-blue-900.
+  │       * Ringkasan total keluar/masuk dan riwayat transaksi petty cash shift ini diformat font-mono font-extrabold; tombol Tutup footer diseragamkan ke h-9 px-5.
+  └── 3. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server, database verified 100% up-to-date.
 ===============================================================
 ```
 

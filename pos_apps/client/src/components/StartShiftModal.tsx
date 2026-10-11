@@ -91,8 +91,8 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
                 label="Modal Awal di Laci Kasir (Cash Float)"
                 value={startingCash}
                 onChange={(val) => setStartingCash(val)}
-                inputClassName="py-3 text-lg font-black text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
-                prefixClassName="text-sm font-extrabold"
+                inputClassName="py-3 text-lg font-black font-mono text-right tracking-tight bg-slate-50 border-2 border-slate-200 focus:bg-white rounded-2xl"
+                prefixClassName="text-sm font-extrabold font-mono"
                 placeholder="0"
                 required
               />
@@ -110,7 +110,7 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
                     key={amt}
                     type="button"
                     onClick={() => setStartingCash(amt)}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    className={`h-10 px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all active:scale-95 cursor-pointer ${
                       startingCash === amt
                         ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
@@ -132,7 +132,7 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Contoh: Buka shift pagi, uang laci pas"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
+                className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
               />
             </div>
           </div>
@@ -142,14 +142,14 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
             >
               <Check className="w-4 h-4 stroke-[2.5]" />
               <span>{loading ? 'Membuka...' : 'Mulai Sesi Shift'}</span>
