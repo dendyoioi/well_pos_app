@@ -683,6 +683,10 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
     - **Honeypot Decoy Redirect**: Setiap akses ke route umum yang mudah ditebak scanner bot atau penyerang (`#superadmin`, `#admin`, `#saas-admin`, `#platform`) otomatis dialihkan secara hening ke Landing Page publik (`#landing`), dan jejak hash dibersihkan seketika dari address bar browser via `window.history.replaceState`.
     - **Zero Autofill & Penghapusan Tautan Default**: Seluruh kredensial default (`superadmin@wellpos.id`) dan tombol pintas (*"Gunakan Akun Default Superadmin"*) telah dihapus permanen dari UI form login. Input email dan kata sandi wajib diketik manual oleh pengelola sistem.
     - **Eliminasi Jejak Publik**: Seluruh teks atau tautan bypass yang menyebutkan `#superadmin` pada halaman pemeliharaan (`MaintenancePage.tsx`) dihapus total agar tidak meninggalkan petunjuk apapun di DOM publik.
+35. **Standar Dialog Konfirmasi Kustom & Integritas Pembayaran SaaS (Anti-Native JS Alert & Single-Row Actions)**:
+    - **Larangan Keras Dialog Native Browser (`window.confirm` / `alert`)**: Seluruh interaksi konfirmasi destruktif (seperti pembatalan tagihan faktur atau void) WAJIB menggunakan modal dialog kustom bertema Clean White-Blue dengan aksen Rose (`<AlertTriangle />`, tombol Batal & Konfirmasi). Dilarang keras memicu pop-up JavaScript bawaan browser yang merusak estetika dan pengalaman PWA.
+    - **Tata Letak Baris Kolom Aksi Tunggal (*Single-Row Actions*)**: Seluruh tombol aksi pada baris tabel wajib sejajar dalam 1 baris (`whitespace-nowrap flex items-center justify-center gap-1.5` dengan tinggi seragam `h-8`). Dilarang membuat tombol bertumpuk secara vertikal (*wrap*) yang merusak simetri dan ketinggian baris tabel data.
+    - **Kanonikalisasi Metode Pembayaran QRIS Pakasir**: Seluruh faktur SaaS (registrasi & top-up token) wajib secara seragam menampilkan metode pembayaran sebagai **"QRIS (Pakasir)"** atau **"QRIS"**. Seluruh teks atau sisa fallback usang *"Transfer Manual"* dihapus permanen dari antarmuka Backoffice dan Superadmin.
 
 ---
 

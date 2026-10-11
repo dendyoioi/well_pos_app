@@ -206,7 +206,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
     }
   };
 
-  const [cancellingInvoiceNumber, setCancellingInvoiceNumber] = useState<string | null>(null);
+  const [confirmCancelInvoice, setConfirmCancelInvoice] = useState<any | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const handlePayInvoice = (inv: any) => {
     // Zero Stacked Modals Policy: tutup modal detail jika sedang dibuka
@@ -220,23 +221,24 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
     setIsQrisModalOpen(true);
   };
 
-  const handleCancelInvoice = async (inv: any) => {
-    const isConfirmed = window.confirm(
-      `Batalkan tagihan ${inv.invoiceNumber}? Tagihan dan kode QRIS aktif untuk pesanan kuota ini akan ditutup secara permanen.`
-    );
-    if (!isConfirmed) return;
+  const promptCancelInvoice = (inv: any) => {
+    // Zero Stacked Modals Policy: tutup modal detail jika sedang dibuka
+    setSelectedInvoiceModal(null);
+    setConfirmCancelInvoice(inv);
+  };
 
-    setCancellingInvoiceNumber(inv.invoiceNumber);
+  const handleExecuteCancelInvoice = async () => {
+    if (!confirmCancelInvoice) return;
+
+    setIsCancelling(true);
     try {
-      const res = await api.cancelInvoice(inv.invoiceNumber);
+      const res = await api.cancelInvoice(confirmCancelInvoice.invoiceNumber);
       if (res.status === 'success') {
         setActionFeedback({
-          message: res.message || `Faktur ${inv.invoiceNumber} berhasil dibatalkan.`,
+          message: res.message || `Faktur ${confirmCancelInvoice.invoiceNumber} berhasil dibatalkan.`,
           type: 'success',
         });
-        if (selectedInvoiceModal?.invoiceNumber === inv.invoiceNumber) {
-          setSelectedInvoiceModal(null);
-        }
+        setConfirmCancelInvoice(null);
         await fetchSubscriptionAndInvoices();
       } else {
         setActionFeedback({
@@ -250,7 +252,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
         type: 'error',
       });
     } finally {
-      setCancellingInvoiceNumber(null);
+      setIsCancelling(false);
     }
   };
 
@@ -539,7 +541,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     <th className="py-3 px-3">Item Layanan / Kuota</th>
                     <th className="py-3 px-3 text-right">Nominal</th>
                     <th className="py-3 px-3 text-center">Status</th>
-                    <th className="py-3 px-3 text-center">Aksi</th>
+                    <th className="py-3 px-3 text-center min-w-[210px]">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -584,8 +586,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {inv.status !== 'PAID' && inv.status !== 'VOID' && (
+                        <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                          {inv.status !== 'PAID' && inv.status !== 'VOID' ? (
                             <>
                               <button
                                 onClick={() => handlePayInvoice(inv)}
@@ -596,22 +598,31 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                                 <span>Bayar QRIS</span>
                               </button>
                               <button
-                                onClick={() => handleCancelInvoice(inv)}
-                                disabled={cancellingInvoiceNumber === inv.invoiceNumber}
-                                className="h-8 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                onClick={() => setSelectedInvoiceModal(inv)}
+                                className="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
+                                title="Lihat Rincian Faktur"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>Faktur</span>
+                              </button>
+                              <button
+                                onClick={() => promptCancelInvoice(inv)}
+                                className="h-8 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
                                 title="Batalkan Tagihan"
                               >
                                 <Ban className="w-3.5 h-3.5" />
                                 <span>Batal</span>
                               </button>
                             </>
+                          ) : (
+                            <button
+                              onClick={() => setSelectedInvoiceModal(inv)}
+                              className="h-8 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
+                            >
+                              <Receipt className="w-3.5 h-3.5" />
+                              <span>Lihat Faktur</span>
+                            </button>
                           )}
-                          <button
-                            onClick={() => setSelectedInvoiceModal(inv)}
-                            className="h-8 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center"
-                          >
-                            Lihat Faktur
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -666,38 +677,46 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     )}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Tagihan</span>
                       <span className="font-black text-sm text-slate-900">{formatRupiah(Number(inv.amount))}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {inv.status !== 'PAID' && inv.status !== 'VOID' && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {inv.status !== 'PAID' && inv.status !== 'VOID' ? (
                         <>
                           <button
                             onClick={() => handlePayInvoice(inv)}
-                            className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+                            className="h-8.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
                           >
                             <QrCode className="w-3.5 h-3.5" />
                             <span>Bayar</span>
                           </button>
                           <button
-                            onClick={() => handleCancelInvoice(inv)}
-                            disabled={cancellingInvoiceNumber === inv.invoiceNumber}
-                            className="h-9 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                            onClick={() => promptCancelInvoice(inv)}
+                            className="h-8.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                             title="Batalkan Tagihan"
                           >
                             <Ban className="w-3.5 h-3.5" />
+                            <span>Batal</span>
+                          </button>
+                          <button
+                            onClick={() => setSelectedInvoiceModal(inv)}
+                            className="h-8.5 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                            title="Lihat Faktur"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
                           </button>
                         </>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedInvoiceModal(inv)}
+                          className="h-8.5 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>Lihat Faktur</span>
+                        </button>
                       )}
-                      <button
-                        onClick={() => setSelectedInvoiceModal(inv)}
-                        className="h-9 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Receipt className="w-3.5 h-3.5" />
-                        <span>Faktur</span>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -1091,7 +1110,16 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                       })}
                     </strong>
                   </p>
-                  <p className="text-slate-600 mt-0.5">Metode: {selectedInvoiceModal.paymentMethod || 'Transfer Manual'}</p>
+                  <p className="text-slate-600 mt-0.5">
+                    Metode:{' '}
+                    <strong className="text-slate-800">
+                      {selectedInvoiceModal.paymentMethod === 'CASH'
+                        ? 'Tunai'
+                        : (selectedInvoiceModal.paymentGateway === 'PAKASIR' || selectedInvoiceModal.qrString || !selectedInvoiceModal.paymentMethod || selectedInvoiceModal.paymentMethod === 'QRIS'
+                          ? 'QRIS (Pakasir)'
+                          : selectedInvoiceModal.paymentMethod)}
+                    </strong>
+                  </p>
                   {selectedInvoiceModal.paidAt && (
                     <p className="text-emerald-700 text-[11px] font-semibold mt-0.5">
                       Dibayar: {new Date(selectedInvoiceModal.paidAt).toLocaleDateString('id-ID')}
@@ -1175,9 +1203,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleCancelInvoice(selectedInvoiceModal)}
-                    disabled={cancellingInvoiceNumber === selectedInvoiceModal.invoiceNumber}
-                    className="h-10 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                    onClick={() => promptCancelInvoice(selectedInvoiceModal)}
+                    className="h-10 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   >
                     <Ban className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Batalkan Tagihan</span>
@@ -1198,6 +1225,55 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                 className="h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL KONFIRMASI PEMBATALAN FAKTUR (CUSTOM DIALOG - ZERO NATIVE JS POPUP)
+          ========================================================================= */}
+      {confirmCancelInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-slate-100 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative text-center space-y-4 animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle className="w-7 h-7 stroke-[2.2]" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-black text-slate-900">
+                Batalkan Tagihan Ini?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Nomor faktur <strong className="font-mono text-slate-800">{confirmCancelInvoice.invoiceNumber}</strong> senilai{' '}
+                <strong className="text-slate-800">{formatRupiah(Number(confirmCancelInvoice.amount))}</strong> akan ditutup dan kode QRIS dinonaktifkan secara permanen.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setConfirmCancelInvoice(null)}
+                disabled={isCancelling}
+                className="flex-1 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Kembali
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteCancelInvoice}
+                disabled={isCancelling}
+                className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                {isCancelling ? (
+                  <span>Membatalkan...</span>
+                ) : (
+                  <>
+                    <Ban className="w-3.5 h-3.5" />
+                    <span>Ya, Batalkan</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

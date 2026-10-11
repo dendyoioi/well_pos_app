@@ -137,5 +137,23 @@ Fitur pengelolaan katalog mandiri oleh Superadmin pada Tab **PLANS** (`Superadmi
 * **Kesimpulan Kesiapan**:
   * Integrasi API v2, pembuatan direct QRIS, auto-polling frontend, simulasi sandbox, dan webhook handler telah terverifikasi 100% siap untuk aktivasi KYC menuju **Production Mode**.
 
+---
 
+### 9. ALUR PEMULIHAN STATUS, SCAN ULANG QRIS, PEMBATALAN TAGIHAN & INTEGRITAS UI (12 OKTOBER 2026)
 
+Menindaklanjuti audit operasional transaksi top-up kuota dan kenyamanan pengguna:
+1. **Pencegahan Stale State pada Modal QRIS (`PakasirDirectQrisModal.tsx`)**:
+   * Menambahkan auto-reset `isPaid: false`, `checking: false`, dan `simulating: false` setiap kali modal dibuka (`isOpen`) atau saat nomor faktur berubah (`invoiceNumber`).
+   * Memastikan modal tidak pernah menampilkan state sukses sisa transaksi sebelumnya sebelum verifikasi status aktual dari server selesai.
+2. **Scan Ulang QRIS (Fitur Bayar Lagi)**:
+   * Jika pop-up QRIS tertutup atau pengguna ingin membayar kembali nanti, pengguna dapat mengklik tombol **"Bayar QRIS"** langsung dari baris faktur berstatus `MENUNGGU` di tabel **Riwayat Faktur Digital SaaS** atau dari modal rincian faktur.
+   * Modal QRIS akan terbuka kembali dengan kode QRIS dan polling status otomatis.
+3. **Pembatalan Tagihan Mandiri (`Cancel Invoice` via Modal Dialog Custom)**:
+   * Pengguna dapat membatalkan faktur kuota `UNPAID` dengan mengklik tombol **"Batal"**.
+   * **Aturan Anti-Native JS Alert**: Dilarang keras menggunakan `window.confirm` / `alert`. Seluruh alur konfirmasi pembatalan menggunakan modal dialog kustom bertema Clean White-Blue dengan aksen Rose (`confirmCancelInvoice`).
+   * Saat dikonfirmasi, endpoint `POST /api/saas/invoices/:invoiceNumber/cancel` akan mengubah status faktur menjadi `VOID` (`✖ DIBATALKAN`) dan secara otomatis memanggil API Pakasir v2 (`POST /api/v2/cancel-transaction/{slug}/{order_id}`) untuk membatalkan pesanan di gateway.
+4. **Standardisasi Metode Pembayaran Kanonikal**:
+   * Menghilangkan seluruh sisa string fallback *"Transfer Manual"*. Seluruh faktur SaaS resmi menetapkan metode pembayaran sebagai **"QRIS"** atau **"QRIS (Pakasir)"**.
+5. **Proporsionalitas Tata Letak Kolom Aksi Tabel**:
+   * Merapikan kolom Aksi tabel desktop menjadi satu baris datar seragam (`whitespace-nowrap flex items-center justify-center gap-1.5` dengan tinggi konsisten `h-8`).
+   * Mencegah pematahan baris (*line wrapping*) yang sebelumnya merusak proporsi dan ketinggian baris tabel data.
