@@ -96,8 +96,18 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
     amount: number;
     tokenAmount: number;
     qrString: string;
+    createdAt?: string;
+    expiredAt?: string;
   } | null>(null);
   const [isQrisModalOpen, setIsQrisModalOpen] = useState(false);
+
+  // Helper untuk mendeteksi apakah QRIS invoice sudah melewati masa berlaku 60 menit
+  const isInvoiceExpired = (inv: any) => {
+    if (!inv || inv.status === 'PAID' || inv.status === 'VOID') return false;
+    const createdMs = inv.createdAt ? new Date(inv.createdAt).getTime() : 0;
+    if (!createdMs) return false;
+    return Date.now() > createdMs + 60 * 60 * 1000;
+  };
 
   const fetchSubscriptionAndInvoices = async () => {
     setLoading(true);
@@ -174,11 +184,15 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
 
         // Jika metode QRIS dan invoice memiliki qrString dari Pakasir, buka Direct QRIS Modal
         if (paymentMethod === 'QRIS' && res.data?.invoice?.qrString) {
+          const invCreatedAt = res.data.invoice.createdAt;
+          const invExpiredAt = res.data.invoice.expiredAt || (invCreatedAt ? new Date(new Date(invCreatedAt).getTime() + 60 * 60 * 1000).toISOString() : undefined);
           setQrisModalData({
             invoiceNumber: res.data.invoice.invoiceNumber,
             amount: res.data.invoice.amount || finalCost,
             tokenAmount: res.data.invoice.tokenAmount || tokenAmount,
             qrString: res.data.invoice.qrString,
+            createdAt: invCreatedAt,
+            expiredAt: invExpiredAt,
           });
           setIsQrisModalOpen(true);
         } else {
@@ -212,11 +226,15 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   const handlePayInvoice = (inv: any) => {
     // Zero Stacked Modals Policy: tutup modal detail jika sedang dibuka
     setSelectedInvoiceModal(null);
+    const invCreatedAt = inv.createdAt;
+    const invExpiredAt = inv.expiredAt || (invCreatedAt ? new Date(new Date(invCreatedAt).getTime() + 60 * 60 * 1000).toISOString() : undefined);
     setQrisModalData({
       invoiceNumber: inv.invoiceNumber,
       amount: Number(inv.amount),
       tokenAmount: Number(inv.tokenAmount || 0),
       qrString: inv.qrString || '',
+      createdAt: invCreatedAt,
+      expiredAt: invExpiredAt,
     });
     setIsQrisModalOpen(true);
   };
@@ -575,6 +593,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : inv.status === 'VOID'
                               ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
+                              : isInvoiceExpired(inv)
+                              ? 'bg-amber-100 text-amber-900 border-amber-300'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
                           }`}
                         >
@@ -582,6 +602,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                             ? '✔ LUNAS'
                             : inv.status === 'VOID'
                             ? '✖ DIBATALKAN'
+                            : isInvoiceExpired(inv)
+                            ? '⏱ KEDALUWARSA'
                             : '⏳ MENUNGGU'}
                         </span>
                       </td>
@@ -589,14 +611,16 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                         <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                           {inv.status !== 'PAID' && inv.status !== 'VOID' ? (
                             <>
-                              <button
-                                onClick={() => handlePayInvoice(inv)}
-                                className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer inline-flex items-center gap-1"
-                                title="Pindai Ulang Kode QRIS"
-                              >
-                                <QrCode className="w-3.5 h-3.5" />
-                                <span>Bayar QRIS</span>
-                              </button>
+                              {!isInvoiceExpired(inv) && (
+                                <button
+                                  onClick={() => handlePayInvoice(inv)}
+                                  className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                                  title="Pindai Ulang Kode QRIS"
+                                >
+                                  <QrCode className="w-3.5 h-3.5" />
+                                  <span>Bayar QRIS</span>
+                                </button>
+                              )}
                               <button
                                 onClick={() => setSelectedInvoiceModal(inv)}
                                 className="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
@@ -648,6 +672,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : inv.status === 'VOID'
                           ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
+                          : isInvoiceExpired(inv)
+                          ? 'bg-amber-100 text-amber-900 border-amber-300'
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}
                     >
@@ -655,6 +681,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                         ? '✔ LUNAS'
                         : inv.status === 'VOID'
                         ? '✖ DIBATALKAN'
+                        : isInvoiceExpired(inv)
+                        ? '⏱ KEDALUWARSA'
                         : '⏳ MENUNGGU'}
                     </span>
                   </div>
@@ -685,13 +713,15 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {inv.status !== 'PAID' && inv.status !== 'VOID' ? (
                         <>
-                          <button
-                            onClick={() => handlePayInvoice(inv)}
-                            className="h-8.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            <span>Bayar</span>
-                          </button>
+                          {!isInvoiceExpired(inv) && (
+                            <button
+                              onClick={() => handlePayInvoice(inv)}
+                              className="h-8.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                              <span>Bayar</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => promptCancelInvoice(inv)}
                             className="h-8.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
@@ -1071,12 +1101,16 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : selectedInvoiceModal.status === 'VOID'
                         ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
+                        : isInvoiceExpired(selectedInvoiceModal)
+                        ? 'bg-amber-100 text-amber-900 border-amber-300'
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
                       {selectedInvoiceModal.status === 'PAID'
                         ? '✔ PAID'
                         : selectedInvoiceModal.status === 'VOID'
                         ? '✖ DIBATALKAN'
+                        : isInvoiceExpired(selectedInvoiceModal)
+                        ? '⏱ KEDALUWARSA'
                         : '⏳ PENDING'}
                     </span>
                   </div>
@@ -1190,42 +1224,63 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
             </div>
 
             {/* Sticky Action Footer with Safe Area Padding */}
-            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex items-center gap-2 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] flex-wrap">
+            <div className="pt-3.5 border-t border-slate-100 shrink-0 flex flex-col gap-2 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               {selectedInvoiceModal.status !== 'PAID' && selectedInvoiceModal.status !== 'VOID' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handlePayInvoice(selectedInvoiceModal)}
-                    className="flex-1 sm:flex-initial h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                  >
-                    <QrCode className="w-4 h-4" />
-                    <span>Bayar QRIS Sekarang</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => promptCancelInvoice(selectedInvoiceModal)}
-                    className="h-10 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Ban className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Batalkan Tagihan</span>
-                  </button>
-                </>
+                <div className="flex items-center gap-2 w-full">
+                  {!isInvoiceExpired(selectedInvoiceModal) ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handlePayInvoice(selectedInvoiceModal)}
+                        className="flex-1 h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm"
+                      >
+                        <QrCode className="w-4 h-4 shrink-0" />
+                        <span>Bayar QRIS Sekarang</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => promptCancelInvoice(selectedInvoiceModal)}
+                        className="h-10 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-rose-200 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Ban className="w-3.5 h-3.5 shrink-0" />
+                        <span>Batalkan Tagihan</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 h-10 px-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                        <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Tagihan Kedaluwarsa (60 Menit)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => promptCancelInvoice(selectedInvoiceModal)}
+                        className="h-10 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-rose-200 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Ban className="w-3.5 h-3.5 shrink-0" />
+                        <span>Batalkan</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="flex-1 h-10 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors cursor-pointer shadow-2xs"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-500" />
-                <span>Cetak / PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedInvoiceModal(null)}
-                className="h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
-              >
-                Tutup
-              </button>
+              <div className="flex items-center gap-2 w-full">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex-1 h-10 px-4 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-slate-300 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                >
+                  <Printer className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span>Cetak / Unduh PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoiceModal(null)}
+                  className="w-28 sm:w-32 h-10 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-colors cursor-pointer shadow-2xs shrink-0"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1293,6 +1348,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
         amount={qrisModalData?.amount || 0}
         tokenAmount={qrisModalData?.tokenAmount || 0}
         qrString={qrisModalData?.qrString || ''}
+        createdAt={qrisModalData?.createdAt}
+        expiredAt={qrisModalData?.expiredAt}
         successButtonText="Selesai & Cek Kuota Baru"
         onSuccess={() => {
           fetchSubscriptionAndInvoices();

@@ -163,6 +163,25 @@ export const checkPakasirInvoiceStatus = async (req: Request, res: Response) => 
       }
     }
 
+    // Deteksi jika faktur sudah melewati batas 60 menit sejak dibuat
+    const invoiceCreatedMs = new Date(invoice.createdAt).getTime();
+    const isExpired = Date.now() > invoiceCreatedMs + 60 * 60 * 1000;
+    if (isExpired && invoice.status === InvoiceStatus.UNPAID) {
+      await prisma.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: { status: InvoiceStatus.VOID },
+      });
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          invoiceNumber: invoice.invoiceNumber,
+          status: 'EXPIRED',
+          message: 'Batas waktu pembayaran QRIS (60 menit) telah kedaluwarsa.',
+          expiredAt: new Date(invoiceCreatedMs + 60 * 60 * 1000).toISOString(),
+        },
+      });
+    }
+
     return res.status(200).json({
       status: 'success',
       data: {
@@ -173,6 +192,8 @@ export const checkPakasirInvoiceStatus = async (req: Request, res: Response) => 
         qrString: invoice.qrString,
         paymentUrl: invoice.paymentUrl,
         tenantStatus: invoice.tenant.status,
+        createdAt: invoice.createdAt,
+        expiredAt: new Date(invoiceCreatedMs + 60 * 60 * 1000).toISOString(),
       },
     });
   } catch (error: any) {

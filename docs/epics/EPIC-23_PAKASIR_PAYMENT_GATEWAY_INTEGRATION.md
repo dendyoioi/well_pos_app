@@ -160,7 +160,16 @@ Menindaklanjuti audit operasional transaksi top-up kuota dan kenyamanan pengguna
    * Mencegah pematahan baris (*line wrapping*) yang sebelumnya merusak proporsi dan ketinggian baris tabel data.
 6. **Eliminasi Tombol Simulasi Sandbox dari Antarmuka Publik**:
    * Seluruh tombol *"⚡ Simulasi Bayar QRIS (Sandbox Test)"* dihapus secara total dari modal pembayaran top-up (`PakasirDirectQrisModal.tsx`) dan form registrasi awal (`SaasLandingPage.tsx`).
-7. **Durasi Masa Berlaku QRIS (60 Menit), Countdown Timer & Auto-Batal**:
-   * Masa berlaku standar QRIS dinamis dari gateway adalah tepat **60 menit (1 jam)** sejak faktur dibuat (`expired_at`).
-   * Modal QRIS dilengkapi **Countdown Timer** live (`Sisa Waktu Pembayaran: MM:SS`).
-   * Begitu sisa waktu habis, sistem otomatis menghentikan polling, mengubah antarmuka ke layar *Waktu Pembayaran Habis*, dan memicu pembatalan otomatis (`api.cancelInvoice`) agar status faktur menjadi `VOID` dan tidak menggantung.
+7. **Durasi Masa Berlaku QRIS (60 Menit), Anti-Reset Timer & Auto-Batal**:
+   * Masa berlaku standar QRIS dinamis dari gateway adalah tepat **60 menit (1 jam)** sejak faktur dibuat (`createdAt`).
+   * **Anti-Reset Countdown**: Sisa waktu dihitung secara ketat berdasarkan selisih waktu pembuatan asli faktur (`targetMs = createdAt + 60 menit`), BUKAN mereset ke 60:00 setiap kali tombol bayar diklik. Hal ini krusial untuk mencegah pengguna memindai QRIS kedaluwarsa yang berisiko tertolak atau gagal di gateway.
+   * Jika faktur sudah melebihi 60 menit:
+     - Tabel dan modal menampilkan badge **`⏱ KEDALUWARSA`** dan tombol *"Bayar QRIS"* disembunyikan.
+     - Backend otomatis menandai status menjadi `VOID` saat status diperiksa.
+     - Modal QRIS langsung menampilkan layar *Waktu Pembayaran Habis* tanpa merender gambar QR.
+8. **Proporsionalitas Tombol Sticky Footer Modal Faktur (Anti-Cramped Buttons)**:
+   * Tata letak tombol aksi footer modal faktur (`Official Tax Invoice`) disusun dalam layout 2 baris terstruktur:
+     - **Baris 1 (Aksi Transaksi)**: Tombol *"Bayar QRIS Sekarang"* (`flex-1 h-10 bg-emerald-600`) dan *"Batalkan Tagihan"* (`px-3.5 h-10 bg-rose-50`).
+     - **Baris 2 (Dokumen & Navigasi)**: Tombol *"Cetak / Unduh PDF"* (`flex-1 h-10 border border-slate-300`) dan *"Tutup"* (`w-28 sm:w-32 h-10 bg-blue-900`).
+   * Memastikan tombol Cetak / PDF tidak lagi terhimpit (*kegencet*) ke ukuran sempit yang memotong teks menjadi dua baris vertikal.
+

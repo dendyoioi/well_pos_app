@@ -1223,6 +1223,7 @@ export const getSubscriptionInvoices = async (req: Request, res: Response) => {
           paymentUrl: inv.paymentUrl,
           payments: inv.payments,
           createdAt: inv.createdAt,
+          expiredAt: new Date(new Date(inv.createdAt).getTime() + 60 * 60 * 1000).toISOString(),
         };
       }),
     });

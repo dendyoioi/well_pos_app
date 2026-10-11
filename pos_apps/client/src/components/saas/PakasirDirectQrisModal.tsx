@@ -22,6 +22,7 @@ export interface PakasirDirectQrisModalProps {
   amount: number;
   tokenAmount?: number;
   qrString?: string;
+  createdAt?: string;
   expiredAt?: string;
   onSuccess?: () => void;
   successButtonText?: string;
@@ -37,6 +38,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
   amount,
   tokenAmount,
   qrString,
+  createdAt,
   expiredAt,
   onSuccess,
   successButtonText = 'Selesai & Lanjutkan',
@@ -58,13 +60,19 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     }
   }, [isOpen, invoiceNumber]);
 
-  // Countdown timer kedaluwarsa QRIS (Auto batal saat expired)
+  // Countdown timer kedaluwarsa QRIS (Dihitung akurat dari createdAt / expiredAt invoice)
   useEffect(() => {
     if (!isOpen || !invoiceNumber || isPaid) return;
 
-    let targetMs = expiredAt ? new Date(expiredAt).getTime() : NaN;
+    let targetMs = NaN;
+    if (expiredAt) {
+      targetMs = new Date(expiredAt).getTime();
+    } else if (createdAt) {
+      targetMs = new Date(createdAt).getTime() + 60 * 60 * 1000;
+    }
+
+    // Fallback darurat jika metadata waktu tidak tersedia sama sekali
     if (isNaN(targetMs)) {
-      // Default durasi QRIS dinamis: 60 menit
       targetMs = Date.now() + 60 * 60 * 1000;
     }
 
@@ -81,7 +89,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [isOpen, invoiceNumber, expiredAt, isPaid]);
+  }, [isOpen, invoiceNumber, expiredAt, createdAt, isPaid]);
 
   const formatTimer = (seconds: number | null) => {
     if (seconds === null) return '60:00';
@@ -94,7 +102,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
     }).format(num);
   };
 
@@ -105,12 +113,17 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 
     try {
       const res = await api.checkPakasirInvoiceStatus(invoiceNumber);
-      if (res.status === 'success' && res.data?.status === 'PAID') {
-        setIsPaid(true);
-        setStatusMessage('Pembayaran berhasil diverifikasi!');
-        if (onSuccess) onSuccess();
-      } else {
-        setIsPaid(false);
+      if (res.status === 'success' && res.data) {
+        if (res.data.status === 'PAID') {
+          setIsPaid(true);
+          setStatusMessage('Pembayaran berhasil diverifikasi!');
+          if (onSuccess) onSuccess();
+        } else if (res.data.status === 'EXPIRED' || res.data.status === 'VOID') {
+          setIsExpired(true);
+          setStatusMessage('Batas waktu pembayaran QRIS telah kedaluwarsa.');
+        } else {
+          setIsPaid(false);
+        }
       }
     } catch (err) {
       if (!silent) console.error('Error saat cek status pembayaran:', err);
