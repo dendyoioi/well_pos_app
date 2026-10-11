@@ -709,6 +709,7 @@ export const AttendanceReportView: React.FC = () => {
             setCurrentPage(1);
           }}
           pageSizeOptions={[10, 25, 50, 100]}
+          itemLabel="catatan absensi"
         />
       </div>
 

@@ -482,7 +482,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   // ==========================================
   if (viewMode === 'FORM') {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      <div className="space-y-6 max-w-4xl mx-auto pb-28 sm:pb-16 font-sans">
         {/* Breadcrumb & Top Navigation */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -851,19 +851,19 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             </div>
           </div>
 
-          {/* ACTION BUTTONS (STICKY OR FOOTER) */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+          {/* Action Buttons (Desktop & Mobile Safe-Area Sticky Footer) */}
+          <div className="fixed bottom-0 left-0 right-0 sm:static p-4 sm:p-0 bg-white/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t border-slate-200 z-30 flex items-center justify-end gap-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4 sm:border-t sm:border-slate-200 shadow-lg sm:shadow-none">
             <button
               type="button"
               onClick={() => setViewMode('LIST')}
-              className="px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs sm:text-sm rounded-2xl transition-colors shadow-xs"
+              className="h-10 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs sm:text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-7 py-3 bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-xs sm:text-sm rounded-2xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2"
+              className="h-10 px-6 bg-blue-900 hover:bg-blue-950 active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2 cursor-pointer"
             >
               {submitting ? (
                 <>
