@@ -173,3 +173,24 @@ Menindaklanjuti audit operasional transaksi top-up kuota dan kenyamanan pengguna
      - **Baris 2 (Dokumen & Navigasi)**: Tombol *"Cetak / Unduh PDF"* (`flex-1 h-10 border border-slate-300`) dan *"Tutup"* (`w-28 sm:w-32 h-10 bg-blue-900`).
    * Memastikan tombol Cetak / PDF tidak lagi terhimpit (*kegencet*) ke ukuran sempit yang memotong teks menjadi dua baris vertikal.
 
+---
+
+### 10. AUDIT INTEGRITAS HARGA KATALOG PAKET KUOTA & DISKON PROMO B2B (12 OKTOBER 2026)
+
+Menindaklanjuti temuan disparitas harga paket kuota dan kalkulasi diskon kupon:
+1. **Penyelarasan Harga Paket Katalog Resmi (`matchedPackage.price`)**:
+   * **Akar Masalah**: Sebelumnya, modal top-up di sisi Owner (`BillingTokensView.tsx`) dan endpoint backend (`saas.controller.ts`) menghitung subtotal menggunakan rumus generik `tokenAmount * tokenPrice` (`5.000 * 100 = Rp 500.000`). Padahal kartu paket Enterprise 5.000 diatur dengan harga diskon volume resmi Rp 225.000 di katalog Superadmin.
+   * **Solusi**: Baik di Frontend (`BillingTokensView.tsx`) maupun Backend (`saas.controller.ts`), sistem melakukan lookup paket resmi (`matchedPackage = config.packages.find(pkg => pkg.tokens === tokenAmount)`). Jika ada paket yang cocok, `baseAmount` menggunakan `matchedPackage.price` (Rp 225.000 untuk 5.000 token, Rp 90.000 untuk 1.500 token, Rp 37.500 untuk 500 token, dan Rp 25.000 untuk 250 token).
+   * Rincian subtotal di modal ringkasan kini menampilkan label resmi paket: `Paket Enterprise 5.000: Rp 225.000`.
+2. **Perbaikan Tombol Duplikat Plus Superadmin**:
+   * Tombol *"Buat Paket Baru"* di Superadmin (`SuperadminDashboardPage.tsx`) sebelumnya menampilkan `+ +` karena teks tombol mengandung tanda `+` manual di samping komponen `<Plus />`. Teks manual telah dibersihkan menjadi `<Plus /> Buat Paket Baru`.
+3. **Audit Keterkaitan Diskon Promo B2B (Persen, Nominal Tetap, Bonus Token)**:
+   * **Sinkronisasi Presisi**: Diskon kupon promo kini dihitung proporsional terhadap `baseCost` paket resmi yang aktif:
+     - `DISCOUNT_PERCENT`: Dihitung dari `baseAmount` resmi paket (misal diskon 20% dari Enterprise 5.000 = Rp 45.000, bukan Rp 100.000). Plafon `maxDiscount` tetap dihormati jika ditentukan.
+     - `DISCOUNT_FIXED`: Memotong nominal tetap dari `baseAmount` paket resmi dengan pembatasan `Math.min(baseCost, value)`.
+     - `BONUS_TOKENS`: Menambahkan kuota token tanpa mengubah total tagihan rupiah.
+   * **Reaktivitas Syarat Minimal Belanja (`minSpend`)**:
+     - Jika pengguna memasang kupon yang memiliki syarat minimal belanja (contoh `minSpend: Rp 100.000`), lalu beralih ke paket yang nilainya di bawah syarat tersebut (misal Paket Basic 500 senilai Rp 37.500), UI secara otomatis mendeteksi ketidaksesuaian syarat, menampilkan peringatan informatif, dan tidak memotong total tagihan hingga paket yang memenuhi syarat dipilih.
+   * **Konsistensi Endpoint API**:
+     - Endpoint `POST /api/saas/promos/validate` dan `POST /api/saas/tokens/topup` memvalidasi `baseAmount` dan potongan promo menggunakan algoritma yang identik 100%, menjamin tidak ada perbedaan antara angka yang dilihat pengguna di layar dan angka yang diterbitkan pada faktur resmi maupun QRIS dinamis.
+

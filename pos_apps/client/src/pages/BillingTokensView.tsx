@@ -59,7 +59,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
 
   // Top-Up Modal State
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
-  const [topUpPreset, setTopUpPreset] = useState<number>(1000);
+  const [topUpPreset, setTopUpPreset] = useState<number>(500);
   const [customTokenAmount, setCustomTokenAmount] = useState<number>(250);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -71,8 +71,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   const [platformPaymentConfig, setPlatformPaymentConfig] = useState<any>(null);
 
   // Dynamic token config from platform HQ
-  const tokenPrice = platformPaymentConfig?.tokenPrice ?? 69;
-  const minTokenPurchase = platformPaymentConfig?.minTokenPurchase ?? 250;
+  const tokenPrice = platformPaymentConfig?.tokenPrice ?? 100;
+  const minTokenPurchase = platformPaymentConfig?.minTokenPurchase ?? 100;
   const qrisEnabled = platformPaymentConfig?.qrisEnabled ?? (platformPaymentConfig?.qris?.enabled ?? true);
   const presetPackages: Array<{
     id?: string;
@@ -83,12 +83,14 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
     badge?: string;
     isPopular?: boolean;
     description?: string;
-  }> = platformPaymentConfig?.packages || [
-    { tokens: 250, name: 'Starter 250', label: 'Starter 250', badge: 'Trial Ramah', isPopular: false },
-    { tokens: 1000, name: 'Basic 1.000', label: 'Basic 1.000', badge: 'Paling Fleksibel', isPopular: false },
-    { tokens: 2500, name: 'Pro 2.500', label: 'Pro 2.500', badge: '⭐ Paling Diminati', isPopular: true },
-    { tokens: 5000, name: 'Enterprise 5.000', label: 'Enterprise 5.000', badge: 'Kapasitas Besar', isPopular: false },
-  ];
+  }> = (platformPaymentConfig?.packages && platformPaymentConfig.packages.length > 0)
+    ? platformPaymentConfig.packages
+    : [
+        { tokens: 250, name: 'Starter 250', label: 'Starter 250', price: 25000, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
+        { tokens: 500, name: 'Basic 500', label: 'Basic 500', price: 37500, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
+        { tokens: 1500, name: 'Pro 1.500', label: 'Pro 1.500', price: 90000, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
+        { tokens: 5000, name: 'Enterprise 5.000', label: 'Enterprise 5.000', price: 225000, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
+      ];
 
   // State Direct QRIS Pakasir untuk Top-Up
   const [qrisModalData, setQrisModalData] = useState<{
@@ -139,9 +141,28 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   }, []);
 
   const tokenAmount = isCustomMode ? customTokenAmount : topUpPreset;
-  const baseCost = tokenAmount * tokenPrice;
-  const discountCost = appliedPromo ? appliedPromo.discountAmount || 0 : 0;
-  const bonusTokens = appliedPromo ? appliedPromo.bonusTokens || 0 : 0;
+  const selectedPackage = !isCustomMode
+    ? presetPackages.find((pkg) => pkg.tokens === topUpPreset)
+    : null;
+  const baseCost = selectedPackage && typeof selectedPackage.price === 'number' && selectedPackage.price > 0
+    ? selectedPackage.price
+    : tokenAmount * tokenPrice;
+
+  // Cek apakah kupon promo memenuhi syarat minimal transaksi (minSpend)
+  const isPromoEligible = !appliedPromo || !appliedPromo.minSpend || baseCost >= Number(appliedPromo.minSpend);
+
+  // Hitung diskon promo secara proporsional terhadap baseCost resmi paket
+  const discountCost = appliedPromo && isPromoEligible
+    ? (appliedPromo.type === 'DISCOUNT_PERCENT'
+        ? Math.min(baseCost, appliedPromo.maxDiscount && Number(appliedPromo.maxDiscount) > 0
+            ? Math.min(Math.round((baseCost * Number(appliedPromo.value)) / 100), Number(appliedPromo.maxDiscount))
+            : Math.round((baseCost * Number(appliedPromo.value)) / 100))
+        : appliedPromo.type === 'DISCOUNT_FIXED'
+        ? Math.min(baseCost, Number(appliedPromo.value || appliedPromo.discountAmount || 0))
+        : Math.min(baseCost, Number(appliedPromo.discountAmount || 0)))
+    : 0;
+
+  const bonusTokens = appliedPromo && isPromoEligible ? appliedPromo.bonusTokens || 0 : 0;
   const finalCost = Math.max(0, baseCost - discountCost);
   const totalTokensReceived = tokenAmount + bonusTokens;
 
@@ -172,7 +193,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
     try {
       const res = await api.topUpTokens({
         tokenAmount,
-        promoCode: appliedPromo?.code || undefined,
+        promoCode: (appliedPromo && isPromoEligible) ? appliedPromo.code : undefined,
         paymentMethod,
       });
 
@@ -908,16 +929,30 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                       </button>
                     </div>
                     {appliedPromo && (
-                      <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
-                        <span className="font-bold">
-                          Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name || 'Diskon diterapkan'}
-                        </span>
+                      <div className={`p-2.5 rounded-xl text-xs flex items-center justify-between ${
+                        isPromoEligible
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                          : 'bg-amber-50 border border-amber-200 text-amber-900'
+                      }`}>
+                        <div className="space-y-0.5">
+                          <span className="font-bold block">
+                            Kupon &quot;{appliedPromo.code}&quot; aktif: {appliedPromo.name || 'Diskon diterapkan'}
+                          </span>
+                          {!isPromoEligible && (
+                            <span className="text-[11px] text-amber-700 block font-semibold">
+                              ⚠️ Minimal transaksi Rp {Number(appliedPromo.minSpend).toLocaleString('id-ID')} belum tercapai untuk paket ini.
+                            </span>
+                          )}
+                        </div>
                         <button
+                          type="button"
                           onClick={() => {
                             setAppliedPromo(null);
                             setPromoCodeInput('');
                           }}
-                          className="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer"
+                          className={`${
+                            isPromoEligible ? 'text-emerald-700 hover:text-emerald-950' : 'text-amber-800 hover:text-amber-950'
+                          } font-bold cursor-pointer shrink-0 ml-2`}
                         >
                           Batal
                         </button>
@@ -1011,8 +1046,8 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                       </span>
                     </div>
                     <div className="flex justify-between text-slate-500">
-                      <span>Subtotal (Rp {tokenPrice} / token):</span>
-                      <span className="font-mono">{formatRupiah(baseCost)}</span>
+                      <span>{selectedPackage ? `Paket ${selectedPackage.name || selectedPackage.label}:` : `Subtotal (Rp ${tokenPrice} / token):`}</span>
+                      <span className="font-mono font-bold text-slate-800">{formatRupiah(baseCost)}</span>
                     </div>
                     {discountCost > 0 && (
                       <div className="flex justify-between text-emerald-700 font-bold">

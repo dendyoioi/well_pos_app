@@ -837,7 +837,14 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
     }
 
     let finalTokenAmount = tokenAmount;
-    let baseAmount = tokenAmount * tokenPrice;
+    
+    // Cari paket kuota resmi jika tokenAmount sesuai dengan katalog paket superadmin
+    const matchedPackage = (config.packages || []).find(
+      (pkg: any) => Number(pkg.tokens) === Number(tokenAmount)
+    );
+    let baseAmount = matchedPackage && typeof matchedPackage.price === 'number' && matchedPackage.price > 0
+      ? Number(matchedPackage.price)
+      : tokenAmount * tokenPrice;
     let discountAmount = 0;
 
     // Evaluasi Promo jika ada
@@ -950,7 +957,9 @@ export const topUpSubscriptionTokens = async (req: Request, res: Response) => {
         planId: plan.id,
         amount: new Prisma.Decimal(finalAmount),
         tokenAmount: finalTokenAmount,
-        notes: `Top-Up Kuota +${finalTokenAmount.toLocaleString('id-ID')} Token Pesanan (Pay-As-You-Go)`,
+        notes: matchedPackage
+          ? `Top-Up Kuota ${matchedPackage.name} (+${finalTokenAmount.toLocaleString('id-ID')} Token Pesanan)`
+          : `Top-Up Kuota +${finalTokenAmount.toLocaleString('id-ID')} Token Pesanan (Pay-As-You-Go)`,
         promoCode: promoCode || null,
         discountAmount: new Prisma.Decimal(discountAmount),
         status: initialStatus,
@@ -1070,7 +1079,14 @@ export const validateTenantPromoCode = async (req: Request, res: Response) => {
     const config = readPlatformPaymentConfig();
     const tokenPrice = typeof config.tokenPrice === 'number' ? config.tokenPrice : 69;
     const tokens = Number(tokenAmount) || 1000;
-    const baseAmount = tokens * tokenPrice;
+
+    // Cari paket kuota resmi jika tokenAmount sesuai dengan katalog paket superadmin
+    const matchedPackage = (config.packages || []).find(
+      (pkg: any) => Number(pkg.tokens) === Number(tokens)
+    );
+    const baseAmount = matchedPackage && typeof matchedPackage.price === 'number' && matchedPackage.price > 0
+      ? Number(matchedPackage.price)
+      : tokens * tokenPrice;
 
     if (promo.minSpend && baseAmount < Number(promo.minSpend)) {
       return res.status(400).json({
@@ -1101,8 +1117,11 @@ export const validateTenantPromoCode = async (req: Request, res: Response) => {
         name: promo.name,
         type: promo.type,
         value: Number(promo.value),
+        maxDiscount: promo.maxDiscount ? Number(promo.maxDiscount) : null,
+        minSpend: promo.minSpend ? Number(promo.minSpend) : null,
         discountAmount,
         bonusTokens,
+        baseAmount,
         finalAmount: Math.max(0, baseAmount - discountAmount),
       },
     });

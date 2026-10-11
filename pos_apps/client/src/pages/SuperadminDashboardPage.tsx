@@ -3545,7 +3545,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer active:scale-95"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>+ Buat Paket Baru</span>
+                    <span>Buat Paket Baru</span>
                   </button>
                   <button
                     type="button"
