@@ -27,6 +27,8 @@ import {
   Copy,
   Tag,
   TrendingUp,
+  Calculator,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -58,6 +60,9 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     registrationFee: 99000,
     registrationBonusTokens: 100,
   });
+
+  // State Kalkulator Efisiensi Biaya Token Live
+  const [dailyTransactions, setDailyTransactions] = useState<number>(40);
 
   // State Navigasi & Tampilan
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1101,6 +1106,160 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* KALKULATOR PENGHEMATAN TOKEN LIVE (INTERAKTIF) */}
+            {(() => {
+              const monthlyTx = dailyTransactions * 30;
+              const perTxRate = monthlyTx <= 500 ? 100 : monthlyTx <= 2000 ? 75 : 60;
+              const wellPosCost = monthlyTx * perTxRate;
+              const competitorCost = 249000;
+              const savings = Math.max(0, competitorCost - wellPosCost);
+              const savingsPct = Math.round((savings / competitorCost) * 100);
+
+              return (
+                <div className="mt-8 bg-white rounded-2xl sm:rounded-3xl border border-blue-200/80 p-6 sm:p-8 shadow-lg shadow-blue-900/5 relative overflow-hidden">
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-extrabold text-[11px] border border-blue-200 mb-2">
+                        <Calculator className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Kalkulator Simulasi Penghematan</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        Berapa Banyak Penghematan Toko Anda?
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl">
+                        Geser slider transaksi harian toko Anda untuk melihat perbandingan riil biaya operasional Well POS dibandingkan langganan kasir konvensional.
+                      </p>
+                    </div>
+
+                    {/* Presets Button Group */}
+                    <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+                      {[
+                        { label: 'Kedai / Kios', tx: 15 },
+                        { label: 'Kafe / Butik', tx: 40 },
+                        { label: 'Resto Ramai', tx: 100 },
+                        { label: 'Grosir / Retail', tx: 250 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.tx}
+                          type="button"
+                          onClick={() => setDailyTransactions(preset.tx)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            dailyTransactions === preset.tx
+                              ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {preset.label} ({preset.tx}/hari)
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slider Control */}
+                  <div className="py-6 space-y-3">
+                    <div className="flex items-center justify-between text-xs sm:text-sm font-bold">
+                      <span className="text-slate-700">Rata-rata Transaksi Toko per Hari:</span>
+                      <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-200 font-black text-base sm:text-lg">
+                        {dailyTransactions} Struk / Hari
+                        <span className="text-xs font-semibold text-slate-500 ml-1.5">
+                          (~{monthlyTx.toLocaleString('id-ID')} Struk / Bulan)
+                        </span>
+                      </span>
+                    </div>
+
+                    <input
+                      type="range"
+                      min={5}
+                      max={400}
+                      step={5}
+                      value={dailyTransactions}
+                      onChange={(e) => setDailyTransactions(Number(e.target.value))}
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+
+                    <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+                      <span>5 Struk/hari (Pemula)</span>
+                      <span>100 Struk/hari (Menengah)</span>
+                      <span>400+ Struk/hari (Ramai / Grosir)</span>
+                    </div>
+                  </div>
+
+                  {/* Comparison Result Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    {/* Card 1: Well POS */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 border-2 border-blue-600/60 rounded-2xl p-5 relative shadow-xs">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-extrabold text-blue-700 uppercase tracking-wider">
+                          Well POS (Pay-Per-Struk)
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300">
+                          Token Tidak Hangus
+                        </span>
+                      </div>
+                      <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+                        Rp {wellPosCost.toLocaleString('id-ID')}
+                        <span className="text-xs font-semibold text-slate-500"> / bulan</span>
+                      </div>
+                      <p className="text-xs text-blue-900/80 mt-1.5 font-medium">
+                        Hanya ~Rp {perTxRate} per transaksi. Toko tutup libur mudik? Saldo token tetap utuh selamanya!
+                      </p>
+                    </div>
+
+                    {/* Card 2: Aplikasi POS Konvensional */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                          POS Lain (Langganan Flat)
+                        </span>
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-300">
+                          Hangus Tiap Bulan
+                        </span>
+                      </div>
+                      <div className="text-2xl sm:text-3xl font-black text-slate-600 mt-1 line-through decoration-rose-500/60">
+                        Rp {competitorCost.toLocaleString('id-ID')}
+                        <span className="text-xs font-semibold text-slate-400"> / bulan</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1.5">
+                        Biaya wajib dipotong flat tiap bulan, tidak peduli apakah toko sedang sepi, tutup, atau renovasi.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Highlight Penghematan Bersih */}
+                  <div className="mt-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md shadow-emerald-900/20">
+                    <div className="flex items-center gap-3 text-center sm:text-left">
+                      <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-6 h-6 text-amber-300" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-emerald-100 uppercase tracking-wider">
+                          Total Penghematan Bersih Toko Anda:
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-white">
+                          Hemat Rp {savings.toLocaleString('id-ID')} / bulan ({savingsPct}% Lebih Hemat)
+                        </div>
+                        <div className="text-xs text-emerald-100 mt-0.5">
+                          Setara penghematan <strong>Rp {(savings * 12).toLocaleString('id-ID')} per tahun</strong> untuk kas modal usaha Anda!
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRegisterSuccessData(null);
+                        setRegisterModalOpen(true);
+                      }}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 font-black text-xs shadow-md transition-all active:scale-95 shrink-0 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <span>Mulai Hemat Sekarang</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* BANNER PROMO MENARIK SETIAP BULAN */}
             <div className="mt-8 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-2xl p-4 sm:p-6 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">

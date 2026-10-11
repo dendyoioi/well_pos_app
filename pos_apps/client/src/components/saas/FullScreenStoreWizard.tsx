@@ -160,7 +160,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
           </div>
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-xs text-slate-600 font-medium transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-xs text-slate-600 font-medium transition-colors shadow-xs cursor-pointer"
             title="Keluar / Ganti Akun"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -303,7 +303,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                       <button
                         type="button"
                         onClick={() => removeIndustry(ind)}
-                        className="text-slate-400 hover:text-rose-600 transition-colors ml-0.5"
+                        className="text-slate-400 hover:text-rose-600 transition-colors ml-0.5 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -312,7 +312,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedIndustries([])}
-                    className="text-[11px] text-blue-600 hover:text-blue-800 underline self-center ml-2"
+                    className="text-[11px] text-blue-600 hover:text-blue-800 underline self-center ml-2 cursor-pointer"
                   >
                     Hapus Semua
                   </button>
@@ -336,7 +336,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -350,7 +350,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                         key={tab}
                         type="button"
                         onClick={() => setActiveTab(tab)}
-                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                           activeTab === tab
                             ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -377,7 +377,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                             key={`${category}-${name}`}
                             type="button"
                             onClick={() => toggleIndustry(name)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-blue-900 border-blue-900 text-white font-bold shadow-xs'
                                 : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/40'
