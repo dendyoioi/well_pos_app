@@ -197,4 +197,10 @@ Menindaklanjuti temuan disparitas harga paket kuota dan kalkulasi diskon kupon:
    * **Akar Masalah**: Bagian *"Pilihan Paket Token Transaksi"* di halaman depan publik sebelumnya menggunakan kartu statis legacy (*Paket Pemula 500 Struk Rp 50.000, Paket Laris Manis 2.000 Struk Rp 150.000, Paket Grosir 5.000 Struk Rp 300.000*), yang tidak sinkron dengan pengaturan Superadmin dan menimbulkan efek kejutan bagi pengguna saat top-up di dalam aplikasi.
    * **Solusi**: Diubah menjadi dinamis membaca konfigurasi dari `platformConfig.packages` melalui API publik `api.getPublicPlatformConfig()`, dengan nilai fallback identik dengan katalog resmi Superadmin (Starter 250 Rp 25.000, Basic 500 Rp 37.500, Pro 1.500 Rp 90.000, Enterprise 5.000 Rp 225.000).
    * **Sinkronisasi Kalkulator Simulasi Penghematan**: Tier tarif per transaksi pada kalkulator diselaraskan dengan rate resmi paket (250 struk @Rp 100, 500 struk @Rp 75, 1.500 struk @Rp 60, dan 5.000 struk @Rp 45).
+5. **Perbaikan UX Input Kuota Token Kustom (Anti-Aggressive Snapping & Notifikasi Inline)**:
+   * **Akar Masalah**: Handler `onChange` input kustom sebelumnya mengeksekusi `Math.max(minTokenPurchase, Number(e.target.value))` secara live saat setiap ketikan. Akibatnya, saat pengguna mengetik `1` (untuk mengetik 120), menghapus karakter, atau mengetik `50`, angka langsung dipaksa terkunci (*snapped*) kembali ke `100`.
+   * **Solusi UX Humanis**:
+     - Input kini menerima string angka murni (`cleanDigits = e.target.value.replace(/[^0-9]/g, '')`), memungkinkan pengguna mengetik bebas, menghapus karakter, atau mengosongkan kolom tanpa interupsi agresif.
+     - Jika nominal yang diketik di bawah batas minimum (`< 100`), sistem tidak memaksa mengubah angka pengguna, melainkan menampilkan notifikasi peringatan inline yang jelas: `⚠️ Jumlah token kustom minimal 100 token`.
+     - Tombol aksi *"Beli Kuota Sekarang"* otomatis memblokir submission (`disabled`) dan menampilkan teks status `Min. 100 Token` hingga input memenuhi syarat.
 

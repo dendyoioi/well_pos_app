@@ -60,7 +60,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
   // Top-Up Modal State
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
   const [topUpPreset, setTopUpPreset] = useState<number>(500);
-  const [customTokenAmount, setCustomTokenAmount] = useState<number>(250);
+  const [customTokenInput, setCustomTokenInput] = useState<string>('250');
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
@@ -140,7 +140,21 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
     fetchSubscriptionAndInvoices();
   }, []);
 
-  const tokenAmount = isCustomMode ? customTokenAmount : topUpPreset;
+  const parsedCustomTokens = Number(customTokenInput) || 0;
+  const tokenAmount = isCustomMode ? parsedCustomTokens : topUpPreset;
+  const isCustomTokenInvalid = isCustomMode && parsedCustomTokens < minTokenPurchase;
+
+  const handleCustomTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleanDigits = e.target.value.replace(/[^0-9]/g, '');
+    setCustomTokenInput(cleanDigits);
+  };
+
+  const handleCustomTokenBlur = () => {
+    if (!customTokenInput.trim() || Number(customTokenInput) === 0) {
+      setCustomTokenInput(String(minTokenPurchase));
+    }
+  };
+
   const selectedPackage = !isCustomMode
     ? presetPackages.find((pkg) => pkg.tokens === topUpPreset)
     : null;
@@ -168,6 +182,10 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
 
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
+    if (isCustomMode && tokenAmount < minTokenPurchase) {
+      setPromoError(`Kupon tidak dapat diproses: kuota token kustom minimal ${minTokenPurchase.toLocaleString('id-ID')} token`);
+      return;
+    }
     setPromoError('');
     try {
       const res = await api.validateTenantPromo({
@@ -189,6 +207,13 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
 
   const handleExecuteTopUp = async () => {
     if (tokenAmount <= 0) return;
+    if (isCustomMode && tokenAmount < minTokenPurchase) {
+      setActionFeedback({
+        message: `Jumlah token kustom minimal ${minTokenPurchase.toLocaleString('id-ID')} token`,
+        type: 'error',
+      });
+      return;
+    }
     setIsSubmittingTopUp(true);
     try {
       const res = await api.topUpTokens({
@@ -875,28 +900,45 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                 <div className="pt-1">
                   <button
                     type="button"
-                    onClick={() => setIsCustomMode(!isCustomMode)}
+                    onClick={() => {
+                      const nextMode = !isCustomMode;
+                      setIsCustomMode(nextMode);
+                      if (nextMode && (!customTokenInput || Number(customTokenInput) === 0)) {
+                        setCustomTokenInput('250');
+                      }
+                    }}
                     className="text-xs font-bold text-blue-900 hover:text-blue-950 flex items-center gap-1 cursor-pointer"
                   >
                     <span>{isCustomMode ? 'Gunakan Paket Pilihan Di Atas' : '+ Butuh kuota kustom lainnya?'}</span>
                   </button>
                   {isCustomMode && (
-                    <div className="mt-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 max-w-md">
+                    <div className="mt-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 max-w-md">
                       <div className="flex justify-between items-center">
                         <label className="text-[11px] font-bold text-slate-600">Jumlah Token Kustom:</label>
-                        <span className="text-[10px] text-slate-500">Min. {minTokenPurchase.toLocaleString('id-ID')} token</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">Min. {minTokenPurchase.toLocaleString('id-ID')} token</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <input
-                          type="number"
-                          min={minTokenPurchase}
-                          step="50"
-                          value={customTokenAmount}
-                          onChange={(e) => setCustomTokenAmount(Math.max(minTokenPurchase, Number(e.target.value)))}
-                          className="flex-1 h-10 px-3.5 rounded-xl border border-slate-300 text-xs font-mono font-bold bg-white text-slate-900 focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10"
+                          type="text"
+                          inputMode="numeric"
+                          value={customTokenInput}
+                          placeholder={String(minTokenPurchase)}
+                          onChange={handleCustomTokenChange}
+                          onBlur={handleCustomTokenBlur}
+                          className={`flex-1 h-10 px-3.5 rounded-xl border text-xs font-mono font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 ${
+                            isCustomTokenInvalid
+                              ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10'
+                              : 'border-slate-300 focus:border-blue-900 focus:ring-blue-900/10'
+                          }`}
                         />
                         <span className="text-xs font-black text-slate-700">Token</span>
                       </div>
+                      {isCustomTokenInvalid && (
+                        <p className="text-[11px] text-rose-600 font-semibold flex items-center gap-1 mt-1">
+                          <span>⚠️</span>
+                          <span>Jumlah token kustom minimal {minTokenPurchase.toLocaleString('id-ID')} token.</span>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1086,10 +1128,16 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
               <button
                 type="button"
                 onClick={handleExecuteTopUp}
-                disabled={isSubmittingTopUp || !qrisEnabled}
+                disabled={isSubmittingTopUp || !qrisEnabled || isCustomTokenInvalid}
                 className="flex-2 h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer whitespace-nowrap text-center"
               >
-                {isSubmittingTopUp ? 'Memproses...' : !qrisEnabled ? 'QRIS Dinonaktifkan' : 'Beli Kuota Sekarang'}
+                {isSubmittingTopUp
+                  ? 'Memproses...'
+                  : !qrisEnabled
+                  ? 'QRIS Dinonaktifkan'
+                  : isCustomTokenInvalid
+                  ? `Min. ${minTokenPurchase.toLocaleString('id-ID')} Token`
+                  : 'Beli Kuota Sekarang'}
               </button>
             </div>
         </div>
