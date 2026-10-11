@@ -743,11 +743,15 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                       })}
                     </div>
                   )}
-                  {itemDisc > 0 && (
-                    <div className="text-[10px] text-rose-600 pl-2 font-semibold">
-                      Diskon Item: -Rp {(itemDisc * item.quantity).toLocaleString('id-ID')} {item.quantity > 1 ? `(@Rp ${itemDisc.toLocaleString('id-ID')})` : ''}
-                    </div>
-                  )}
+                  {itemDisc > 0 && (() => {
+                    const discPercent = (basePriceEach || rawUnitPrice) > 0 ? Math.round((itemDisc / (basePriceEach || rawUnitPrice)) * 100) : 0;
+                    const percentTag = discPercent > 0 ? ` (${discPercent}%)` : '';
+                    return (
+                      <div className="text-[10px] text-rose-600 pl-2 font-semibold">
+                        Diskon Item{percentTag}: -Rp {(itemDisc * item.quantity).toLocaleString('id-ID')} {item.quantity > 1 ? `(@Rp ${itemDisc.toLocaleString('id-ID')})` : ''}
+                      </div>
+                    );
+                  })()}
                   {itemNotes && (
                     <div className="text-[10px] text-amber-700 pl-2 italic">
                       Catatan: {itemNotes}

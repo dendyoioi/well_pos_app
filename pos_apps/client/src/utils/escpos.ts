@@ -206,7 +206,9 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
     }
 
     if (itemDisc > 0) {
-      builder.line(`  Diskon Item: -Rp ${(itemDisc * qty).toLocaleString('id-ID')}`);
+      const discPercent = (basePriceEach || rawPriceEach) > 0 ? Math.round((itemDisc / (basePriceEach || rawPriceEach)) * 100) : 0;
+      const percentTag = discPercent > 0 ? ` (${discPercent}%)` : '';
+      builder.line(`  Diskon Item${percentTag}: -Rp ${(itemDisc * qty).toLocaleString('id-ID')}`);
     }
 
     const itemNote = it.notes || it.itemNote;

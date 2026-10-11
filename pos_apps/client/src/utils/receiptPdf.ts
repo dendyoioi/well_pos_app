@@ -213,7 +213,10 @@ export const generateReceiptPdf = (
     }
 
     if (Number(item.discountAmount || 0) > 0) {
-      const discStr = `Diskon Item: -Rp ${Number(item.discountAmount * item.quantity).toLocaleString('id-ID')}`;
+      const itemDisc = Number(item.discountAmount || 0);
+      const discPercent = (basePriceEach || rawUnitPrice) > 0 ? Math.round((itemDisc / (basePriceEach || rawUnitPrice)) * 100) : 0;
+      const percentTag = discPercent > 0 ? ` (${discPercent}%)` : '';
+      const discStr = `Diskon Item${percentTag}: -Rp ${Number(itemDisc * item.quantity).toLocaleString('id-ID')}`;
       doc.text(discStr, margin + 2, y);
       y += 3.2;
     }
