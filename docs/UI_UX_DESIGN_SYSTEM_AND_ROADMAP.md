@@ -381,6 +381,37 @@ Mengacu pada *binding rules* Well POS:
 * **Ergonomi Responsif & PWA Mobile Safe Spacing**:
   * Seluruh kontainer view staf dan absensi dilengkapi bantalan bawah `pb-28 sm:pb-16 font-sans` agar aman dari tumpang tindih navigasi bawah PWA smartphone.
 
+### 21. Standar Pengaturan Toko & Resto (Fase 11)
+
+* **Zero Redundant Refresh Button (Rule 16 AGENTS.md)**:
+  * Seluruh modul pengaturan toko ([`ReceiptSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/ReceiptSettingsView.tsx), [`TaxesSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/TaxesSettingsView.tsx), [`PaymentSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PaymentSettingsView.tsx), [`SalesChannelsSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/SalesChannelsSettingsView.tsx), [`LoyaltySettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/LoyaltySettingsView.tsx), dan [`OutletsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/OutletsView.tsx)) bebas 100% dari tombol reload mandiri (`<RefreshCw />`). Seluruh data tersinkronisasi otomatis saat form disimpan atau outlet berganti.
+* **Format Struk Kasir & Printer Bluetooth ([`ReceiptSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/ReceiptSettingsView.tsx))**:
+  * Pilihan lebar kertas 58mm vs 80mm menggunakan kartu selektor interaktif dengan live preview thermal receipt simulator di kolom kanan.
+  * Standarisasi tombol aksi Bluetooth printer (Hubungkan `h-10`, Putus `h-10`, Cetak Uji Coba `h-9`, Uji Laci Kasir `h-9`).
+  * WhatsApp Gateway Dispatch: Segmented tabs token pribadi vs platform, input API key `h-10 font-mono`, dan sticky action footer mobile safe-area.
+* **Pajak PB1 & Service Charge Restoran ([`TaxesSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/TaxesSettingsView.tsx))**:
+  * 4 KPI cards pemisahan pajak vs biaya (*PB1 Daerah*, *Service Charge*, *Kurir Toko*, *Kemasan*) diformat ke `font-mono text-2xl font-black`.
+  * Seluruh input controls Tab 1 (Pajak), Tab 2 (Service), Tab 3 (Kemasan) distandarisasi ke tinggi kanonikal `h-10`.
+  * Tab 4 Simulator Struk Kasir: Kalkulasi live reaktif 100% untuk Dine In, Kurir Toko, Mitra Online, kemasan, dan PB1 dari DPP.
+* **Metode Pembayaran & QRIS Statis ([`PaymentSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PaymentSettingsView.tsx))**:
+  * Upload QRIS dengan utilitas kompresi hening di background (Rule 11 AGENTS.md), tombol ganti/hapus `h-9 px-3.5 rounded-xl`.
+  * Jangka waktu jatuh tempo kasbon standar (7, 14, 30 hari) dan kustom input hari diformat ke `h-10 font-mono font-bold`.
+  * Tombol simpan desktop `h-10 px-5 bg-blue-900` dan sticky action footer mobile safe-area.
+* **Kanal Penjualan & Mitra Online Delivery ([`SalesChannelsSettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/SalesChannelsSettingsView.tsx))**:
+  * Toggle status kanal penjualan langsung & online delivery menggunakan modern pill switch kanonikal.
+  * Modal Ubah & Tambah Mitra menggunakan pola bottom-sheet responsif PWA dengan sticky action footer (Rule 10 AGENTS.md).
+  * Konfigurasi kewajiban ID Pesanan Driver & Nomor Meja kasir.
+* **Program Loyalitas Poin ([`LoyaltySettingsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/LoyaltySettingsView.tsx))**:
+  * Ketinggian input formula belanja per poin, nilai potongan, dan ambang penukaran diseragamkan ke `h-10 font-mono`.
+  * Simulator alur kasir live reaktif dengan format monospaced tebal dan Sticky Action Footer mobile safe-area.
+* **Manajemen Toko & Pairing ID ([`OutletsView.tsx`](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/OutletsView.tsx))**:
+  * Tombol primer `+ Tambah Outlet Toko` `h-10 px-5 rounded-xl font-extrabold`.
+  * Banner ID Toko Resmi untuk koneksi kasir tablet/laptop diformat ke `font-mono text-2xl sm:text-3xl font-black text-amber-300` dengan tombol salin.
+  * 3 KPI cards ringkasan (*Toko Penjualan*, *Disuplai Gudang Pusat*, *Toko Mandiri*) diformat ke `font-mono text-2xl font-black`.
+  * Seluruh input nomor telepon menggunakan `<WhatsAppInput />` ter-normalisasi `+62` (Rule 5 AGENTS.md).
+* **Ergonomi Responsif & PWA Mobile Safe Spacing**:
+  * Seluruh 6 halaman pengaturan dilengkapi bantalan bawah `pb-28 sm:pb-16 font-sans` sehingga aman dari tumpang tindih navigasi bawah PWA smartphone.
+
 ---
 
 ## 🗺️ II. ROADMAP EKSEKUSI BERTAHAP (FASE 0 S.D. FASE 11)
@@ -398,9 +429,10 @@ Mengacu pada *binding rules* Well POS:
 | **FASE 8** | **Promosi, Diskon & Voucher** | • [PromotionsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PromotionsView.tsx) (Dual-subtab Voucher Nota vs Diskon Produk/Item Terjadwal, Tabel checklist multi-produk & varian, Zero arbitrary cashier discount di POS, zero refresh button, KPI font-mono, toolbar & modal h-10, sticky PWA footer) | **SELESAI** |
 | **FASE 9** | **Pelanggan, CRM & Kasbon** | • [CustomersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/CustomersView.tsx) (Buku member loyalitas, riwayat kasbon, zero refresh button, KPI font-mono, subtab h-9, sticky PWA footer)<br>• [CustomerDebtsTab.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/CustomerDebtsTab.tsx) & Modal pelunasan piutang (Zero refresh button, KPI font-mono, filter h-10, hybrid table & mobile cards, sticky PWA footer) | **SELESAI** |
 | **FASE 10** | **Manajemen Staf & Absensi** | • [UsersView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/UsersView.tsx) & [attendance](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/attendance) (Akun staf, PIN 5-digit, absensi, KPI font-mono, zero refresh button, sticky mobile safe-area footer)<br>• [StaffRolesView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/StaffRolesView.tsx) (Hierarki hak akses RBAC, guardrail diskon kasir, KPI font-mono, zero refresh button, sticky mobile safe-area footer)<br>• [StaffAttendanceModal.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/components/pos/StaffAttendanceModal.tsx) (Absensi mandiri kasir multi-zona waktu, live clock font-mono, sticky footer safe-area) | **SELESAI** |
-| **FASE 11** | **Pengaturan Toko & Resto** | • [ReceiptSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/ReceiptSettingsView.tsx) (Struk kasir & printer Bluetooth)<br>• [TaxesSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/TaxesSettingsView.tsx) (Pajak PB1 & biaya resto)<br>• [PaymentSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PaymentSettingsView.tsx) (QRIS statis & EDC)<br>• [SalesChannelsSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/SalesChannelsSettingsView.tsx) (Mitra online delivery)<br>• [LoyaltySettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/LoyaltySettingsView.tsx) & [OutletsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/OutletsView.tsx) | Siap Dikerjakan |
+| **FASE 11** | **Pengaturan Toko & Resto** | • [ReceiptSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/ReceiptSettingsView.tsx) (Struk kasir & printer Bluetooth)<br>• [TaxesSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/TaxesSettingsView.tsx) (Pajak PB1 & biaya resto)<br>• [PaymentSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/PaymentSettingsView.tsx) (QRIS statis & EDC)<br>• [SalesChannelsSettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/SalesChannelsSettingsView.tsx) (Mitra online delivery)<br>• [LoyaltySettingsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/LoyaltySettingsView.tsx) & [OutletsView.tsx](file:///Users/dendyaditya/Projects/pos_project/pos_apps/client/src/pages/OutletsView.tsx) (Kelola Toko & Program Loyalitas Poin) | **SELESAI** |
 
 ---
 
 *Dokumen ini dibuat otomatis dan terikat sebagai standar QA & UI/UX Well POS.*
+
 
