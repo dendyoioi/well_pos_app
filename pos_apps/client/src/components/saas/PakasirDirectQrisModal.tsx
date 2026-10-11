@@ -8,6 +8,7 @@ import {
   Clock,
   X,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { generateQrPngUri } from '../../utils/qrCode';
 import { api } from '../../services/api';
@@ -43,36 +44,50 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 }) => {
   const [isPaid, setIsPaid] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [simulating, setSimulating] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Menunggu pembayaran Anda...');
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   // Reset status setiap kali modal dibuka atau nomor faktur berganti
   useEffect(() => {
     if (isOpen) {
       setIsPaid(false);
       setChecking(false);
-      setSimulating(false);
+      setIsExpired(false);
       setStatusMessage('Menunggu pembayaran Anda...');
     }
   }, [isOpen, invoiceNumber]);
 
-  const handleSimulatePayment = async () => {
-    if (!invoiceNumber) return;
-    setSimulating(true);
-    try {
-      const res = await api.simulatePakasirSandboxPayment(invoiceNumber);
-      if (res.status === 'success') {
-        setIsPaid(true);
-        setStatusMessage('Pembayaran berhasil diverifikasi (Sandbox)!');
-        if (onSuccess) onSuccess();
-      } else {
-        alert(res.message || 'Gagal simulasi pembayaran sandbox');
-      }
-    } catch (err: any) {
-      alert(err.message || 'Gagal simulasi sandbox');
-    } finally {
-      setSimulating(false);
+  // Countdown timer kedaluwarsa QRIS (Auto batal saat expired)
+  useEffect(() => {
+    if (!isOpen || !invoiceNumber || isPaid) return;
+
+    let targetMs = expiredAt ? new Date(expiredAt).getTime() : NaN;
+    if (isNaN(targetMs)) {
+      // Default durasi QRIS dinamis: 60 menit
+      targetMs = Date.now() + 60 * 60 * 1000;
     }
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.floor((targetMs - Date.now()) / 1000));
+      setTimeLeftSeconds(remaining);
+      if (remaining <= 0) {
+        setIsExpired(true);
+        // Auto batalkan di server jika waktu pembayaran habis
+        api.cancelInvoice(invoiceNumber).catch(() => {});
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [isOpen, invoiceNumber, expiredAt, isPaid]);
+
+  const formatTimer = (seconds: number | null) => {
+    if (seconds === null) return '60:00';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   const formatRupiah = (num: number) => {
@@ -85,7 +100,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 
   // Check invoice status
   const checkStatus = async (silent: boolean = false) => {
-    if (!invoiceNumber) return;
+    if (!invoiceNumber || isExpired) return;
     if (!silent) setChecking(true);
 
     try {
@@ -104,9 +119,9 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     }
   };
 
-  // Auto-polling status setiap 4 detik saat modal terbuka & belum lunas
+  // Auto-polling status setiap 4 detik saat modal terbuka, belum lunas, dan belum expired
   useEffect(() => {
-    if (!isOpen || !invoiceNumber) return;
+    if (!isOpen || !invoiceNumber || isExpired) return;
 
     // Cek awal
     checkStatus(true);
@@ -116,7 +131,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [isOpen, invoiceNumber]);
+  }, [isOpen, invoiceNumber, isExpired]);
 
   if (!isOpen) return null;
 
@@ -165,7 +180,7 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                   Pembayaran Berhasil Diterima!
                 </h4>
                 <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                  Transaksi Anda telah terverifikasi lunas secara otomatis via Pakasir.com.
+                  Transaksi Anda telah terverifikasi lunas secara otomatis via QRIS.
                 </p>
               </div>
 
@@ -201,6 +216,33 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                 <span>{successButtonText}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+            </div>
+          ) : isExpired ? (
+            /* =================================================================
+               STATE 3: KEDALUWARSA / WAKTU HABIS (AUTO CANCEL)
+            ================================================================= */
+            <div className="py-6 space-y-4 animate-scaleUp">
+              <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto shadow-inner">
+                <AlertTriangle className="w-10 h-10 stroke-[2.2]" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-lg font-black text-slate-900">
+                  Waktu Pembayaran Habis
+                </h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  Batas waktu pembayaran QRIS (60 menit) telah kedaluwarsa. Tagihan <strong className="font-mono text-slate-700">{invoiceNumber}</strong> otomatis dibatalkan demi keamanan.
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm bg-blue-900 hover:bg-blue-950 text-white shadow transition-all cursor-pointer"
+                >
+                  <span>Tutup &amp; Buat Ulang Tagihan</span>
+                </button>
+              </div>
             </div>
           ) : (
             /* =================================================================
@@ -243,18 +285,17 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                   </div>
                 )}
 
-                {/* Badge logo QRIS */}
+                {/* Badge logo QRIS Standar Nasional */}
                 <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-600">
                   <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>QRIS Nasional Terverifikasi (Pakasir)</span>
+                  <span>Non-Tunai (QRIS) Standar Nasional</span>
                 </div>
 
-                {expiredAt && (
-                  <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-slate-400">
-                    <Clock className="w-3 h-3" />
-                    <span>Berlaku hingga: {new Date(expiredAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
-                  </div>
-                )}
+                {/* Hitung Mundur Sisa Waktu Pembayaran */}
+                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Sisa Waktu Pembayaran: {formatTimer(timeLeftSeconds)}</span>
+                </div>
               </div>
 
               {/* Status Polling Live & Indikator */}
@@ -263,27 +304,16 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                 <span className="font-medium">{statusMessage}</span>
               </div>
 
-              {/* Aksi Cek Status & Simulasi Sandbox */}
-              <div className="pt-2 space-y-2">
+              {/* Aksi Cek Status Manual */}
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => checkStatus(false)}
-                  disabled={checking || simulating}
+                  disabled={checking}
                   className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <RotateCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
                   <span>{checking ? 'Memeriksa...' : 'Cek Status Pembayaran Manual'}</span>
-                </button>
-
-                {/* Tombol Uji Simulasi Sandbox (Khusus Pengujian) */}
-                <button
-                  type="button"
-                  onClick={handleSimulatePayment}
-                  disabled={simulating || checking}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <Zap className={`w-3.5 h-3.5 fill-amber-500 text-amber-600 ${simulating ? 'animate-bounce' : ''}`} />
-                  <span>{simulating ? 'Memproses Simulasi...' : 'Simulasi Bayar QRIS (Sandbox Test)'}</span>
                 </button>
               </div>
 

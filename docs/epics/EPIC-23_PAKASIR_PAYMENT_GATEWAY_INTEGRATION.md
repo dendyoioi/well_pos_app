@@ -152,8 +152,15 @@ Menindaklanjuti audit operasional transaksi top-up kuota dan kenyamanan pengguna
    * Pengguna dapat membatalkan faktur kuota `UNPAID` dengan mengklik tombol **"Batal"**.
    * **Aturan Anti-Native JS Alert**: Dilarang keras menggunakan `window.confirm` / `alert`. Seluruh alur konfirmasi pembatalan menggunakan modal dialog kustom bertema Clean White-Blue dengan aksen Rose (`confirmCancelInvoice`).
    * Saat dikonfirmasi, endpoint `POST /api/saas/invoices/:invoiceNumber/cancel` akan mengubah status faktur menjadi `VOID` (`✖ DIBATALKAN`) dan secara otomatis memanggil API Pakasir v2 (`POST /api/v2/cancel-transaction/{slug}/{order_id}`) untuk membatalkan pesanan di gateway.
-4. **Standardisasi Metode Pembayaran Kanonikal**:
-   * Menghilangkan seluruh sisa string fallback *"Transfer Manual"*. Seluruh faktur SaaS resmi menetapkan metode pembayaran sebagai **"QRIS"** atau **"QRIS (Pakasir)"**.
+4. **Standardisasi Terminologi Metode Pembayaran & Eliminasi Nama Vendor ("Non-Tunai (QRIS)")**:
+   * Seluruh faktur SaaS dan antarmuka pembayaran menetapkan metode pembayaran sebagai **"Non-Tunai (QRIS)"** atau **"QRIS"**.
+   * Dilarang keras menampilkan nama vendor pihak ketiga seperti *"QRIS (Pakasir)"* pada antarmuka publik atau tenant agar tidak menimbulkan kebingungan bagi pengguna umum.
 5. **Proporsionalitas Tata Letak Kolom Aksi Tabel**:
    * Merapikan kolom Aksi tabel desktop menjadi satu baris datar seragam (`whitespace-nowrap flex items-center justify-center gap-1.5` dengan tinggi konsisten `h-8`).
    * Mencegah pematahan baris (*line wrapping*) yang sebelumnya merusak proporsi dan ketinggian baris tabel data.
+6. **Eliminasi Tombol Simulasi Sandbox dari Antarmuka Publik**:
+   * Seluruh tombol *"⚡ Simulasi Bayar QRIS (Sandbox Test)"* dihapus secara total dari modal pembayaran top-up (`PakasirDirectQrisModal.tsx`) dan form registrasi awal (`SaasLandingPage.tsx`).
+7. **Durasi Masa Berlaku QRIS (60 Menit), Countdown Timer & Auto-Batal**:
+   * Masa berlaku standar QRIS dinamis dari gateway adalah tepat **60 menit (1 jam)** sejak faktur dibuat (`expired_at`).
+   * Modal QRIS dilengkapi **Countdown Timer** live (`Sisa Waktu Pembayaran: MM:SS`).
+   * Begitu sisa waktu habis, sistem otomatis menghentikan polling, mengubah antarmuka ke layar *Waktu Pembayaran Habis*, dan memicu pembatalan otomatis (`api.cancelInvoice`) agar status faktur menjadi `VOID` dan tidak menggantung.

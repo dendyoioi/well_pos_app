@@ -1116,7 +1116,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
                       {selectedInvoiceModal.paymentMethod === 'CASH'
                         ? 'Tunai'
                         : (selectedInvoiceModal.paymentGateway === 'PAKASIR' || selectedInvoiceModal.qrString || !selectedInvoiceModal.paymentMethod || selectedInvoiceModal.paymentMethod === 'QRIS'
-                          ? 'QRIS (Pakasir)'
+                          ? 'Non-Tunai (QRIS)'
                           : selectedInvoiceModal.paymentMethod)}
                     </strong>
                   </p>

@@ -5815,7 +5815,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     })}
                   </strong>
                 </p>
-                <p className="text-slate-400 mt-0.5">Metode: {selectedInvoiceModal.paymentMethod || 'QRIS (Pakasir)'}</p>
+                <p className="text-slate-400 mt-0.5">Metode: {selectedInvoiceModal.paymentMethod || 'Non-Tunai (QRIS)'}</p>
                 {selectedInvoiceModal.paidAt && (
                   <p className="text-emerald-400 text-[11px] font-semibold mt-0.5">
                     Dibayar: {new Date(selectedInvoiceModal.paidAt).toLocaleDateString('id-ID')}

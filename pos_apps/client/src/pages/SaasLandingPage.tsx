@@ -29,7 +29,6 @@ import {
   TrendingUp,
   Calculator,
   Sparkles,
-  Zap,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -104,7 +103,6 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
   const [paymentPaid, setPaymentPaid] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
-  const [simulatingPayment, setSimulatingPayment] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,23 +206,6 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       console.error('Gagal mengecek status pembayaran:', err);
     } finally {
       setCheckingPayment(false);
-    }
-  };
-
-  const handleSimulateSandboxPayment = async () => {
-    if (!registerSuccessData?.payment?.invoiceNumber) return;
-    setSimulatingPayment(true);
-    try {
-      const res = await api.simulatePakasirSandboxPayment(registerSuccessData.payment.invoiceNumber);
-      if (res.status === 'success') {
-        setPaymentPaid(true);
-      } else {
-        alert(res.message || 'Gagal simulasi sandbox');
-      }
-    } catch (err: any) {
-      alert(err.message || 'Gagal memproses simulasi pembayaran sandbox');
-    } finally {
-      setSimulatingPayment(false);
     }
   };
 
@@ -1686,7 +1667,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                   {registerSuccessData.finalAmount === 0
                     ? 'Pendaftaran akun toko Anda telah berhasil aktif dan siap digunakan.'
-                    : 'Pembayaran berhasil dikonfirmasi via QRIS Pakasir. Akun pemilik dan kuota token Anda telah aktif.'}
+                    : 'Pembayaran berhasil dikonfirmasi via QRIS. Akun pemilik dan kuota token Anda telah aktif.'}
                 </p>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2.5">
@@ -1749,14 +1730,14 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
             </div>
           ) : (
             /* =========================================================
-               TAMPILAN 2: QRIS PAKASIR UNTUK PEMBAYARAN REGISTRASI
+               TAMPILAN 2: QRIS UNTUK PEMBAYARAN REGISTRASI
                ========================================================= */
             <div className="py-2 space-y-4 text-center">
               {/* Header Box Total Bayar */}
               <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-4 text-center shadow-sm">
                 <div className="inline-flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-[11px] font-semibold text-blue-200 mb-2">
                   <QrCode className="w-3.5 h-3.5" />
-                  <span>QRIS Otomatis Pakasir</span>
+                  <span>QRIS Standar Nasional</span>
                 </div>
                 <div className="text-xs text-blue-200 font-medium">Total Biaya Aktivasi Akun</div>
                 <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
@@ -1775,7 +1756,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   <div className="p-3 bg-white border-2 border-slate-900 rounded-2xl shadow-sm inline-block">
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(registerSuccessData.payment.qrString)}`}
-                      alt="QRIS Pembayaran Pakasir"
+                      alt="QRIS Pembayaran"
                       className="w-48 h-48 sm:w-52 sm:h-52 object-contain mx-auto"
                     />
                   </div>
@@ -1823,26 +1804,15 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               </div>
 
               {/* Tombol Aksi: Cek Status Pembayaran */}
-              <div className="space-y-2 pt-1">
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={handleCheckPaymentStatus}
-                  disabled={checkingPayment || simulatingPayment}
+                  disabled={checkingPayment}
                   className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow transition-all cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${checkingPayment ? 'animate-spin' : ''}`} />
-                  <span>{checkingPayment ? 'Mengecek Status Pembayaran...' : 'Cek Status Pembayaran Sekarang'}</span>
-                </button>
-
-                {/* Tombol Uji Simulasi Sandbox (Khusus Pengujian Sandbox) */}
-                <button
-                  type="button"
-                  onClick={handleSimulateSandboxPayment}
-                  disabled={simulatingPayment || checkingPayment}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <Zap className={`w-3.5 h-3.5 fill-amber-500 text-amber-600 ${simulatingPayment ? 'animate-bounce' : ''}`} />
-                  <span>{simulatingPayment ? 'Memproses Simulasi Bayar...' : 'Simulasi Bayar QRIS (Sandbox Test)'}</span>
+                  <span>{checkingPayment ? 'Mengecek Status Pembayaran...' : 'Cek Status Pembayaran Manual'}</span>
                 </button>
               </div>
             </div>
