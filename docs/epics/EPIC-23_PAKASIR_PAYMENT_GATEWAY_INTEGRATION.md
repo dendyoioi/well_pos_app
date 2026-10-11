@@ -122,4 +122,20 @@ Fitur pengelolaan katalog mandiri oleh Superadmin pada Tab **PLANS** (`Superadmi
    * Setiap kali Superadmin menambah, mengubah, atau menghapus paket, data otomatis tersimpan di `platform_payment_config.json` via endpoint `api.updatePlatformPaymentSettings()`.
    * Pilihan paket pada modal Top-Up Kuota Owner (`BillingTokensView.tsx`) langsung menampilkan nama kustom, badge, dan harga terbaru secara *real-time*.
 
+---
+
+### 8. VERIFIKASI RESMI DI DOMAIN UTAMA (`WELLPOS.ID`) & DASHBOARD PAKASIR (11 OKTOBER 2026)
+
+* **Domain & Routing**:
+  * Domain `wellpos.id` aktif via Cloudflare DNS $\rightarrow$ Vercel.
+  * Webhook resmi terdaftar di dashboard Pakasir: `https://wellpos.id/api/saas/pakasir/webhook`.
+* **Hasil Pengujian Live Sandbox**:
+  * Invoice Pendaftaran: `INV-REG-20261011-7076` (Nominal Rp 99.000).
+  * Status di Dashboard Pakasir ([app.pakasir.com](https://app.pakasir.com)): **`completed`** pada 11 Oktober 2026 23:23 WIB.
+  * Status di Database Supabase: **`PAID`** (`externalTxnId: ggiqyzqiq`).
+  * Tenant Baru: **Petra Nuswantoro** (`petra-nuswantoro`) langsung beralih ke status **`ACTIVE`** dengan alokasi **100 Bonus Token Transaksi**.
+* **Kesimpulan Kesiapan**:
+  * Integrasi API v2, pembuatan direct QRIS, auto-polling frontend, simulasi sandbox, dan webhook handler telah terverifikasi 100% siap untuk aktivasi KYC menuju **Production Mode**.
+
+
 
