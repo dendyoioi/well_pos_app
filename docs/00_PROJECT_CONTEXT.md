@@ -678,6 +678,11 @@ Setiap pengembang dan AI Coding Assistant wajib mematuhi panduan baku berikut:
       - *Filter Kasir Murni Role `CASHIER` (Anti-Non-Cashier Role Pollution)*: Dropdown filter kasir HANYA menampilkan staf yang memiliki `role === 'CASHIER'` di outlet yang sedang aktif. Akun non-kasir seperti Owner (`(Owner)`), Supervisor, Admin, maupun Gudang dilarang keras muncul di opsi dropdown filter kasir, baik di tampilan kasir maupun di tampilan backoffice owner/admin saat membuka outlet tersebut.
       - *Fleksibilitas Kolaborasi Operasional Toko*: Dropdown kasir tetap dapat diubah ke `[ Semua Kasir di Toko Ini ]` atau kasir rekan di toko yang sama agar kasir dapat membantu melayani cetak ulang struk (reprint), memeriksa status pesanan open-tab, atau menangani komplain pelanggan saat kasir rekan sedang istirahat.
       - *Pertanggungjawaban Uang Fisik Tetap Terisolasi*: Rekonsiliasi fisik laci uang (modal awal, petty cash, selisih kas) tetap terisolasi 100% per individu di menu **Shift Kasir (Z-Report)** sehingga tidak ada risiko salah hitung uang setoran kasir.
+34. **Standar Keamanan Portal Superadmin (Anti-Brute Force, Secret Route Obfuscation & Zero Autofill)**:
+    - **Obfuscated Secret Route (`#hq-gate-99`)**: Akses ke portal Platform Control Center (Superadmin) diproteksi menggunakan hash rahasia internal (`SUPERADMIN_SECRET_HASH = '#hq-gate-99'`).
+    - **Honeypot Decoy Redirect**: Setiap akses ke route umum yang mudah ditebak scanner bot atau penyerang (`#superadmin`, `#admin`, `#saas-admin`, `#platform`) otomatis dialihkan secara hening ke Landing Page publik (`#landing`), dan jejak hash dibersihkan seketika dari address bar browser via `window.history.replaceState`.
+    - **Zero Autofill & Penghapusan Tautan Default**: Seluruh kredensial default (`superadmin@wellpos.id`) dan tombol pintas (*"Gunakan Akun Default Superadmin"*) telah dihapus permanen dari UI form login. Input email dan kata sandi wajib diketik manual oleh pengelola sistem.
+    - **Eliminasi Jejak Publik**: Seluruh teks atau tautan bypass yang menyebutkan `#superadmin` pada halaman pemeliharaan (`MaintenancePage.tsx`) dihapus total agar tidak meninggalkan petunjuk apapun di DOM publik.
 
 ---
 
