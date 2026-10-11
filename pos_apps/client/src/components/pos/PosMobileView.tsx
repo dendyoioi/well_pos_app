@@ -977,10 +977,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                             )}
 
                             {/* Badge Promo Diskon Item Mobile (Menu Promo & Diskon) */}
-                            {item.discountAmount && item.discountAmount > 0 ? (
+                            {Number(item.discountAmount || 0) > 0 ? (
                               <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded text-[10px] font-bold">
                                 <Tag className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                                <span>Promo: -Rp {item.discountAmount.toLocaleString('id-ID')}/pcs</span>
+                                <span>Promo: -Rp {Number(item.discountAmount).toLocaleString('id-ID')}/pcs</span>
                               </div>
                             ) : null}
                           </div>
@@ -1018,11 +1018,11 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                         <X className="w-3 h-3" /> Hapus
                       </button>
                       <div className="flex items-baseline gap-1">
-                        {item.discountAmount && item.discountAmount > 0 && (
+                        {Number(item.discountAmount || 0) > 0 ? (
                           <span className="text-[10px] line-through text-slate-400 font-medium font-mono">
                             Rp {(itemPrice * item.quantity).toLocaleString('id-ID')}
                           </span>
-                        )}
+                        ) : null}
                         <span className="font-extrabold font-mono text-xs text-blue-950">
                           Rp {itemTotal.toLocaleString('id-ID')}
                         </span>

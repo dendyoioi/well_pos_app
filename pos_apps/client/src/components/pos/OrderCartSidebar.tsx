@@ -1010,21 +1010,21 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                       )}
 
                       {/* Badge Promo Diskon Item Resmi (Terkonfigurasi via Menu Promo & Diskon) */}
-                      {item.discountAmount && item.discountAmount > 0 ? (
+                      {Number(item.discountAmount || 0) > 0 ? (
                         <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md text-[10px] font-bold">
                           <Tag className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>Promo Item: -Rp {item.discountAmount.toLocaleString('id-ID')}/pcs</span>
+                          <span>Promo Item: -Rp {Number(item.discountAmount).toLocaleString('id-ID')}/pcs</span>
                         </div>
                       ) : null}
                     </div>
                   )}
 
                   <div className="flex items-baseline gap-1.5 mt-1">
-                    {item.discountAmount && item.discountAmount > 0 && (
+                    {Number(item.discountAmount || 0) > 0 ? (
                       <span className="text-[10px] line-through text-slate-400 font-medium font-mono">
                         Rp {(getItemPrice(item) * item.quantity).toLocaleString('id-ID')}
                       </span>
-                    )}
+                    ) : null}
                     <p className="text-xs font-black font-mono text-slate-900">
                       Rp {getItemSubtotal(item).toLocaleString('id-ID')}
                     </p>

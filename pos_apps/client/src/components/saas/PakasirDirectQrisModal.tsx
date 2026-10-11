@@ -146,14 +146,14 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                   <span className="text-slate-500">Total Dibayar:</span>
                   <span className="font-black text-emerald-700">{formatRupiah(amount)}</span>
                 </div>
-                {tokenAmount && tokenAmount > 0 && (
+                {Number(tokenAmount || 0) > 0 ? (
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Kuota Token Ditambahkan:</span>
                     <span className="font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                      +{tokenAmount.toLocaleString('id-ID')} Token
+                      +{Number(tokenAmount).toLocaleString('id-ID')} Token
                     </span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <button
@@ -185,15 +185,15 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                   <span className="text-[11px] font-semibold text-blue-700 block">Total Tagihan</span>
                   <span className="text-lg font-black text-blue-950">{formatRupiah(amount)}</span>
                 </div>
-                {tokenAmount && tokenAmount > 0 && (
+                {Number(tokenAmount || 0) > 0 ? (
                   <div className="text-right">
                     <span className="text-[11px] font-semibold text-amber-700 block">Bonus / Kuota</span>
                     <span className="inline-flex items-center gap-1 text-xs font-black text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-lg">
                       <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
-                      +{tokenAmount.toLocaleString('id-ID')} Token
+                      +{Number(tokenAmount).toLocaleString('id-ID')} Token
                     </span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               {/* Box Tampilan QRIS */}
