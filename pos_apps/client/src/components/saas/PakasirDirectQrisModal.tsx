@@ -140,10 +140,22 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
     checkStatus(true);
 
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return; // Hemat traffic saat tab di background
       checkStatus(true);
     }, 4000);
 
-    return () => clearInterval(interval);
+    // Langsung periksa status seketika saat user kembali membuka tab browser
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        checkStatus(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isOpen, invoiceNumber, isExpired]);
 
   if (!isOpen) return null;

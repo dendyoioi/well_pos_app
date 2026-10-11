@@ -175,7 +175,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     const invoiceNum = registerSuccessData.payment.invoiceNumber;
     let isMounted = true;
 
-    const interval = setInterval(async () => {
+    const checkRegistrationStatus = async () => {
       try {
         const res = await api.checkPakasirInvoiceStatus(invoiceNum);
         if (res.status === 'success' && res.data?.status === 'PAID') {
@@ -186,11 +186,24 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       } catch (e) {
         // Silently catch polling error
       }
-    }, 3500);
+    };
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return; // Hemat bandwidth saat tab tidak aktif
+      checkRegistrationStatus();
+    }, 4000);
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        checkRegistrationStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       isMounted = false;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [registerSuccessData, paymentPaid]);
 
