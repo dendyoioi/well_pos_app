@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Calculator,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -103,6 +104,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
   const [paymentPaid, setPaymentPaid] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [simulatingPayment, setSimulatingPayment] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,6 +208,23 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       console.error('Gagal mengecek status pembayaran:', err);
     } finally {
       setCheckingPayment(false);
+    }
+  };
+
+  const handleSimulateSandboxPayment = async () => {
+    if (!registerSuccessData?.payment?.invoiceNumber) return;
+    setSimulatingPayment(true);
+    try {
+      const res = await api.simulatePakasirSandboxPayment(registerSuccessData.payment.invoiceNumber);
+      if (res.status === 'success') {
+        setPaymentPaid(true);
+      } else {
+        alert(res.message || 'Gagal simulasi sandbox');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Gagal memproses simulasi pembayaran sandbox');
+    } finally {
+      setSimulatingPayment(false);
     }
   };
 
@@ -1808,11 +1827,22 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 <button
                   type="button"
                   onClick={handleCheckPaymentStatus}
-                  disabled={checkingPayment}
+                  disabled={checkingPayment || simulatingPayment}
                   className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow transition-all cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${checkingPayment ? 'animate-spin' : ''}`} />
                   <span>{checkingPayment ? 'Mengecek Status Pembayaran...' : 'Cek Status Pembayaran Sekarang'}</span>
+                </button>
+
+                {/* Tombol Uji Simulasi Sandbox (Khusus Pengujian Sandbox) */}
+                <button
+                  type="button"
+                  onClick={handleSimulateSandboxPayment}
+                  disabled={simulatingPayment || checkingPayment}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Zap className={`w-3.5 h-3.5 fill-amber-500 text-amber-600 ${simulatingPayment ? 'animate-bounce' : ''}`} />
+                  <span>{simulatingPayment ? 'Memproses Simulasi Bayar...' : 'Simulasi Bayar QRIS (Sandbox Test)'}</span>
                 </button>
               </div>
             </div>

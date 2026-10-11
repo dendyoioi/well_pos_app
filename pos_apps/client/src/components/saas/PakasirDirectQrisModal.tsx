@@ -43,7 +43,27 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
 }) => {
   const [isPaid, setIsPaid] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [simulating, setSimulating] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Menunggu pembayaran Anda...');
+
+  const handleSimulatePayment = async () => {
+    if (!invoiceNumber || isPaid) return;
+    setSimulating(true);
+    try {
+      const res = await api.simulatePakasirSandboxPayment(invoiceNumber);
+      if (res.status === 'success') {
+        setIsPaid(true);
+        setStatusMessage('Pembayaran berhasil diverifikasi (Sandbox)!');
+        if (onSuccess) onSuccess();
+      } else {
+        alert(res.message || 'Gagal simulasi pembayaran sandbox');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Gagal simulasi sandbox');
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -236,11 +256,22 @@ export const PakasirDirectQrisModal: React.FC<PakasirDirectQrisModalProps> = ({
                 <button
                   type="button"
                   onClick={() => checkStatus(false)}
-                  disabled={checking}
+                  disabled={checking || simulating}
                   className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <RotateCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
                   <span>{checking ? 'Memeriksa...' : 'Cek Status Pembayaran Manual'}</span>
+                </button>
+
+                {/* Tombol Uji Simulasi Sandbox (Khusus Pengujian) */}
+                <button
+                  type="button"
+                  onClick={handleSimulatePayment}
+                  disabled={simulating || checking}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Zap className={`w-3.5 h-3.5 fill-amber-500 text-amber-600 ${simulating ? 'animate-bounce' : ''}`} />
+                  <span>{simulating ? 'Memproses Simulasi...' : 'Simulasi Bayar QRIS (Sandbox Test)'}</span>
                 </button>
               </div>
 

@@ -282,6 +282,7 @@ export const registerClient = async (req: Request, res: Response) => {
           externalTxnId: qrisData.txnId || null,
           paymentGateway: isFree ? 'PROMO_FREE' : 'QRIS_PAKASIR',
           paymentUrl: qrisData.paymentUrl,
+          qrString: qrisData.qrString || null,
         },
       });
 

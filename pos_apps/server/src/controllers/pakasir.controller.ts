@@ -190,11 +190,12 @@ export const checkPakasirInvoiceStatus = async (req: Request, res: Response) => 
  */
 export const simulateSandboxPayment = async (req: Request, res: Response) => {
   try {
-    // Keamanan: Cegah eksploitasi simulasi pembayaran di lingkungan produksi
-    if (process.env.NODE_ENV === 'production') {
+    // Keamanan: Cegah eksploitasi simulasi pembayaran jika gateway sudah beroperasi live/production
+    const isLiveProduction = process.env.PAKASIR_MODE === 'production' && process.env.PAKASIR_SLUG !== 'wellposdev' && process.env.NODE_ENV === 'production';
+    if (isLiveProduction) {
       return res.status(403).json({
         status: 'error',
-        message: 'Simulasi pembayaran sandbox dinonaktifkan di lingkungan produksi.',
+        message: 'Simulasi pembayaran sandbox dinonaktifkan di lingkungan live produksi.',
       });
     }
 

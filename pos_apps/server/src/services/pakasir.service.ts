@@ -97,7 +97,7 @@ export class PakasirService {
         paymentMethod: data.payment_method || method,
         qrString: data.qr_string || '',
         vaNumber: data.va_number || '',
-        expiredAt: data.expired_at,
+        expiredAt: data.expired_at || data.expires_at,
         isSandbox: Boolean(data.is_sandbox),
       };
     } catch (err: any) {
