@@ -172,23 +172,56 @@ export const generateReceiptPdf = (
   order.orderItems?.forEach((item) => {
     doc.setFont('courier', 'bold');
     doc.setFontSize(paperSize === '58mm' ? 7 : 8);
-    const itemName = item.product?.name || 'Produk';
+    const rawName = item.product?.name || item.productName || 'Produk';
+    const variantName = item.variantName || item.variant?.name;
+    const hasVariant = Boolean(variantName && variantName !== 'Default' && variantName !== 'Standar');
+    const itemName = hasVariant ? `${rawName} (${variantName})` : rawName;
     const splitName = doc.splitTextToSize(itemName, contentWidth);
     doc.text(splitName, margin, y);
     y += splitName.length * 3.2;
 
+    const mods = item.modifiers || item.modifiersSnapshot || item.selectedModifiers || [];
+    let totalModPerUnit = 0;
+    if (Array.isArray(mods) && mods.length > 0) {
+      for (const m of mods) {
+        if (m?.option?.priceDelta) totalModPerUnit += Number(m.option.priceDelta);
+        else if (m?.priceAdjustment || m?.price_adjustment) totalModPerUnit += Number(m.priceAdjustment || m.price_adjustment);
+      }
+    }
+    const rawUnitPrice = Number(item.unitPrice ?? (item as any).price ?? 0);
+    const basePriceEach = Math.max(0, rawUnitPrice - totalModPerUnit);
+
     doc.setFont('courier', 'normal');
     doc.setFontSize(paperSize === '58mm' ? 6.5 : 7.5);
-    const qtyPrice = `${item.quantity} x ${Number(item.unitPrice).toLocaleString('id-ID')}`;
+    const qtyPrice = `${item.quantity} x ${basePriceEach.toLocaleString('id-ID')}`;
     const subtotalStr = Number(item.subtotal).toLocaleString('id-ID');
     doc.text(qtyPrice, margin + 2, y);
     doc.text(subtotalStr, widthMm - margin, y, { align: 'right' });
     y += 3.2;
 
-    if (item.discountAmount > 0) {
-      const discStr = `-Disc: ${Number(item.discountAmount * item.quantity).toLocaleString('id-ID')}`;
+    // Modifiers breakdown in PDF
+    if (Array.isArray(mods) && mods.length > 0) {
+      mods.forEach((m: any) => {
+        const modName = typeof m === 'string' ? m : (m.option?.name || m.name || '');
+        const modPrice = typeof m === 'string' ? 0 : Number(m.option?.priceDelta || m.priceAdjustment || m.price_adjustment || 0);
+        if (modName) {
+          const modText = `+ ${modName}${modPrice > 0 ? ` (+Rp ${modPrice.toLocaleString('id-ID')})` : ''}`;
+          doc.text(modText, margin + 2, y);
+          y += 3.0;
+        }
+      });
+    }
+
+    if (Number(item.discountAmount || 0) > 0) {
+      const discStr = `Diskon Item: -Rp ${Number(item.discountAmount * item.quantity).toLocaleString('id-ID')}`;
       doc.text(discStr, margin + 2, y);
       y += 3.2;
+    }
+
+    const itemNote = item.notes || item.itemNote;
+    if (itemNote) {
+      doc.text(`Catatan: ${itemNote}`, margin + 2, y);
+      y += 3.0;
     }
   });
 

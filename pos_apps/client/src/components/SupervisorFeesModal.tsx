@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Shield,
@@ -76,8 +76,11 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
   // Delete Fee State (Hoisted to top to strictly preserve Hook call order)
   const [feeToDelete, setFeeToDelete] = useState<OutletFee | null>(null);
 
+  // Track open state transition to prevent unwanted re-render resets
+  const wasOpenRef = useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !wasOpenRef.current) {
       setPinAuthorized(isRoleDirect);
       setPinInput('');
       setPinError(null);
@@ -88,9 +91,10 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
       setFeeToDelete(null);
       setActiveTab(initialTab || 'TAX');
 
-      setFees(normalizeOutletFees(outlet.feesConfig));
+      setFees(normalizeOutletFees(outlet?.feesConfig));
     }
-  }, [isOpen, outlet, isDirectAuthorized, initialTab]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, outlet, isRoleDirect, initialTab]);
 
   // Handle PIN verification
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -357,7 +361,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                   setActiveTab('TAX');
                   setShowAddForm(false);
                 }}
-                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'TAX'
                     ? 'bg-white text-blue-950 shadow-sm border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -376,7 +380,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                   setActiveTab('SERVICE');
                   setShowAddForm(false);
                 }}
-                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'SERVICE'
                     ? 'bg-white text-emerald-950 shadow-sm border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -395,7 +399,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                   setActiveTab('PACKAGING');
                   setShowAddForm(false);
                 }}
-                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   activeTab === 'PACKAGING'
                     ? 'bg-white text-amber-950 shadow-sm border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -596,20 +600,38 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                         )}
 
                         {/* Toggle On/Off Switch */}
-                        <button
-                          type="button"
-                          onClick={() => toggleFeeActive(fee.id)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            fee.isActive ? 'bg-emerald-600' : 'bg-slate-300'
-                          }`}
-                          title={fee.isActive ? 'Nonaktifkan Biaya' : 'Aktifkan Biaya'}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              fee.isActive ? 'translate-x-5' : 'translate-x-0'
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={fee.isActive}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFeeActive(fee.id);
+                            }}
+                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              fee.isActive ? 'bg-emerald-600' : 'bg-slate-300'
                             }`}
-                          />
-                        </button>
+                            title={fee.isActive ? 'Klik untuk Nonaktifkan Biaya' : 'Klik untuk Aktifkan Biaya'}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                fee.isActive ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                            />
+                          </button>
+                          <span
+                            className={`text-[10px] font-bold select-none cursor-pointer ${
+                              fee.isActive ? 'text-emerald-700' : 'text-slate-400'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFeeActive(fee.id);
+                            }}
+                          >
+                            {fee.isActive ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        </div>
 
                         {/* Delete button (bisa hapus semua biaya kecuali pajak utama) */}
                         {fee.id !== 'fee_tax' && (

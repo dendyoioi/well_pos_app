@@ -709,17 +709,20 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
               const mods = item.modifiers || item.modifiersSnapshot || item.selectedModifiers || [];
               const itemNotes = item.notes || item.itemNote;
 
+              // Hitung akumulasi modifier ekstra per 1 unit item
+              const totalModPerUnit = (Array.isArray(mods) ? mods : []).reduce((acc: number, m: any) => {
+                const modPrice = typeof m === 'string' ? 0 : Number(m.option?.priceDelta || m.priceAdjustment || m.price_adjustment || 0);
+                return acc + modPrice;
+              }, 0);
+              const rawUnitPrice = Number(item.unitPrice || 0);
+              const basePriceEach = Math.max(0, rawUnitPrice - totalModPerUnit);
+
               return (
                 <div key={idx} className="space-y-0.5">
                   <div className="font-bold text-slate-900">{pName}</div>
                   <div className="flex justify-between text-[10px] sm:text-[11px] text-slate-500">
                     <span>
-                      {item.quantity} x Rp {Number(item.unitPrice).toLocaleString('id-ID')}
-                      {itemDisc > 0 && (
-                        <span className="text-rose-600 ml-1">
-                          (Disc: -Rp {(itemDisc * item.quantity).toLocaleString('id-ID')})
-                        </span>
-                      )}
+                      {item.quantity} x Rp {basePriceEach.toLocaleString('id-ID')}
                     </span>
                     <span className="font-semibold text-slate-900">
                       Rp {Number(item.subtotal).toLocaleString('id-ID')}
@@ -731,12 +734,18 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                         const modName = typeof m === 'string' ? m : (m.option?.name || m.name || '');
                         const modPrice = typeof m === 'string' ? 0 : Number(m.option?.priceDelta || m.priceAdjustment || m.price_adjustment || 0);
                         if (!modName) return null;
+                        const qtyModText = item.quantity > 1 ? ` (${item.quantity} x @Rp ${modPrice.toLocaleString('id-ID')} = +Rp ${(modPrice * item.quantity).toLocaleString('id-ID')})` : ` (+Rp ${modPrice.toLocaleString('id-ID')})`;
                         return (
                           <div key={mIdx} className="text-slate-600">
-                            + {modName} {modPrice > 0 ? `(+Rp ${modPrice.toLocaleString('id-ID')})` : ''}
+                            + {modName} {modPrice > 0 ? qtyModText : ''}
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                  {itemDisc > 0 && (
+                    <div className="text-[10px] text-rose-600 pl-2 font-semibold">
+                      Diskon Item: -Rp {(itemDisc * item.quantity).toLocaleString('id-ID')} {item.quantity > 1 ? `(@Rp ${itemDisc.toLocaleString('id-ID')})` : ''}
                     </div>
                   )}
                   {itemNotes && (

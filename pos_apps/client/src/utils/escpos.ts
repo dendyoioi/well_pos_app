@@ -162,19 +162,29 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
     const hasVariant = Boolean(variantName && variantName !== 'Default' && variantName !== 'Standar');
     const pName = hasVariant ? `${rawName} (${variantName})` : rawName;
     const qty = it.quantity || 1;
-    const priceEach = Number(it.unitPrice ?? it.price ?? 0);
-    const subtotal = Number(it.subtotal ?? (priceEach > 0 ? priceEach * qty : 0));
-
-    builder.bold(true).twoColumns(`${pName} x${qty}`, `Rp ${subtotal.toLocaleString('id-ID')}`);
-    builder.bold(false);
-
-    // Keterangan harga satuan jika qty > 1
-    if (qty > 1 && priceEach > 0) {
-      builder.line(`  @ Rp ${priceEach.toLocaleString('id-ID')}`);
-    }
+    const rawPriceEach = Number(it.unitPrice ?? it.price ?? 0);
+    const subtotal = Number(it.subtotal ?? (rawPriceEach > 0 ? rawPriceEach * qty : 0));
+    const itemDisc = Number(it.discountAmount || 0);
 
     // Modifiers / Pilihan Tambahan
     const mods = it.modifiers || it.modifiersSnapshot || it.selectedModifiers || [];
+    let totalModPerUnit = 0;
+    if (Array.isArray(mods) && mods.length > 0) {
+      for (const m of mods) {
+        if (m?.option?.priceDelta) totalModPerUnit += Number(m.option.priceDelta);
+        else if (m?.priceAdjustment || m?.price_adjustment) totalModPerUnit += Number(m.priceAdjustment || m.price_adjustment);
+      }
+    }
+    const basePriceEach = Math.max(0, rawPriceEach - totalModPerUnit);
+
+    builder.bold(true).twoColumns(`${pName}`, `Rp ${subtotal.toLocaleString('id-ID')}`);
+    builder.bold(false);
+
+    // Keterangan harga satuan dasar
+    if (basePriceEach > 0) {
+      builder.line(`  ${qty} x Rp ${basePriceEach.toLocaleString('id-ID')}`);
+    }
+
     if (Array.isArray(mods) && mods.length > 0) {
       for (const m of mods) {
         let modName = '';
@@ -189,11 +199,16 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
           modPrice = Number(m.priceAdjustment || m.price_adjustment || 0);
         }
         if (modName) {
-          const priceTag = modPrice > 0 ? ` (+Rp ${modPrice.toLocaleString('id-ID')})` : '';
+          const priceTag = modPrice > 0 ? (qty > 1 ? ` (+Rp ${(modPrice * qty).toLocaleString('id-ID')})` : ` (+Rp ${modPrice.toLocaleString('id-ID')})`) : '';
           builder.line(`  + ${modName}${priceTag}`);
         }
       }
     }
+
+    if (itemDisc > 0) {
+      builder.line(`  Diskon Item: -Rp ${(itemDisc * qty).toLocaleString('id-ID')}`);
+    }
+
     const itemNote = it.notes || it.itemNote;
     if (itemNote) {
       builder.line(`  Catatan: ${itemNote}`);

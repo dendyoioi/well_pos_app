@@ -1045,6 +1045,19 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     });
   };
 
+  const handleUpdateItemDiscount = (index: number, discountAmount: number) => {
+    setCart((prev) => {
+      const updated = [...prev];
+      if (updated[index]) {
+        updated[index] = {
+          ...updated[index],
+          discountAmount: Math.max(0, discountAmount),
+        };
+      }
+      return updated;
+    });
+  };
+
   // ─── Reset Penuh Satu Transaksi (dipakai di: Hold Order, Bayar, Lepas Tagihan, Batal Tarik) ───
   const resetTransactionState = () => {
     setCart([]);
@@ -1291,7 +1304,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       setCheckoutLoading(true);
       const subtotal = cart.reduce((acc, item) => {
         const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-        return acc + price * item.quantity;
+        const itemNet = Math.max(0, price - (item.discountAmount || 0));
+        return acc + itemNet * item.quantity;
       }, 0);
 
       let promoDisc = 0;
@@ -1517,7 +1531,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     try {
       const subtotal = cart.reduce((acc, item) => {
         const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-        return acc + price * item.quantity;
+        const itemNet = Math.max(0, price - (item.discountAmount || 0));
+        return acc + itemNet * item.quantity;
       }, 0);
 
       let promoDisc = 0;
@@ -1777,7 +1792,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   // Calculate Grand Total for Payment Modal
   const cartSubtotal = cart.reduce((acc, item) => {
     const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-    return acc + price * item.quantity;
+    const itemNet = Math.max(0, price - (item.discountAmount || 0));
+    return acc + itemNet * item.quantity;
   }, 0);
   const cartDiscount = Math.round((cartSubtotal * globalDiscount) / 100);
 
@@ -1875,6 +1891,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           onRemoveItem={handleRemoveItem}
           onClearCart={handleClearCart}
           onUpdateItemNote={handleUpdateItemNote}
+          onUpdateItemDiscount={handleUpdateItemDiscount}
           subtotal={cartSubtotal}
           discountAmount={cartDiscount + promoDiscount}
           taxAmount={autoFeesTotal}
@@ -2111,6 +2128,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
               }}
               onPrintKitchenTicket={handleOpenKitchenTicket}
               onUpdateItemNote={handleUpdateItemNote}
+              onUpdateItemDiscount={handleUpdateItemDiscount}
             />
           </div>
         </>
