@@ -95,6 +95,23 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   ├── EPIC-12: Local Pre-Release Sandbox (Master Seeder, QRIS/Hardware Simulators, Runner, Playbook) ➔ SELESAI 100% (COMPLETED ✅)
   └── EPIC-13: Total Frontend Re-Architecture & Modern UI/UX Overhaul (Landing, SuperAdmin, POS, Backoffice) ➔ SELESAI 100% (COMPLETED ✅)
 
+[2026-10-11] AUDIO CHIME SYNTHESIZER, FULLSCREEN KDS & REGRESSION VERIFIKASI SELESAI (100% COMPLETED ✅)
+  ├── sound.ts (Browser-Native Web Audio API Synth Chimes):
+  │   ├── Zero asset eksternal (100% offline, zero lag): Sintesis audio harmonik murni menggunakan AudioContext bawaan browser.
+  │   ├── Chime 1: Kasir Sukses Bayar (playCashierSuccess) — Nada harmonik ganda C6 (~1046.5Hz) & G6 (~1567.9Hz) dengan sparkling decay.
+  │   ├── Chime 2: Tiket Pesanan Dapur Masuk (playKitchenOrderAlert) — Double-strike bell alert E6 (~1318.5Hz) -> A6 (~1760Hz).
+  │   └── Chime 3: Hidangan Siap Saji (playOrderReady) — 3-nada arpeggio ceria A5 -> C#6 -> E6 saat koki menandai hidangan siap antar.
+  ├── QrLiveOrdersView.tsx (Monitor Dapur KDS & Audio Feedback):
+  │   ├── Integrasi otomatis lonceng pesanan baru masuk saat polling feed mendeteksi penambahan order berstatus CONFIRMED.
+  │   ├── Tombol toggle audio lonceng (Volume2 / VolumeX) dengan state tersimpan di localStorage.
+  │   ├── Indikator visual durasi tunggu pesanan (Elapsed Timer Badge: hijau <10 menit, kuning 10-20 menit, merah berdenyut >20 menit).
+  │   └── Mode Layar Penuh Dapur (Fullscreen KDS): Antarmuka tema gelap (Dark Theme bg-slate-950) kontras tinggi berukuran besar yang mudah dibaca koki dari jarak 1-2 meter di area memasak, lengkap dengan tombol aksi sentuh ekstra-besar (MASAK SEKARANG, HIDANGAN SIAP SAJI, SELESAI DISAJIKAN).
+  ├── PosTerminalView.tsx: Pemicu audio chime instan playCashierSuccess saat transaksi kasir berhasil diselesaikan (online maupun offline sync).
+  └── Uji Regresi Penuh (Full Regression Suite 100% PASS):
+      ├── test:smoke: 30/30 (100%) Lulus — Validasi 5 flow kritikal (Owner -> Toko -> Kasir -> Multi-Tender -> BOM Deductions -> Laporan -> Multi-Outlet Isolation -> QR Menu).
+      ├── test:sandbox: 5/5 (100%) Lulus — Idempotensi seeder, IAM multi-role, topologi cabang & gudang, BOM & modifiers, kesiapan shift.
+      └── test:offline: 100% Lulus — Idempotensi transaksi kasir offline sync tanpa duplikasi order.
+
 [2026-10-11] STANDARISASI DESAIN KANONIKAL FASE 15: PENYELARASAN PENGALAMAN ROLE TERISOLASI (WAREHOUSE & KITCHEN) (100% COMPLETED ✅)
   ├── BackofficeLayout.tsx (Isolasi Navigasi Sidebar Khusus):
   │   ├── Mode Dapur (KITCHEN): Isolasi penuh antarmuka staf dapur dengan banner status khusus 'Mode Dapur (KDS)', eliminasi total akses kasir POS, omset, dan laporan keuangan. Sidebar eksklusif hanya merender: 'Pesanan Masak (KDS)' (qr_orders) dan 'Formula Resep & BOM' (recipes) serta widget PWA.

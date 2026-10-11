@@ -38,6 +38,7 @@ import { usePlan } from '../hooks/usePlan';
 import { useDialog } from '../context/DialogContext';
 import { api, customerApi, authStorage, attendanceApi } from '../services/api';
 import type { User } from '../types/auth';
+import { soundService } from '../utils/sound';
 import {
   saveOfflineOrder,
   getPendingOfflineOrders,
@@ -1782,6 +1783,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         const res = await api.checkoutOrder(checkoutPayload);
 
         if (res.status === 'success' && res.data) {
+          soundService.playCashierSuccess();
           setLastOrder(res.data);
           setPaymentModalOpen(false);
           setSuccessModalOpen(true);

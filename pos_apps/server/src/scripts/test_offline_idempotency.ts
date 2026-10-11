@@ -26,13 +26,20 @@ async function testOfflineIdempotency() {
     process.exit(1);
   }
 
+  // Cari kasir di outlet Kemang
+  const cashier = await prisma.user.findFirst({
+    where: { outletId: outlet.id, role: 'CASHIER' },
+  });
+
   // 2. Login Kasir
   const loginRes = await fetch(`${API_BASE}/api/auth/pin-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      tenantId: outlet.tenantId,
       outletId: outlet.id,
       pin: '123456',
+      userCode: cashier?.userCode || '10001',
     }),
   });
 
