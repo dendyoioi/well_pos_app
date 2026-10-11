@@ -10,12 +10,12 @@ import {
   XCircle,
   Clock,
   LogOut,
-  RefreshCw,
   TrendingUp,
   Eye,
   Calendar,
   ExternalLink,
   KeyRound,
+  Loader2,
   Copy,
   Check,
   Users,
@@ -2110,18 +2110,6 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <span className="font-semibold text-[11px]">Sistem Normal</span>
             </div>
 
-            {/* Realtime Refresh Button */}
-            <button
-              type="button"
-              onClick={loadPlatformData}
-              disabled={loadingData}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-indigo-300 hover:text-indigo-200 border border-slate-700/60 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-              title="Segarkan data realtime"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-              <span className="hidden md:inline">Refresh Realtime</span>
-            </button>
-
             {/* Quick Link to POS Kasir */}
             <button
               type="button"
@@ -2835,7 +2823,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                     title={isSuspended ? 'Aktifkan Kembali Akun Owner' : 'Bekukan Akun (Semua Toko Akan Inaktif)'}
                                   >
                                     {actionLoadingId === t.id ? (
-                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                     ) : isSuspended ? (
                                       <CheckCircle2 className="w-3.5 h-3.5" />
                                     ) : (
@@ -3059,7 +3047,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                                   title={(outlet.isActive ?? true) ? 'Nonaktifkan Toko Ini' : 'Aktifkan Toko Ini'}
                                                 >
                                                   {actionLoadingId === outlet.id ? (
-                                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                   ) : (outlet.isActive ?? true) ? (
                                                     <XCircle className="w-3.5 h-3.5" />
                                                   ) : (
@@ -3615,14 +3603,6 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   >
                     <QrCode className="w-3.5 h-3.5" />
                     <span>Kelola QRIS &amp; Rekening Platform</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={loadPlatformData}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700 text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-800 cursor-pointer transition-colors"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Segarkan Ledger</span>
                   </button>
                 </div>
               </div>
@@ -4386,15 +4366,6 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     <option value="BROADCAST">📢 Broadcast (Semua Toko)</option>
                     <option value="SPECIFIC">🎯 Khusus Tenant Tertentu</option>
                   </select>
-
-                  <button
-                    type="button"
-                    onClick={loadPlatformData}
-                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors cursor-pointer"
-                    title="Muat Ulang Data"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${loadingData ? 'animate-spin' : ''}`} />
-                  </button>
                 </div>
               </div>
 
@@ -4672,7 +4643,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   >
                     {savingWaSettings ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Menyimpan...</span>
                       </>
                     ) : (
@@ -4727,7 +4698,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     >
                       {testingWa ? (
                         <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                           <span>Mengirim Pesan Uji Coba...</span>
                         </>
                       ) : (
@@ -4793,61 +4764,63 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 1: DETAIL TENANT (TENANT DEEP DIVE)
       ========================================================================= */}
       {detailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto text-slate-200">
-            {/* Close button */}
-            <button
-              type="button"
-              onClick={() => setDetailModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden text-slate-200">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 flex items-start justify-between gap-3">
+              <div className="pr-6 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-lg sm:text-xl font-black text-white truncate">
+                    {selectedTenantDetail?.owner?.name || selectedTenantDetail?.tenant?.businessName || 'Detail Tenant'}
+                  </span>
+                  {selectedTenantDetail?.tenant?.status === 'PENDING' && (
+                    <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 animate-pulse">
+                      ⏳ MENUNGGU APPROVAL
+                    </span>
+                  )}
+                  {selectedTenantDetail?.tenant?.status === 'ACTIVE' && (
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                      ✅ AKTIF (DISETUJUI)
+                    </span>
+                  )}
+                  {selectedTenantDetail?.tenant?.status === 'SUSPENDED' && (
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400">
+                      🚫 DIBEKUKAN
+                    </span>
+                  )}
+                  {selectedTenantDetail?.tenant?.status === 'CANCELLED' && (
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
+                      ❌ DITOLAK / DIBATALKAN
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-1 truncate">
+                  {selectedTenantDetail?.tenant?.status === 'PENDING'
+                    ? 'Pendaftaran Akun Pemilik • Belum Memiliki Toko Fisik'
+                    : selectedTenantDetail?.outlets && selectedTenantDetail.outlets.length > 0
+                    ? `${selectedTenantDetail.outlets[0].name} • ${selectedTenantDetail.outlets.length} Toko Terdaftar`
+                    : 'Akun Disetujui • Menunggu Penyelesaian Setup Toko'}
+                </p>
+              </div>
+
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => setDetailModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all shrink-0 cursor-pointer"
+                title="Tutup Modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {loadingDetail ? (
-              <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-400">
-                <RefreshCw className="w-6 h-6 animate-spin text-indigo-400" />
+              <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-400 flex-1">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
                 <p className="text-xs">Memuat data mendalam tenant...</p>
               </div>
             ) : selectedTenantDetail ? (
-              <div className="space-y-6">
-                {/* Header */}
-                <div className="border-b border-slate-800 pb-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl font-black text-white">
-                        {selectedTenantDetail.owner?.name || selectedTenantDetail.tenant.businessName}
-                      </span>
-                      {selectedTenantDetail.tenant.status === 'PENDING' && (
-                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 animate-pulse">
-                          ⏳ MENUNGGU APPROVAL
-                        </span>
-                      )}
-                      {selectedTenantDetail.tenant.status === 'ACTIVE' && (
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
-                          ✅ AKTIF (DISETUJUI)
-                        </span>
-                      )}
-                      {selectedTenantDetail.tenant.status === 'SUSPENDED' && (
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400">
-                          🚫 DIBEKUKAN
-                        </span>
-                      )}
-                      {selectedTenantDetail.tenant.status === 'CANCELLED' && (
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
-                          ❌ DITOLAK / DIBATALKAN
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {selectedTenantDetail.tenant.status === 'PENDING'
-                      ? 'Pendaftaran Akun Pemilik • Belum Memiliki Toko Fisik'
-                      : selectedTenantDetail.outlets && selectedTenantDetail.outlets.length > 0
-                      ? `${selectedTenantDetail.outlets[0].name} • ${selectedTenantDetail.outlets.length} Toko Terdaftar`
-                      : 'Akun Disetujui • Menunggu Penyelesaian Setup Toko'}
-                  </p>
-                </div>
+              <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-6">
 
                 {/* Banner Khusus Akun PENDING */}
                 {selectedTenantDetail.tenant.status === 'PENDING' && (
@@ -5165,6 +5138,17 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </div>
               </div>
             ) : null}
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setDetailModalOpen(false)}
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -5536,7 +5520,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   >
                     {submittingSub ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
                         <span>Memproses Top-Up Kuota...</span>
                       </>
                     ) : (
@@ -5557,12 +5541,12 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 3: HASIL RESET PASSWORD OWNER
       ========================================================================= */}
       {resetModalOpen && resetResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl relative text-slate-200 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={() => setResetModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -5617,18 +5601,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 4: PREVIEW FAKTUR DIGITAL SAAS (OFFICIAL TAX INVOICE PREVIEW)
       ========================================================================= */}
       {selectedInvoiceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl relative text-slate-200 my-8">
-            <button
-              type="button"
-              onClick={() => setSelectedInvoiceModal(null)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             {/* Invoice Top Header */}
-            <div className="border-b border-slate-800 pb-5 mb-5 flex items-start justify-between">
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-white text-xs">
@@ -5642,22 +5618,34 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </p>
               </div>
 
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Official Tax Invoice</span>
-                <span className="font-mono font-black text-sm text-indigo-400">{selectedInvoiceModal.invoiceNumber}</span>
-                <div className="mt-1">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase ${
-                    selectedInvoiceModal.status === 'PAID'
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                      : 'bg-amber-950 text-amber-300 border-amber-800'
-                  }`}>
-                    {selectedInvoiceModal.status === 'PAID' ? '✔ PAID / VERIFIED' : '⏳ PENDING PAYMENT'}
-                  </span>
+              <div className="flex items-start gap-3">
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Official Tax Invoice</span>
+                  <span className="font-mono font-black text-sm text-indigo-400">{selectedInvoiceModal.invoiceNumber}</span>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase ${
+                      selectedInvoiceModal.status === 'PAID'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                        : 'bg-amber-950 text-amber-300 border-amber-800'
+                    }`}>
+                      {selectedInvoiceModal.status === 'PAID' ? '✔ PAID / VERIFIED' : '⏳ PENDING PAYMENT'}
+                    </span>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoiceModal(null)}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+                  title="Tutup Faktur"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            {/* Client & Date Info */}
+            {/* Scrollable Invoice Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-5">
+              {/* Client & Date Info */}
             <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-5 text-xs">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Ditagihkan Kepada:</span>
@@ -5751,10 +5739,11 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   [DIGITALLY VERIFIED]
                 </span>
               </div>
+              </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-3">
+            {/* Sticky Action Footer */}
+            <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -5779,17 +5768,19 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 5: TAMBAH ANGGOTA TIM STAF PLATFORM (RBAC)
       ========================================================================= */}
       {isCreateStaffModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setIsCreateStaffModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="text-center mb-5">
+            {/* Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 text-center">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto mb-3 shadow-md">
                 <UserPlus className="w-6 h-6" />
               </div>
@@ -5799,57 +5790,60 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               </p>
             </div>
 
-            <form onSubmit={handleCreateStaff} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Nama Lengkap Staf:</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Rian Anggara"
-                  value={newStaffForm.name}
-                  onChange={(e) => setNewStaffForm({ ...newStaffForm, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 font-semibold"
-                />
+            <form onSubmit={handleCreateStaff} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Nama Lengkap Staf:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Rian Anggara"
+                    value={newStaffForm.name}
+                    onChange={(e) => setNewStaffForm({ ...newStaffForm, name: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Alamat Email Kerja:</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="Contoh: rian@wellpos.id"
+                    value={newStaffForm.email}
+                    onChange={(e) => setNewStaffForm({ ...newStaffForm, email: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Kata Sandi Awal:</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Minimal 6 karakter..."
+                    value={newStaffForm.password}
+                    onChange={(e) => setNewStaffForm({ ...newStaffForm, password: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Peran &amp; Wewenang (RBAC):</label>
+                  <select
+                    value={newStaffForm.role}
+                    onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
+                  >
+                    <option value="SUPPORT">SUPPORT — Layanan Bantuan Klien &amp; Reset Sandi</option>
+                    <option value="BILLING">BILLING — Verifikasi Pembayaran &amp; Manajemen Kupon</option>
+                    <option value="SUPER_ADMIN">SUPER_ADMIN — Akses Administrator Penuh</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Alamat Email Kerja:</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="Contoh: rian@wellpos.id"
-                  value={newStaffForm.email}
-                  onChange={(e) => setNewStaffForm({ ...newStaffForm, email: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Kata Sandi Awal:</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Minimal 6 karakter..."
-                  value={newStaffForm.password}
-                  onChange={(e) => setNewStaffForm({ ...newStaffForm, password: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Peran &amp; Wewenang (RBAC):</label>
-                <select
-                  value={newStaffForm.role}
-                  onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 font-semibold"
-                >
-                  <option value="SUPPORT">SUPPORT — Layanan Bantuan Klien &amp; Reset Sandi</option>
-                  <option value="BILLING">BILLING — Verifikasi Pembayaran &amp; Manajemen Kupon</option>
-                  <option value="SUPER_ADMIN">SUPER_ADMIN — Akses Administrator Penuh</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex items-center gap-3">
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateStaffModalOpen(false)}
@@ -5862,7 +5856,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   disabled={submittingStaff}
                   className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {submittingStaff ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                  {submittingStaff ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
                   <span>{submittingStaff ? 'Menyimpan...' : 'Simpan Staf'}</span>
                 </button>
               </div>
@@ -6149,7 +6143,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   disabled={submittingPromo}
                   className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/40"
                 >
-                  {submittingPromo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5" />}
+                  {submittingPromo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5" />}
                   <span>{submittingPromo ? 'Menerbitkan...' : 'Terbitkan Promo'}</span>
                 </button>
               </div>
@@ -6463,7 +6457,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   disabled={submittingEditPromo}
                   className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/40"
                 >
-                  {submittingEditPromo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Edit3 className="w-3.5 h-3.5" />}
+                  {submittingEditPromo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Edit3 className="w-3.5 h-3.5" />}
                   <span>{submittingEditPromo ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
                 </button>
               </div>
@@ -6476,17 +6470,19 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL: PENGATURAN BIAYA TOKEN, PAKET & QRIS PLATFORM (SUPERADMIN)
       ========================================================================= */}
       {isPaymentConfigModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative text-slate-200 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setIsPaymentConfigModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-6">
+            {/* Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 flex items-center gap-3 pr-12">
               <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shrink-0">
                 <Coins className="w-6 h-6 text-amber-400" />
               </div>
@@ -6499,13 +6495,14 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             </div>
 
             {paymentConfigLoading ? (
-              <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <RefreshCw className="w-7 h-7 animate-spin text-indigo-400" />
+              <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2 flex-1">
+                <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
                 <span className="text-xs">Memuat pengaturan platform...</span>
               </div>
             ) : (
-              <form onSubmit={handleSavePaymentConfig} className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <form onSubmit={handleSavePaymentConfig} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                   {/* ==================== KOLOM KIRI ==================== */}
                   <div className="space-y-4">
                     {/* Bagian 1: Biaya Pendaftaran Awal & Bonus Kuota Token Onboarding */}
@@ -6748,9 +6745,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Footer Actions */}
-                <div className="border-t border-slate-800 pt-4 flex items-center justify-end gap-3">
+                {/* Sticky Action Footer */}
+                <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setIsPaymentConfigModalOpen(false)}
@@ -6763,7 +6761,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                     disabled={paymentConfigSubmitting}
                     className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {paymentConfigSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {paymentConfigSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                     <span>{paymentConfigSubmitting ? 'Menyimpan Pengaturan...' : 'Simpan Pengaturan'}</span>
                   </button>
                 </div>
@@ -6777,18 +6775,20 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL: KELOLA PAKET KUOTA PAY-AS-YOU-GO (TAMBAH / EDIT DENGAN NAMA SENDIRI)
       ========================================================================= */}
       {isPackageModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setIsPackageModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+            {/* Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 flex items-center gap-3 pr-12">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
                 <Layers className="w-5 h-5 text-amber-400" />
               </div>
               <div>
@@ -6801,8 +6801,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               </div>
             </div>
 
-            <form onSubmit={handleSavePackage} className="space-y-4">
-              {/* Nama Paket (Bebas / Penamaan Sendiri) */}
+            <form onSubmit={handleSavePackage} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4">
+                {/* Nama Paket (Bebas / Penamaan Sendiri) */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
                   Nama Paket <span className="text-rose-400">*</span> (Bebas / Penamaan Sendiri)
@@ -6958,8 +6959,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 />
               </div>
 
-              {/* Tombol Aksi Modal */}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsPackageModalOpen(false)}
@@ -6974,7 +6977,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 >
                   {packageSaving ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>Menyimpan...</span>
                     </>
                   ) : (
@@ -6994,8 +6997,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 5: CUSTOM CONFIRMATION DIALOG (NO BROWSER POPUPS)
       ========================================================================= */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-2xl relative text-slate-200">
             <div className="text-center mb-5">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 border ${
                 confirmDialog.variant === 'emerald'
@@ -7022,7 +7025,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               <button
                 type="button"
                 onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
-                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors"
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 {confirmDialog.cancelText || 'Batal'}
               </button>
@@ -7032,7 +7035,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
                   confirmDialog.onConfirm();
                 }}
-                className={`flex-1 py-2.5 text-white font-bold rounded-xl text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2.5 text-white font-bold rounded-xl text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
                   confirmDialog.variant === 'emerald'
                     ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/50'
                     : confirmDialog.variant === 'rose'
@@ -7051,8 +7054,8 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 5: CUSTOM ALERT DIALOG (ERROR / INFO NOTIFICATION)
       ========================================================================= */}
       {alertDialog.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-2xl relative text-slate-200">
             <div className="text-center mb-5">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 border ${
                 alertDialog.variant === 'error'
@@ -7078,7 +7081,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
             <button
               type="button"
               onClick={() => setAlertDialog((prev) => ({ ...prev, isOpen: false }))}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-colors shadow-lg shadow-indigo-900/50"
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-colors shadow-lg shadow-indigo-900/50 cursor-pointer"
             >
               Mengerti
             </button>
@@ -7090,31 +7093,36 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           MODAL 7: BUAT NOTIFIKASI & BROADCAST BARU (SUPERADMIN)
       ========================================================================= */}
       {isCreateNotifModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl relative text-slate-200 my-8">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl relative text-slate-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <button
               type="button"
               onClick={() => setIsCreateNotifModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer"
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all cursor-pointer z-10"
+              title="Tutup Modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="text-center mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto mb-3 shadow-md">
-                <Bell className="w-6 h-6" />
+            {/* Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 shrink-0 flex items-center gap-3 pr-12">
+              <div className="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 shadow-md">
+                <Bell className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-black text-white">Buat Notifikasi / Pengumuman Sistem</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Pesan ini akan disiarkan ke lonceng notifikasi Backoffice toko merchant.
-              </p>
+              <div>
+                <h3 className="text-lg font-black text-white">Buat Notifikasi / Pengumuman Sistem</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Pesan ini akan disiarkan ke lonceng notifikasi Backoffice toko merchant.
+                </p>
+              </div>
             </div>
 
-            <form onSubmit={handleCreateNotification} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Judul Pengumuman: <span className="text-rose-400">*</span>
-                </label>
+            <form onSubmit={handleCreateNotification} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Judul Pengumuman: <span className="text-rose-400">*</span>
+                  </label>
                 <input
                   type="text"
                   required
@@ -7206,7 +7214,10 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 </p>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3">
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-950/80 border-t border-slate-800 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateNotifModalOpen(false)}
@@ -7221,7 +7232,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 >
                   {submittingNotif ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>Menerbitkan...</span>
                     </>
                   ) : (
