@@ -113,9 +113,9 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!platformStorage.getToken());
   const [currentUser, setCurrentUser] = useState<any>(() => platformStorage.getUser());
 
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState('superadmin@wellpos.id');
-  const [loginPassword, setLoginPassword] = useState('SuperAdmin123!');
+  // Login form state (dikosongkan agar wajib diinput manual demi keamanan)
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -1687,19 +1687,6 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
               {loginLoading ? 'Memverifikasi...' : 'Masuk ke Portal Platform'}
             </button>
           </form>
-
-          <div className="mt-6 pt-4 border-t border-slate-700 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginEmail('superadmin@wellpos.id');
-                setLoginPassword('SuperAdmin123!');
-              }}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
-            >
-              Gunakan Akun Default Superadmin
-            </button>
-          </div>
         </div>
 
         <div className="mt-6 flex items-center gap-4 text-xs text-slate-400">

@@ -66,6 +66,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 }
 
+// Path URL rahasia khusus akses portal Superadmin Platform (Mencegah brute force / scan bot)
+export const SUPERADMIN_SECRET_HASH = '#hq-gate-99';
+
 export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
@@ -87,7 +90,13 @@ export const App: React.FC = () => {
     const hash = window.location.hash.toLowerCase();
     if (hash.startsWith('#menu')) return 'menu';
     if (hash === '#pos' || hash === '#login') return 'pos-login';
-    if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) return 'superadmin';
+    // Hanya izinkan akses jika URL hash tepat sesuai kode rahasia internal
+    if (hash === SUPERADMIN_SECRET_HASH) return 'superadmin';
+    // Honeypot: Jika ada yang menebak #superadmin, #admin, dll, alihkan diam-diam ke landing
+    if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) {
+      window.history.replaceState(null, '', window.location.pathname);
+      return 'landing';
+    }
     return 'landing';
   });
 
@@ -137,8 +146,12 @@ export const App: React.FC = () => {
         setViewMode('menu');
       } else if (lower === '#pos' || lower === '#login') {
         setViewMode('pos-login');
-      } else if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(lower)) {
+      } else if (lower === SUPERADMIN_SECRET_HASH) {
         setViewMode('superadmin');
+      } else if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(lower)) {
+        // Honeypot: alihkan siapapun yang menebak path admin ke landing page & bersihkan hash
+        window.history.replaceState(null, '', window.location.pathname);
+        setViewMode('landing');
       } else if (lower === '#landing' || lower === '') {
         setViewMode('landing');
       }
@@ -210,7 +223,7 @@ export const App: React.FC = () => {
     setViewMode(mode);
     if (mode === 'landing') window.location.hash = '';
     else if (mode === 'pos-login') window.location.hash = 'pos';
-    else if (mode === 'superadmin') window.location.hash = 'superadmin';
+    else if (mode === 'superadmin') window.location.hash = SUPERADMIN_SECRET_HASH.slice(1);
   };
 
   if (initializing) {
@@ -230,7 +243,6 @@ export const App: React.FC = () => {
       <ErrorBoundary>
         <MaintenancePage
           maintenanceInfo={systemStatus}
-          onGoToSuperadmin={() => navigateTo('superadmin')}
           onMaintenanceResolved={() =>
             setSystemStatus((prev) => ({ ...prev, maintenanceMode: false }))
           }

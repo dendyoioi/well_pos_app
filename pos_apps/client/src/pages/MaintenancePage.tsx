@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Wrench, Clock, RefreshCw, Lock, Sparkles, ExternalLink } from 'lucide-react';
+import { ShieldAlert, Wrench, Clock, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 
 export interface MaintenanceInfo {
@@ -11,13 +11,11 @@ export interface MaintenanceInfo {
 
 interface MaintenancePageProps {
   maintenanceInfo?: MaintenanceInfo | null;
-  onGoToSuperadmin?: () => void;
   onMaintenanceResolved?: () => void;
 }
 
 export const MaintenancePage: React.FC<MaintenancePageProps> = ({
   maintenanceInfo,
-  onGoToSuperadmin,
   onMaintenanceResolved,
 }) => {
   const [checking, setChecking] = useState(false);
@@ -147,22 +145,9 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
         </div>
       </main>
 
-      {/* Footer & Superadmin Bypass Link */}
+      {/* Footer */}
       <footer className="w-full max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-900 pt-6 z-10">
         <div>&copy; {new Date().getFullYear()} Well POS Platform. Hak Cipta Dilindungi.</div>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (onGoToSuperadmin) onGoToSuperadmin();
-            else window.location.hash = 'superadmin';
-          }}
-          className="inline-flex items-center gap-1.5 text-slate-400 hover:text-amber-400 transition-colors font-medium underline cursor-pointer"
-        >
-          <Lock className="w-3.5 h-3.5" />
-          <span>Akses Khusus Superadmin Platform (#superadmin)</span>
-          <ExternalLink className="w-3 h-3" />
-        </button>
       </footer>
     </div>
   );
