@@ -465,6 +465,18 @@ Produk Well POS memiliki total **28 Epic** yang mencakup seluruh siklus hidup pe
   │   - Modal Tambah & Edit Toko dirombak ke pola kanonikal bottom-sheet PWA, dropdown gudang pasokan dengan ChevronDown, dan status operasional toko via toggle pill switch.
   └── 7. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server, serta 14 patch skema database verified 100% di Supabase remote.
 ===============================================================
+[2026-10-11] FASE 12: ROLE CASHIER — KASIR FRONTLINER EXPERIENCE (TAHAP 12.1 SELESAI)
+  ├── 1. Tahap 12.1: Terminal Kasir POS & Checkout Experience (PosTerminalView, OrderCartSidebar, PosMobileView, PaymentModal, ProductCatalogGrid, ProductModifierModal):
+  │   - Modal Pembayaran Kasir (PaymentModal.tsx): Total Tagihan Banner diformat font-mono font-black, tombol pecahan cepat (quick cash bills: Rp 10.000, Rp 20.000, Rp 50.000, Rp 100.000, Uang Pas) diformat h-10 font-mono font-bold, CurrencyInput font-mono, dan Uang Kembalian kasir diformat besar text-2xl font-black font-mono emerald (atau minus merah jika kurang).
+  │   - Split Payment & Kasbon (PaymentModal.tsx): Nilai porsi QRIS, input uang fisik diterima, kembalian tunai split, dan tombol batas jatuh tempo kasbon (+7, +14, +30 hari) diformat font-mono font-bold dengan date input h-10.
+  │   - Keranjang Belanja Desktop (OrderCartSidebar.tsx): Seluruh angka subtotal, potongan diskon manual, voucher promo, tukar poin, biaya kemasan, pajak/service charge, dan grand total diformat font-mono. Tombol checkout utama menyertakan nominal font-mono tebal.
+  │   - Inline Item Note Editing (OrderCartSidebar.tsx & PosMobileView.tsx): Ditambahkan kemampuan kasir untuk menambahkan catatan instan (+ Catatan) atau mengedit/menghapus catatan item pesanan langsung dari baris keranjang belanja bahkan untuk produk tanpa modifier (misal: "less sugar", "level 2").
+  │   - Varian & Modifier Indentasi (OrderCartSidebar.tsx & PosMobileView.tsx): Opsi modifier ber-indentasi rapi dengan border samping (border-l-2 border-blue-200), tanda +, dan delta harga font-mono font-bold.
+  │   - Input ID Pesanan Driver Mitra Online Delivery (OrderCartSidebar.tsx): Ditingkatkan ke h-10 font-mono font-black uppercase dengan tracking luas untuk integrasi GoFood/GrabFood/ShopeeFood.
+  │   - Katalog Menu & Modal Modifier (ProductCatalogGrid.tsx & ProductModifierModal.tsx): Harga katalog grid & compact view diformat font-mono tabular-nums; modal varian memformat harga dasar, delta opsi modifier, total harga unit dengan font-mono font-black, serta input catatan h-10.
+  │   - Mobile Cart Drawer (PosMobileView.tsx): Stepper kuantitas font-mono, harga item font-mono, ringkasan tagihan font-mono, dan inline catatan item terintegrasi.
+  └── 2. Verifikasi Sistem: Exit code 0 pada build pos_apps/client dan pos_apps/server, database verified 100% up-to-date.
+===============================================================
 ```
 
 ---

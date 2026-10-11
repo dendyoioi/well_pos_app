@@ -1035,6 +1035,16 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     setCart((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleUpdateItemNote = (index: number, note: string) => {
+    setCart((prev) => {
+      const updated = [...prev];
+      if (updated[index]) {
+        updated[index] = { ...updated[index], itemNote: note.trim() || undefined };
+      }
+      return updated;
+    });
+  };
+
   // ─── Reset Penuh Satu Transaksi (dipakai di: Hold Order, Bayar, Lepas Tagihan, Batal Tarik) ───
   const resetTransactionState = () => {
     setCart([]);
@@ -1864,6 +1874,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           onUpdateQuantity={handleUpdateQuantity}
           onRemoveItem={handleRemoveItem}
           onClearCart={handleClearCart}
+          onUpdateItemNote={handleUpdateItemNote}
           subtotal={cartSubtotal}
           discountAmount={cartDiscount + promoDiscount}
           taxAmount={autoFeesTotal}
@@ -2099,6 +2110,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                 setScanMessage('Kupon promo telah dilepas.');
               }}
               onPrintKitchenTicket={handleOpenKitchenTicket}
+              onUpdateItemNote={handleUpdateItemNote}
             />
           </div>
         </>

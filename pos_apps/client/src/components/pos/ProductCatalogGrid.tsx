@@ -117,7 +117,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                   <div className="text-right">
                     <p className="text-xs sm:text-sm font-black text-slate-900 whitespace-nowrap flex items-baseline justify-end">
                       <span className="text-[11px] font-bold text-slate-500 mr-0.5 select-none">Rp</span>
-                      <span className="tabular-nums">{price.toLocaleString('id-ID')}</span>
+                      <span className="tabular-nums font-mono">{price.toLocaleString('id-ID')}</span>
                     </p>
                     <p className="text-[10px] text-slate-500 font-medium">
                       {isUnlimited ? (isComposite ? 'Tersedia (Olahan F&B)' : 'Tersedia') : `Stok: ${stock}`}
@@ -241,7 +241,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                     <span className="text-[10px] font-bold text-slate-500 mr-0.5 select-none">
                       Rp
                     </span>
-                    <span className="tabular-nums truncate">
+                    <span className="tabular-nums font-mono truncate">
                       {price.toLocaleString('id-ID')}
                     </span>
                   </p>

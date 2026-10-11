@@ -114,6 +114,8 @@ export interface PosMobileViewProps {
   pendingOfflineCount?: number;
   isSyncingQueue?: boolean;
   onSyncOfflineQueue?: () => void;
+  /** Callback ubah / tambah catatan item pesanan kasir */
+  onUpdateItemNote?: (index: number, note: string) => void;
 }
 
 export const PosMobileView: React.FC<PosMobileViewProps> = ({
@@ -182,6 +184,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   allowedTabs,
   currentUser,
   onOpenBarcodeScanner,
+  onUpdateItemNote,
 }) => {
   // Mobile UI States
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -189,6 +192,8 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [showCustomerInputs, setShowCustomerInputs] = useState(false);
   const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
+  const [editingMobileNoteIdx, setEditingMobileNoteIdx] = useState<number | null>(null);
+  const [tempMobileNoteText, setTempMobileNoteText] = useState('');
   const btPrinter = useBluetoothPrinter();
 
   // Deteksi khusus apakah sedang berjalan sebagai PWA Standalone di iPhone / Handheld
@@ -835,7 +840,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                         <h4 className="font-extrabold text-xs text-slate-900 leading-tight">
                           {item.product.name}
                         </h4>
-                        <div className="text-[11px] font-semibold text-slate-500 mt-0.5">
+                        <div className="text-[11px] font-bold font-mono text-slate-500 mt-0.5">
                           Rp {itemPrice.toLocaleString('id-ID')}
                         </div>
 
@@ -848,15 +853,95 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                                 className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-violet-50 text-violet-700 border border-violet-200"
                               >
                                 +{mod.option?.name || mod.groupName}
+                                {mod.option?.priceDelta ? (
+                                  <span className="font-mono ml-0.5">
+                                    (+Rp {mod.option.priceDelta.toLocaleString('id-ID')})
+                                  </span>
+                                ) : null}
                               </span>
                             ))}
                           </div>
                         )}
 
-                        {item.itemNote && (
-                          <p className="text-[10px] text-slate-400 italic mt-0.5">
-                            Catatan: {item.itemNote}
-                          </p>
+                        {/* Inline Item Note Edit Mode */}
+                        {editingMobileNoteIdx === index ? (
+                          <div className="mt-1 flex items-center gap-1.5 animate-fadeIn">
+                            <input
+                              type="text"
+                              placeholder="Catatan..."
+                              value={tempMobileNoteText}
+                              onChange={(e) => setTempMobileNoteText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  onUpdateItemNote?.(index, tempMobileNoteText.trim());
+                                  setEditingMobileNoteIdx(null);
+                                } else if (e.key === 'Escape') {
+                                  setEditingMobileNoteIdx(null);
+                                }
+                              }}
+                              className="flex-1 bg-amber-50 border border-amber-300 rounded-lg px-2 py-0.5 text-[10px] font-medium text-slate-800 outline-none"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onUpdateItemNote?.(index, tempMobileNoteText.trim());
+                                setEditingMobileNoteIdx(null);
+                              }}
+                              className="px-2 py-0.5 bg-blue-900 text-white rounded text-[10px] font-bold"
+                            >
+                              Simpan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingMobileNoteIdx(null)}
+                              className="text-slate-400 p-0.5 text-[10px]"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            {item.itemNote ? (
+                              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-900 px-1.5 py-0.2 rounded text-[10px] font-medium">
+                                <span>📝 {item.itemNote}</span>
+                                {onUpdateItemNote && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingMobileNoteIdx(index);
+                                      setTempMobileNoteText(item.itemNote || '');
+                                    }}
+                                    className="text-amber-700 hover:text-amber-950 font-bold ml-0.5"
+                                  >
+                                    ✏️
+                                  </button>
+                                )}
+                                {onUpdateItemNote && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onUpdateItemNote(index, '')}
+                                    className="text-amber-700 hover:text-rose-600 font-bold ml-0.5"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              onUpdateItemNote && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingMobileNoteIdx(index);
+                                    setTempMobileNoteText('');
+                                  }}
+                                  className="text-[9px] text-slate-400 hover:text-blue-900 font-medium hover:underline"
+                                >
+                                  + Catatan
+                                </button>
+                              )
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -869,7 +954,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-5 text-center text-xs font-black text-slate-900">
+                        <span className="w-5 text-center text-xs font-black font-mono text-slate-900">
                           {item.quantity}
                         </span>
                         <button
@@ -890,7 +975,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                       >
                         <X className="w-3 h-3" /> Hapus
                       </button>
-                      <span className="font-extrabold text-xs text-blue-950">
+                      <span className="font-extrabold font-mono text-xs text-blue-950">
                         Rp {itemTotal.toLocaleString('id-ID')}
                       </span>
                     </div>
@@ -944,43 +1029,43 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
               <div className="space-y-1 text-[11px] text-slate-600 border-t border-slate-200/80 pt-2">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold font-mono text-slate-900">
                     Rp {subtotal.toLocaleString('id-ID')}
                   </span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-rose-600 font-bold">
                     <span>Potongan Diskon</span>
-                    <span>-Rp {discountAmount.toLocaleString('id-ID')}</span>
+                    <span className="font-mono">-Rp {discountAmount.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {pointsToRedeem > 0 && (
                   <div className="flex justify-between text-amber-800 font-bold">
                     <span>Tukar Poin ({pointsToRedeem} Poin)</span>
-                    <span>-Rp {(pointsToRedeem * (activeOutlet?.loyaltyConfig?.pointValueIdr || 100)).toLocaleString('id-ID')}</span>
+                    <span className="font-mono">-Rp {(pointsToRedeem * (activeOutlet?.loyaltyConfig?.pointValueIdr || 100)).toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {onDemandFeesTotal > 0 && (
                   <div className="flex justify-between text-blue-900 font-semibold">
                     <span>Biaya Kemasan</span>
-                    <span>Rp {onDemandFeesTotal.toLocaleString('id-ID')}</span>
+                    <span className="font-mono">Rp {onDemandFeesTotal.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {taxAmount > 0 && (
                   <div className="flex justify-between">
                     <span>Pajak (PB1)</span>
-                    <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
+                    <span className="font-mono">Rp {taxAmount.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 {serviceChargeAmount > 0 && (
                   <div className="flex justify-between">
                     <span>Biaya Layanan</span>
-                    <span>Rp {serviceChargeAmount.toLocaleString('id-ID')}</span>
+                    <span className="font-mono">Rp {serviceChargeAmount.toLocaleString('id-ID')}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-baseline pt-1.5 border-t border-slate-200 font-black text-slate-900 text-sm">
                   <span>Total Tagihan:</span>
-                  <span className="text-base text-blue-900">
+                  <span className="text-base font-mono font-black text-blue-900">
                     Rp {cartGrandTotal.toLocaleString('id-ID')}
                   </span>
                 </div>

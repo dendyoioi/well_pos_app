@@ -97,6 +97,8 @@ export interface OrderCartSidebarProps {
   onRemovePromotion?: () => void;
   /** Callback cetak tiket dapur tanpa harga (KDS Kitchen Check) */
   onPrintKitchenTicket?: () => void;
+  /** Callback ubah / tambah catatan item pesanan kasir */
+  onUpdateItemNote?: (index: number, note: string) => void;
 }
 
 export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
@@ -142,9 +144,12 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
   onOpenPromotionModal,
   onRemovePromotion,
   onPrintKitchenTicket,
+  onUpdateItemNote,
 }) => {
   const [showMemberSearch, setShowMemberSearch] = useState(false);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
+  const [tempNoteText, setTempNoteText] = useState('');
 
   // Table Search & Filter States
   const [showTablePicker, setShowTablePicker] = useState(false);
@@ -819,7 +824,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                 placeholder="No. Pesanan Driver (e.g. #GF-402, #GRAB-108)"
                 value={onlineOrderId || ''}
                 onChange={(e) => onChangeOnlineOrderId?.(e.target.value)}
-                className="flex-1 bg-white border border-blue-300 rounded-xl px-3 py-1.5 text-xs font-black text-blue-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900 font-mono tracking-wide"
+                className="flex-1 h-10 bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-black text-blue-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900 font-mono tracking-wide uppercase"
               />
               {onlineOrderId && (
                 <button
@@ -908,21 +913,101 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                     <p className="text-[10px] text-blue-900 font-semibold">{item.product.category.name}</p>
                   )}
                   {item.selectedModifiers && item.selectedModifiers.length > 0 && (
-                    <div className="mt-1 space-y-0.5">
+                    <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-blue-200">
                       {item.selectedModifiers.map((m, mIdx) => (
-                        <p key={mIdx} className="text-[10px] text-slate-500 flex justify-between">
+                        <p key={mIdx} className="text-[10px] text-slate-600 flex justify-between items-center">
                           <span>+ {m.option?.name || m.groupName}</span>
-                          <span>Rp {(m.option?.priceDelta || 0).toLocaleString('id-ID')}</span>
+                          <span className="font-mono text-slate-500 font-bold">+Rp {(m.option?.priceDelta || 0).toLocaleString('id-ID')}</span>
                         </p>
                       ))}
                     </div>
                   )}
-                  {item.itemNote && (
-                    <p className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded mt-1 font-medium inline-block">
-                      Catatan: {item.itemNote}
-                    </p>
+
+                  {/* Inline Item Note Edit Mode */}
+                  {editingNoteIdx === idx ? (
+                    <div className="mt-1 flex items-center gap-1.5 animate-fadeIn">
+                      <input
+                        type="text"
+                        placeholder="Catatan item (cth: jangan pedas, less ice)..."
+                        value={tempNoteText}
+                        onChange={(e) => setTempNoteText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            onUpdateItemNote?.(idx, tempNoteText.trim());
+                            setEditingNoteIdx(null);
+                          } else if (e.key === 'Escape') {
+                            setEditingNoteIdx(null);
+                          }
+                        }}
+                        className="flex-1 bg-amber-50/70 border border-amber-300 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-800 outline-none focus:border-amber-500"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateItemNote?.(idx, tempNoteText.trim());
+                          setEditingNoteIdx(null);
+                        }}
+                        className="px-2 py-1 bg-blue-900 text-white rounded-lg text-[10px] font-bold cursor-pointer hover:bg-blue-800"
+                      >
+                        Simpan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingNoteIdx(null)}
+                        className="p-1 text-slate-400 hover:text-slate-600 rounded-lg text-[10px] cursor-pointer"
+                        title="Batal"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      {item.itemNote ? (
+                        <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-900 px-2 py-0.5 rounded-md text-[10px] font-medium">
+                          <span>📝 {item.itemNote}</span>
+                          {onUpdateItemNote && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingNoteIdx(idx);
+                                setTempNoteText(item.itemNote || '');
+                              }}
+                              className="text-amber-700 hover:text-amber-950 font-bold ml-1 cursor-pointer"
+                              title="Ubah catatan item"
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {onUpdateItemNote && (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateItemNote(idx, '')}
+                              className="text-amber-700 hover:text-rose-600 font-bold ml-0.5 cursor-pointer"
+                              title="Hapus catatan"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        onUpdateItemNote && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingNoteIdx(idx);
+                              setTempNoteText('');
+                            }}
+                            className="text-[10px] text-slate-400 hover:text-blue-900 font-medium flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            <span>+ Catatan item</span>
+                          </button>
+                        )
+                      )}
+                    </div>
                   )}
-                  <p className="text-xs font-black text-slate-900 mt-1">
+
+                  <p className="text-xs font-black font-mono text-slate-900 mt-1">
                     Rp {getItemSubtotal(item).toLocaleString('id-ID')}
                   </p>
                 </div>
@@ -942,7 +1027,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                   >
                     {item.quantity <= 1 ? <Trash2 className="w-3 h-3 text-rose-600" /> : <Minus className="w-3 h-3" />}
                   </button>
-                  <span className="w-6 text-center text-xs font-black text-slate-900">
+                  <span className="w-6 text-center text-xs font-black font-mono text-slate-900">
                     {item.quantity}
                   </span>
                   <button
@@ -1041,34 +1126,34 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
         <div className="space-y-1.5 text-xs">
           <div className="flex justify-between text-slate-600">
             <span>Subtotal Pesanan</span>
-            <span className="font-bold text-slate-900">Rp {subtotal.toLocaleString('id-ID')}</span>
+            <span className="font-bold font-mono text-slate-900">Rp {subtotal.toLocaleString('id-ID')}</span>
           </div>
 
           {manualDiscountAmount > 0 && (
             <div className="flex justify-between text-rose-600 font-medium">
               <span>Diskon Manual ({globalDiscount}%)</span>
-              <span>- Rp {manualDiscountAmount.toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono">- Rp {manualDiscountAmount.toLocaleString('id-ID')}</span>
             </div>
           )}
 
           {promoDiscountAmount > 0 && (
             <div className="flex justify-between text-emerald-700 font-bold">
               <span>Voucher Promo ({appliedPromotion?.code})</span>
-              <span>- Rp {promoDiscountAmount.toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono">- Rp {promoDiscountAmount.toLocaleString('id-ID')}</span>
             </div>
           )}
 
           {pointDiscountAmount > 0 && (
             <div className="flex justify-between text-amber-800 font-bold">
               <span>Tukar Poin ({pointsToRedeem} Poin)</span>
-              <span>- Rp {pointDiscountAmount.toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono">- Rp {pointDiscountAmount.toLocaleString('id-ID')}</span>
             </div>
           )}
 
           {onDemandFeesTotal > 0 && (
             <div className="flex justify-between text-slate-600">
               <span>Kemasan &amp; Kantong</span>
-              <span>Rp {onDemandFeesTotal.toLocaleString('id-ID')}</span>
+              <span className="font-bold font-mono">Rp {onDemandFeesTotal.toLocaleString('id-ID')}</span>
             </div>
           )}
 
@@ -1082,7 +1167,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                 <span>
                   {fee.name} ({fee.type === 'PERCENTAGE' ? `${fee.rate}%` : 'Tetap'})
                 </span>
-                <span>Rp {calculated.toLocaleString('id-ID')}</span>
+                <span className="font-bold font-mono">Rp {calculated.toLocaleString('id-ID')}</span>
               </div>
             );
           })}
@@ -1091,7 +1176,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
             <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
               Total Tagihan
             </span>
-            <span className="text-xl font-black text-blue-900 tracking-tight">
+            <span className="text-xl font-black font-mono text-blue-900 tracking-tight">
               Rp {grandTotal.toLocaleString('id-ID')}
             </span>
           </div>
@@ -1127,11 +1212,16 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
             onClick={onOpenPayment}
             className="w-full text-sm font-black shadow-md shadow-blue-900/20"
           >
-            {activePulledOrder || activeOpenTab
-              ? `Pelunasan Meja (Rp ${grandTotal.toLocaleString('id-ID')})`
-              : (orderChannel === 'DINE_IN' || orderChannel === 'QR_MENU')
-              ? `Bayar Langsung (Rp ${grandTotal.toLocaleString('id-ID')})`
-              : `Bayar Sekarang (Rp ${grandTotal.toLocaleString('id-ID')})`}
+            <span>
+              {activePulledOrder || activeOpenTab
+                ? 'Pelunasan Meja'
+                : (orderChannel === 'DINE_IN' || orderChannel === 'QR_MENU')
+                ? 'Bayar Langsung'
+                : 'Bayar Sekarang'}
+            </span>
+            <span className="font-mono ml-1 font-black">
+              (Rp {grandTotal.toLocaleString('id-ID')})
+            </span>
           </Button>
 
           {/* Secondary Action: Simpan & Kirim Dapur (Bayar Nanti / Perbarui Tagihan Meja) */}

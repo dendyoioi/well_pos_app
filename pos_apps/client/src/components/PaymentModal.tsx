@@ -184,7 +184,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Total Tagihan Pembayaran
             </span>
-            <div className="text-3xl sm:text-4xl font-black text-blue-950 mt-1">
+            <div className="text-3xl sm:text-4xl font-black font-mono text-blue-950 mt-1">
               Rp {grandTotal.toLocaleString('id-ID')}
             </div>
           </div>
@@ -320,7 +320,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       key={idx}
                       type="button"
                       onClick={() => setAmountPaid(item.value)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                      className={`h-10 py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all active:scale-95 cursor-pointer ${
                         amountPaid === item.value
                           ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
                           : 'bg-slate-50 hover:bg-blue-50/80 text-slate-800 border-slate-200'
@@ -340,8 +340,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   label="Uang Tunai Diterima:"
                   value={amountPaid}
                   onChange={(val) => setAmountPaid(val)}
-                  inputClassName="py-3 text-lg font-black text-right text-slate-900 focus:border-blue-900"
-                  prefixClassName="text-sm font-bold"
+                  inputClassName="py-3 text-lg font-black font-mono text-right text-slate-900 focus:border-blue-900"
+                  prefixClassName="text-sm font-bold font-mono"
                   placeholder="0"
                 />
               </div>
@@ -361,7 +361,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   {isCashInsufficient && <AlertCircle className="w-4 h-4 text-rose-600" />}
                 </div>
                 <div
-                  className={`text-2xl font-black mt-1 ${
+                  className={`text-2xl font-black font-mono mt-1 ${
                     isCashInsufficient ? 'text-rose-600' : 'text-emerald-700'
                   }`}
                 >
@@ -536,7 +536,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     <QrCode className="w-4 h-4 text-blue-900" />
                     <span>Porsi QRIS</span>
                   </div>
-                  <div className="bg-white border border-slate-200 text-blue-950 rounded-xl px-3 py-2 text-sm font-black">
+                  <div className="bg-white border border-slate-200 text-blue-950 rounded-xl px-3 py-2 text-sm font-black font-mono">
                     Rp {splitQrisPortion.toLocaleString('id-ID')}
                   </div>
                 </div>
@@ -548,8 +548,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   label="Uang Fisik Tunai Diterima Pelanggan:"
                   value={splitCashTendered}
                   onChange={(val) => setSplitCashTendered(val)}
-                  inputClassName="py-2.5 text-base font-black text-right"
-                  prefixClassName="text-sm font-bold"
+                  inputClassName="py-2.5 text-base font-black font-mono text-right"
+                  prefixClassName="text-sm font-bold font-mono"
                   placeholder="0"
                 />
 
@@ -562,7 +562,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   }`}
                 >
                   <span>{isSplitCashInsufficient ? 'Uang Tunai Kurang' : 'Kembalian Tunai'}</span>
-                  <span className="text-sm font-black">
+                  <span className="text-sm font-black font-mono">
                     {isSplitCashInsufficient
                       ? `- Rp ${(splitCashPortion - splitCashTendered).toLocaleString('id-ID')}`
                       : `Rp ${splitCashChange.toLocaleString('id-ID')}`}
@@ -574,7 +574,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-700">
-                    Tagihan QRIS: Rp {splitQrisPortion.toLocaleString('id-ID')}
+                    Tagihan QRIS: <span className="font-mono font-bold">Rp {splitQrisPortion.toLocaleString('id-ID')}</span>
                   </span>
                   {splitQrisPaid ? (
                     <span className="text-emerald-700 font-extrabold flex items-center gap-1">
@@ -679,7 +679,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                             key={days}
                             type="button"
                             onClick={() => setDebtDueDate(dateStr)}
-                            className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${
+                            className={`h-10 py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
                               debtDueDate === dateStr
                                 ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                                 : 'bg-slate-50 hover:bg-amber-50/60 text-slate-700 border-slate-200'
@@ -695,7 +695,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         type="date"
                         value={debtDueDate}
                         onChange={(e) => setDebtDueDate(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                        className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-amber-500"
                       />
                     </div>
                   </div>

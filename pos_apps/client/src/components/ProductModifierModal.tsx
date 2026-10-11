@@ -131,7 +131,7 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
                 {product.name}
               </h3>
               <div className="text-xs text-slate-500 flex items-center gap-2 truncate">
-                <span className="truncate">Harga Dasar: Rp {basePrice.toLocaleString('id-ID')}</span>
+                <span className="truncate">Harga Dasar: <strong className="font-mono text-slate-700">Rp {basePrice.toLocaleString('id-ID')}</strong></span>
                 <span className="text-slate-300 shrink-0">•</span>
                 <span className="text-blue-900 font-semibold truncate">{product.category.name}</span>
               </div>
@@ -206,7 +206,7 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
                           <span className="text-xs">{opt.name}</span>
                         </div>
                         {opt.priceDelta > 0 && (
-                          <span className="text-[11px] font-bold text-emerald-600">
+                          <span className="text-[11px] font-bold font-mono text-emerald-600">
                             +Rp {opt.priceDelta.toLocaleString('id-ID')}
                           </span>
                         )}
@@ -228,7 +228,7 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="misal: Sambal dipisah, minta sedotan ramah lingkungan..."
-              className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none transition-all"
+              className="w-full h-10 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white text-slate-900 rounded-xl px-3.5 py-2 text-xs outline-none transition-all"
             />
           </div>
         </div>
@@ -237,7 +237,7 @@ export const ProductModifierModal: React.FC<ProductModifierModalProps> = ({
         <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-3 sm:gap-4 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
           <div>
             <div className="text-[11px] text-slate-500 font-medium">Total Harga Unit</div>
-            <div className="text-base sm:text-lg font-black text-blue-950">
+            <div className="text-base sm:text-lg font-black font-mono text-blue-950">
               Rp {finalPrice.toLocaleString('id-ID')}
             </div>
           </div>
