@@ -12,3 +12,4 @@ export * from './TableSkeleton';
 export * from './SearchableSelect';
 export * from './ActionBar';
 export * from './ToggleSwitch';
+export * from './WellPosLogo';

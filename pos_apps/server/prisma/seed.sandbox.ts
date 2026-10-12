@@ -94,13 +94,20 @@ export async function runSandboxSeed() {
   // 3. Bersihkan Data Sandbox Ura Coffee Lama jika ada
   // ----------------------------------------------------
   console.log('🧹 3. Mengatur ulang tenant sandbox "ura-coffee"...');
-  const existingTenant = await prisma.tenant.findUnique({
-    where: { slug: 'ura-coffee' },
+  const existingTenants = await prisma.tenant.findMany({
+    where: {
+      OR: [
+        { slug: 'URA-4829001' },
+        { slug: 'ura-coffee' },
+        { name: 'Ura Coffee & Roastery' },
+        { users: { some: { email: 'owner@uracoffee.id' } } }
+      ]
+    },
     include: { outlets: true },
   });
 
-  if (existingTenant) {
-    console.log('   Menghapus data transaksi dan relasi sandbox sebelumnya...');
+  for (const existingTenant of existingTenants) {
+    console.log(`   Menghapus data transaksi dan relasi sandbox sebelumnya (ID: ${existingTenant.id})...`);
     const tId = existingTenant.id;
     await prisma.customerDebtPayment.deleteMany({ where: { tenantId: tId } });
     await prisma.customerDebt.deleteMany({ where: { tenantId: tId } });
@@ -145,6 +152,8 @@ export async function runSandboxSeed() {
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: tId } });
     await prisma.outlet.deleteMany({ where: { tenantId: tId } });
     await prisma.tenant.delete({ where: { id: tId } });
+  }
+  if (existingTenants.length > 0) {
     console.log('   ✅ Data sandbox lama berhasil dibersihkan.');
   }
 
@@ -155,7 +164,7 @@ export async function runSandboxSeed() {
   const tenant = await prisma.tenant.create({
     data: {
       name: 'Ura Coffee & Roastery',
-      slug: 'ura-coffee',
+      slug: 'URA-4829001',
       businessVertical: BusinessVertical.FNB,
       businessType: 'Coffee Shop & Eatery',
       status: TenantStatus.ACTIVE,

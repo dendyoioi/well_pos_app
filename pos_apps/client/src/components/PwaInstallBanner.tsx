@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Download, X, Smartphone, Share } from 'lucide-react';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import { WellPosLogo } from './ui/WellPosLogo';
 
 export const PwaInstallBanner: React.FC = () => {
   const { isInstallable, isInstalled, isIos, installing, installApp } = usePwaInstall();
@@ -36,9 +37,7 @@ export const PwaInstallBanner: React.FC = () => {
         <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 shadow-2xl text-white flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-500/40 text-blue-400 flex items-center justify-center shrink-0">
-                <Smartphone className="w-5 h-5" />
-              </div>
+              <WellPosLogo size="md" />
               <div>
                 <h4 className="text-xs font-black tracking-tight text-white flex items-center gap-1.5">
                   <span>Pasang Aplikasi Well POS</span>

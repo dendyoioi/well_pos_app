@@ -46,9 +46,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   const [selectedFeeOutlet, setSelectedFeeOutlet] = useState<Outlet | null>(null);
   const [previewOnDemandOutletId, setPreviewOnDemandOutletId] = useState<string | null>(null);
 
-  // Ambil storeId dari tenant aktif
-  const currentUser = authStorage.getUser();
-  const storeId = currentUser?.tenant?.slug || '';
+  // Ambil storeId dari tenant aktif dengan state reaktif
+  const [storeId, setStoreId] = useState(() => {
+    const currentUser = authStorage.getUser();
+    return currentUser?.tenant?.slug || '';
+  });
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,6 +88,23 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
   useEffect(() => {
     fetchOutlets();
+
+    // Sinkronisasi data Company ID / profile terbaru secara live dari server
+    api.getProfile().then((res) => {
+      if (res.status === 'success' && res.data?.tenant?.slug) {
+        setStoreId(res.data.tenant.slug);
+        const currentUser = authStorage.getUser();
+        if (currentUser) {
+          authStorage.saveSession(authStorage.getToken() || '', {
+            ...currentUser,
+            tenant: {
+              ...(currentUser.tenant || {}),
+              ...res.data.tenant,
+            },
+          });
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   // Filter murni toko penjualan & daftar gudang logistik untuk pilihan pasokan

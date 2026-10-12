@@ -276,6 +276,7 @@ Sesuai rancangan arsitektur modern (EPIC-14, EPIC-15, dan EPIC-18), pendaftaran 
 1. [Landing Page (#register)]
    └── Input 5 Field: Nama Depan, Nama Belakang, WhatsApp (+628...), Email, Password
    └── Endpoint: POST /api/saas/register
+   └── Company ID (Slug): Ter-generate otomatis dengan format Alphanumeric baku: `[3 Huruf Inisial]-[4 Angka Acak][3 Digit Urutan]` (Contoh: `DND-4829001`). Dilengkapi filter kata kasar (*Profanity Blocklist*) dan normalisasi input kasir (*case-insensitive* & toleransi dengan/tanpa dash `-`).
    └── Database: Buat Tenant (status: PENDING) & User Owner (Role: ADMIN, outletId: null)
    └── Zero Stores: Belum ada toko fisik/outlet yang dibuat di tahap pendaftaran awal.
 
@@ -320,7 +321,7 @@ Well POS menerapkan arsitektur kredensial multi-tier yang terpisah sesuai ranah 
    - Entitas: `User` (Role: `CASHIER`, terikat ke `outletId` spesifik).
    - Kredensial: PIN numerik 4-6 digit yang di-hash dengan Bcrypt (`pinHash`).
    - Terminal Device Pairing (`POST /api/auth/device/pair`):
-     - Mesin kasir fisik dihubungkan menggunakan Identitas Toko (Slug/Tenant ID) dan diotorisasi dengan PIN Admin/Supervisor.
+     - Mesin kasir fisik dihubungkan menggunakan Company ID (format: `DND-4829001`) dan diotorisasi dengan PIN Admin/Supervisor.
      - Konteks tersimpan aman di `localStorage` perangkat (`pairedDeviceContext`: tenantId, outletId, outletName).
      - Kasir login cepat menggunakan PIN pada terminal yang telah terhubung (`POST /api/auth/login-pin`).
 

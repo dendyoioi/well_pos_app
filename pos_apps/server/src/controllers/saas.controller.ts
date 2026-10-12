@@ -9,6 +9,7 @@ import { catalogDualWriteService } from '../services/dual_write';
 import { billingService } from '../services/billing.service';
 import { pakasirService } from '../services/pakasir.service';
 import { readPlatformPaymentConfig, readPlatformNotifications } from './platform.controller';
+import { generateCompanyId } from '../utils/companyId.util';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -100,17 +101,16 @@ export const registerClient = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Generate slug unik
-    let slug = `${firstName}-${lastName}`
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    if (!slug) slug = 'owner-' + Date.now();
+    // 2. Generate Company ID unik (Format Baku: DND-4829001)
+    const tenantCount = await prisma.tenant.count();
+    const ownerFullName = `${firstName} ${lastName}`.trim();
+    let slug = generateCompanyId(ownerFullName, tenantCount + 1);
 
-    const existingTenantSlug = await prisma.tenant.findUnique({ where: { slug } });
-    if (existingTenantSlug) {
-      slug = `${slug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Safeguard collision check
+    let attempts = 0;
+    while ((await prisma.tenant.findUnique({ where: { slug } })) && attempts < 10) {
+      slug = generateCompanyId(ownerFullName, tenantCount + 1);
+      attempts++;
     }
 
     // 3. Hash password

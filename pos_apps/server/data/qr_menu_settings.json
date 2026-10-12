@@ -384,5 +384,33 @@
     "showEstimatedTime": true,
     "estimatedPrepMinutes": 15,
     "updatedAt": "2026-10-12T07:45:50.822Z"
+  },
+  {
+    "tenantId": "4c620eec-4bc4-4a4f-ad6e-7b43e3c85984",
+    "outletId": "0ec1578d-a39c-44fc-8911-2966deb07b8f",
+    "selfOrderingEnabled": true,
+    "welcomeTitle": "Selamat Datang di Buku Menu Digital!",
+    "welcomeSubtitle": "Pesan makanan & minuman langsung dari meja Anda tanpa perlu antri.",
+    "wifiEnabled": true,
+    "wifiName": "KedaiKopi_Guest",
+    "wifiPassword": "ngopidulu",
+    "paymentPolicy": "PAY_AT_CASHIER",
+    "showEstimatedTime": true,
+    "estimatedPrepMinutes": 15,
+    "updatedAt": "2026-10-12T13:08:13.628Z"
+  },
+  {
+    "tenantId": "fd4af420-e789-4f62-a90d-da300aae4aba",
+    "outletId": "b050f87d-07d2-47b1-836d-edaca07f0f9e",
+    "selfOrderingEnabled": true,
+    "welcomeTitle": "Selamat Datang di Buku Menu Digital!",
+    "welcomeSubtitle": "Pesan makanan & minuman langsung dari meja Anda tanpa perlu antri.",
+    "wifiEnabled": true,
+    "wifiName": "KedaiKopi_Guest",
+    "wifiPassword": "ngopidulu",
+    "paymentPolicy": "PAY_AT_CASHIER",
+    "showEstimatedTime": true,
+    "estimatedPrepMinutes": 15,
+    "updatedAt": "2026-10-12T13:10:00.434Z"
   }
 ]

@@ -15,6 +15,7 @@ import {
 import { api } from '../../services/api';
 import { INDUSTRY_CATEGORIES } from '../../constants/industries';
 import { WhatsAppInput } from '../ui';
+import { WellPosLogo } from '../ui/WellPosLogo';
 import { validateIndonesianWhatsApp, formatIndonesianWhatsApp } from '../../utils/phone';
 
 interface FullScreenStoreWizardProps {
@@ -139,9 +140,7 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
       {/* Top Navbar: Clean White-Blue SaaS Header */}
       <header className="relative z-10 border-b border-slate-200 bg-white/90 backdrop-blur-md px-3.5 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2.5 sm:gap-3">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20 shrink-0">
-            <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
-          </div>
+          <WellPosLogo size="sm" />
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900">WELL POS</span>

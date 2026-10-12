@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Wrench, Clock, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
+import { WellPosLogo } from '../components/ui/WellPosLogo';
 
 export interface MaintenanceInfo {
   maintenanceMode: boolean;
@@ -66,9 +67,7 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
       {/* Top Header Logo */}
       <header className="w-full max-w-5xl flex items-center justify-between z-10 pt-2">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-900 border border-blue-700/50 flex items-center justify-center font-black text-white text-base shadow-sm">
-            W
-          </div>
+          <WellPosLogo size="md" />
           <span className="font-black text-lg tracking-tight text-white">Well POS</span>
         </div>
 

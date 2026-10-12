@@ -33,6 +33,7 @@ import {
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
 import { Modal, Input, WhatsAppInput } from '../components/ui';
+import { WellPosLogo } from '../components/ui/WellPosLogo';
 
 interface SaasLandingPageProps {
   onOpenPos: () => void;
@@ -359,9 +360,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
           {/* Logo & Brand Identity */}
           <a href="#" className="flex items-center gap-3 group shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 group-hover:scale-105 transition-transform shrink-0">
-              <Store className="w-5 h-5 stroke-[2.5]" />
-            </div>
+            <WellPosLogo size="md" className="group-hover:scale-105 transition-transform" />
             <div className="flex flex-col">
               <span className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
                 Well POS
@@ -1658,9 +1657,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
       <footer className="border-t border-slate-200 bg-slate-50 py-8 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
-              <Store className="w-3.5 h-3.5" />
-            </div>
+            <WellPosLogo size="xs" />
             <span className="font-bold text-slate-800">Well POS</span>
             <span className="text-slate-400">&bull;</span>
             <span>Aplikasi Kasir &amp; Stok Toko</span>

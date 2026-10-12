@@ -25,6 +25,7 @@ import {
   type PairedDeviceContext,
 } from '../services/api';
 import type { User as AuthUser } from '../types/auth';
+import { WellPosLogo } from '../components/ui/WellPosLogo';
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser) => void;
@@ -360,9 +361,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/80 relative z-10 my-auto">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-5">
-          <div className="w-13 h-13 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-lg shadow-blue-900/25 mb-3">
-            <Store className="w-6 h-6 stroke-[2.5]" />
-          </div>
+          <WellPosLogo size="lg" className="mb-3" />
           <h1 className="text-2xl font-extrabold tracking-tight text-blue-950">
             {activeTab === 'pos' ? 'Mesin Kasir Terminal' : 'Portal Pemilik Toko'}
           </h1>
@@ -708,10 +707,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </div>
                 </div>
 
-                {/* Field 1: ID Toko (slug) */}
+                {/* Field 1: ID Toko (Company ID) */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ID Toko (Company Slug):
+                    ID Toko (Company ID):
                   </label>
                   <div className="relative">
                     <Store className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -719,13 +718,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="text"
                       required
                       value={tenantSlug}
-                      onChange={(e) => setTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                      placeholder="Contoh: ura-coffee"
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono"
+                      onChange={(e) => setTenantSlug(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                      placeholder="Contoh: DND-4829001"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono tracking-wider font-bold"
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    ID Toko dapat dilihat di halaman Pengaturan Toko atau diberikan oleh Owner.
+                    ID Toko resmi dapat dilihat di menu Kelola Toko / Outlet atau diberikan oleh Owner.
                   </p>
                 </div>
 

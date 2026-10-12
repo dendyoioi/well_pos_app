@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
+import { normalizeCompanyIdInput } from '../utils/companyId.util';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment. Jika tidak ada, server gagal startup secara eksplisit.
 // Generate dengan: openssl rand -hex 64
@@ -445,9 +446,12 @@ export const pairDevice = async (req: Request, res: Response) => {
 
     const { tenantSlug, staffCode, authPin } = parseResult.data;
 
-    // Langkah 1: Identifikasi tenant via slug toko
+    // Langkah 1: Identifikasi tenant via variants ID Toko (dengan/tanpa strip, upper/lowercase)
+    const normalized = normalizeCompanyIdInput(tenantSlug);
     const tenant = await prisma.tenant.findFirst({
-      where: { slug: tenantSlug.trim().toLowerCase() },
+      where: {
+        slug: { in: normalized.variants },
+      },
       select: {
         id: true,
         name: true,
@@ -464,7 +468,7 @@ export const pairDevice = async (req: Request, res: Response) => {
     if (!tenant) {
       return res.status(404).json({
         status: 'error',
-        message: 'ID Toko tidak ditemukan. Pastikan slug toko Anda benar (contoh: kopi-nusantara).',
+        message: 'ID Toko tidak ditemukan. Pastikan ID Toko Anda benar (contoh: DND-4829001).',
       });
     }
 

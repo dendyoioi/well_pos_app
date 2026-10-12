@@ -19,12 +19,17 @@ async function runEpic12SandboxValidation() {
     const serverRoot = path.resolve(__dirname, '../../..');
     execSync('npx tsx prisma/seed.sandbox.ts', { cwd: serverRoot, stdio: 'inherit' });
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: 'ura-coffee' },
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [
+          { slug: 'URA-4829001' },
+          { slug: 'ura-coffee' },
+        ],
+      },
       include: { subscriptions: { include: { plan: true } } },
     });
 
-    if (!tenant) throw new Error('Tenant sandbox "ura-coffee" tidak ditemukan!');
+    if (!tenant) throw new Error('Tenant sandbox "URA-4829001" tidak ditemukan!');
     if (tenant.status !== 'ACTIVE') throw new Error('Status tenant bukan ACTIVE!');
     if (!tenant.enableRecipeTracking) throw new Error('Fitur recipe tracking tidak aktif!');
 
