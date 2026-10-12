@@ -18,7 +18,7 @@ import {
   sendOrderWhatsApp,
 } from '../controllers/order.controller';
 import { authenticate } from '../middlewares/auth.middleware';
-import { tenantContext, verifyTenantLicense } from '../middlewares/saas.middleware';
+import { tenantContext, verifyTenantLicense, checkTokenQuotaWithGrace } from '../middlewares/saas.middleware';
 
 export const orderRouter = Router();
 
@@ -32,8 +32,8 @@ orderRouter.post('/hold', holdOrder);
 orderRouter.get('/hold', getHoldOrders);
 orderRouter.delete('/hold/:id', deleteHoldOrder);
 
-// Fitur Tagihan Meja Terbuka (Open Tab / Bayar Nanti)
-orderRouter.post('/open-tab', createOpenTabOrder);
+// Fitur Tagihan Meja Terbuka (Open Tab / Bayar Nanti) dengan Buffer Kuota Token
+orderRouter.post('/open-tab', checkTokenQuotaWithGrace, createOpenTabOrder);
 orderRouter.get('/open-tabs', getOpenTabs);
 orderRouter.post('/:id/cancel-tab', cancelOpenTab);
 
@@ -44,8 +44,8 @@ orderRouter.get('/:id/kitchen-ticket', getKitchenTicket);
 orderRouter.get('/:id/digital-receipt', getDigitalReceipt);
 orderRouter.post('/:id/send-receipt', sendDigitalReceipt);
 
-// Fitur Checkout Penjualan & Riwayat
-orderRouter.post('/checkout', checkoutOrder);
+// Fitur Checkout Penjualan & Riwayat dengan Buffer Kuota Token
+orderRouter.post('/checkout', checkTokenQuotaWithGrace, checkoutOrder);
 orderRouter.get('/', getOrders);
 orderRouter.get('/:id', getOrderById);
 orderRouter.post('/:id/send-email', sendOrderEmail);

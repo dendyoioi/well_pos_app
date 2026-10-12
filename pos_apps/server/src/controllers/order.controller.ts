@@ -908,10 +908,14 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       }
     }
 
+    const graceQuota = (req as any).graceQuota;
     return res.status(201).json({
       status: 'success',
       message: 'Transaksi berhasil diselesaikan',
-      data: result,
+      data: {
+        ...result,
+        graceQuota: graceQuota || { inGrace: false },
+      },
     });
   } catch (error: any) {
     console.error('Error saat memproses checkout order:', error);

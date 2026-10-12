@@ -35,6 +35,8 @@ import {
   getSystemStatus,
   getMaintenanceConfig,
   updateMaintenanceMode,
+  getSystemBackups,
+  triggerSystemBackup,
 } from '../controllers/platform.controller';
 
 export const platformRouter = Router();
@@ -97,6 +99,10 @@ platformRouter.post('/subscriptions/evaluate-lifecycle', authenticatePlatform, t
 // Rute Mode Pemeliharaan (Maintenance Mode) Platform
 platformRouter.get('/system/maintenance', authenticatePlatform, getMaintenanceConfig);
 platformRouter.post('/system/maintenance', authenticatePlatform, updateMaintenanceMode);
+
+// Rute Backup Database & Snapshot Scheduler (Superadmin Only)
+platformRouter.get('/system/backups', authenticatePlatform, getSystemBackups);
+platformRouter.post('/system/backup', authenticatePlatform, triggerSystemBackup);
 
 export default platformRouter;
 

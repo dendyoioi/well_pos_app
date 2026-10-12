@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { pwaService } from './services/pwa.service'
+import { initGlobalErrorMonitor } from './services/errorMonitor'
+import { AppErrorBoundary } from './components/ui/AppErrorBoundary'
+
+// Inisialisasi Error Monitoring & Crash Reporter (P0-1)
+initGlobalErrorMonitor();
 
 // Registrasi Service Worker PWA (Offline shell caching & install)
 pwaService.registerServiceWorker();
@@ -21,6 +26,9 @@ if (apiBase) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 )
+

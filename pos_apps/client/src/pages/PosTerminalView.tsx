@@ -1791,9 +1791,20 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           loadProducts(activeOutlet?.id);
           loadCurrentShift();
           loadTablesAndOrders();
+
+          // P0-3 Grace Quota Notification Guard
+          const orderWithGrace = res.data as any;
+          if (orderWithGrace?.graceQuota?.inGrace) {
+            const remaining = orderWithGrace.graceQuota.remainingGrace;
+            dialog.toast(
+              `⚠️ Token habis! Menggunakan kuota darurat (Sisa ${remaining} transaksi). Harap segera lakukan top-up di Backoffice.`,
+              'info'
+            );
+          }
         } else {
+          const resObj = res as any;
           dialog.alert({
-            title: 'Transaksi Gagal',
+            title: resObj?.code === 'TOKEN_QUOTA_EXHAUSTED' ? 'Kuota Token Habis' : 'Transaksi Gagal',
             message: res.message || 'Transaksi gagal diproses.',
             variant: 'danger',
           });

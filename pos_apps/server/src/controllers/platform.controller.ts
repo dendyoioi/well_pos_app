@@ -2038,6 +2038,56 @@ export const updateMaintenanceMode = async (req: Request, res: Response) => {
   }
 };
 
+import { getBackupStatus, triggerImmediateBackup } from '../services/backupScheduler';
+
+/**
+ * Controller: Ambil Status & Daftar Berkas Snapshot Backup (Superadmin Only)
+ * @route GET /api/platform/system/backups
+ */
+export const getSystemBackups = async (_req: Request, res: Response) => {
+  try {
+    const status = getBackupStatus();
+    return res.status(200).json({
+      status: 'success',
+      data: status,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Gagal mengambil status backup sistem',
+    });
+  }
+};
+
+/**
+ * Controller: Picu Eksekusi Snapshot Backup Instan (Superadmin Only)
+ * @route POST /api/platform/system/backup
+ */
+export const triggerSystemBackup = async (_req: Request, res: Response) => {
+  try {
+    const result = await triggerImmediateBackup();
+    if (!result.success) {
+      return res.status(500).json({
+        status: 'error',
+        message: result.error || 'Eksekusi snapshot backup gagal',
+        data: result,
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Snapshot backup PostgreSQL berhasil dieksekusi dan terkompresi.',
+      data: result,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Gagal mengeksekusi backup sistem instan',
+    });
+  }
+};
+
+
 
 
 

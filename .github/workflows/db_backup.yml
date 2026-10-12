@@ -1,0 +1,55 @@
+name: Daily Automated PostgreSQL Database Backup
+
+on:
+  schedule:
+    # Berjalan setiap hari pukul 20:00 UTC (Pukul 03:00 WIB dini hari)
+    - cron: '0 20 * * *'
+  workflow_dispatch: # Mengizinkan trigger manual sewaktu-waktu dari GitHub UI
+
+jobs:
+  database-backup:
+    name: Run Database Snapshot & Archival
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'pos_apps/server/package-lock.json'
+
+      - name: Install Dependencies
+        working-directory: pos_apps/server
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: pos_apps/server
+        run: npx prisma generate
+
+      - name: Execute Database Snapshot & Rotation
+        working-directory: pos_apps/server
+        env:
+          # Mengutamakan Secret GitHub jika disetel, atau fallback ke koneksi dev Supabase
+          REMOTE_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL || secrets.DATABASE_URL }}
+        run: |
+          echo "======================================================"
+          echo "🚀 Memulai Snapshot Database Terjadwal Well POS"
+          echo "Waktu UTC: $(date -u)"
+          echo "======================================================"
+          npm run db:backup
+
+      - name: Archive Compressed Backup Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellpos-db-backup-${{ github.run_id }}
+          path: |
+            pos_apps/server/backups/backup_*.json.gz
+            pos_apps/server/backups/backup_*.dump
+            pos_apps/server/backups/backup_*.sha256
+          retention-days: 14
+          if-no-files-found: warn

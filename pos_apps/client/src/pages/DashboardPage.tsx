@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   Store,
   LogOut,
@@ -39,41 +39,51 @@ import { ProductsView } from './ProductsView';
 import { InventoryView } from './InventoryView';
 import { PosTerminalView } from './PosTerminalView';
 import { OrdersView } from './OrdersView';
-import { CustomersView } from './CustomersView';
-import { FinancialReportView } from './FinancialReportView';
-import { ProductAnalyticsView } from './ProductAnalyticsView';
-import { ShiftsAuditView } from './ShiftsAuditView';
-import { UsersView } from './UsersView';
-import { StaffRolesView } from './StaffRolesView';
-import { QrTablesView } from './QrTablesView';
-import { QrMenuSettingsView } from './QrMenuSettingsView';
-import { QrLiveOrdersView } from './QrLiveOrdersView';
-import { CustomerQrMenuView } from './CustomerQrMenuView';
-import type { QrLiveOrder } from '../types/qr_menu';
-import { CategoriesView } from './CategoriesView';
-import { ModifiersView } from './ModifiersView';
-import { RecipesView } from './RecipesView';
-import { OutletsView } from './OutletsView';
-import { WarehousesView } from './WarehousesView';
-import { SuppliersView } from './SuppliersView';
-import { PromotionsView } from './PromotionsView';
-import { ReceiptSettingsView } from './ReceiptSettingsView';
-import { TaxesSettingsView } from './TaxesSettingsView';
-import { PaymentSettingsView } from './PaymentSettingsView';
-import { SalesChannelsSettingsView } from './SalesChannelsSettingsView';
-import { LoyaltySettingsView } from './LoyaltySettingsView';
-import { PurchaseOrdersView } from './PurchaseOrdersView';
-import { StockTransfersView } from './StockTransfersView';
-import { StockMovementsView } from './StockMovementsView';
-import { OnboardingWizardModal } from '../components/saas/OnboardingWizardModal';
-import { FullScreenStoreWizard } from '../components/saas/FullScreenStoreWizard';
 import { BackofficeLayout } from '../components/saas/BackofficeLayout';
 import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
-import { BillingTokensView } from './BillingTokensView';
-import { UserGuideView } from './UserGuideView';
 import { PwaInstallButton } from '../components/PwaInstallBanner';
 import { BluetoothSettingsModal } from '../components/pos/BluetoothSettingsModal';
 import { api } from '../services/api';
+import type { QrLiveOrder } from '../types/qr_menu';
+
+// Code Splitting: Lazy-loaded Secondary Backoffice Views & Modals
+const CustomersView = React.lazy(() => import('./CustomersView').then((m) => ({ default: m.CustomersView })));
+const FinancialReportView = React.lazy(() => import('./FinancialReportView').then((m) => ({ default: m.FinancialReportView })));
+const ProductAnalyticsView = React.lazy(() => import('./ProductAnalyticsView').then((m) => ({ default: m.ProductAnalyticsView })));
+const ShiftsAuditView = React.lazy(() => import('./ShiftsAuditView').then((m) => ({ default: m.ShiftsAuditView })));
+const UsersView = React.lazy(() => import('./UsersView').then((m) => ({ default: m.UsersView })));
+const StaffRolesView = React.lazy(() => import('./StaffRolesView').then((m) => ({ default: m.StaffRolesView })));
+const QrTablesView = React.lazy(() => import('./QrTablesView').then((m) => ({ default: m.QrTablesView })));
+const QrMenuSettingsView = React.lazy(() => import('./QrMenuSettingsView').then((m) => ({ default: m.QrMenuSettingsView })));
+const QrLiveOrdersView = React.lazy(() => import('./QrLiveOrdersView').then((m) => ({ default: m.QrLiveOrdersView })));
+const CustomerQrMenuView = React.lazy(() => import('./CustomerQrMenuView').then((m) => ({ default: m.CustomerQrMenuView })));
+const CategoriesView = React.lazy(() => import('./CategoriesView').then((m) => ({ default: m.CategoriesView })));
+const ModifiersView = React.lazy(() => import('./ModifiersView').then((m) => ({ default: m.ModifiersView })));
+const RecipesView = React.lazy(() => import('./RecipesView').then((m) => ({ default: m.RecipesView })));
+const OutletsView = React.lazy(() => import('./OutletsView').then((m) => ({ default: m.OutletsView })));
+const WarehousesView = React.lazy(() => import('./WarehousesView').then((m) => ({ default: m.WarehousesView })));
+const SuppliersView = React.lazy(() => import('./SuppliersView').then((m) => ({ default: m.SuppliersView })));
+const PromotionsView = React.lazy(() => import('./PromotionsView').then((m) => ({ default: m.PromotionsView })));
+const ReceiptSettingsView = React.lazy(() => import('./ReceiptSettingsView').then((m) => ({ default: m.ReceiptSettingsView })));
+const TaxesSettingsView = React.lazy(() => import('./TaxesSettingsView').then((m) => ({ default: m.TaxesSettingsView })));
+const PaymentSettingsView = React.lazy(() => import('./PaymentSettingsView').then((m) => ({ default: m.PaymentSettingsView })));
+const SalesChannelsSettingsView = React.lazy(() => import('./SalesChannelsSettingsView').then((m) => ({ default: m.SalesChannelsSettingsView })));
+const LoyaltySettingsView = React.lazy(() => import('./LoyaltySettingsView').then((m) => ({ default: m.LoyaltySettingsView })));
+const PurchaseOrdersView = React.lazy(() => import('./PurchaseOrdersView').then((m) => ({ default: m.PurchaseOrdersView })));
+const StockTransfersView = React.lazy(() => import('./StockTransfersView').then((m) => ({ default: m.StockTransfersView })));
+const StockMovementsView = React.lazy(() => import('./StockMovementsView').then((m) => ({ default: m.StockMovementsView })));
+const OnboardingWizardModal = React.lazy(() => import('../components/saas/OnboardingWizardModal').then((m) => ({ default: m.OnboardingWizardModal })));
+const FullScreenStoreWizard = React.lazy(() => import('../components/saas/FullScreenStoreWizard').then((m) => ({ default: m.FullScreenStoreWizard })));
+const BillingTokensView = React.lazy(() => import('./BillingTokensView').then((m) => ({ default: m.BillingTokensView })));
+const UserGuideView = React.lazy(() => import('./UserGuideView').then((m) => ({ default: m.UserGuideView })));
+
+const ViewTabFallback: React.FC = () => (
+  <div className="flex flex-col items-center justify-center p-12 min-h-[350px] text-slate-500 animate-pulse">
+    <div className="w-9 h-9 border-3 border-blue-900 border-t-transparent rounded-full animate-spin mb-3" />
+    <span className="text-xs font-bold text-slate-700 tracking-wide uppercase">Memuat Modul Antarmuka...</span>
+    <span className="text-[11px] text-slate-400 mt-1">Mengoptimalkan resource Well POS</span>
+  </div>
+);
 
 interface DashboardPageProps {
   user: User;
@@ -484,15 +494,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
   // 1. Full-Screen Wizard bila Owner belum memiliki toko
   if (!loadingOutlets && outlets.length === 0 && (user.role === 'ADMIN' || (user as any).role === 'OWNER')) {
     return (
-      <FullScreenStoreWizard
-        ownerName={user.name}
-        ownerEmail={user.email}
-        onStoreCreated={async () => {
-          await fetchOutlets();
-          setActiveTab('overview');
-        }}
-        onLogout={onLogout}
-      />
+      <Suspense fallback={<ViewTabFallback />}>
+        <FullScreenStoreWizard
+          ownerName={user.name}
+          ownerEmail={user.email}
+          onStoreCreated={async () => {
+            await fetchOutlets();
+            setActiveTab('overview');
+          }}
+          onLogout={onLogout}
+        />
+      </Suspense>
     );
   }
 
@@ -509,7 +521,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         onOpenGuide={handleOpenGuide}
         onLogout={onLogout}
       >
-        {activeTab === 'pos' ? (
+        <Suspense fallback={<ViewTabFallback />}>
+          {activeTab === 'pos' ? (
           <PosTerminalView
             activeOutlet={activeOutlet}
             currentUserRole={user.role}
@@ -722,25 +735,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}
+        </Suspense>
 
         {/* Modal Onboarding Wizard (3 Steps) */}
         {showOnboardingWizard && activeOutlet && (
-          <OnboardingWizardModal
-            isOpen={showOnboardingWizard}
-            onClose={() => {
-              if (activeOutlet?.id && typeof window !== 'undefined') {
-                sessionStorage.setItem(`wellpos_dismissed_wizard_${activeOutlet.id}`, 'true');
-              }
-              setShowOnboardingWizard(false);
-            }}
-            outletId={activeOutlet.id}
-            businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
-            currentUser={user}
-            onComplete={() => {
-              setShowOnboardingWizard(false);
-              fetchOutlets();
-            }}
-          />
+          <Suspense fallback={null}>
+            <OnboardingWizardModal
+              isOpen={showOnboardingWizard}
+              onClose={() => {
+                if (activeOutlet?.id && typeof window !== 'undefined') {
+                  sessionStorage.setItem(`wellpos_dismissed_wizard_${activeOutlet.id}`, 'true');
+                }
+                setShowOnboardingWizard(false);
+              }}
+              outletId={activeOutlet.id}
+              businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
+              currentUser={user}
+              onComplete={() => {
+                setShowOnboardingWizard(false);
+                fetchOutlets();
+              }}
+            />
+          </Suspense>
         )}
       </BackofficeLayout>
     );
@@ -1532,7 +1548,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           </div>
         )}
 
-        {activeTab === 'pos' ? (
+        <Suspense fallback={<ViewTabFallback />}>
+          {activeTab === 'pos' ? (
           <PosTerminalView
             activeOutlet={activeOutlet}
             currentUserRole={user.role}
@@ -2026,21 +2043,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}
+        </Suspense>
 
         {/* Modal Onboarding Wizard (3 Steps) */}
         {showOnboardingWizard && activeOutlet && (
-          <OnboardingWizardModal
-            isOpen={showOnboardingWizard}
-            onClose={() => setShowOnboardingWizard(false)}
-            outletId={activeOutlet.id}
-            businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
-            currentUser={user}
-            onComplete={() => {
-              setShowOnboardingWizard(false);
-              fetchOutlets();
-              window.location.reload();
-            }}
-          />
+          <Suspense fallback={null}>
+            <OnboardingWizardModal
+              isOpen={showOnboardingWizard}
+              onClose={() => setShowOnboardingWizard(false)}
+              outletId={activeOutlet.id}
+              businessName={user.tenant?.name || (user as any).businessName || activeOutlet.name}
+              currentUser={user}
+              onComplete={() => {
+                setShowOnboardingWizard(false);
+                fetchOutlets();
+                window.location.reload();
+              }}
+            />
+          </Suspense>
         )}
 
         {/* Modal Pengaturan Printer Bluetooth Kasir */}

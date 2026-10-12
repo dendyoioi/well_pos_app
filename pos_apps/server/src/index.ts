@@ -129,6 +129,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 import { runAutoSchemaPatcher } from './migrations/schema_patcher';
+import { initBackupScheduler } from './services/backupScheduler';
 
 // Jalankan Server jika dieksekusi secara langsung (bukan di-import oleh test suite)
 let server: any = null;
@@ -141,6 +142,9 @@ if (process.env.NODE_ENV !== 'test' && require.main === module) {
       }
     })
     .catch((err) => console.warn('[Boot] ⚠️ Auto-schema patcher warning:', err.message));
+
+  // Inisialisasi scheduler backup otomatis harian
+  initBackupScheduler();
 
   server = app.listen(PORT, () => {
     console.log(`=========================================`);

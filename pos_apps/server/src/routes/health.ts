@@ -27,3 +27,25 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * @route POST /api/health/client-error
+ * @desc Menerima log crash runtime / unhandled rejection dari klien browser (P0-1 Monitoring)
+ */
+healthRouter.post('/client-error', (req: Request, res: Response) => {
+  const { id, message, stack, route, source, userAgent, viewport } = req.body || {};
+
+  console.warn(`[CLIENT_CRASH_REPORT] ID: ${id || 'N/A'} | Route: ${route || '#'} | Source: ${source || 'client'}`);
+  console.warn(`  Message: ${message}`);
+  if (stack) {
+    console.warn(`  Stack:\n${String(stack).split('\n').slice(0, 4).map(l => `    ${l}`).join('\n')}`);
+  }
+  console.warn(`  Device: ${userAgent || 'Unknown'} (Screen: ${viewport || 'N/A'})`);
+
+  return res.status(200).json({
+    status: 'ok',
+    message: 'Client error telemetry recorded',
+    receivedId: id,
+  });
+});
+

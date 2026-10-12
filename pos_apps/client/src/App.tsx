@@ -1,70 +1,37 @@
-import React, { useState, useEffect, Component } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { SaasLandingPage } from './pages/SaasLandingPage';
-import { SuperadminDashboardPage } from './pages/SuperadminDashboardPage';
-import { CustomerQrMenuView } from './pages/CustomerQrMenuView';
-import { MaintenancePage } from './pages/MaintenancePage';
 import { api, authStorage } from './services/api';
 import type { User } from './types/auth';
 import { DialogProvider } from './context/DialogContext';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { PullToRefresh } from './components/PullToRefresh';
+import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
 
-interface ErrorBoundaryProps {
-  children: ReactNode;
-}
+// Code-splitting P1-1: Halaman publik, superadmin, dan QR menu dimuat secara dinamis saat rute diakses
+const SuperadminDashboardPage = lazy(() =>
+  import('./pages/SuperadminDashboardPage').then((m) => ({ default: m.SuperadminDashboardPage }))
+);
+const SaasLandingPage = lazy(() =>
+  import('./pages/SaasLandingPage').then((m) => ({ default: m.SaasLandingPage }))
+);
+const CustomerQrMenuView = lazy(() =>
+  import('./pages/CustomerQrMenuView').then((m) => ({ default: m.CustomerQrMenuView }))
+);
+const MaintenancePage = lazy(() =>
+  import('./pages/MaintenancePage').then((m) => ({ default: m.MaintenancePage }))
+);
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
+const ViewLoadingFallback = () => (
+  <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-3 border-blue-900 border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-bold text-blue-950 font-sans">Memuat halaman...</span>
+    </div>
+  </div>
+);
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-xl text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-xl font-bold">
-              ⚠️
-            </div>
-            <h2 className="text-lg font-black text-blue-950">Terjadi Kesalahan Tampilan</h2>
-            <p className="text-xs text-slate-500">
-              {this.state.error?.message || 'Gagal memuat komponen antarmuka.'}
-            </p>
-            <div className="pt-2 flex gap-2 justify-center">
-              <button
-                onClick={() => {
-                  this.setState({ hasError: false, error: null });
-                  window.location.reload();
-                }}
-                className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-              >
-                Muat Ulang Halaman
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 // Path URL rahasia khusus akses portal Superadmin Platform (Mencegah brute force / scan bot)
 export const SUPERADMIN_SECRET_HASH = '#hq-gate-99';
@@ -240,29 +207,33 @@ export const App: React.FC = () => {
   // JIKA MODE PEMELIHARAAN AKTIF DAN BUKAN HALAMAN SUPERADMIN, BLOKIR KE MAINTENANCE PAGE
   if (systemStatus.maintenanceMode && viewMode !== 'superadmin') {
     return (
-      <ErrorBoundary>
-        <MaintenancePage
-          maintenanceInfo={systemStatus}
-          onMaintenanceResolved={() =>
-            setSystemStatus((prev) => ({ ...prev, maintenanceMode: false }))
-          }
-        />
-      </ErrorBoundary>
+      <AppErrorBoundary>
+        <Suspense fallback={<ViewLoadingFallback />}>
+          <MaintenancePage
+            maintenanceInfo={systemStatus}
+            onMaintenanceResolved={() =>
+              setSystemStatus((prev) => ({ ...prev, maintenanceMode: false }))
+            }
+          />
+        </Suspense>
+      </AppErrorBoundary>
     );
   }
 
   return (
-    <ErrorBoundary>
+    <AppErrorBoundary>
       <DialogProvider>
         <PullToRefresh>
           <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
           {/* JIKA MODE BUKU MENU QR, TAMPILKAN HALAMAN PELANGGAN */}
           {viewMode === 'menu' ? (
             <div className="flex-1 flex flex-col">
-              <CustomerQrMenuView
-                outletId={menuParams.outletId || user?.outletId || user?.outlet?.id || ''}
-                tableCode={menuParams.table}
-              />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <CustomerQrMenuView
+                  outletId={menuParams.outletId || user?.outletId || user?.outlet?.id || ''}
+                  tableCode={menuParams.table}
+                />
+              </Suspense>
             </div>
           ) : user ? (
             /* JIKA USER MERCHANT LOGIN, TAMPILKAN DASHBOARD POS */
@@ -298,11 +269,13 @@ export const App: React.FC = () => {
           ) : viewMode === 'superadmin' ? (
             /* LEVEL 1: SUPERADMIN PLATFORM DASHBOARD */
             <div className="flex-1 flex flex-col">
-              <SuperadminDashboardPage
-                onBackToLanding={() => navigateTo('landing')}
-                onOpenPos={() => navigateTo('pos-login')}
-                onImpersonateSuccess={(impersonatedUser) => handleLoginSuccess(impersonatedUser)}
-              />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <SuperadminDashboardPage
+                  onBackToLanding={() => navigateTo('landing')}
+                  onOpenPos={() => navigateTo('pos-login')}
+                  onImpersonateSuccess={(impersonatedUser) => handleLoginSuccess(impersonatedUser)}
+                />
+              </Suspense>
             </div>
           ) : viewMode === 'pos-login' ? (
             /* LEVEL 2: TERMINAL MESIN KASIR LOGIN */
@@ -316,10 +289,12 @@ export const App: React.FC = () => {
           ) : (
             /* WEBSITE PUBLIK SAAS KOMPREHENSIF UNTUK CALON KLIEN */
             <div className="flex-1 flex flex-col">
-              <SaasLandingPage
-                onOpenPos={() => navigateTo('pos-login')}
-                onOpenSuperadmin={() => navigateTo('superadmin')}
-              />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <SaasLandingPage
+                  onOpenPos={() => navigateTo('pos-login')}
+                  onOpenSuperadmin={() => navigateTo('superadmin')}
+                />
+              </Suspense>
             </div>
           )}
           {/* Global Progressive Web App (PWA) Install Banner — Hanya tampil saat pengguna telah login */}
@@ -327,7 +302,7 @@ export const App: React.FC = () => {
         </div>
       </PullToRefresh>
     </DialogProvider>
-  </ErrorBoundary>
+  </AppErrorBoundary>
 );
 };
 

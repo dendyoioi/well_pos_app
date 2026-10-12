@@ -1,0 +1,151 @@
+name: Well POS — Quality Gate & CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # 1. CLIENT QUALITY GATE (Linter, TypeScript Check, Vite Bundler)
+  # =========================================================================
+  client-ci:
+    name: Frontend Client Validation (Lint & Vite Build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'pos_apps/client/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: pos_apps/client
+        run: npm ci
+
+      - name: Run Fast Linter (Oxlint)
+        working-directory: pos_apps/client
+        run: npm run lint
+
+      - name: Build & Type-Check Frontend Bundle
+        working-directory: pos_apps/client
+        run: npm run build
+
+      - name: Verify Bundle Size & Chunk Distribution
+        working-directory: pos_apps/client
+        run: |
+          echo "======================================================"
+          echo "📦 Distribusi Chunk Vite Frontend:"
+          ls -lh dist/assets/*.js | awk '{print $9, "->", $5}'
+          echo "======================================================"
+
+  # =========================================================================
+  # 2. SERVER QUALITY GATE (TypeScript Compilation & Prisma Generation)
+  # =========================================================================
+  server-ci:
+    name: Backend API Validation (TypeScript & Prisma Engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'pos_apps/server/package-lock.json'
+
+      - name: Install Backend Dependencies
+        working-directory: pos_apps/server
+        run: npm ci
+
+      - name: Generate Prisma ORM Client
+        working-directory: pos_apps/server
+        run: npx prisma generate
+
+      - name: Compile Backend TypeScript (tsc)
+        working-directory: pos_apps/server
+        run: npm run build
+
+  # =========================================================================
+  # 3. GOVERNANCE & ARCHITECTURAL COMPLIANCE (AGENTS.md Checks)
+  # =========================================================================
+  governance-audit:
+    name: Architectural Anti-Pattern & Policy Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Zero Hardcoded Tenant Fallback (Rule 3)
+        run: |
+          echo "🔍 Memeriksa larangan hardcoded tenant fallback ('toko-maju-jaya')..."
+          if grep -rn "toko-maju-jaya" pos_apps/server/src/ pos_apps/client/src/; then
+            echo "❌ Pelanggaran Rule 3: Ditemukan hardcoded tenant fallback 'toko-maju-jaya'!"
+            exit 1
+          else
+            echo "✅ Rule 3 Terpenuhi: Nol hardcoded tenant fallback."
+          fi
+
+      - name: Verify Zero DDL Negative Stock Hard Constraint (Rule 4)
+        run: |
+          echo "🔍 Memeriksa larangan DDL hard constraint CHECK (quantity_on_hand >= 0)..."
+          if grep -rn "CHECK (quantity_on_hand >= 0)" pos_apps/server/prisma/ pos_apps/server/src/migrations/; then
+            echo "❌ Pelanggaran Rule 4: Ditemukan hard database constraint pada stok persediaan!"
+            exit 1
+          else
+            echo "✅ Rule 4 Terpenuhi: Stok negatif ditoleransi secara kontekstual di service layer (ADR-002)."
+          fi
+
+  # =========================================================================
+  # 4. DEPLOYMENT ROUTING NOTICE
+  # =========================================================================
+  deployment-status:
+    name: Environment Release Target Status
+    needs: [client-ci, server-ci, governance-audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Deployment Routing
+        run: |
+          echo "======================================================"
+          echo "🚀 STATUS KESIAPAN RILIS CI/CD WELL POS"
+          echo "Branch Aktif: ${{ github.ref_name }}"
+          echo "Komit SHA   : ${{ github.sha }}"
+          echo "======================================================"
+          if [ "${{ github.ref_name }}" = "dev" ]; then
+            echo "📍 Target Environment: DEV ENVIRONMENT"
+            echo "   • Frontend : Vercel (https://well-pos-app.vercel.app)"
+            echo "   • Backend  : Render (https://wellpos-api-dev.onrender.com)"
+            echo "   • Database : Supabase SG (izzcirbofftkprrtpqae)"
+            echo "   🚀 Rilis dev otomatis terpicu via webhook Vercel & Render."
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            echo "📍 Target Environment: PRODUCTION ENVIRONMENT"
+            echo "   • Domain   : https://wellpos.id"
+            echo "   • Server   : GCP Compute Engine e2-micro + Cloudflare Tunnel"
+            echo "   • Database : PostgreSQL Lokal VM GCP"
+            echo "   🔒 Rilis produksi terkontrol melalui Pull Request."
+          else
+            echo "ℹ️ Branch '${{ github.ref_name }}' divalidasi. Seluruh Quality Gate LULUS."
+          fi
+          echo "======================================================"
