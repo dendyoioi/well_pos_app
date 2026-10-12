@@ -52,6 +52,7 @@ app.use(cors({
     // 3. Izinkan domain deployment Vercel (preview & production) serta local development
     if (
       origin.endsWith('.vercel.app') ||
+      origin.endsWith('wellpos.id') ||
       origin.includes('localhost') ||
       origin.includes('127.0.0.1')
     ) {
