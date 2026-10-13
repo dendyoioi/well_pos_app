@@ -105,6 +105,11 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                       <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                         {product.name}
                       </h4>
+                      {isOutOfStock && (
+                        <span className="inline-flex items-center text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-2xs uppercase tracking-wider">
+                          Habis
+                        </span>
+                      )}
                       {itemPromo && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
                           Promo {itemPromo.discountType === 'PERCENTAGE' ? `-${itemPromo.discountValue}%` : `-Rp ${itemPromo.discountValue.toLocaleString('id-ID')}`}
@@ -146,8 +151,8 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                         <span className="tabular-nums font-mono">{price.toLocaleString('id-ID')}</span>
                       </p>
                     )}
-                    <p className="text-[10px] text-slate-500 font-medium">
-                      {isUnlimited ? (isComposite ? 'Tersedia (Olahan F&B)' : 'Tersedia') : `Stok: ${stock}`}
+                    <p className={`text-[10px] font-medium ${isOutOfStock ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
+                      {isUnlimited ? (isComposite ? 'Tersedia (Olahan F&B)' : 'Tersedia') : isOutOfStock ? 'Stok Habis (0)' : `Stok: ${stock}`}
                     </p>
                   </div>
                   <button
@@ -308,6 +313,11 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                     <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 font-semibold mt-1 truncate">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                       Siap Saji
+                    </span>
+                  ) : isOutOfStock ? (
+                    <span className="inline-flex items-center gap-1 text-[9px] text-rose-600 font-bold mt-1 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                      Stok Habis (0)
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[9px] text-slate-500 font-medium mt-1 truncate">
