@@ -2115,58 +2115,74 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 </div>
               )}
 
-              {/* Kotak Input Kode OTP (Jika sudah kirim OTP dan belum diverifikasi) */}
-              {otpSent && !emailVerified && (
-                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2.5 mt-2">
+              {/* Kotak Input Kode OTP (Selalu tampak agar pengguna jelas letak pengisian OTP) */}
+              {!emailVerified && (
+                <div
+                  className={`p-3.5 rounded-xl space-y-2.5 mt-2 transition-all ${
+                    otpSent
+                      ? 'bg-blue-50/70 border border-blue-200'
+                      : 'bg-slate-50/70 border border-slate-200'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-extrabold text-blue-900 flex items-center gap-1.5">
+                    <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
                       <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-                      Masukkan 6 Digit Kode OTP Email
+                      Kode Verifikasi OTP (6-Digit)
                     </span>
-                    <span className="text-[10px] text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-blue-600" />
-                      Berlaku 5 Menit
-                    </span>
+                    {otpSent ? (
+                      <span className="text-[10px] text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-blue-600" />
+                        Berlaku 5 Menit
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        Klik "Kirim OTP" di samping email
+                      </span>
+                    )}
                   </div>
+
                   <div className="flex gap-2">
                     <input
                       type="text"
                       maxLength={6}
-                      placeholder="Contoh: 123456"
+                      disabled={!otpSent}
+                      placeholder={otpSent ? 'Contoh: 123456' : 'Menunggu pengiriman OTP...'}
                       value={emailOtp}
                       onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                      className="flex-1 text-center font-mono tracking-widest font-extrabold text-base px-3 py-2 bg-white border border-blue-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                      className="flex-1 text-center font-mono tracking-widest font-extrabold text-base px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                     />
                     <button
                       type="button"
-                      disabled={otpVerifying || emailOtp.length !== 6}
+                      disabled={!otpSent || otpVerifying || emailOtp.length !== 6}
                       onClick={handleVerifyOtp}
-                      className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                      className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                     >
                       {otpVerifying ? 'Memverifikasi...' : 'Verifikasi OTP'}
                     </button>
                   </div>
 
                   {/* Resend Section inside OTP Box */}
-                  <div className="flex items-center justify-between pt-1.5 border-t border-blue-200/60 text-[11px]">
-                    <span className="text-slate-500">Tidak menerima email?</span>
-                    {otpCountdown > 0 ? (
-                      <span className="font-semibold text-slate-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        Kirim ulang dalam <strong className="text-blue-900 font-mono font-bold">{formatOtpCountdown(otpCountdown)}</strong>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendOtp}
-                        disabled={otpSending}
-                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        Kirim Ulang Kode OTP
-                      </button>
-                    )}
-                  </div>
+                  {otpSent && (
+                    <div className="flex items-center justify-between pt-1.5 border-t border-blue-200/60 text-[11px]">
+                      <span className="text-slate-500">Tidak menerima email?</span>
+                      {otpCountdown > 0 ? (
+                        <span className="font-semibold text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          Kirim ulang dalam <strong className="text-blue-900 font-mono font-bold">{formatOtpCountdown(otpCountdown)}</strong>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={otpSending}
+                          className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Kirim Ulang Kode OTP
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {otpError && (
                     <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
