@@ -102,7 +102,7 @@ export class StockTransferService {
           where: { id: item.inventoryItemId, tenantId: input.tenantId },
         });
         if (!invItem) {
-          throw new Error(`Inventory item ${item.inventoryItemId} tidak ditemukan`);
+          throw new Error('Item persediaan tidak ditemukan atau telah dihapus');
         }
 
         const effectiveUnitCost =

@@ -176,7 +176,7 @@ export class UserDualWriteService extends BaseDualWriteService {
       );
 
       if (!existing || existing.length === 0) {
-        throw new Error(`Pengguna dengan ID ${userId} tidak ditemukan pada tenant ini.`);
+        throw new Error('Pengguna tidak ditemukan pada akun bisnis ini.');
       }
 
       const current = existing[0];

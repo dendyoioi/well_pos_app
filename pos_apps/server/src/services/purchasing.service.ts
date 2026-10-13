@@ -120,7 +120,7 @@ export class PurchasingService {
           where: { id: item.inventoryItemId, tenantId: input.tenantId },
         });
         if (!invItem) {
-          throw new Error(`Inventory item ${item.inventoryItemId} tidak ditemukan`);
+          throw new Error('Item persediaan tidak ditemukan atau telah dihapus');
         }
 
         const itemSubtotal = item.quantityOrdered * item.unitCost;
@@ -231,7 +231,7 @@ export class PurchasingService {
       for (const receivedItem of input.items) {
         const poItem = poItemMap.get(receivedItem.purchaseOrderItemId);
         if (!poItem) {
-          throw new Error(`Item PO ${receivedItem.purchaseOrderItemId} tidak terdaftar pada PO ini`);
+          throw new Error('Item barang yang diterima tidak terdaftar pada Purchase Order ini');
         }
 
         if (receivedItem.quantityReceived <= 0) {
@@ -248,7 +248,7 @@ export class PurchasingService {
           where: { id: poItem.inventoryItemId },
         });
         if (!invItem) {
-          throw new Error(`Inventory item ${poItem.inventoryItemId} tidak ditemukan`);
+          throw new Error('Data persediaan barang untuk item PO ini tidak ditemukan');
         }
 
         // Sum current on-hand stock across all locations in this tenant

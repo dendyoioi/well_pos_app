@@ -721,7 +721,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     // 5. Generate 6-digit numeric OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = await bcrypt.hash(otpCode, 10);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
 
     // 6. Simpan OTP ke database
     await prisma.emailVerification.create({
@@ -739,8 +739,9 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
     return res.json({
       status: 'success',
-      message: 'Kode OTP reset kata sandi telah dikirim ke email Anda. Berlaku selama 10 menit.',
+      message: 'Kode OTP reset kata sandi telah dikirim ke email Anda. Berlaku selama 5 menit.',
       email,
+      expiresInSeconds: 300,
     });
   } catch (err: any) {
     console.error('[AuthController] Error saat meminta reset kata sandi:', err);

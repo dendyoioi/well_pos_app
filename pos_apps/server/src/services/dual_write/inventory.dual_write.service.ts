@@ -291,8 +291,15 @@ export class InventoryDualWriteService extends BaseDualWriteService {
           inventoryItemId
         );
         if (!allowNegative) {
+          const invItemInfo = await this.queryRaw<{ name: string; canonical_uom: string }>(
+            tx,
+            `SELECT name, canonical_uom FROM "inventory_items" WHERE id = $1;`,
+            inventoryItemId
+          );
+          const itemName = invItemInfo[0]?.name || 'Barang';
+          const itemUom = invItemInfo[0]?.canonical_uom || 'Pcs';
           throw new Error(
-            `Stok tidak mencukupi untuk stock-out. Tersedia: ${balanceBefore}, diminta keluar: ${dto.quantity}. Kebijakan stok negatif melarang saldo minus.`
+            `Stok barang "${itemName}" tidak mencukupi untuk pengeluaran stok. Tersedia: ${balanceBefore} ${itemUom}, diminta keluar: ${dto.quantity} ${itemUom}.`
           );
         }
       }
@@ -656,8 +663,15 @@ export class InventoryDualWriteService extends BaseDualWriteService {
       if (srcAfter < 0) {
         const allowNegative = await this.checkNegativeStockAllowed(tx, tenantId, sourceLocId, inventoryItemId);
         if (!allowNegative) {
+          const invItemInfo = await this.queryRaw<{ name: string; canonical_uom: string }>(
+            tx,
+            `SELECT name, canonical_uom FROM "inventory_items" WHERE id = $1;`,
+            inventoryItemId
+          );
+          const itemName = invItemInfo[0]?.name || 'Barang';
+          const itemUom = invItemInfo[0]?.canonical_uom || 'Pcs';
           throw new Error(
-            `Stok toko / outlet asal tidak mencukupi untuk transfer. Tersedia: ${srcBefore}, transfer: ${dto.quantity}.`
+            `Stok barang "${itemName}" di toko / outlet asal tidak mencukupi untuk transfer. Tersedia: ${srcBefore} ${itemUom}, diminta transfer: ${dto.quantity} ${itemUom}.`
           );
         }
       }

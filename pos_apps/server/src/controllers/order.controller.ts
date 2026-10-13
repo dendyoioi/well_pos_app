@@ -2661,7 +2661,7 @@ export const voidOrderItem = async (req: Request, res: Response) => {
     if (voidQty <= 0 || voidQty > currentQty) {
       return res.status(400).json({
         status: 'error',
-        message: `Jumlah item yang dibatalkan tidak valid (tersedia: ${currentQty}, diminta: ${voidQty})`,
+        message: `Jumlah item "${targetItem.productName}" yang dibatalkan tidak valid (tersedia di pesanan: ${currentQty}, diminta: ${voidQty})`,
       });
     }
 

@@ -977,7 +977,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         if (!isUnlimited && existing.quantity >= stock) {
           dialog.alert({
             title: 'Batas Stok Tercapai',
-            message: `Jumlah melebihi stok yang tersedia (${stock} ${product.unit})!`,
+            message: `Jumlah pesanan untuk "${product.name}" melebihi stok yang tersedia (${stock} ${product.unit})!`,
             variant: 'warning',
           });
           return prev;
@@ -1061,7 +1061,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         if (!isUnlimited && newQty > stock) {
           dialog.alert({
             title: 'Batas Stok Tercapai',
-            message: `Jumlah pesanan melebihi stok tersedia (${stock} ${item.product.unit})!`,
+            message: `Jumlah pesanan untuk "${item.product.name}" melebihi stok tersedia (${stock} ${item.product.unit})!`,
             variant: 'warning',
           });
           return prev;

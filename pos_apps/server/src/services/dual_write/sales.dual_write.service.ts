@@ -433,6 +433,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
         let multiplier = Number(variantRows[0]?.inventory_quantity_multiplier || 1.000);
         let prodSku = variantRows[0]?.sku || null;
         let prodName = 'Product';
+        let prodUnit = 'Pcs';
 
         if (!inventoryItemId) {
           inventoryItemId = this.generateDeterministicUuid(`${item.productId}:inventory_item`);
@@ -443,6 +444,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
           );
           const p = prodRows[0];
           prodName = p?.name || 'Product';
+          prodUnit = p?.unit || 'Pcs';
           const sku = (p?.sku && p.sku.trim() !== '') ? p.sku.trim() : `SKU-${item.productId.substring(0, 8).toUpperCase()}`;
           prodSku = sku;
           const itemCode = `${sku}-INV`;
@@ -494,8 +496,9 @@ export class SalesDualWriteService extends BaseDualWriteService {
 
           multiplier = 1.000;
         } else {
-          const pRows = await this.queryRaw<{ name: string }>(tx, `SELECT name FROM "products" WHERE id = $1;`, item.productId);
+          const pRows = await this.queryRaw<{ name: string; unit?: string }>(tx, `SELECT name, unit FROM "products" WHERE id = $1;`, item.productId);
           prodName = pRows[0]?.name || 'Product';
+          prodUnit = pRows[0]?.unit || 'Pcs';
         }
 
         // Resolusi Modifiers Snapshot jika ada
@@ -766,7 +769,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
                   const allowNeg = await this.checkNegativeStockAllowed(tx, tenantId, targetModLocId, eff.inventory_item_id);
                   if (!allowNeg) {
                     throw new Error(
-                      `Stok bahan modifier "${eff.ingredient_name}" (${eff.modifier_name}) di ${targetModLocName} tidak mencukupi. Tersedia: ${effBalBefore}, Dibutuhkan: ${effectConsumption}.`
+                      `Stok bahan modifier "${eff.ingredient_name}" (${eff.modifier_name}) di ${targetModLocName} tidak mencukupi. Tersedia: ${effBalBefore} ${eff.canonical_uom}, Dibutuhkan: ${effectConsumption} ${eff.canonical_uom}.`
                     );
                   }
                 }
@@ -875,8 +878,9 @@ export class SalesDualWriteService extends BaseDualWriteService {
               inventoryItemId
             );
             if (!allowNegative) {
+              const displayName = variantName && variantName !== 'Default' ? `${prodName} (${variantName})` : prodName;
               throw new Error(
-                `Stok barang (ID: ${item.productId}) tidak mencukupi untuk transaksi retail ini. Tersedia: ${balanceBefore}, Dibutuhkan: ${deductedCanonicalQty}.`
+                `Stok barang "${displayName}" tidak mencukupi untuk transaksi ini. Tersedia: ${balanceBefore} ${prodUnit}, Dibutuhkan: ${deductedCanonicalQty} ${prodUnit}.`
               );
             }
           }

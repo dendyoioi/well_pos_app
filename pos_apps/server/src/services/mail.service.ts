@@ -397,7 +397,7 @@ export const sendVerificationOtpEmail = async (
         <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #1e3a8a; font-family: monospace;">
           ${otpCode}
         </div>
-        <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama <strong>10 menit</strong>.</p>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama <strong>5 menit</strong>.</p>
       </div>
 
       <div style="background: #f8fafc; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 24px;">
@@ -671,7 +671,7 @@ export const sendPasswordResetOtpEmail = async (
         <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f172a; font-family: monospace;">
           ${otpCode}
         </div>
-        <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama <strong>10 menit</strong>.</p>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">Kode berlaku selama <strong>5 menit</strong>.</p>
       </div>
 
       <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 24px;">

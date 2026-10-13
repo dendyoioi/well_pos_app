@@ -28,7 +28,7 @@ export class BillingService {
       where: { id: tenantId },
     });
     if (!tenant) {
-      throw new Error(`Tenant dengan ID ${tenantId} tidak ditemukan`);
+      throw new Error('Bisnis / Tenant tidak ditemukan');
     }
 
     const plan = await prisma.subscriptionPlan.findUnique({
@@ -264,7 +264,7 @@ export class BillingService {
     });
 
     if (!invoice) {
-      throw new Error(`Invoice SaaS dengan ID ${invoiceId} tidak ditemukan`);
+      throw new Error('Invoice tagihan SaaS tidak ditemukan');
     }
 
     if (invoice.status === InvoiceStatus.PAID) {

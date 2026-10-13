@@ -32,6 +32,9 @@ import {
   Mail,
   KeyRound,
   ShieldAlert,
+  Clock,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -281,13 +284,19 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  // Timer countdown untuk tombol kirim ulang OTP
+  // Timer countdown untuk tombol kirim ulang OTP (5 menit = 300 detik)
   useEffect(() => {
     if (otpCountdown > 0) {
       const timer = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [otpCountdown]);
+
+  const formatOtpCountdown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Cek cepat domain disposable di client untuk UX proaktif
   const isClientDisposableEmail = (emailStr: string): boolean => {
@@ -346,8 +355,9 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
       if (res.status === 'success') {
         setOtpSent(true);
-        setOtpCountdown(60);
-        setOtpSuccessMsg(res.message || 'Kode OTP 6 digit telah dikirim ke email Anda.');
+        const expires = res.data?.expiresInSeconds || 300;
+        setOtpCountdown(expires);
+        setOtpSuccessMsg(res.message || 'Kode OTP 6 digit telah dikirim ke email Anda. Berlaku 5 menit.');
       } else {
         setOtpError(res.message || 'Gagal mengirim kode OTP verifikasi.');
       }
@@ -2051,16 +2061,23 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                     onClick={handleSendOtp}
                     className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
                   >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>
-                      {otpSending
-                        ? 'Mengirim...'
-                        : otpCountdown > 0
-                          ? `Ulang (${otpCountdown}s)`
-                          : otpSent
-                            ? 'Kirim Ulang'
-                            : 'Kirim OTP'}
-                    </span>
+                    {otpSending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Mengirim...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>
+                          {otpCountdown > 0
+                            ? `Ulang (${formatOtpCountdown(otpCountdown)})`
+                            : otpSent
+                              ? 'Kirim Ulang'
+                              : 'Kirim OTP'}
+                        </span>
+                      </>
+                    )}
                   </button>
                 ) : (
                   <div className="flex items-center gap-1 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-bold shrink-0">
@@ -2082,6 +2099,14 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 )}
               </div>
 
+              {/* Error pengiriman OTP (sebelum OTP terkirim) */}
+              {!otpSent && otpError && (
+                <div className="flex items-center gap-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px] font-semibold">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
               {/* Warning Email Dummy / Disposable */}
               {disposableEmailWarning && (
                 <div className="flex items-center gap-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px] font-semibold">
@@ -2092,13 +2117,16 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
 
               {/* Kotak Input Kode OTP (Jika sudah kirim OTP dan belum diverifikasi) */}
               {otpSent && !emailVerified && (
-                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 mt-2">
+                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2.5 mt-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-extrabold text-blue-900 flex items-center gap-1">
+                    <span className="text-[11px] font-extrabold text-blue-900 flex items-center gap-1.5">
                       <KeyRound className="w-3.5 h-3.5 text-blue-600" />
                       Masukkan 6 Digit Kode OTP Email
                     </span>
-                    <span className="text-[10px] text-slate-500 font-medium">Berlaku 10 Menit</span>
+                    <span className="text-[10px] text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-blue-600" />
+                      Berlaku 5 Menit
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -2113,11 +2141,33 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                       type="button"
                       disabled={otpVerifying || emailOtp.length !== 6}
                       onClick={handleVerifyOtp}
-                      className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-50 cursor-pointer"
+                      className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1"
                     >
-                      {otpVerifying ? 'Verifikasi...' : 'Verifikasi OTP'}
+                      {otpVerifying ? 'Memverifikasi...' : 'Verifikasi OTP'}
                     </button>
                   </div>
+
+                  {/* Resend Section inside OTP Box */}
+                  <div className="flex items-center justify-between pt-1.5 border-t border-blue-200/60 text-[11px]">
+                    <span className="text-slate-500">Tidak menerima email?</span>
+                    {otpCountdown > 0 ? (
+                      <span className="font-semibold text-slate-500 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        Kirim ulang dalam <strong className="text-blue-900 font-mono font-bold">{formatOtpCountdown(otpCountdown)}</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={otpSending}
+                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Kirim Ulang Kode OTP
+                      </button>
+                    )}
+                  </div>
+
                   {otpError && (
                     <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />

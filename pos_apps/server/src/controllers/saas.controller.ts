@@ -144,7 +144,7 @@ export const sendRegistrationOtp = async (req: Request, res: Response) => {
     // 4. Generate 6 digit angka OTP acak
     const otpCode = crypto.randomInt(100000, 999999).toString();
     const otpHash = await bcrypt.hash(otpCode, 8);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
 
     // 5. Simpan ke database email_verifications
     await prisma.emailVerification.create({
@@ -162,10 +162,10 @@ export const sendRegistrationOtp = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       status: 'success',
-      message: 'Kode OTP verifikasi 6 digit telah dikirim ke email Anda. Periksa kotak masuk atau spam.',
+      message: 'Kode OTP verifikasi 6 digit telah dikirim ke email Anda (berlaku 5 menit). Periksa kotak masuk atau spam.',
       data: {
         email: cleanEmail,
-        expiresInSeconds: 600,
+        expiresInSeconds: 300,
         previewUrl: mailResult.previewUrl,
       },
     });

@@ -111,6 +111,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     return () => clearInterval(timer);
   }, [resetCooldown]);
 
+  const formatOtpCountdown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Load existing paired device context on mount
   useEffect(() => {
     const saved = pairedDeviceStorage.get();
@@ -376,7 +382,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (res.status === 'success') {
         setSuccessMessage(`Kode verifikasi OTP 6-digit telah dikirim ke ${resetEmail}. Silakan periksa inbox atau spam.`);
         setForgotStep(2);
-        setResetCooldown(60);
+        setResetCooldown((res as any).expiresInSeconds || 300);
       } else {
         setError(res.message || 'Gagal mengirim kode reset kata sandi');
         if (res.retryAfter) setResetCooldown(res.retryAfter);
@@ -1051,7 +1057,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {loading ? (
                 'Mengirim Kode OTP...'
               ) : resetCooldown > 0 ? (
-                `Tunggu ${resetCooldown} detik`
+                `Tunggu (${formatOtpCountdown(resetCooldown)})`
               ) : (
                 <>
                   <span>Kirim Kode Verifikasi OTP</span>
@@ -1076,7 +1082,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         ) : (
           <form onSubmit={handleConfirmResetPassword} className="space-y-4">
             <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs text-emerald-900 leading-relaxed">
-              Kode OTP 6-digit telah dikirimkan ke <strong className="font-semibold">{resetEmail}</strong>. Masukkan kode tersebut dan buat kata sandi baru Anda.
+              Kode OTP 6-digit telah dikirimkan ke <strong className="font-semibold">{resetEmail}</strong> (berlaku 5 menit). Masukkan kode tersebut dan buat kata sandi baru Anda.
             </div>
 
             <div>
@@ -1090,7 +1096,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={() => handleRequestResetOtp()}
                   className="text-xs font-semibold text-blue-900 hover:text-blue-950 disabled:text-slate-400 transition-colors cursor-pointer"
                 >
-                  {resetCooldown > 0 ? `Kirim Ulang (${resetCooldown}s)` : 'Kirim Ulang OTP'}
+                  {resetCooldown > 0 ? `Kirim Ulang (${formatOtpCountdown(resetCooldown)})` : 'Kirim Ulang OTP'}
                 </button>
               </div>
               <div className="relative">

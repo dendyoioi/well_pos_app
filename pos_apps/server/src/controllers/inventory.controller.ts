@@ -1222,7 +1222,7 @@ export const recordBulkStockAdjustment = async (req: Request, res: Response) => 
           });
 
           if (!prod) {
-            throw new Error(`Produk dengan ID "${item.productId}" tidak ditemukan.`);
+            throw new Error(`Produk tidak ditemukan atau telah dihapus.`);
           }
 
           if (prod.type === 'COMPOSITE') {
@@ -1419,7 +1419,7 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
             select: { id: true, name: true, type: true, unit: true },
           });
           if (!prod) {
-            throw new Error(`Produk dengan ID "${item.productId}" tidak ditemukan.`);
+            throw new Error(`Produk tidak ditemukan atau telah dihapus.`);
           }
 
           if (prod.type === 'COMPOSITE') {
@@ -1593,7 +1593,7 @@ export const recordBulkStockOut = async (req: Request, res: Response) => {
           });
 
           if (!prod) {
-            throw new Error(`Produk dengan ID "${item.productId}" tidak ditemukan.`);
+            throw new Error(`Produk tidak ditemukan atau telah dihapus.`);
           }
 
           if (prod.type === 'COMPOSITE') {
