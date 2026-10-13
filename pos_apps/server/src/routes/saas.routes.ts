@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   registerClient,
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
   createInitialStore,
   onboardingClient,
   getSubscriptionStatus,
@@ -29,6 +31,8 @@ export const saasRouter = Router();
 
 // Endpoint Pendaftaran Mandiri & Info Publik (Public)
 saasRouter.post('/register', registerClient);
+saasRouter.post('/otp/send', sendRegistrationOtp);
+saasRouter.post('/otp/verify', verifyRegistrationOtp);
 saasRouter.get('/public-config', getPublicPlatformConfig);
 saasRouter.get('/promos/validate-registration', validateRegistrationPromoCode);
 saasRouter.get('/promos/public', getPublicPublishedPromos);

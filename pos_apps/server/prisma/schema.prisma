@@ -1398,5 +1398,17 @@ model Attendance {
   @@map("attendances")
 }
 
+model EmailVerification {
+  id         String    @id @default(uuid())
+  email      String
+  otpHash    String    @map("otp_hash")
+  purpose    String    @default("REGISTRATION") // 'REGISTRATION' | 'PASSWORD_RESET'
+  expiresAt  DateTime  @map("expires_at")
+  isVerified Boolean   @default(false) @map("is_verified")
+  verifiedAt DateTime? @map("verified_at")
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-
+  @@index([email, purpose, isVerified])
+  @@map("email_verifications")
+}

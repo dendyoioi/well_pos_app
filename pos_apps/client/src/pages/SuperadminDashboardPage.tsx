@@ -228,6 +228,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
     target: 'ALL' as 'ALL' | 'SPECIFIC',
     targetTenantId: '',
     expiresAt: '',
+    sendEmailBroadcast: false,
   });
   const [submittingNotif, setSubmittingNotif] = useState(false);
   const [notifSearchQuery, setNotifSearchQuery] = useState('');
@@ -1163,6 +1164,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         targetTenantId: newNotifForm.target === 'SPECIFIC' ? newNotifForm.targetTenantId : null,
         targetTenantName: selectedTenant ? (selectedTenant.name || selectedTenant.businessName) : null,
         expiresAt: newNotifForm.expiresAt ? new Date(newNotifForm.expiresAt).toISOString() : null,
+        sendEmailBroadcast: newNotifForm.sendEmailBroadcast,
       });
 
       if (res.status === 'success') {
@@ -1175,6 +1177,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
           target: 'ALL',
           targetTenantId: '',
           expiresAt: '',
+          sendEmailBroadcast: false,
         });
         await loadPlatformData();
       } else {
@@ -7355,6 +7358,26 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <p className="text-[10px] text-slate-500 mt-1">
                   Biarkan kosong jika pengumuman ini berlaku permanen hingga dihapus manual.
                 </p>
+              </div>
+
+              {/* Opsi Siaran Email Resmi */}
+              <div className="p-3.5 bg-blue-950/40 border border-blue-800/60 rounded-xl space-y-1.5 animate-fade-in">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newNotifForm.sendEmailBroadcast}
+                    onChange={(e) => setNewNotifForm({ ...newNotifForm, sendEmailBroadcast: e.target.checked })}
+                    className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700 focus:ring-blue-500 mt-0.5 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-white block">
+                      Kirimkan juga sebagai Siaran Email Resmi (Broadcast) ke Pemilik Toko
+                    </span>
+                    <span className="text-[11px] text-blue-300 block leading-tight mt-0.5">
+                      Surat pemberitahuan resmi akan dikirim otomatis dari <strong className="font-mono text-white">noreply@wellpos.id</strong> ke kotak masuk email pemilik ({newNotifForm.target === 'SPECIFIC' ? 'toko terpilih' : 'seluruh toko aktif'}).
+                    </span>
+                  </div>
+                </label>
               </div>
 
               </div>

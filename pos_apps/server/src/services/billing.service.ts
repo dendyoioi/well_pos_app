@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma';
-import { InvoiceStatus, TenantStatus, Prisma } from '@prisma/client';
+import { InvoiceStatus, TenantStatus, Prisma, Role } from '@prisma/client';
+import { sendWelcomeAndReceiptEmail, sendTokenTopUpInvoiceEmail } from './mail.service';
 
 export interface CreateInvoiceDto {
   tenantId: string;
@@ -106,7 +107,7 @@ export class BillingService {
     }
 
     // Eksekusi aktivasi lisensi dalam transaksi atomik
-    return await prisma.$transaction(async (tx) => {
+    const txResult = await prisma.$transaction(async (tx) => {
       const now = new Date();
 
       // 1. Catat SaaS Payment
@@ -188,6 +189,69 @@ export class BillingService {
         message: `Pembayaran sukses, lisensi paket ${invoice.plan.name} aktif sampai ${newExpiresAt.toISOString()}`,
       };
     });
+
+    // Kirim email sambutan & bukti bayar secara asinkron jika ini adalah invoice pendaftaran
+    if (!txResult.alreadyProcessed && (invoice.invoiceNumber.startsWith('INV-REG-') || invoice.invoiceNumber.startsWith('INV-SETUP-'))) {
+      (async () => {
+        try {
+          const owner = await prisma.user.findFirst({
+            where: { tenantId: invoice.tenantId, role: Role.ADMIN },
+          });
+          if (owner && owner.email) {
+            const discAmt = Number(txResult.invoice.discountAmount || 0);
+            await sendWelcomeAndReceiptEmail(owner.email, {
+              ownerName: owner.name,
+              companyName: txResult.tenant.name,
+              companyId: txResult.tenant.slug,
+              email: owner.email,
+              invoiceNumber: txResult.invoice.invoiceNumber,
+              amount: Number(txResult.invoice.amount),
+              originalAmount: discAmt > 0 ? (Number(txResult.invoice.amount) + discAmt) : undefined,
+              discountAmount: discAmt > 0 ? discAmt : undefined,
+              promoCode: txResult.invoice.promoCode || undefined,
+              bonusTokens: txResult.invoice.tokenAmount || 100,
+              paymentMethod: txResult.payment.paymentChannel || 'Non-Tunai (QRIS)',
+              paidAt: txResult.invoice.paidAt || new Date(),
+            });
+          }
+        } catch (mailErr) {
+          console.error('[Billing] Gagal mengirim email aktivasi pendaftaran berbayar:', mailErr);
+        }
+      })();
+    }
+
+    // Kirim bukti bayar top-up token kuota secara asinkron jika ini adalah invoice top-up token
+    if (!txResult.alreadyProcessed && (invoice.invoiceNumber.startsWith('INV-TOKEN-') || (invoice.tokenAmount && invoice.tokenAmount > 0 && !invoice.invoiceNumber.startsWith('INV-REG-')))) {
+      (async () => {
+        try {
+          const owner = await prisma.user.findFirst({
+            where: { tenantId: invoice.tenantId, role: Role.ADMIN },
+          });
+          if (owner && owner.email) {
+            const discAmt = Number(txResult.invoice.discountAmount || 0);
+            await sendTokenTopUpInvoiceEmail(owner.email, {
+              ownerName: owner.name,
+              companyName: txResult.tenant.name,
+              companyId: txResult.tenant.slug,
+              email: owner.email,
+              invoiceNumber: txResult.invoice.invoiceNumber,
+              packageName: txResult.invoice.notes || 'Top-Up Kuota Pesanan',
+              tokenAmount: txResult.invoice.tokenAmount || 0,
+              amount: Number(txResult.invoice.amount),
+              originalAmount: discAmt > 0 ? (Number(txResult.invoice.amount) + discAmt) : undefined,
+              discountAmount: discAmt > 0 ? discAmt : undefined,
+              promoCode: txResult.invoice.promoCode || undefined,
+              paymentMethod: txResult.payment.paymentChannel || 'Non-Tunai (QRIS)',
+              paidAt: txResult.invoice.paidAt || new Date(),
+            });
+          }
+        } catch (mailErr) {
+          console.error('[Billing] Gagal mengirim email bukti bayar top-up token:', mailErr);
+        }
+      })();
+    }
+
+    return txResult;
   }
 
   /**
@@ -207,7 +271,7 @@ export class BillingService {
       throw new Error(`Invoice ${invoice.invoiceNumber} sudah berstatus PAID`);
     }
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const now = new Date();
 
       // Catat payment dengan verified_by_id
@@ -285,6 +349,69 @@ export class BillingService {
         tenant: updatedTenant,
       };
     });
+
+    // Kirim email sambutan & bukti bayar secara asinkron jika invoice pendaftaran
+    if (result.invoice.invoiceNumber.startsWith('INV-REG-') || result.invoice.invoiceNumber.startsWith('INV-SETUP-')) {
+      (async () => {
+        try {
+          const owner = await prisma.user.findFirst({
+            where: { tenantId: result.invoice.tenantId, role: Role.ADMIN },
+          });
+          if (owner && owner.email) {
+            const discAmt = Number(result.invoice.discountAmount || 0);
+            await sendWelcomeAndReceiptEmail(owner.email, {
+              ownerName: owner.name,
+              companyName: result.tenant.name,
+              companyId: result.tenant.slug,
+              email: owner.email,
+              invoiceNumber: result.invoice.invoiceNumber,
+              amount: Number(result.invoice.amount),
+              originalAmount: discAmt > 0 ? (Number(result.invoice.amount) + discAmt) : undefined,
+              discountAmount: discAmt > 0 ? discAmt : undefined,
+              promoCode: result.invoice.promoCode || undefined,
+              bonusTokens: result.invoice.tokenAmount || 100,
+              paymentMethod: paymentChannel || 'Non-Tunai (QRIS)',
+              paidAt: result.invoice.paidAt || new Date(),
+            });
+          }
+        } catch (mailErr) {
+          console.error('[Billing] Gagal mengirim email aktivasi pendaftaran manual:', mailErr);
+        }
+      })();
+    }
+
+    // Kirim bukti bayar top-up token kuota secara asinkron jika invoice top-up token
+    if (result.invoice.invoiceNumber.startsWith('INV-TOKEN-') || (result.invoice.tokenAmount && result.invoice.tokenAmount > 0 && !result.invoice.invoiceNumber.startsWith('INV-REG-'))) {
+      (async () => {
+        try {
+          const owner = await prisma.user.findFirst({
+            where: { tenantId: result.invoice.tenantId, role: Role.ADMIN },
+          });
+          if (owner && owner.email) {
+            const discAmt = Number(result.invoice.discountAmount || 0);
+            await sendTokenTopUpInvoiceEmail(owner.email, {
+              ownerName: owner.name,
+              companyName: result.tenant.name,
+              companyId: result.tenant.slug,
+              email: owner.email,
+              invoiceNumber: result.invoice.invoiceNumber,
+              packageName: result.invoice.notes || 'Top-Up Kuota Pesanan',
+              tokenAmount: result.invoice.tokenAmount || 0,
+              amount: Number(result.invoice.amount),
+              originalAmount: discAmt > 0 ? (Number(result.invoice.amount) + discAmt) : undefined,
+              discountAmount: discAmt > 0 ? discAmt : undefined,
+              promoCode: result.invoice.promoCode || undefined,
+              paymentMethod: paymentChannel || 'Non-Tunai (QRIS)',
+              paidAt: result.invoice.paidAt || new Date(),
+            });
+          }
+        } catch (mailErr) {
+          console.error('[Billing] Gagal mengirim email bukti bayar top-up token manual:', mailErr);
+        }
+      })();
+    }
+
+    return result;
   }
 
   /**

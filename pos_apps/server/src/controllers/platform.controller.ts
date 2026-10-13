@@ -10,6 +10,7 @@ import { billingService } from '../services/billing.service';
 import { licenseWorkerService } from '../services/licenseWorker.service';
 import { whatsAppService } from '../services/whatsapp.service';
 import { systemConfigService } from '../services/system_config.service';
+import { sendPlatformBroadcastEmail } from '../services/mail.service';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment — tidak boleh ada fallback string.
 if (!process.env.JWT_SECRET) {
@@ -1894,7 +1895,7 @@ export const getPlatformNotifications = async (_req: Request, res: Response) => 
 
 export const createPlatformNotification = async (req: Request, res: Response) => {
   try {
-    const { title, message, type, target, targetTenantId, targetTenantName, expiresAt } = req.body;
+    const { title, message, type, target, targetTenantId, targetTenantName, expiresAt, sendEmailBroadcast } = req.body;
     if (!title || !message) {
       return res.status(400).json({ status: 'error', message: 'Judul dan isi notifikasi wajib diisi' });
     }
@@ -1917,9 +1918,65 @@ export const createPlatformNotification = async (req: Request, res: Response) =>
     const updated = [newNotif, ...currentList];
     writePlatformNotifications(updated);
 
+    // Kirim siaran email resmi jika sendEmailBroadcast dicentang oleh Superadmin
+    if (sendEmailBroadcast) {
+      (async () => {
+        try {
+          let targetUsers: Array<{ name: string; email: string | null; tenant: { name: string; slug: string } }> = [];
+
+          if (target === 'SPECIFIC' && targetTenantId) {
+            targetUsers = await prisma.user.findMany({
+              where: {
+                tenantId: targetTenantId,
+                role: Role.ADMIN,
+                email: { not: null },
+              },
+              select: {
+                name: true,
+                email: true,
+                tenant: { select: { name: true, slug: true } },
+              },
+            });
+          } else {
+            targetUsers = await prisma.user.findMany({
+              where: {
+                role: Role.ADMIN,
+                email: { not: null },
+                tenant: { status: TenantStatus.ACTIVE },
+              },
+              select: {
+                name: true,
+                email: true,
+                tenant: { select: { name: true, slug: true } },
+              },
+            });
+          }
+
+          console.log(`[Platform Broadcast] Menyiarkan email notifikasi ke ${targetUsers.length} pemilik toko...`);
+          for (const u of targetUsers) {
+            if (u.email) {
+              await sendPlatformBroadcastEmail(u.email, {
+                recipientName: u.name,
+                companyName: u.tenant.name,
+                title: newNotif.title,
+                message: newNotif.message,
+                type: newNotif.type as any,
+                expiresAt: newNotif.expiresAt,
+              });
+            }
+          }
+          console.log(`[Platform Broadcast] Selesai menyiarkan email pengumuman platform.`);
+        } catch (mailErr) {
+          console.error('[Platform Broadcast] Gagal menyiarkan email pengumuman:', mailErr);
+        }
+      })();
+    }
+
     return res.status(201).json({
       status: 'success',
-      message: 'Notifikasi berhasil diterbitkan ke merchant',
+      message: sendEmailBroadcast
+        ? 'Notifikasi berhasil diterbitkan dan siaran email sedang dikirimkan ke pemilik toko'
+        : 'Notifikasi berhasil diterbitkan ke merchant',
       data: newNotif,
     });
   } catch (error) {

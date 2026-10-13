@@ -173,6 +173,30 @@ export const api = {
     return res.json();
   },
 
+  requestPasswordReset: async (
+    email: string
+  ): Promise<{ status: string; message: string; retryAfter?: number }> => {
+    const res = await fetch('/api/auth/password/reset/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return res.json();
+  },
+
+  confirmPasswordReset: async (payload: {
+    email: string;
+    otp: string;
+    newPassword: string;
+  }): Promise<{ status: string; message: string; remainingAttempts?: number }> => {
+    const res = await fetch('/api/auth/password/reset/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
   loginWithPin: async (
     pin: string,
     userCode?: string,   // ID Staff kasir (5 digit, misal: 10001)
@@ -1184,6 +1208,38 @@ export const api = {
   // ----------------------------------------------------
   // SAAS MULTI-TENANT & ONBOARDING KLIEN
   // ----------------------------------------------------
+  sendRegistrationOtp: async (data: {
+    email: string;
+    name?: string;
+  }): Promise<{
+    status: string;
+    message?: string;
+    data?: { email: string; expiresInSeconds: number; previewUrl?: string };
+  }> => {
+    const res = await fetch('/api/saas/otp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  verifyRegistrationOtp: async (data: {
+    email: string;
+    otp: string;
+  }): Promise<{
+    status: string;
+    message?: string;
+    data?: { email: string; isVerified: boolean };
+  }> => {
+    const res = await fetch('/api/saas/otp/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   saasRegister: async (data: {
     firstName: string;
     lastName?: string;
@@ -1743,6 +1799,7 @@ export const api = {
     targetTenantId?: string | null;
     targetTenantName?: string | null;
     expiresAt?: string | null;
+    sendEmailBroadcast?: boolean;
   }): Promise<{ status: string; data?: PlatformNotification; message?: string }> => {
     const res = await fetch('/api/platform/notifications', {
       method: 'POST',

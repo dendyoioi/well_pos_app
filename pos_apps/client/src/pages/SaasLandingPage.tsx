@@ -29,6 +29,9 @@ import {
   TrendingUp,
   Calculator,
   Sparkles,
+  Mail,
+  KeyRound,
+  ShieldAlert,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -55,6 +58,17 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+
+  // State Verifikasi Email & OTP Pendaftaran (Anti-Dummy Email)
+  const [emailOtp, setEmailOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSuccessMsg, setOtpSuccessMsg] = useState<string | null>(null);
+  const [disposableEmailWarning, setDisposableEmailWarning] = useState<string | null>(null);
 
   // Konfigurasi dinamis biaya pendaftaran, token, dan paket katalog dari platform
   const [platformConfig, setPlatformConfig] = useState<{
@@ -267,6 +281,114 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
+  // Timer countdown untuk tombol kirim ulang OTP
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      const timer = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCountdown]);
+
+  // Cek cepat domain disposable di client untuk UX proaktif
+  const isClientDisposableEmail = (emailStr: string): boolean => {
+    const domain = emailStr.split('@')[1]?.toLowerCase().trim();
+    if (!domain) return false;
+    const known = [
+      'mailinator.com', 'tempmail.com', 'temp-mail.org', '10minutemail.com',
+      '10minutemail.net', 'guerrillamail.com', 'yopmail.com', 'throwawaymail.com',
+      'trashmail.com', 'sharklasers.com', 'fakemail.net', 'dropmail.me',
+      'emailondeck.com', 'mohmal.com', 'nada.ltd', 'getnada.com', 'inboxes.com', 'burnermail.io'
+    ];
+    return known.some((d) => domain === d || domain.endsWith('.' + d));
+  };
+
+  const handleEmailChange = (val: string) => {
+    setRegEmail(val);
+    setEmailVerified(false);
+    setOtpSent(false);
+    setEmailOtp('');
+    setOtpError(null);
+    setOtpSuccessMsg(null);
+    if (isClientDisposableEmail(val)) {
+      setDisposableEmailWarning('Email sementara / dummy tidak diizinkan. Gunakan email bisnis/pribadi resmi Anda.');
+    } else {
+      setDisposableEmailWarning(null);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setOtpError(null);
+    setOtpSuccessMsg(null);
+    const email = regEmail.trim();
+
+    if (!email) {
+      setOtpError('Masukkan alamat email Anda terlebih dahulu.');
+      return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+      setOtpError('Format email tidak valid.');
+      return;
+    }
+
+    if (isClientDisposableEmail(email)) {
+      setOtpError('Email sementara / dummy tidak diizinkan. Gunakan email bisnis/pribadi resmi Anda.');
+      return;
+    }
+
+    setOtpSending(true);
+    try {
+      const ownerName = `${regFirstName.trim()} ${regLastName.trim()}`.trim();
+      const res = await api.sendRegistrationOtp({
+        email,
+        name: ownerName || undefined,
+      });
+
+      if (res.status === 'success') {
+        setOtpSent(true);
+        setOtpCountdown(60);
+        setOtpSuccessMsg(res.message || 'Kode OTP 6 digit telah dikirim ke email Anda.');
+      } else {
+        setOtpError(res.message || 'Gagal mengirim kode OTP verifikasi.');
+      }
+    } catch (err: any) {
+      setOtpError(err.message || 'Terjadi kesalahan sistem saat mengirim kode OTP.');
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setOtpError(null);
+    setOtpSuccessMsg(null);
+
+    const cleanOtp = emailOtp.trim();
+    if (cleanOtp.length !== 6) {
+      setOtpError('Masukkan 6 digit kode OTP secara lengkap.');
+      return;
+    }
+
+    setOtpVerifying(true);
+    try {
+      const res = await api.verifyRegistrationOtp({
+        email: regEmail.trim(),
+        otp: cleanOtp,
+      });
+
+      if (res.status === 'success') {
+        setEmailVerified(true);
+        setOtpSuccessMsg('Alamat email Anda berhasil diverifikasi! ✓');
+        setOtpError(null);
+      } else {
+        setOtpError(res.message || 'Kode OTP tidak sesuai atau telah kedaluwarsa.');
+      }
+    } catch (err: any) {
+      setOtpError(err.message || 'Gagal memverifikasi kode OTP.');
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
   const handleApplyRegistrationPromo = async () => {
     if (!promoInput.trim()) return;
     setPromoError(null);
@@ -309,6 +431,11 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
     const phoneValidation = validateIndonesianWhatsApp(regPhone);
     if (!phoneValidation.isValid) {
       setError(phoneValidation.message || 'Nomor WhatsApp tidak valid. Masukkan nomor HP aktif diawali 08 atau 62 (contoh: 08123456789).');
+      return;
+    }
+
+    if (!emailVerified) {
+      setError('Alamat email belum diverifikasi. Mohon klik "Kirim OTP" dan masukkan kode verifikasi 6 digit yang dikirim ke email Anda terlebih dahulu.');
       return;
     }
 
@@ -1902,15 +2029,110 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
               required
             />
 
-            {/* 3. Email */}
-            <Input
-              label="Alamat Email"
-              type="email"
-              placeholder="owner@bisnis.id"
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              required
-            />
+            {/* 3. Email & Verifikasi OTP (Anti-Dummy) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                Alamat Email Bisnis <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="owner@bisnis.id"
+                  value={regEmail}
+                  disabled={emailVerified}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  required
+                  className="flex-1 px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-600 disabled:border-slate-200"
+                />
+                {!emailVerified ? (
+                  <button
+                    type="button"
+                    disabled={otpSending || otpCountdown > 0 || !regEmail.trim() || Boolean(disposableEmailWarning)}
+                    onClick={handleSendOtp}
+                    className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>
+                      {otpSending
+                        ? 'Mengirim...'
+                        : otpCountdown > 0
+                          ? `Ulang (${otpCountdown}s)`
+                          : otpSent
+                            ? 'Kirim Ulang'
+                            : 'Kirim OTP'}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-bold shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Terverifikasi</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmailVerified(false);
+                        setOtpSent(false);
+                        setEmailOtp('');
+                        setOtpSuccessMsg(null);
+                      }}
+                      className="ml-1 text-[11px] underline text-slate-500 hover:text-slate-800 cursor-pointer"
+                    >
+                      Ubah
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Warning Email Dummy / Disposable */}
+              {disposableEmailWarning && (
+                <div className="flex items-center gap-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px] font-semibold">
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>{disposableEmailWarning}</span>
+                </div>
+              )}
+
+              {/* Kotak Input Kode OTP (Jika sudah kirim OTP dan belum diverifikasi) */}
+              {otpSent && !emailVerified && (
+                <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-blue-900 flex items-center gap-1">
+                      <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                      Masukkan 6 Digit Kode OTP Email
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">Berlaku 10 Menit</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="Contoh: 123456"
+                      value={emailOtp}
+                      onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                      className="flex-1 text-center font-mono tracking-widest font-extrabold text-base px-3 py-2 bg-white border border-blue-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    />
+                    <button
+                      type="button"
+                      disabled={otpVerifying || emailOtp.length !== 6}
+                      onClick={handleVerifyOtp}
+                      className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      {otpVerifying ? 'Verifikasi...' : 'Verifikasi OTP'}
+                    </button>
+                  </div>
+                  {otpError && (
+                    <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{otpError}</span>
+                    </p>
+                  )}
+                  {otpSuccessMsg && (
+                    <p className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>{otpSuccessMsg}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* 4. Kata Sandi */}
             <Input

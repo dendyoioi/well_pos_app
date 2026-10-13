@@ -211,6 +211,32 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "promotion_items_tenant_id_variant_id_idx" ON "promotion_items"("tenant_id", "variant_id");
     `,
   },
+  {
+    id: '20261013_01_email_verifications',
+    description: 'Menambahkan tabel email_verifications untuk verifikasi kode OTP email dan proteksi pendaftaran anti-dummy email',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "email_verifications" (
+        "id" TEXT PRIMARY KEY,
+        "email" VARCHAR(255) NOT NULL,
+        "otp_hash" TEXT NOT NULL,
+        "expires_at" TIMESTAMP(3) NOT NULL,
+        "is_verified" BOOLEAN NOT NULL DEFAULT false,
+        "verified_at" TIMESTAMP(3),
+        "attempts" INTEGER NOT NULL DEFAULT 0,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "email_verifications_email_is_verified_idx" ON "email_verifications"("email", "is_verified");
+    `,
+  },
+  {
+    id: '20261013_02_email_verifications_purpose',
+    description: 'Menambahkan kolom purpose pada tabel email_verifications untuk mendukung reset kata sandi akun',
+    sql: `
+      ALTER TABLE "email_verifications" ADD COLUMN IF NOT EXISTS "purpose" VARCHAR(50) NOT NULL DEFAULT 'REGISTRATION';
+      CREATE INDEX IF NOT EXISTS "email_verifications_email_purpose_is_verified_idx" ON "email_verifications"("email", "purpose", "is_verified");
+    `,
+  },
 ];
 
 /**

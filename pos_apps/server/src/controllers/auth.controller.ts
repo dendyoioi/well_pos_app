@@ -4,6 +4,11 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { normalizeCompanyIdInput } from '../utils/companyId.util';
+import { validateBusinessEmail } from '../utils/disposableEmailValidator';
+import {
+  sendPasswordResetOtpEmail,
+  sendPasswordChangedNotificationEmail,
+} from '../services/mail.service';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment. Jika tidak ada, server gagal startup secara eksplisit.
 // Generate dengan: openssl rand -hex 64
@@ -629,5 +634,236 @@ export const getPairedOutletCashiers = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error memuat staf kasir:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memuat staf kasir' });
+  }
+};
+
+/**
+ * Controller: Mengirimkan Kode OTP Reset Kata Sandi
+ * POST /api/auth/password/reset/request
+ */
+export const requestPasswordReset = async (req: Request, res: Response) => {
+  try {
+    const schema = z.object({
+      email: z.string().trim().toLowerCase().email('Format email tidak valid'),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: parsed.error.issues[0]?.message || 'Email tidak valid',
+      });
+    }
+
+    const { email } = parsed.data;
+
+    // 1. Validasi domain disposable
+    const disposableCheck = validateBusinessEmail(email);
+    if (!disposableCheck.isValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: disposableCheck.message,
+      });
+    }
+
+    // 2. Cari akun terkait (User atau PlatformUser)
+    const existingUser = await prisma.user.findFirst({
+      where: { email, isActive: true },
+      select: { id: true, name: true, email: true },
+    });
+    const existingPlatformUser = !existingUser
+      ? await prisma.platformUser.findUnique({
+          where: { email },
+          select: { id: true, name: true, email: true },
+        })
+      : null;
+
+    const account = existingUser || existingPlatformUser;
+
+    // OWASP: Jika akun tidak ditemukan, tetap kembalikan respons sukses netral demi keamanan privasi
+    if (!account) {
+      return res.json({
+        status: 'success',
+        message: 'Jika email terdaftar, instruksi reset kata sandi telah dikirimkan ke kotak masuk Anda.',
+      });
+    }
+
+    // 3. Rate limiting cooldown (60 detik)
+    const recentOtp = await prisma.emailVerification.findFirst({
+      where: {
+        email,
+        purpose: 'PASSWORD_RESET',
+        createdAt: { gt: new Date(Date.now() - 60 * 1000) },
+      },
+    });
+
+    if (recentOtp) {
+      const waitSeconds = Math.max(
+        1,
+        Math.ceil((recentOtp.createdAt.getTime() + 60 * 1000 - Date.now()) / 1000)
+      );
+      return res.status(429).json({
+        status: 'error',
+        message: `Mohon tunggu ${waitSeconds} detik sebelum meminta kode OTP reset baru.`,
+        retryAfter: waitSeconds,
+      });
+    }
+
+    // 4. Batalkan OTP reset sebelumnya yang belum terverifikasi
+    await prisma.emailVerification.deleteMany({
+      where: {
+        email,
+        purpose: 'PASSWORD_RESET',
+        isVerified: false,
+      },
+    });
+
+    // 5. Generate 6-digit numeric OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otpCode, 10);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+
+    // 6. Simpan OTP ke database
+    await prisma.emailVerification.create({
+      data: {
+        email,
+        otpHash,
+        purpose: 'PASSWORD_RESET',
+        expiresAt,
+        isVerified: false,
+      },
+    });
+
+    // 7. Kirim email OTP via Resend
+    await sendPasswordResetOtpEmail(email, otpCode, account.name);
+
+    return res.json({
+      status: 'success',
+      message: 'Kode OTP reset kata sandi telah dikirim ke email Anda. Berlaku selama 10 menit.',
+      email,
+    });
+  } catch (err: any) {
+    console.error('[AuthController] Error saat meminta reset kata sandi:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Terjadi kesalahan sistem saat memproses permintaan reset kata sandi.',
+    });
+  }
+};
+
+/**
+ * Controller: Mengonfirmasi Kode OTP dan Menyimpan Kata Sandi Baru
+ * POST /api/auth/password/reset/confirm
+ */
+export const confirmPasswordReset = async (req: Request, res: Response) => {
+  try {
+    const schema = z.object({
+      email: z.string().trim().toLowerCase().email('Format email tidak valid'),
+      otp: z.string().trim().length(6, 'Kode OTP harus berupa 6 digit angka'),
+      newPassword: z.string().min(6, 'Kata sandi baru minimal 6 karakter'),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: parsed.error.issues[0]?.message || 'Input tidak valid',
+      });
+    }
+
+    const { email, otp, newPassword } = parsed.data;
+
+    // 1. Cari OTP aktif di database
+    const pendingVerification = await prisma.emailVerification.findFirst({
+      where: {
+        email,
+        purpose: 'PASSWORD_RESET',
+        isVerified: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!pendingVerification) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Kode OTP tidak valid atau telah kedaluwarsa. Silakan minta kode baru.',
+      });
+    }
+
+    // 2. Proteksi brute-force (maksimal 5 percobaan)
+    if (pendingVerification.attempts >= 5) {
+      await prisma.emailVerification.delete({ where: { id: pendingVerification.id } });
+      return res.status(429).json({
+        status: 'error',
+        message: 'Batas percobaan OTP terlampaui (5x). Silakan ajukan permohonan reset baru.',
+      });
+    }
+
+    // 3. Verifikasi hash OTP
+    const isMatch = await bcrypt.compare(otp, pendingVerification.otpHash);
+    if (!isMatch) {
+      const currentAttempts = pendingVerification.attempts + 1;
+      await prisma.emailVerification.update({
+        where: { id: pendingVerification.id },
+        data: { attempts: currentAttempts },
+      });
+      const remaining = 5 - currentAttempts;
+      return res.status(400).json({
+        status: 'error',
+        message: `Kode OTP salah. Sisa kesempatan: ${remaining} kali lagi.`,
+        remainingAttempts: remaining,
+      });
+    }
+
+    // 4. Tandai OTP sebagai terverifikasi
+    await prisma.emailVerification.update({
+      where: { id: pendingVerification.id },
+      data: {
+        isVerified: true,
+        verifiedAt: new Date(),
+      },
+    });
+
+    // 5. Hash kata sandi baru
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // 6. Update user (User / PlatformUser) dan cabut sesi aktif via tokenVersion
+    await prisma.user.updateMany({
+      where: { email },
+      data: {
+        passwordHash: newPasswordHash,
+        tokenVersion: { increment: 1 },
+      },
+    });
+
+    await prisma.platformUser.updateMany({
+      where: { email },
+      data: {
+        passwordHash: newPasswordHash,
+      },
+    });
+
+    // 7. Ambil profil user untuk email konfirmasi
+    const userAccount = await prisma.user.findFirst({
+      where: { email },
+      select: { name: true },
+    });
+
+    // 8. Kirim email konfirmasi sukses ganti password (background asynchronous)
+    sendPasswordChangedNotificationEmail(email, userAccount?.name).catch((notifyErr) =>
+      console.warn('[AuthController] Gagal mengirim email notifikasi perubahan password:', notifyErr)
+    );
+
+    return res.json({
+      status: 'success',
+      message: 'Kata sandi berhasil diperbarui! Seluruh sesi aktif di perangkat lain telah dicabut demi keamanan. Silakan login kembali.',
+    });
+  } catch (err: any) {
+    console.error('[AuthController] Error saat konfirmasi reset kata sandi:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Terjadi kesalahan sistem saat memperbarui kata sandi.',
+    });
   }
 };

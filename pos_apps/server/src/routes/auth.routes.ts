@@ -5,6 +5,8 @@ import {
   getProfile,
   pairDevice,
   getPairedOutletCashiers,
+  requestPasswordReset,
+  confirmPasswordReset,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
@@ -15,6 +17,18 @@ export const authRouter = Router();
  * @desc Login user menggunakan Email dan Password (Portal Pemilik/Backoffice)
  */
 authRouter.post('/login', loginWithPassword);
+
+/**
+ * @route POST /api/auth/password/reset/request
+ * @desc Mengirimkan kode verifikasi OTP 6 digit ke email untuk permohonan reset kata sandi
+ */
+authRouter.post('/password/reset/request', requestPasswordReset);
+
+/**
+ * @route POST /api/auth/password/reset/confirm
+ * @desc Memverifikasi OTP dan mengupdate kata sandi baru akun
+ */
+authRouter.post('/password/reset/confirm', confirmPasswordReset);
 
 /**
  * @route POST /api/auth/pin-login
@@ -40,4 +54,5 @@ authRouter.get('/paired-cashiers', authenticate, getPairedOutletCashiers);
  * @desc Mendapatkan data profil akun yang sedang login (membutuhkan Bearer Token)
  */
 authRouter.get('/me', authenticate, getProfile);
+
 

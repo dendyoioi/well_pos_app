@@ -16,6 +16,10 @@ import {
   UserCheck,
   ChevronDown,
   User,
+  KeyRound,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { PinNumpad } from '../components/PinNumpad';
 import {
@@ -79,6 +83,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Password Recovery / Reset State (EPIC-29 Phase 2)
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
+  const [forgotStep, setForgotStep] = useState<1 | 2>(1); // 1 = Input Email, 2 = Input OTP & Password Baru
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -87,6 +101,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     tenantName?: string;
     message?: string;
   } | null>(null);
+
+  // Countdown timer cooldown reset OTP
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResetCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldown]);
 
   // Load existing paired device context on mount
   useEffect(() => {
@@ -339,6 +362,74 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
+  // Handle Request OTP Reset Password
+  const handleRequestResetOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!resetEmail || !resetEmail.includes('@')) {
+      setError('Masukkan alamat email yang valid');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await api.requestPasswordReset(resetEmail);
+      if (res.status === 'success') {
+        setSuccessMessage(`Kode verifikasi OTP 6-digit telah dikirim ke ${resetEmail}. Silakan periksa inbox atau spam.`);
+        setForgotStep(2);
+        setResetCooldown(60);
+      } else {
+        setError(res.message || 'Gagal mengirim kode reset kata sandi');
+        if (res.retryAfter) setResetCooldown(res.retryAfter);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal terhubung ke server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Confirm OTP & Save New Password
+  const handleConfirmResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetOtp || resetOtp.length !== 6) {
+      setError('Masukkan kode OTP 6 digit yang dikirim ke email');
+      return;
+    }
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setError('Kata sandi baru minimal 6 karakter');
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setError('Konfirmasi kata sandi baru tidak cocok');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await api.confirmPasswordReset({
+        email: resetEmail,
+        otp: resetOtp,
+        newPassword: resetNewPassword,
+      });
+      if (res.status === 'success') {
+        setSuccessMessage('Kata sandi berhasil diperbarui! Silakan masuk dengan kata sandi baru Anda.');
+        setEmail(resetEmail);
+        setPassword('');
+        setIsForgotPasswordMode(false);
+        setForgotStep(1);
+        setResetOtp('');
+        setResetNewPassword('');
+        setResetConfirmPassword('');
+      } else {
+        setError(res.message || 'Gagal memperbarui kata sandi');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal terhubung ke server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col justify-between items-center p-4 relative overflow-hidden bg-slate-50 text-slate-900">
       {/* Background Accents */}
@@ -363,46 +454,73 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <div className="flex flex-col items-center text-center mb-5">
           <WellPosLogo size="lg" className="mb-3" />
           <h1 className="text-2xl font-extrabold tracking-tight text-blue-950">
-            {activeTab === 'pos' ? 'Mesin Kasir Terminal' : 'Portal Pemilik Toko'}
+            {isForgotPasswordMode
+              ? 'Atur Ulang Kata Sandi'
+              : activeTab === 'pos'
+              ? 'Mesin Kasir Terminal'
+              : 'Portal Pemilik Toko'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Well POS Multi-Tenant Retail &bull; v2.2
+            {isForgotPasswordMode
+              ? 'Verifikasi email resmi untuk membuat kata sandi baru'
+              : 'Well POS Multi-Tenant Retail • v2.2'}
           </p>
         </div>
 
-        {/* Tab Selector: Mesin Kasir (PIN) vs Portal Pemilik (Email) */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100 border border-slate-200 rounded-2xl mb-5 gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('pos');
-              setError(null);
-            }}
-            className={`py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'pos'
-                ? 'bg-blue-900 text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-slate-950'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Mesin Kasir (Terminal)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('backoffice');
-              setError(null);
-            }}
-            className={`py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'backoffice'
-                ? 'bg-blue-900 text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-slate-950'
-            }`}
-          >
-            <Laptop className="w-3.5 h-3.5" />
-            <span>Portal Pemilik (Email)</span>
-          </button>
-        </div>
+        {/* Tab Selector atau Bar Navigasi Pemulihan Akun */}
+        {!isForgotPasswordMode ? (
+          <div className="grid grid-cols-2 p-1 bg-slate-100 border border-slate-200 rounded-2xl mb-5 gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('pos');
+                setError(null);
+              }}
+              className={`py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'pos'
+                  ? 'bg-blue-900 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mesin Kasir (Terminal)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('backoffice');
+                setError(null);
+              }}
+              className={`py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'backoffice'
+                  ? 'bg-blue-900 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              <Laptop className="w-3.5 h-3.5" />
+              <span>Portal Pemilik (Email)</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-2.5 bg-blue-50/70 border border-blue-200 rounded-2xl mb-5 text-xs text-blue-900">
+            <div className="flex items-center gap-2 font-semibold">
+              <KeyRound className="w-4 h-4 text-blue-700" />
+              <span>Mode Pemulihan Akun</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPasswordMode(false);
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className="text-xs font-bold text-blue-700 hover:text-blue-950 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Batal</span>
+            </button>
+          </div>
+        )}
 
         {/* Feedback Alerts */}
         {error && (
@@ -439,10 +557,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB 1: MESIN KASIR (DEVICE PAIRING & FAST PIN) */}
-        {/* ==================================================== */}
-        {activeTab === 'pos' && (
+        {!isForgotPasswordMode ? (
+          <>
+            {/* ==================================================== */}
+            {/* TAB 1: MESIN KASIR (DEVICE PAIRING & FAST PIN) */}
+            {/* ==================================================== */}
+            {activeTab === 'pos' && (
           <div>
             {pairedDevice ? (
               // KONDISI A: PERANGKAT SUDAH TER-PAIRING
@@ -832,9 +952,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Kata Sandi:
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  Kata Sandi:
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPasswordMode(true);
+                    setForgotStep(1);
+                    setResetEmail(email);
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="text-xs font-bold text-blue-900 hover:text-blue-950 hover:underline transition-colors cursor-pointer"
+                >
+                  Lupa kata sandi?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
@@ -878,6 +1013,175 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </form>
         )}
+      </>
+    ) : (
+      <div>
+        {forgotStep === 1 ? (
+          <form onSubmit={handleRequestResetOtp} className="space-y-4">
+            <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs text-blue-950 leading-relaxed">
+              <div className="font-bold flex items-center gap-1.5 mb-1 text-blue-900">
+                <ShieldCheck className="w-4 h-4 text-blue-700" />
+                <span>Verifikasi Keamanan Email Resmi</span>
+              </div>
+              Masukkan alamat email yang terdaftar pada akun Well POS Anda. Kami akan mengirimkan kode verifikasi OTP 6 digit dari <strong className="font-mono text-blue-950">noreply@wellpos.id</strong>.
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Alamat Email Terdaftar:
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="owner@toko.com"
+                  className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || resetCooldown > 0}
+              className="w-full mt-2 py-3 px-4 bg-blue-900 hover:bg-blue-950 active:scale-[0.98] disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+            >
+              {loading ? (
+                'Mengirim Kode OTP...'
+              ) : resetCooldown > 0 ? (
+                `Tunggu ${resetCooldown} detik`
+              ) : (
+                <>
+                  <span>Kirim Kode Verifikasi OTP</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPasswordMode(false);
+                  setError(null);
+                }}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                Batal &bull; Kembali ke Login
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleConfirmResetPassword} className="space-y-4">
+            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs text-emerald-900 leading-relaxed">
+              Kode OTP 6-digit telah dikirimkan ke <strong className="font-semibold">{resetEmail}</strong>. Masukkan kode tersebut dan buat kata sandi baru Anda.
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Kode OTP (6-Digit):
+                </label>
+                <button
+                  type="button"
+                  disabled={loading || resetCooldown > 0}
+                  onClick={() => handleRequestResetOtp()}
+                  className="text-xs font-semibold text-blue-900 hover:text-blue-950 disabled:text-slate-400 transition-colors cursor-pointer"
+                >
+                  {resetCooldown > 0 ? `Kirim Ulang (${resetCooldown}s)` : 'Kirim Ulang OTP'}
+                </button>
+              </div>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={resetOtp}
+                  onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-base tracking-widest font-mono text-center outline-none transition-all placeholder:text-slate-300 focus:ring-2 focus:ring-blue-900/10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Kata Sandi Baru:
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-10 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  aria-label={showNewPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Konfirmasi Kata Sandi Baru:
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  placeholder="Ketik ulang kata sandi baru"
+                  className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+            >
+              {loading ? (
+                'Menyimpan Kata Sandi Baru...'
+              ) : (
+                <>
+                  <span>Simpan &amp; Perbarui Kata Sandi</span>
+                  <Check className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotStep(1);
+                  setError(null);
+                }}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                &larr; Ubah Alamat Email
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    )}
       </div>
 
       {/* Footer Info */}

@@ -273,10 +273,13 @@ Sesuai amanat kepatuhan multi-tenant enterprise (EPIC-11) dan strategi evolusi i
 Sesuai rancangan arsitektur modern (EPIC-14, EPIC-15, dan EPIC-18), pendaftaran identitas pemilik usaha (*Owner Identity*) terpisah penuh dari pembuatan toko (*Store/Outlet*):
 
 ```text
-1. [Landing Page (#register)]
+1. [Landing Page (#register) & Verifikasi Email (EPIC-29)]
    └── Input 5 Field: Nama Depan, Nama Belakang, WhatsApp (+628...), Email, Password
+   └── Proteksi Anti-Dummy: Penyaringan domain email disposable (3.000+ domain dilarang, contoh: mailinator, tempmail).
+   └── Gerbang Verifikasi OTP: Calon owner wajib klik "Kirim OTP", menerima 6 digit kode OTP (masa berlaku 10 menit), dan memverifikasinya via POST /api/saas/otp/verify sebelum transaksi dapat dibuat.
    └── Endpoint: POST /api/saas/register
    └── Company ID (Slug): Ter-generate otomatis dengan format Alphanumeric baku: `[3 Huruf Inisial]-[4 Angka Acak][3 Digit Urutan]` (Contoh: `DND-4829001`). Dilengkapi filter kata kasar (*Profanity Blocklist*) dan normalisasi input kasir (*case-insensitive* & toleransi dengan/tanpa dash `-`).
+   └── Tagihan & Notifikasi: Pembuatan QRIS Pakasir otomatis; pasca-lunas (webhook/gratis), sistem otomatis mengirimkan email sambutan & bukti faktur resmi (`sendWelcomeAndReceiptEmail`).
    └── Database: Buat Tenant (status: PENDING) & User Owner (Role: ADMIN, outletId: null)
    └── Zero Stores: Belum ada toko fisik/outlet yang dibuat di tahap pendaftaran awal.
 
@@ -333,6 +336,11 @@ Well POS menerapkan arsitektur kredensial multi-tier yang terpisah sesuai ranah 
    - **Endpoint Pencabutan Massal**: `POST /api/users/revoke-all-sessions` (memutus seluruh sesi perangkat kasir/staf di toko; default `excludeCurrent: true` agar sesi pemanggil tetap aktif).
    - **Auto-Revocation**: Otomatis menaikkan `token_version` saat password diubah, PIN kasir diganti, atau status staf dinonaktifkan (`isActive: false`).
    - **Penanganan Sisi Klien**: Interceptor respons otomatis mendeteksi 401 `SESSION_REVOKED`, menghapus cache autentikasi lokal, dan mengarahkan layar ke form login kasir dengan alert informatif.
+5. **Pemulihan Kata Sandi Mandiri (Self-Service Password Recovery - EPIC-29)**:
+   - **Endpoint Permohonan**: `POST /api/auth/password/reset/request` (Input email, validasi anti-dummy, proteksi OWASP anti-enumerasi, rate limit cooldown 60s).
+   - **Endpoint Konfirmasi**: `POST /api/auth/password/reset/confirm` (Verifikasi OTP 6-digit batas 5x salah, pembaruan password hash bcrypt).
+   - **Pengiriman**: Dispatched resmi dari `noreply@wellpos.id` via Resend REST API & SMTP relay.
+   - **Keamanan Sesi**: Otomatis menaikkan `tokenVersion` user (`tokenVersion + 1`) pasca-reset sukses untuk memutus seluruh sesi aktif di perangkat lain secara instan.
 
 ### 7.3 Tata Kelola Akses & Peran Staf (Granular Functional RBAC)
 Well POS menerapkan sistem hak akses berbasis domain fungsional operasional nyata (bukan pemisahan hardware channel perangkat ala Mekari):
