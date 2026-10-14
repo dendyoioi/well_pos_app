@@ -204,3 +204,31 @@ Menindaklanjuti temuan disparitas harga paket kuota dan kalkulasi diskon kupon:
      - Jika nominal yang diketik di bawah batas minimum (`< 100`), sistem tidak memaksa mengubah angka pengguna, melainkan menampilkan notifikasi peringatan inline yang jelas: `⚠️ Jumlah token kustom minimal 100 token`.
      - Tombol aksi *"Beli Kuota Sekarang"* otomatis memblokir submission (`disabled`) dan menampilkan teks status `Min. 100 Token` hingga input memenuhi syarat.
 
+---
+
+### 11. TRANSISI KE MODE PRODUCTION LIVE & VERIFIKASI GATEWAY (14 OKTOBER 2026)
+
+Menindaklanjuti persetujuan KYC akun Pakasir (`wellposdev`) dan aktivasi resmi status Production:
+1. **Status Proyek di Dashboard Pakasir**:
+   * **Mode**: Berhasil dialihkan dari `Sandbox` ke **`Production`** (Live).
+   * **Fee By Merchant**: Ditetapkan **`Ya`** (MDR dipotong otomatis dari saldo platform, pelanggan membayar nominal pas sesuai nilai tagihan).
+   * **Kredensial Aktif**:
+     - **Slug**: `wellposdev`
+     - **API Key**: `vDSvureIrzkKGjuzmIwu2GJwutMMzdNj`
+     - **Webhook Secret**: `a5da553214d1f9e9b072b429f076a0b7`
+     - **Webhook URL**: `https://wellpos.id/api/saas/pakasir/webhook`
+2. **Verifikasi Teknis Transaksi Live (NMID Bank Indonesia)**:
+   * Telah diverifikasi pemanggilan endpoint API v2 `POST /api/v2/create-transaction/wellposdev/TEST-LIVE-PROD-001` (nominal Rp 25.000):
+     - Respons gateway mengembalikan `"is_sandbox": false`.
+     - String QRIS dinamis resmi terbit dengan identitas perbankan nasional (`COM.NOBUBANK.WWW`, `ID.CO.QRIS.WWW`).
+     - Fee MDR tercatat akurat sebesar Rp 485 ($25.000 \times 0,7\% + 310$), total tagihan bersih ke pembeli tepat Rp 25.000.
+     - Endpoint pembatalan transaksi `POST /api/v2/cancel-transaction/wellposdev/:txnId` teruji sukses melepaskan tagihan uji coba.
+3. **Integritas Webhook & Routing Vercel $\rightarrow$ Render Dev**:
+   * Pengujian transmisi HTTP POST ke `https://wellpos.id/api/saas/pakasir/webhook` terbukti diteruskan secara instan oleh reverse-proxy Vercel ke backend Render (`wellpos-api-dev.onrender.com`).
+   * Guard `X-Secret` berhasil menolak akses liar tanpa secret valid (HTTP 401) dan menerima notifikasi terotentikasi.
+4. **Hardening Keamanan Server (`PAKASIR_MODE=production`)**:
+   * Menambahkan flag `PAKASIR_MODE="production"` pada environment server.
+   * Endpoint simulasi bayar sandbox (`POST /api/saas/pakasir/simulate-sandbox-pay`) otomatis dikunci secara permanen (HTTP 403 Forbidden) di lingkungan live untuk mencegah eksploitasi pelunasan token tanpa dana nyata.
+5. **Strategi Operasional Awal (`beta.wellpos.id` $\rightarrow$ Target 40 Outlet Toko)**:
+   * Sesuai roadmap efisiensi biaya, tahap awal live production dijalankan pada domain aktif `beta.wellpos.id` (backend Render Free + database Supabase AWS SG) hingga mencapai kapasitas operasional $\approx 40$ outlet toko atau tercapai akumulasi profit cadangan Rp 500.000 sebelum aktivasi deposit/migrasi ke Google Cloud Platform (GCP).
+
