@@ -211,8 +211,8 @@ export const checkPakasirInvoiceStatus = async (req: Request, res: Response) => 
  */
 export const simulateSandboxPayment = async (req: Request, res: Response) => {
   try {
-    // Keamanan: Cegah eksploitasi simulasi pembayaran jika gateway sudah beroperasi live/production
-    const isLiveProduction = process.env.PAKASIR_MODE === 'production' || process.env.NODE_ENV === 'production';
+    // Keamanan: Cegah eksploitasi simulasi pembayaran jika gateway sudah beroperasi di server live produksi
+    const isLiveProduction = process.env.PAKASIR_MODE === 'production' && (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true');
     if (isLiveProduction) {
       return res.status(403).json({
         status: 'error',
