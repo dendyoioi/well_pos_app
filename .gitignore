@@ -18,3 +18,10 @@ backups/
 pos_apps/server/backups/
 pos_apps/scratch/
 scratch/
+
+# Non-App Assets & Local Documentation/Memory (Not Pushed to Git/Server)
+Payment Integration/
+E2E_QA_Prompt_Pack/
+asset_design/
+docs/
+AGENT.md
