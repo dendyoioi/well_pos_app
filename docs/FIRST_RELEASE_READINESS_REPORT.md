@@ -231,7 +231,7 @@ Sesuai aturan kanonikal Rule 9 [AGENTS.md](file:///Users/dendyaditya/Projects/po
 | No | Item Pemeriksaan | Status | Bukti / Catatan Verifikasi |
 | :-: | :--- | :---: | :--- |
 | E.1 | Centralized Error Monitoring (P0-1 Resolusi) | **PASS** | Terpasang `errorMonitor.ts`, `AppErrorBoundary.tsx`, dan sink backend `POST /api/health/client-error`. |
-| E.2 | Script & Cron Backup Database Terjadwal (P2-1 Resolusi) | **PASS** | Terpasang kompresi Gzip (98 KB, efisiensi 72%), SHA-256 checksum, rotasi 7 hari, scheduler internal node 03:00 WIB (`backupScheduler.ts`), endpoint API superadmin (`/api/platform/system/backups`), dan GitHub Actions workflow harian (`.github/workflows/db_backup.yml`). |
+| E.2 | Script Backup Database Lokal (P2-1 Resolusi) | **PASS** | Terpasang kompresi Gzip (140 KB, efisiensi 70%), SHA-256 checksum, rotasi 7 hari, engine snapshot mandiri lokal (`npm run db:backup` / `dbBackup.service.ts`), endpoint API superadmin (`/api/platform/system/backups`), dan proteksi `.gitignore` ketat (anti-push ke remote). GitHub Actions cron telah dinonaktifkan permanen. |
 | E.3 | Bundle Size Optimization (Frontend) | **PASS** | Bundle JS utama turun 68.4% dari 3.58 MB (796 kB gzip) menjadi 1.12 MB (222 kB gzip) via code splitting `React.lazy` & vendor chunks (`jspdf`, `@zxing`, `lucide`, `react`). |
 | E.4 | Saluran Pengaduan Langsung (Merchant Help) | **PASS** | Floating Guide Widget dan tombol Bantuan WhatsApp terpasang di ErrorBoundary & Backoffice. |
 
