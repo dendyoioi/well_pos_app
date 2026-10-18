@@ -6,7 +6,14 @@ dist/
 !.env.production.example
 .DS_Store
 *.log
+# Database Backups (Strictly Local - Never Push to Server / Git)
 *.dump
+*.dump.*
+*.json.gz
+*.sha256
+*.sql
+*.sql.gz
+*.backup
 backups/
 pos_apps/server/backups/
 pos_apps/scratch/
