@@ -469,7 +469,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <p className="text-xs text-slate-500 mt-0.5">
             {isForgotPasswordMode
               ? 'Verifikasi email resmi untuk membuat kata sandi baru'
-              : 'Well POS Multi-Tenant Retail • v2.2'}
+              : 'Well POS Multi-Tenant Retail'}
           </p>
         </div>
 
@@ -1192,7 +1192,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Footer Info */}
       <footer className="mt-4 text-center text-xs text-slate-400 z-10">
-        <p>&copy; 2026 Well POS Indonesia &bull; PT Well Digital Solusindo &bull; Sistem POS Multi-Tenant</p>
+        <p>&copy; 2026 Well POS Indonesia &bull; Sistem POS Multi-Tenant</p>
       </footer>
 
       {/* MODAL: PENDING APPROVAL SAAS STATUS */}
