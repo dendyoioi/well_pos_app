@@ -239,18 +239,51 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       const subtotal = Number(item.subtotal || 0);
                       const prodName = item.product?.name || item.productName || item.name || 'Produk';
                       const variantName = item.variantName || item.productVariant?.name;
+                      const rawMods = item.modifiers || item.modifiersSnapshot || item.selectedModifiers || [];
+                      const mods = Array.isArray(rawMods) ? rawMods : [];
+                      const itemNotes = item.notes || item.itemNote;
 
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-2.5 px-3 font-semibold text-slate-900">
-                            <div>{prodName}</div>
-                            {variantName && (
-                              <span className="inline-block mt-0.5 text-[10px] text-blue-900 font-semibold bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                                {variantName}
-                              </span>
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 align-top">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{prodName}</span>
+                              {variantName && (
+                                <span className="text-[10px] text-blue-900 font-extrabold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                  {variantName}
+                                </span>
+                              )}
+                            </div>
+                            {mods.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap mt-1">
+                                {mods.map((m: any, mIdx: number) => {
+                                  const mName = typeof m === 'string' ? m : (m.option?.name || m.name || '');
+                                  const mPrice = typeof m === 'string' ? 0 : Number(m.option?.priceDelta || m.priceAdjustment || m.price_adjustment || 0);
+                                  if (!mName) return null;
+                                  return (
+                                    <span
+                                      key={mIdx}
+                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200/80 font-normal"
+                                    >
+                                      <span className="text-slate-400 font-bold">+</span>
+                                      <span>{mName}</span>
+                                      {mPrice > 0 && (
+                                        <span className="text-emerald-700 font-bold text-[9px] ml-0.5">
+                                          (+Rp {mPrice.toLocaleString('id-ID')})
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {itemNotes && (
+                              <div className="text-[10px] text-slate-400 font-normal italic mt-0.5">
+                                Catatan: {itemNotes}
+                              </div>
                             )}
                             {item.sku && (
-                              <div className="text-[10px] text-slate-400 font-mono">{item.sku}</div>
+                              <div className="text-[10px] text-slate-400 font-mono font-normal">{item.sku}</div>
                             )}
                           </td>
                           <td className="py-2.5 px-2 text-right text-slate-600">

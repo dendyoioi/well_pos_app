@@ -46,6 +46,54 @@ const normalizeNonCashSubMethod = (rawMethod: string): { code: string; label: st
   return { code: m || 'LAINNYA', label: m || 'Lainnya' };
 };
 
+export interface ItemModifierInfo {
+  name: string;
+  priceDelta?: number;
+}
+
+export interface PaymentItemRecapRow {
+  key: string;
+  name: string;
+  productName: string;
+  variantName?: string | null;
+  modifiers: ItemModifierInfo[];
+  notes?: string | null;
+  category: string;
+  quantity: number;
+  revenue: number;
+  cost: number;
+  hasSplitAllocation: boolean;
+}
+
+const extractItemModifiers = (it: any): ItemModifierInfo[] => {
+  const rawMods = it.modifiers || it.modifiersSnapshot || it.selectedModifiers || [];
+  if (!Array.isArray(rawMods)) return [];
+  return rawMods
+    .map((m: any) => {
+      if (typeof m === 'string') return { name: m, priceDelta: 0 };
+      const name = m.name || m.option?.name || m.modifierName || '';
+      const priceDelta = Number(
+        m.price_adjustment ?? m.priceAdjustment ?? m.priceDelta ?? m.option?.priceDelta ?? 0
+      );
+      return { name, priceDelta };
+    })
+    .filter((m) => m.name.trim().length > 0);
+};
+
+const getItemCompositeKey = (
+  prodName: string,
+  variantName?: string | null,
+  modifiers: ItemModifierInfo[] = []
+): string => {
+  const v =
+    variantName && variantName !== 'Default' && variantName !== 'Standar' ? variantName.trim() : '';
+  const sortedMods = [...modifiers]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((m) => m.name.toLowerCase().trim())
+    .join('|');
+  return `${prodName.trim().toLowerCase()}__${v.toLowerCase()}__${sortedMods}`;
+};
+
 export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
   activeOutlet,
   currentUser,
@@ -112,7 +160,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
     );
   }, [rawOrders]);
 
-  // Ekstraksi & Agregasi Metode Pembayaran + Item dengan Standar Akuntansi Pro-Rata Multi-Tender
+  // Ekstraksi & Agregasi Metode Pembayaran + Item dengan Standar Akuntansi Pro-Rata Multi-Tender & Modifiers
   const {
     topLevelCards,
     nonCashSubOptions,
@@ -125,17 +173,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
   } = useMemo(() => {
     let grossRev = 0;
     let grossCost = 0;
-    const allItemsMap: Record<
-      string,
-      {
-        name: string;
-        category: string;
-        quantity: number;
-        revenue: number;
-        cost: number;
-        hasSplitAllocation: boolean;
-      }
-    > = {};
+    const allItemsMap: Record<string, PaymentItemRecapRow> = {};
 
     // Map untuk menampung agregasi per metode
     const methodSummaryMap: Record<
@@ -147,17 +185,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
         txCount: number;
         totalAmount: number;
         totalCost: number;
-        itemsMap: Record<
-          string,
-          {
-            name: string;
-            category: string;
-            quantity: number;
-            revenue: number;
-            cost: number;
-            hasSplitAllocation: boolean;
-          }
-        >;
+        itemsMap: Record<string, PaymentItemRecapRow>;
       }
     > = {
       ALL: {
@@ -198,7 +226,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
     // Helper push ke itemsMap metode
     const addItemToMethod = (
       methodKey: string,
+      itemKey: string,
       pName: string,
+      vName: string | null | undefined,
+      mods: ItemModifierInfo[],
+      notes: string | null | undefined,
       pCat: string,
       qty: number,
       rev: number,
@@ -217,9 +249,14 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
         };
       }
       const targetMap = methodSummaryMap[methodKey].itemsMap;
-      if (!targetMap[pName]) {
-        targetMap[pName] = {
+      if (!targetMap[itemKey]) {
+        targetMap[itemKey] = {
+          key: itemKey,
           name: pName,
+          productName: pName,
+          variantName: vName && vName !== 'Default' && vName !== 'Standar' ? vName : null,
+          modifiers: mods || [],
+          notes: notes || null,
           category: pCat || 'Umum',
           quantity: 0,
           revenue: 0,
@@ -227,11 +264,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
           hasSplitAllocation: false,
         };
       }
-      targetMap[pName].quantity += qty;
-      targetMap[pName].revenue += rev;
-      targetMap[pName].cost += cost;
+      targetMap[itemKey].quantity += qty;
+      targetMap[itemKey].revenue += rev;
+      targetMap[itemKey].cost += cost;
       methodSummaryMap[methodKey].totalCost += cost;
-      if (isSplit) targetMap[pName].hasSplitAllocation = true;
+      if (isSplit) targetMap[itemKey].hasSplitAllocation = true;
     };
 
     for (const order of paidOrders) {
@@ -249,7 +286,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
       // Catat ke ALL items
       for (const it of orderItemList) {
-        const name = it.productName || it.product?.name || 'Produk';
+        const prodName = it.productName || it.product?.name || 'Produk';
+        const vName = it.variantName || it.variant?.name || (it as any).productVariant?.name || null;
+        const itemMods = extractItemModifiers(it);
+        const itemNotes = it.notes || it.itemNote || null;
+        const itemCompositeKey = getItemCompositeKey(prodName, vName, itemMods);
         const cat = it.categoryName || (it.product as any)?.category?.name || 'Umum';
         const qty = Number(it.quantity || 0);
         const subtotal = Number(it.subtotal || (it.unitPrice || 0) * qty);
@@ -257,11 +298,16 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
         const itemCost = costPrice * qty;
 
         grossCost += itemCost;
-        addItemToMethod('ALL', name, cat, qty, subtotal, itemCost, false);
+        addItemToMethod('ALL', itemCompositeKey, prodName, vName, itemMods, itemNotes, cat, qty, subtotal, itemCost, false);
 
-        if (!allItemsMap[name]) {
-          allItemsMap[name] = {
-            name,
+        if (!allItemsMap[itemCompositeKey]) {
+          allItemsMap[itemCompositeKey] = {
+            key: itemCompositeKey,
+            name: prodName,
+            productName: prodName,
+            variantName: vName && vName !== 'Default' && vName !== 'Standar' ? vName : null,
+            modifiers: itemMods,
+            notes: itemNotes,
             category: cat,
             quantity: 0,
             revenue: 0,
@@ -269,9 +315,9 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
             hasSplitAllocation: false,
           };
         }
-        allItemsMap[name].quantity += qty;
-        allItemsMap[name].revenue += subtotal;
-        allItemsMap[name].cost += itemCost;
+        allItemsMap[itemCompositeKey].quantity += qty;
+        allItemsMap[itemCompositeKey].revenue += subtotal;
+        allItemsMap[itemCompositeKey].cost += itemCost;
       }
 
       const payments = order.payments || [];
@@ -283,13 +329,17 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
         // Catat full items ke kategori SPLIT
         for (const it of orderItemList) {
-          const name = it.productName || it.product?.name || 'Produk';
+          const prodName = it.productName || it.product?.name || 'Produk';
+          const vName = it.variantName || it.variant?.name || (it as any).productVariant?.name || null;
+          const itemMods = extractItemModifiers(it);
+          const itemNotes = it.notes || it.itemNote || null;
+          const itemCompositeKey = getItemCompositeKey(prodName, vName, itemMods);
           const cat = it.categoryName || (it.product as any)?.category?.name || 'Umum';
           const qty = Number(it.quantity || 0);
           const subtotal = Number(it.subtotal || (it.unitPrice || 0) * qty);
           const costPrice = Number(it.costPrice || (it as any).cost_price || 0);
           const itemCost = costPrice * qty;
-          addItemToMethod('SPLIT', name, cat, qty, subtotal, itemCost, true);
+          addItemToMethod('SPLIT', itemCompositeKey, prodName, vName, itemMods, itemNotes, cat, qty, subtotal, itemCost, true);
         }
 
         // Hitung alokasi pro-rata per metode bayar penyusun split
@@ -305,14 +355,22 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
             methodSummaryMap.CASH.totalAmount += pAmount;
             // Alokasi pro-rata item ke Tunai
             for (const it of orderItemList) {
-              const name = it.productName || it.product?.name || 'Produk';
+              const prodName = it.productName || it.product?.name || 'Produk';
+              const vName = it.variantName || it.variant?.name || (it as any).productVariant?.name || null;
+              const itemMods = extractItemModifiers(it);
+              const itemNotes = it.notes || it.itemNote || null;
+              const itemCompositeKey = getItemCompositeKey(prodName, vName, itemMods);
               const cat = it.categoryName || (it.product as any)?.category?.name || 'Umum';
               const itemSubtotal = Number(it.subtotal || (it.unitPrice || 0) * Number(it.quantity || 0));
               const costPrice = Number(it.costPrice || (it as any).cost_price || 0);
               const itemCost = costPrice * Number(it.quantity || 0);
               addItemToMethod(
                 'CASH',
-                name,
+                itemCompositeKey,
+                prodName,
+                vName,
+                itemMods,
+                itemNotes,
                 cat,
                 Number(it.quantity || 0) * ratio,
                 itemSubtotal * ratio,
@@ -338,7 +396,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
             methodSummaryMap[subCode].totalAmount += pAmount;
 
             for (const it of orderItemList) {
-              const name = it.productName || it.product?.name || 'Produk';
+              const prodName = it.productName || it.product?.name || 'Produk';
+              const vName = it.variantName || it.variant?.name || (it as any).productVariant?.name || null;
+              const itemMods = extractItemModifiers(it);
+              const itemNotes = it.notes || it.itemNote || null;
+              const itemCompositeKey = getItemCompositeKey(prodName, vName, itemMods);
               const cat = it.categoryName || (it.product as any)?.category?.name || 'Umum';
               const itemSubtotal = Number(it.subtotal || (it.unitPrice || 0) * Number(it.quantity || 0));
               const costPrice = Number(it.costPrice || (it as any).cost_price || 0);
@@ -346,7 +408,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               // Masuk ke sub-metode spesifik (misal QRIS)
               addItemToMethod(
                 subCode,
-                name,
+                itemCompositeKey,
+                prodName,
+                vName,
+                itemMods,
+                itemNotes,
                 cat,
                 Number(it.quantity || 0) * ratio,
                 itemSubtotal * ratio,
@@ -356,7 +422,11 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               // Dan juga ke induk NON_CASH
               addItemToMethod(
                 'NON_CASH',
-                name,
+                itemCompositeKey,
+                prodName,
+                vName,
+                itemMods,
+                itemNotes,
                 cat,
                 Number(it.quantity || 0) * ratio,
                 itemSubtotal * ratio,
@@ -380,13 +450,17 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
           methodSummaryMap.CASH.txCount += 1;
           methodSummaryMap.CASH.totalAmount += pAmount;
           for (const it of orderItemList) {
-            const name = it.productName || it.product?.name || 'Produk';
+            const prodName = it.productName || it.product?.name || 'Produk';
+            const vName = it.variantName || it.variant?.name || (it as any).productVariant?.name || null;
+            const itemMods = extractItemModifiers(it);
+            const itemNotes = it.notes || it.itemNote || null;
+            const itemCompositeKey = getItemCompositeKey(prodName, vName, itemMods);
             const cat = it.categoryName || (it.product as any)?.category?.name || 'Umum';
             const qty = Number(it.quantity || 0);
             const subtotal = Number(it.subtotal || (it.unitPrice || 0) * qty);
             const costPrice = Number(it.costPrice || (it as any).cost_price || 0);
             const itemCost = costPrice * qty;
-            addItemToMethod('CASH', name, cat, qty, subtotal, itemCost, false);
+            addItemToMethod('CASH', itemCompositeKey, prodName, vName, itemMods, itemNotes, cat, qty, subtotal, itemCost, false);
           }
         } else {
           methodSummaryMap.NON_CASH.txCount += 1;
@@ -407,14 +481,18 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
           methodSummaryMap[subCode].totalAmount += pAmount;
 
           for (const it of orderItemList) {
-            const name = it.productName || it.product?.name || 'Produk';
+            const prodName = it.productName || it.product?.name || 'Produk';
+            const vName = it.variantName || it.variant?.name || (it as any).productVariant?.name || null;
+            const itemMods = extractItemModifiers(it);
+            const itemNotes = it.notes || it.itemNote || null;
+            const itemCompositeKey = getItemCompositeKey(prodName, vName, itemMods);
             const cat = it.categoryName || (it.product as any)?.category?.name || 'Umum';
             const qty = Number(it.quantity || 0);
             const subtotal = Number(it.subtotal || (it.unitPrice || 0) * qty);
             const costPrice = Number(it.costPrice || (it as any).cost_price || 0);
             const itemCost = costPrice * qty;
-            addItemToMethod(subCode, name, cat, qty, subtotal, itemCost, false);
-            addItemToMethod('NON_CASH', name, cat, qty, subtotal, itemCost, false);
+            addItemToMethod(subCode, itemCompositeKey, prodName, vName, itemMods, itemNotes, cat, qty, subtotal, itemCost, false);
+            addItemToMethod('NON_CASH', itemCompositeKey, prodName, vName, itemMods, itemNotes, cat, qty, subtotal, itemCost, false);
           }
         }
       }
@@ -489,11 +567,16 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
     let list = Object.values(selectedObj.itemsMap);
 
-    // Filter berdasarkan search term
+    // Filter berdasarkan search term (Nama produk, Kategori, Varian, Modifier, Catatan)
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       list = list.filter(
-        (it) => it.name.toLowerCase().includes(q) || it.category.toLowerCase().includes(q)
+        (it) =>
+          it.name.toLowerCase().includes(q) ||
+          it.category.toLowerCase().includes(q) ||
+          (it.variantName && it.variantName.toLowerCase().includes(q)) ||
+          it.modifiers.some((m) => m.name.toLowerCase().includes(q)) ||
+          (it.notes && it.notes.toLowerCase().includes(q))
       );
     }
 
@@ -526,6 +609,9 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
     const headers = [
       'No',
       'Nama Menu / Produk',
+      'Varian',
+      'Modifier / Topping',
+      'Catatan Khusus',
       'Kategori',
       'Jumlah Terjual (Porsi/Pcs)',
       'Total Omset Penjualan (Rp)',
@@ -543,9 +629,25 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
       const profit = it.revenue - itemCost;
       const margin = it.revenue > 0 ? ((profit / it.revenue) * 100).toFixed(1) + '%' : '0.0%';
 
+      const variantText = it.variantName || '-';
+      const modsText =
+        it.modifiers && it.modifiers.length > 0
+          ? it.modifiers
+              .map((m) =>
+                m.priceDelta && m.priceDelta > 0
+                  ? `${m.name} (+Rp ${Math.round(m.priceDelta).toLocaleString('id-ID')})`
+                  : m.name
+              )
+              .join(', ')
+          : '-';
+      const notesText = it.notes || '-';
+
       return [
         idx + 1,
-        `"${it.name.replace(/"/g, '""')}"`,
+        `"${(it.productName || it.name).replace(/"/g, '""')}"`,
+        `"${variantText.replace(/"/g, '""')}"`,
+        `"${modsText.replace(/"/g, '""')}"`,
+        `"${notesText.replace(/"/g, '""')}"`,
         `"${it.category.replace(/"/g, '""')}"`,
         it.quantity % 1 === 0 ? it.quantity : it.quantity.toFixed(2),
         Math.round(it.revenue),
@@ -984,39 +1086,75 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                         : '0.0';
 
                     return (
-                      <tr key={item.name} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="py-3 px-4 text-center text-slate-400 text-xs font-mono whitespace-nowrap">
+                      <tr key={item.key || `${item.name}-${idx}`} className="hover:bg-blue-50/30 transition-colors">
+                        <td className="py-3 px-4 text-center text-slate-400 text-xs font-mono whitespace-nowrap align-top">
                           {rowNumber}
                         </td>
-                        <td className="py-3 px-4 font-bold text-blue-950 text-xs whitespace-nowrap">
-                          {item.name}
+                        <td className="py-3 px-4 text-xs align-top">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-blue-950 text-xs">
+                              {item.productName || item.name}
+                            </span>
+                            {item.variantName && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-800 border border-blue-200">
+                                {item.variantName}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Modifier / Topping Pills Sub-baris */}
+                          {item.modifiers && item.modifiers.length > 0 && (
+                            <div className="flex items-center gap-1 flex-wrap mt-1">
+                              {item.modifiers.map((mod, mIdx) => (
+                                <span
+                                  key={mIdx}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200/80"
+                                >
+                                  <span className="text-slate-400 font-bold">+</span>
+                                  <span>{mod.name}</span>
+                                  {mod.priceDelta && mod.priceDelta > 0 ? (
+                                    <span className="text-emerald-700 font-bold text-[9px] ml-0.5">
+                                      (+Rp {mod.priceDelta.toLocaleString('id-ID')})
+                                    </span>
+                                  ) : null}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Catatan Khusus Pesanan jika ada */}
+                          {item.notes && (
+                            <div className="text-[10px] text-slate-400 italic mt-0.5 truncate max-w-xs">
+                              Catatan: {item.notes}
+                            </div>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-xs whitespace-nowrap">
+                        <td className="py-3 px-4 text-xs whitespace-nowrap align-top">
                           <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold">
                             {item.category}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center font-bold text-xs whitespace-nowrap">
+                        <td className="py-3 px-4 text-center font-bold text-xs whitespace-nowrap align-top">
                           <span className="inline-flex items-center gap-1 text-slate-900">
                             {item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}
                             <span className="text-[11px] font-normal text-slate-500">porsi</span>
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-black text-blue-950 font-mono text-xs whitespace-nowrap">
+                        <td className="py-3 px-4 text-right font-black text-blue-950 font-mono text-xs whitespace-nowrap align-top">
                           Rp {Math.round(item.revenue).toLocaleString('id-ID')}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-600 text-xs whitespace-nowrap">
+                        <td className="py-3 px-4 text-right font-bold text-slate-600 text-xs whitespace-nowrap align-top">
                           {contribPct}%
                         </td>
                         {showCostAndProfit && isPrivileged && (
                           <>
-                            <td className="py-3 px-4 text-right font-medium text-slate-600 font-mono text-xs whitespace-nowrap">
+                            <td className="py-3 px-4 text-right font-medium text-slate-600 font-mono text-xs whitespace-nowrap align-top">
                               Rp {Math.round(item.cost || 0).toLocaleString('id-ID')}
                             </td>
-                            <td className="py-3 px-4 text-right font-black text-emerald-700 font-mono text-xs whitespace-nowrap">
+                            <td className="py-3 px-4 text-right font-black text-emerald-700 font-mono text-xs whitespace-nowrap align-top">
                               Rp {Math.round((item.revenue || 0) - (item.cost || 0)).toLocaleString('id-ID')}
                             </td>
-                            <td className="py-3 px-4 text-center font-bold text-xs whitespace-nowrap">
+                            <td className="py-3 px-4 text-center font-bold text-xs whitespace-nowrap align-top">
                               <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
                                 {item.revenue > 0
                                   ? (((item.revenue - (item.cost || 0)) / item.revenue) * 100).toFixed(1)
@@ -1025,7 +1163,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                             </td>
                           </>
                         )}
-                        <td className="py-3 px-4 text-center text-xs whitespace-nowrap">
+                        <td className="py-3 px-4 text-center text-xs whitespace-nowrap align-top">
                           {item.hasSplitAllocation ? (
                             <span
                               className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1"

@@ -501,6 +501,18 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
         api.getMaintenanceConfig().catch(() => null),
       ]);
 
+      // Deteksi jika token otentikasi Superadmin expired / invalid
+      if (
+        (dashRes.status === 'error' && (dashRes.message?.toLowerCase().includes('token') || dashRes.message?.toLowerCase().includes('kedaluwarsa') || dashRes.message?.toLowerCase().includes('unauthorized'))) ||
+        (tenantsRes.status === 'error' && (tenantsRes.message?.toLowerCase().includes('token') || tenantsRes.message?.toLowerCase().includes('kedaluwarsa') || tenantsRes.message?.toLowerCase().includes('unauthorized')))
+      ) {
+        platformStorage.clearSession();
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setLoginError('Sesi Superadmin telah kedaluwarsa. Silakan masuk kembali.');
+        return;
+      }
+
       if (dashRes.status === 'success') {
         setDashboardData(dashRes.data);
       }

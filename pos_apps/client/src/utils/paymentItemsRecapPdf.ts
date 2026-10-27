@@ -2,6 +2,10 @@ import { jsPDF } from 'jspdf';
 
 export interface PaymentItemRecapRow {
   name: string;
+  productName?: string;
+  variantName?: string | null;
+  modifiers?: Array<{ name: string; priceDelta?: number }>;
+  notes?: string | null;
   category: string;
   quantity: number;
   revenue: number;
@@ -201,11 +205,19 @@ export const generatePaymentItemsRecapPdf = (options: GeneratePaymentItemsPdfOpt
     doc.text(String(index + 1), curX + cols[0].width / 2, rowY, { align: 'center' });
     curX += cols[0].width;
 
-    // Nama Menu / Produk
+    // Nama Menu / Produk + Varian + Modifiers
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(23, 37, 84);
-    const splitName = doc.splitTextToSize(it.name, cols[1].width - 3);
-    doc.text(splitName[0] || it.name, curX + 2, rowY);
+    let displayName = it.productName || it.name;
+    if (it.variantName) {
+      displayName += ` [${it.variantName}]`;
+    }
+    if (it.modifiers && it.modifiers.length > 0) {
+      const modStr = it.modifiers.map((m) => m.name).join(', ');
+      displayName += ` (+ ${modStr})`;
+    }
+    const splitName = doc.splitTextToSize(displayName, cols[1].width - 3);
+    doc.text(splitName[0] || displayName, curX + 2, rowY);
     curX += cols[1].width;
 
     // Kategori
