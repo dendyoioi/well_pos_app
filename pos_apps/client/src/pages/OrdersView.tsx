@@ -605,7 +605,16 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
 
             <button
               type="button"
-              onClick={() => exportOrdersToCsv(filteredOrders, 'daftar_faktur_penjualan_wellpos')}
+              onClick={() => {
+                const outletName = filteredOrders[0]?.outlet?.name || activeOutlet?.name || 'Well POS';
+                exportOrdersToCsv(filteredOrders, {
+                  outletName,
+                  cashierName: selectedCashier,
+                  filterChannel: selectedChannel,
+                  dateRangeText,
+                  filenamePrefix: 'daftar_faktur_penjualan_wellpos',
+                });
+              }}
               disabled={loading || filteredOrders.length === 0}
               className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
               title="Ekspor Daftar Faktur Penjualan ke Excel / CSV"
@@ -618,7 +627,12 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
               type="button"
               onClick={() => {
                 const outletName = filteredOrders[0]?.outlet?.name || activeOutlet?.name || 'Well POS';
-                generateSalesRecapPdf(filteredOrders, selectedChannel, outletName);
+                generateSalesRecapPdf(filteredOrders, {
+                  filterChannel: selectedChannel,
+                  outletName,
+                  cashierName: selectedCashier,
+                  dateRangeText,
+                });
               }}
               disabled={loading || filteredOrders.length === 0}
               className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
