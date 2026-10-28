@@ -70,14 +70,16 @@ export class ReportReadAdapter extends BaseReadAdapter {
           oi.unit_price,
           oi.cost_price,
           oi.subtotal,
-          p.id as product_id,
-          p.name as product_name,
-          pv.sku,
+          oi.modifiers_snapshot,
+          COALESCE(NULLIF(oi.variant_name, ''), pv.name, 'Default') as variant_name,
+          COALESCE(p.id, oi.product_variant_id, oi.id) as product_id,
+          COALESCE(NULLIF(oi.product_name, ''), p.name, 'Produk') as product_name,
+          COALESCE(pv.sku, oi.sku, '-') as sku,
           c.id as category_id,
           COALESCE(c.name, 'Lainnya') as category_name
         FROM "order_items" oi
-        JOIN "product_variants" pv ON pv.id = oi.product_variant_id
-        JOIN "products" p ON p.id = pv.product_id
+        LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
+        LEFT JOIN "products" p ON p.id = pv.product_id
         LEFT JOIN "categories" c ON c.id = p.category_id
         WHERE oi.order_id = ANY($1::text[]);
       `;
@@ -181,8 +183,30 @@ export class ReportReadAdapter extends BaseReadAdapter {
 
     const productStatsMap = new Map<
       string,
-      { id: string; name: string; sku: string; categoryName: string; qtySold: number; revenue: number; cost: number }
+      {
+        id: string;
+        name: string;
+        sku: string;
+        categoryName: string;
+        qtySold: number;
+        revenue: number;
+        cost: number;
+        variantsMap: Map<string, { name: string; qtySold: number; revenue: number }>;
+      }
     >();
+
+    const variantTrendMap = new Map<
+      string,
+      { productName: string; variantName: string; fullName: string; qtySold: number; revenue: number }
+    >();
+
+    const modifierTrendMap = new Map<
+      string,
+      { name: string; groupName: string; qtySold: number; revenue: number }
+    >();
+
+    let totalVariantUnitsSold = 0;
+    let totalModifierUnitsSold = 0;
 
     const categoryStatsMap = new Map<
       string,
@@ -197,6 +221,7 @@ export class ReportReadAdapter extends BaseReadAdapter {
       const qty = Number(item.quantity || 0);
       const prodId = item.product_id;
       const catId = item.category_id || 'unassigned';
+      const variantName = (item.variant_name || 'Default').trim();
 
       totalCOGS += itemCost;
       orderCogsMap.set(item.order_id, (orderCogsMap.get(item.order_id) || 0) + itemCost);
@@ -211,12 +236,71 @@ export class ReportReadAdapter extends BaseReadAdapter {
           qtySold: 0,
           revenue: 0,
           cost: 0,
+          variantsMap: new Map(),
         });
       }
       const pStat = productStatsMap.get(prodId)!;
       pStat.qtySold += qty;
       pStat.revenue += itemSubtotal;
       pStat.cost += itemCost;
+
+      // Track per-product variant breakdown
+      if (!pStat.variantsMap.has(variantName)) {
+        pStat.variantsMap.set(variantName, { name: variantName, qtySold: 0, revenue: 0 });
+      }
+      const pvStat = pStat.variantsMap.get(variantName)!;
+      pvStat.qtySold += qty;
+      pvStat.revenue += itemSubtotal;
+
+      // Track global variant trend
+      const isDefaultVariant = ['default', 'standard', '-'].includes(variantName.toLowerCase());
+      const vKey = `${item.product_name}:::${variantName}`;
+      if (!variantTrendMap.has(vKey)) {
+        variantTrendMap.set(vKey, {
+          productName: item.product_name,
+          variantName,
+          fullName: isDefaultVariant ? item.product_name : `${item.product_name} (${variantName})`,
+          qtySold: 0,
+          revenue: 0,
+        });
+      }
+      const vt = variantTrendMap.get(vKey)!;
+      vt.qtySold += qty;
+      vt.revenue += itemSubtotal;
+      totalVariantUnitsSold += qty;
+
+      // Track modifiers and toppings from snapshot
+      if (item.modifiers_snapshot) {
+        let parsedMods: any[] = [];
+        try {
+          parsedMods = typeof item.modifiers_snapshot === 'string'
+            ? JSON.parse(item.modifiers_snapshot)
+            : (Array.isArray(item.modifiers_snapshot) ? item.modifiers_snapshot : []);
+        } catch {
+          parsedMods = [];
+        }
+
+        for (const mod of parsedMods) {
+          if (!mod || !mod.name) continue;
+          const modName = String(mod.name).trim();
+          const grpName = String(mod.group_name || mod.groupName || 'Modifier / Topping').trim();
+          const modKey = `${grpName}:::${modName}`;
+          const priceAdj = Number(mod.price_adjustment || mod.priceAdjustment || mod.price || 0);
+
+          if (!modifierTrendMap.has(modKey)) {
+            modifierTrendMap.set(modKey, {
+              name: modName,
+              groupName: grpName,
+              qtySold: 0,
+              revenue: 0,
+            });
+          }
+          const mt = modifierTrendMap.get(modKey)!;
+          mt.qtySold += qty;
+          mt.revenue += (qty * priceAdj);
+          totalModifierUnitsSold += qty;
+        }
+      }
 
       // Category stats
       if (!categoryStatsMap.has(catId)) {
@@ -368,12 +452,42 @@ export class ReportReadAdapter extends BaseReadAdapter {
 
     const topProducts = Array.from(productStatsMap.values())
       .map((p) => ({
-        ...p,
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        categoryName: p.categoryName,
+        qtySold: p.qtySold,
+        revenue: p.revenue,
+        cost: p.cost,
         profit: p.revenue - p.cost,
         profitMargin: p.revenue > 0 ? Number((((p.revenue - p.cost) / p.revenue) * 100).toFixed(2)) : 0,
+        variants: Array.from(p.variantsMap.values())
+          .map((v) => ({
+            name: v.name,
+            qtySold: v.qtySold,
+            revenue: v.revenue,
+            percentage: p.qtySold > 0 ? Math.round((v.qtySold / p.qtySold) * 100) : 0,
+          }))
+          .sort((a, b) => b.qtySold - a.qtySold),
       }))
       .sort((a, b) => b.qtySold - a.qtySold)
-      .slice(0, 10);
+      .slice(0, 50);
+
+    const topVariants = Array.from(variantTrendMap.values())
+      .map((v) => ({
+        ...v,
+        percentage: totalVariantUnitsSold > 0 ? Math.round((v.qtySold / totalVariantUnitsSold) * 100) : 0,
+      }))
+      .sort((a, b) => b.qtySold - a.qtySold)
+      .slice(0, 15);
+
+    const topModifiers = Array.from(modifierTrendMap.values())
+      .map((m) => ({
+        ...m,
+        percentage: totalModifierUnitsSold > 0 ? Math.round((m.qtySold / totalModifierUnitsSold) * 100) : 0,
+      }))
+      .sort((a, b) => b.qtySold - a.qtySold)
+      .slice(0, 15);
 
     let profitHealthStatus: 'SEHAT' | 'WASPADA' | 'KRITIS' = 'SEHAT';
     if (grossProfitMargin < 20) {
@@ -577,6 +691,8 @@ export class ReportReadAdapter extends BaseReadAdapter {
         },
       },
       topProducts,
+      topVariants,
+      topModifiers,
       slowMovingProducts,
       salesByCategory,
       dailyTrends,

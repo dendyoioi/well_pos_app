@@ -131,6 +131,28 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
         `${p.profitMargin}%`,
       ]),
       [''],
+      ['TREN VARIAN UKURAN MENU (STOK CUP & KEMASAN)'],
+      ['Peringkat', 'Nama Menu', 'Varian', 'Qty Terjual', 'Omset', 'Kontribusi (%)'],
+      ...(data.topVariants || []).map((v, idx) => [
+        idx + 1,
+        `"${v.productName}"`,
+        `"${v.variantName}"`,
+        v.qtySold,
+        v.revenue,
+        `${v.percentage}%`,
+      ]),
+      [''],
+      ['TREN MODIFIER & TOPPING (BAHAN PELENGKAP)'],
+      ['Peringkat', 'Grup Modifier', 'Nama Topping / Modifier', 'Qty Terpilih', 'Ekstra Omset', 'Kontribusi (%)'],
+      ...(data.topModifiers || []).map((m, idx) => [
+        idx + 1,
+        `"${m.groupName}"`,
+        `"${m.name}"`,
+        m.qtySold,
+        m.revenue,
+        `${m.percentage}%`,
+      ]),
+      [''],
       ['ANALISIS SLOW-MOVING & POTENSI DEAD STOCK'],
       ['SKU', 'Nama Produk', 'Kategori', 'Sisa Stok', 'HPP Modal Beli', 'Harga Jual', 'Qty Terjual', 'Nilai Modal Mengendap'],
       ...(data.slowMovingProducts || []).map((p) => [
@@ -513,7 +535,22 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                           </td>
                           <td className="px-5 py-3.5">
                             <div className="font-bold text-slate-900">{p.name}</div>
-                            <span className="text-[10px] text-slate-400 font-mono">{p.sku}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                              <span className="text-[10px] text-slate-400 font-mono">{p.sku}</span>
+                              {p.variants && p.variants.length > 1 && (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {p.variants.map((v) => (
+                                    <span
+                                      key={v.name}
+                                      className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100"
+                                      title={`${v.name}: ${v.qtySold} terjual (Rp ${v.revenue.toLocaleString('id-ID')})`}
+                                    >
+                                      {v.name}: <strong className="font-mono">{v.qtySold}</strong> ({v.percentage}%)
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap text-slate-500 font-medium">
                             {p.categoryName}
@@ -586,6 +623,18 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                               <span className="text-slate-300">•</span>
                               <span className="text-[10px] text-slate-500 font-medium">{p.categoryName}</span>
                             </div>
+                            {p.variants && p.variants.length > 1 && (
+                              <div className="flex items-center gap-1 flex-wrap mt-1.5">
+                                {p.variants.map((v) => (
+                                  <span
+                                    key={v.name}
+                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100"
+                                  >
+                                    {v.name}: <strong className="font-mono">{v.qtySold}</strong> ({v.percentage}%)
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -636,6 +685,153 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 itemLabel="menu"
               />
             )}
+          </div>
+
+          {/* Section: Tren Varian Ukuran & Modifier / Topping (Kebutuhan Pengelolaan Stok) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Card 1: Tren Varian Ukuran / Tipe Menu */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-r from-violet-50/60 to-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      Tren Varian Ukuran Menu
+                      <span className="text-[10px] font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full uppercase tracking-normal">
+                        Stok Cup &amp; Kemasan
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Peringkat ukuran (Large, Small, dll) terlaris untuk memandu estimasi belanja cup &amp; porsi
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                {(!data?.topVariants || data.topVariants.length === 0) ? (
+                  <div className="p-8 text-center text-slate-400 text-xs my-auto">
+                    Belum ada data varian menu pada periode ini
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {data.topVariants.slice(0, 7).map((v, i) => (
+                      <div key={`${v.productName}-${v.variantName}-${i}`} className="p-3 rounded-2xl bg-slate-50 border border-slate-100/80 hover:bg-violet-50/40 transition-colors">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-[10px] shrink-0 ${
+                              i === 0 ? 'bg-amber-100 text-amber-800' :
+                              i === 1 ? 'bg-slate-200 text-slate-700' :
+                              i === 2 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'bg-white text-slate-500 border border-slate-200'
+                            }`}>
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-slate-900 truncate block">
+                                {v.fullName}
+                              </span>
+                              <span className="text-[10px] text-violet-600 font-semibold">
+                                Varian: {v.variantName}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 whitespace-nowrap">
+                            <span className="text-xs font-black font-mono text-slate-900 block">
+                              {v.qtySold.toLocaleString('id-ID')} Pcs
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-400 font-mono">
+                              Rp {v.revenue.toLocaleString('id-ID')} ({v.percentage}%)
+                            </span>
+                          </div>
+                        </div>
+                        {/* Progress Bar Kontribusi */}
+                        <div className="w-full bg-slate-200/70 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-violet-600 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(4, v.percentage))}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Card 2: Tren Modifier, Topping & Extra */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-r from-amber-50/60 to-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      Tren Topping &amp; Modifier
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-normal">
+                        Bahan Pelengkap
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Peringkat topping &amp; modifier tambahan untuk kontrol stok bahan habis pakai
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                {(!data?.topModifiers || data.topModifiers.length === 0) ? (
+                  <div className="p-8 text-center text-slate-400 text-xs my-auto">
+                    Belum ada data topping atau modifier pada periode ini
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {data.topModifiers.slice(0, 7).map((m, i) => (
+                      <div key={`${m.groupName}-${m.name}-${i}`} className="p-3 rounded-2xl bg-slate-50 border border-slate-100/80 hover:bg-amber-50/40 transition-colors">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-[10px] shrink-0 ${
+                              i === 0 ? 'bg-amber-100 text-amber-800' :
+                              i === 1 ? 'bg-slate-200 text-slate-700' :
+                              i === 2 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'bg-white text-slate-500 border border-slate-200'
+                            }`}>
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-slate-900 truncate block">
+                                {m.name}
+                              </span>
+                              <span className="text-[10px] text-amber-700 font-semibold">
+                                Grup: {m.groupName}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 whitespace-nowrap">
+                            <span className="text-xs font-black font-mono text-slate-900 block">
+                              {m.qtySold.toLocaleString('id-ID')}x Terpilih
+                            </span>
+                            <span className="text-[10px] font-semibold text-emerald-600 font-mono">
+                              +Rp {m.revenue.toLocaleString('id-ID')} ({m.percentage}%)
+                            </span>
+                          </div>
+                        </div>
+                        {/* Progress Bar Kontribusi */}
+                        <div className="w-full bg-slate-200/70 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(4, m.percentage))}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Slow-Moving Products Table */}

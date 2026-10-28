@@ -462,7 +462,7 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
   // ── Style helpers (inline to stay Vanilla-CSS friendly) ────────────────────
   const card: React.CSSProperties = { background:'#fff', borderRadius:16, border:'1px solid #e2e8f0',
     boxShadow:'0 1px 4px rgba(0,0,0,0.04)', overflow:'hidden' };
-  const grid2: React.CSSProperties = { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', gap:20 };
+  const grid2: React.CSSProperties = { display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(320px,1fr))', gap:20 };
 
   return (
     <div className="space-y-6 pb-28 sm:pb-16 font-sans relative">
@@ -1039,21 +1039,21 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
           {/* Donut: Metode Bayar (Hierarki Tunai & Non-Tunai dengan Sub-Kategori Aktif) */}
           <div style={card}>
             <PanelHeader icon={<CreditCard size={13} color="#7c3aed" />} title="Distribusi Metode Bayar" badge="Donut Chart" />
-            <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-              <div style={{ flexShrink:0 }}>
+            <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-4 sm:gap-5">
+              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                 <DonutChart size={110} data={[
                   { label:'Tunai', value: m.cash, color:'#16a34a' },
                   ...activeNonCashSubs.map(s => ({ label: s.label.split(' ')[0], value: s.value, color: s.color })),
                 ].filter(d => d.value > 0)} />
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:8, width: '100%' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%', minWidth:0, flex:1 }}>
                 {/* 1. TUNAI (CASH) */}
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 10px', borderRadius:8, background:'#f0fdf4', border:'1px solid #bbf7d0' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 10px', borderRadius:8, background:'#f0fdf4', border:'1px solid #bbf7d0', gap:8 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0, flex:1 }}>
                     <span style={{ width:8, height:8, borderRadius:'50%', background:'#16a34a', flexShrink:0 }} />
-                    <span style={{ fontSize:11, fontWeight:700, color:'#166534' }}>Tunai (Cash)</span>
+                    <span style={{ fontSize:11, fontWeight:700, color:'#166534', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Tunai (Cash)</span>
                   </div>
-                  <div style={{ textAlign:'right' }}>
+                  <div style={{ textAlign:'right', flexShrink:0, whiteSpace:'nowrap' }}>
                     <strong className="font-mono" style={{ fontSize:11, color:'#0f172a' }}>{formatRupiah(m.cash)}</strong>
                     <span style={{ fontSize:10, fontWeight:700, color:'#16a34a', marginLeft:6 }}>
                       {m.totalSales > 0 ? Math.round((m.cash / m.totalSales) * 100) : 0}%
@@ -1063,15 +1063,15 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
 
                 {/* 2. NON-TUNAI */}
                 <div style={{ padding:'7px 10px', borderRadius:8, background:'#eff6ff', border:'1px solid #bfdbfe' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0, flex:1 }}>
                       <span style={{ width:8, height:8, borderRadius:'50%', background:'#1d4ed8', flexShrink:0 }} />
-                      <span style={{ fontSize:11, fontWeight:700, color:'#1e40af' }}>Non-Tunai</span>
-                      <span style={{ fontSize:9, fontWeight:600, color:'#3b82f6', background:'#dbeafe', padding:'1px 5px', borderRadius:4 }}>
-                        {activeNonCashSubs.length} Sub-Kategori
+                      <span style={{ fontSize:11, fontWeight:700, color:'#1e40af', whiteSpace:'nowrap' }}>Non-Tunai</span>
+                      <span style={{ fontSize:9, fontWeight:600, color:'#3b82f6', background:'#dbeafe', padding:'1px 5px', borderRadius:4, flexShrink:0 }}>
+                        {activeNonCashSubs.length} Sub
                       </span>
                     </div>
-                    <div style={{ textAlign:'right' }}>
+                    <div style={{ textAlign:'right', flexShrink:0, whiteSpace:'nowrap' }}>
                       <strong className="font-mono" style={{ fontSize:11, color:'#0f172a' }}>{formatRupiah(m.nonCashTotal)}</strong>
                       <span style={{ fontSize:10, fontWeight:700, color:'#1d4ed8', marginLeft:6 }}>
                         {m.totalSales > 0 ? Math.round((m.nonCashTotal / m.totalSales) * 100) : 0}%
@@ -1083,12 +1083,12 @@ export const BusinessSummaryView: React.FC<BusinessSummaryViewProps> = ({ active
                   {activeNonCashSubs.length > 0 && (
                     <div style={{ marginTop:6, paddingTop:6, borderTop:'1px dashed #bfdbfe', display:'flex', flexDirection:'column', gap:4 }}>
                       {activeNonCashSubs.map(sub => (
-                        <div key={sub.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:10 }}>
-                          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                        <div key={sub.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:10, gap:8 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:5, minWidth:0, flex:1 }}>
                             <span style={{ width:5, height:5, borderRadius:'50%', background: sub.color, flexShrink:0 }} />
-                            <span style={{ color:'#475569', fontWeight:600 }}>{sub.label}</span>
+                            <span style={{ color:'#475569', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{sub.label}</span>
                           </div>
-                          <div style={{ textAlign:'right' }}>
+                          <div style={{ textAlign:'right', flexShrink:0, whiteSpace:'nowrap' }}>
                             <span className="font-mono" style={{ color:'#0f172a', fontWeight:700 }}>{formatRupiah(sub.value)}</span>
                             <span style={{ color: sub.color, fontWeight:700, marginLeft:4 }}>
                               ({m.totalSales > 0 ? Math.round((sub.value / m.totalSales) * 100) : 0}%)

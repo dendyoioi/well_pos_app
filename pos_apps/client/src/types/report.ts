@@ -40,6 +40,13 @@ export interface CashFlowReport {
   nonCash?: NonCashDetail;
 }
 
+export interface ProductVariantStatItem {
+  name: string;
+  qtySold: number;
+  revenue: number;
+  percentage: number;
+}
+
 export interface TopProductItem {
   id: string;
   name: string;
@@ -50,6 +57,24 @@ export interface TopProductItem {
   cost: number;
   profit: number;
   profitMargin: number;
+  variants?: ProductVariantStatItem[];
+}
+
+export interface TopVariantItem {
+  productName: string;
+  variantName: string;
+  fullName: string;
+  qtySold: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface TopModifierItem {
+  name: string;
+  groupName: string;
+  qtySold: number;
+  revenue: number;
+  percentage: number;
 }
 
 export interface CategorySalesItem {
@@ -116,6 +141,8 @@ export interface FinancialReportData {
   financialSummary: FinancialSummary;
   cashFlow: CashFlowReport;
   topProducts: TopProductItem[];
+  topVariants?: TopVariantItem[];
+  topModifiers?: TopModifierItem[];
   slowMovingProducts?: SlowMovingProductItem[];
   salesByCategory: CategorySalesItem[];
   dailyTrends: DailyTrendItem[];

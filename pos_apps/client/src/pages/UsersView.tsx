@@ -282,11 +282,14 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           name: formData.name.trim(),
           email: formData.email.trim(),
           role: formData.role,
-          pin: formData.pin || null,
           outletId: formData.outletId || null,
           canCashOut: formData.canCashOut,
           isActive: formData.isActive,
         };
+        // Hanya kirim PIN jika user membuka form Ubah PIN dan menginput PIN baru
+        if (showPinField && formData.pin && formData.pin.trim()) {
+          payload.pin = formData.pin.trim();
+        }
         // Hanya kirim userCode jika benar-benar diubah oleh user
         if (isUserCodeChanged && formData.userCode.trim()) {
           payload.userCode = formData.userCode.trim();

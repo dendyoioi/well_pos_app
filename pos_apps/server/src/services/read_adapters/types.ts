@@ -245,6 +245,27 @@ export interface FinancialReportDTO {
     cost: number;
     profit: number;
     profitMargin: number;
+    variants?: Array<{
+      name: string;
+      qtySold: number;
+      revenue: number;
+      percentage: number;
+    }>;
+  }>;
+  topVariants?: Array<{
+    productName: string;
+    variantName: string;
+    fullName: string;
+    qtySold: number;
+    revenue: number;
+    percentage: number;
+  }>;
+  topModifiers?: Array<{
+    name: string;
+    groupName: string;
+    qtySold: number;
+    revenue: number;
+    percentage: number;
   }>;
   slowMovingProducts: Array<{
     id: string;
