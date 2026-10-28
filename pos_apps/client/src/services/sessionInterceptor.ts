@@ -34,21 +34,28 @@ export function initSessionInterceptor() {
           ? input.url
           : input.toString();
 
-      // Abaikan endpoint otentikasi awal (401 di sini berarti PIN atau password salah, bukan token expired)
-      const isInitialAuthEndpoint =
-        urlString.includes('/api/auth/login') ||
-        urlString.includes('/api/auth/pin-login') ||
-        urlString.includes('/api/platform/auth/login') ||
-        urlString.includes('/api/auth/pair-device') ||
-        urlString.includes('/api/auth/password/reset');
+      // Abaikan SEMUA endpoint auth, pre-login, dan validasi latar belakang awal
+      // (401 di sini adalah normal saat kredensial salah, token lama invalid, atau pairing kasir)
+      const isAuthOrPreLoginEndpoint =
+        urlString.includes('/api/auth/') ||
+        urlString.includes('/api/platform/auth/') ||
+        urlString.includes('/api/health') ||
+        urlString.includes('/api/saas/');
 
-      if (!isInitialAuthEndpoint && urlString.includes('/api/')) {
+      if (!isAuthOrPreLoginEndpoint && urlString.includes('/api/')) {
+        const isPlatform = urlString.includes('/api/platform/');
+
+        // KRITIS: HANYA picu jika sebelumnya memang ADA sesi aktif tersimpan di perangkat!
+        // Jika pengguna memang belum login (token kosong di localStorage), abaikan 401 dan JANGAN munculkan modal!
+        const existingToken = isPlatform ? platformStorage.getToken() : authStorage.getToken();
+        if (!existingToken) {
+          return response;
+        }
+
         const now = Date.now();
         // Debounce: cegah spam event jika ada banyak request paralel yang sama-sama 401
         if (now - lastDispatchedAt > 3000) {
           lastDispatchedAt = now;
-
-          const isPlatform = urlString.includes('/api/platform/');
 
           if (isPlatform) {
             platformStorage.clearSession();

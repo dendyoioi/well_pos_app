@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { api, authStorage } from './services/api';
+import { api, authStorage, platformStorage } from './services/api';
 import type { User } from './types/auth';
 import { DialogProvider } from './context/DialogContext';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
@@ -148,9 +148,16 @@ export const App: React.FC = () => {
       const msg = customEvent.detail?.message;
 
       if (eventType === 'merchant') {
+        const hadActiveSession = Boolean(user || authStorage.getToken());
         authStorage.clearSession();
         setUser(null);
+        if (!hadActiveSession) return; // Jangan munculkan modal jika sebelumnya memang belum login
+      } else {
+        const hadPlatformSession = Boolean(platformStorage.getToken());
+        platformStorage.clearSession();
+        if (!hadPlatformSession) return;
       }
+
       setSessionModalState({
         isOpen: true,
         reason: 'expired',
