@@ -131,8 +131,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
         `${p.profitMargin}%`,
       ]),
       [''],
-      ['TREN VARIAN UKURAN MENU (STOK CUP & KEMASAN)'],
-      ['Peringkat', 'Nama Menu', 'Varian', 'Qty Terjual', 'Omset', 'Kontribusi (%)'],
+      ['TREN VARIAN & PORSI MENU (BAHAN POKOK & KEMASAN)'],
+      ['Peringkat', 'Nama Menu', 'Varian / Porsi', 'Qty Terjual', 'Omset', 'Kontribusi (%)'],
       ...(data.topVariants || []).map((v, idx) => [
         idx + 1,
         `"${v.productName}"`,
@@ -142,8 +142,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
         `${v.percentage}%`,
       ]),
       [''],
-      ['TREN MODIFIER & TOPPING (BAHAN PELENGKAP)'],
-      ['Peringkat', 'Grup Modifier', 'Nama Topping / Modifier', 'Qty Terpilih', 'Ekstra Omset', 'Kontribusi (%)'],
+      ['TREN TOPPING & MODIFIER (PILIHAN & BAHAN PELENGKAP)'],
+      ['Peringkat', 'Grup Modifier', 'Nama Opsi / Topping', 'Qty Terpilih', 'Ekstra Omset', 'Kontribusi (%)'],
       ...(data.topModifiers || []).map((m, idx) => [
         idx + 1,
         `"${m.groupName}"`,
@@ -687,9 +687,9 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
             )}
           </div>
 
-          {/* Section: Tren Varian Ukuran & Modifier / Topping (Kebutuhan Pengelolaan Stok) */}
+          {/* Section: Tren Varian & Porsi Menu serta Topping & Modifier (Kebutuhan Pengelolaan Stok General F&B) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Card 1: Tren Varian Ukuran / Tipe Menu */}
+            {/* Card 1: Tren Varian & Ukuran Porsi Menu */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
               <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-r from-violet-50/60 to-white">
                 <div className="flex items-center gap-2.5">
@@ -698,13 +698,13 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      Tren Varian Ukuran Menu
+                      Tren Varian &amp; Porsi Menu
                       <span className="text-[10px] font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full uppercase tracking-normal">
-                        Stok Cup &amp; Kemasan
+                        Varian &amp; Porsi
                       </span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      Peringkat ukuran (Large, Small, dll) terlaris untuk memandu estimasi belanja cup &amp; porsi
+                      Peringkat varian &amp; ukuran porsi (Jumbo, Regular, Paket Combo) untuk acuan belanja porsi &amp; bahan pokok
                     </p>
                   </div>
                 </div>
@@ -734,7 +734,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                                 {v.fullName}
                               </span>
                               <span className="text-[10px] text-violet-600 font-semibold">
-                                Varian: {v.variantName}
+                                Varian / Porsi: {v.variantName}
                               </span>
                             </div>
                           </div>
@@ -761,7 +761,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </div>
             </div>
 
-            {/* Card 2: Tren Modifier, Topping & Extra */}
+            {/* Card 2: Tren Topping & Modifier Pilihan */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
               <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-r from-amber-50/60 to-white">
                 <div className="flex items-center gap-2.5">
@@ -770,13 +770,13 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      Tren Topping &amp; Modifier
+                      Tren Topping &amp; Modifier Pilihan
                       <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-normal">
-                        Bahan Pelengkap
+                        Modifier &amp; Topping
                       </span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      Peringkat topping &amp; modifier tambahan untuk kontrol stok bahan habis pakai
+                      Peringkat opsi tambahan (Level Pedas/Suhu, Topping Makanan/Minuman, Pilihan Saus) untuk kontrol bahan pelengkap
                     </p>
                   </div>
                 </div>
