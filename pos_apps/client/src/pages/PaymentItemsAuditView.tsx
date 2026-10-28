@@ -602,10 +602,26 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
     return itemAggregationByMethod[activeMethodKey]?.totalAmount || 0;
   }, [itemAggregationByMethod, activeMethodKey]);
 
-  // Ekspor CSV Kanonikal
+  // Ekspor CSV Kanonikal Lengkap dengan Kop Dokumen Resmi (Excel-Friendly)
   const handleExportCsv = () => {
     const methodLabel = itemAggregationByMethod[activeMethodKey]?.label || activeMethodKey;
     const includeHpp = showCostAndProfit && isPrivileged;
+    const outletLabel = activeOutlet?.name || 'Well POS';
+    const cashierLabel = selectedCashier && selectedCashier !== 'ALL' ? selectedCashier : 'Semua Kasir';
+    const rangeLabel = dateRangeText || 'Periode Aktif';
+    const nowStr = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
+    const totalQty = currentItemsList.reduce((sum, it) => sum + Number(it.quantity || 0), 0);
+
+    // Kop Dokumen Resmi di Bagian Atas CSV (Excel Friendly)
+    const headerBanner = [
+      ['"REKAPITULASI PENJUALAN ITEM MENU PER METODE PEMBAYARAN"'],
+      [`"Toko / Outlet: ${outletLabel.replace(/"/g, '""')}"`, `"Metode Pembayaran: ${methodLabel.replace(/"/g, '""')}"`],
+      [`"Kasir Operasional: ${cashierLabel.replace(/"/g, '""')}"`, `"Periode Tanggal: ${rangeLabel.replace(/"/g, '""')}"`],
+      [`"Waktu Ekspor: ${nowStr}"`],
+      [`"Ringkasan: ${currentItemsList.length} Item Menu Unik | ${totalQty % 1 === 0 ? totalQty : totalQty.toFixed(1)} Porsi / Pcs Terjual | Total Omset: Rp ${Math.round(currentMethodTotalRevenue).toLocaleString('id-ID')}"`],
+      ['""'], // Baris kosong pemisah
+    ];
+
     const headers = [
       'No',
       'Nama Menu / Produk',
@@ -658,7 +674,13 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
     });
 
     const csvContent =
-      '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      '\uFEFF' +
+      [
+        ...headerBanner.map((b) => b.join(',')),
+        headers.join(','),
+        ...rows.map((r) => r.join(',')),
+      ].join('\r\n');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
