@@ -113,6 +113,19 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!platformStorage.getToken());
   const [currentUser, setCurrentUser] = useState<any>(() => platformStorage.getUser());
 
+  // Dengarkan sinyal sesi kedaluwarsa platform global
+  useEffect(() => {
+    const handlePlatformSessionExpired = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type?: 'merchant' | 'platform' }>;
+      if (customEvent.detail?.type === 'platform') {
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+      }
+    };
+    window.addEventListener('auth:session_expired', handlePlatformSessionExpired);
+    return () => window.removeEventListener('auth:session_expired', handlePlatformSessionExpired);
+  }, []);
+
   // Login form state (dikosongkan agar wajib diinput manual demi keamanan)
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');

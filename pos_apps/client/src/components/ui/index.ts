@@ -13,3 +13,4 @@ export * from './SearchableSelect';
 export * from './ActionBar';
 export * from './ToggleSwitch';
 export * from './WellPosLogo';
+export * from './SessionExpiredModal';

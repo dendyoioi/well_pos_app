@@ -7,6 +7,7 @@ import { DialogProvider } from './context/DialogContext';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { PullToRefresh } from './components/PullToRefresh';
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
+import { SessionExpiredModal } from './components/ui/SessionExpiredModal';
 
 // Code-splitting P1-1: Halaman publik, superadmin, dan QR menu dimuat secara dinamis saat rute diakses
 const SuperadminDashboardPage = lazy(() =>
@@ -127,23 +128,71 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Tangani pencabutan sesi perangkat secara instan (Force Logout oleh Owner/Admin)
+  // State Modal Sesi Berakhir (Graceful Notification - Bebas alert native)
+  const [sessionModalState, setSessionModalState] = useState<{
+    isOpen: boolean;
+    reason: 'expired' | 'revoked';
+    type: 'merchant' | 'platform';
+    message?: string;
+  }>({
+    isOpen: false,
+    reason: 'expired',
+    type: 'merchant',
+  });
+
+  // Tangani kedaluwarsa sesi (401 global) & pencabutan sesi perangkat (Force Logout oleh Owner/Admin)
   useEffect(() => {
+    const handleSessionExpired = (e: Event) => {
+      const customEvent = e as CustomEvent<{ type?: 'merchant' | 'platform'; message?: string }>;
+      const eventType = customEvent.detail?.type || 'merchant';
+      const msg = customEvent.detail?.message;
+
+      if (eventType === 'merchant') {
+        authStorage.clearSession();
+        setUser(null);
+      }
+      setSessionModalState({
+        isOpen: true,
+        reason: 'expired',
+        type: eventType,
+        message: msg,
+      });
+    };
+
     const handleSessionRevoked = (e: Event) => {
       const customEvent = e as CustomEvent<{ message?: string }>;
       const msg =
         customEvent.detail?.message ||
-        'Sesi login perangkat Anda telah dicabut oleh pemilik toko. Silakan login kembali.';
+        'Sesi login perangkat Anda telah dicabut oleh pemilik toko demi keamanan akun. Silakan login kembali.';
       authStorage.clearSession();
       setUser(null);
-      setViewMode('pos-login');
-      window.location.hash = 'pos';
-      alert(msg);
+      setSessionModalState({
+        isOpen: true,
+        reason: 'revoked',
+        type: 'merchant',
+        message: msg,
+      });
     };
 
+    window.addEventListener('auth:session_expired', handleSessionExpired);
     window.addEventListener('auth:session_revoked', handleSessionRevoked);
-    return () => window.removeEventListener('auth:session_revoked', handleSessionRevoked);
+    return () => {
+      window.removeEventListener('auth:session_expired', handleSessionExpired);
+      window.removeEventListener('auth:session_revoked', handleSessionRevoked);
+    };
   }, []);
+
+  const handleConfirmSessionExpired = () => {
+    const isPlatform = sessionModalState.type === 'platform';
+    setSessionModalState((prev) => ({ ...prev, isOpen: false }));
+    if (isPlatform) {
+      setViewMode('superadmin');
+      window.location.hash = SUPERADMIN_SECRET_HASH;
+    } else {
+      setViewMode('pos-login');
+      window.location.hash = 'pos';
+    }
+  };
 
   useEffect(() => {
     const savedUser = authStorage.getUser();
@@ -299,6 +348,15 @@ export const App: React.FC = () => {
           )}
           {/* Global Progressive Web App (PWA) Install Banner — Hanya tampil saat pengguna telah login */}
           {user && <PwaInstallBanner />}
+
+          {/* Modal Graceful Sesi Berakhir Terpusat (Bebas Alert Native) */}
+          <SessionExpiredModal
+            isOpen={sessionModalState.isOpen}
+            reason={sessionModalState.reason}
+            type={sessionModalState.type}
+            message={sessionModalState.message}
+            onConfirm={handleConfirmSessionExpired}
+          />
         </div>
       </PullToRefresh>
     </DialogProvider>
