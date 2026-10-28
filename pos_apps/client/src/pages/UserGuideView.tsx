@@ -382,6 +382,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
     ],
     tips: 'Slip cetak X-Report dan Z-Report kasir dirancang murni sebagai ringkasan finansial (Pure Summary) tanpa mencetak nota transaksi individual guna menghemat kertas thermal roll 58mm/80mm. Jika membutuhkan audit detail per nota, gunakan menu Rekap Shift Kasir di Backoffice untuk dicetak dalam format kertas besar (A4/F4) atau diekspor ke file Excel/CSV.',
+    warning: 'KUNCI TUTUP SHIFT (Rule 15): Kasir DILARANG dan TIDAK BISA menutup shift jika masih terdapat tagihan belum lunas (UNPAID / Open Tab Meja). Sistem backend secara otomatis menolak permintaan tutup shift dengan kode UNPAID_ORDERS_REMAINING sampai seluruh pesanan diselesaikan pembayarannya atau dibatalkan (VOID) dengan otorisasi Supervisor.',
   },
   {
     id: 'void',
@@ -564,9 +565,16 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Setiap kali transaksi checkout berhasil di POS, klik tombol "Cetak Struk Bluetooth" di jendela sukses pembayaran. Nota langsung tercetak dalam hitungan detik.',
         highlight: 'Proses cetak 100% read-only dan tidak membebani mutasi database kasir.',
       },
+      {
+        number: 6,
+        title: 'Panduan Mengatasi Printer "Mencari Perangkat Terus" (Android & Samsung)',
+        description:
+          'Jika printer Bluetooth (misal Blueprint, Panda, Thermal 58/80mm) mengalami kendala selalu mencari perangkat terus tanpa terdeteksi pada HP Android/Samsung A-Series:\n• Lepas Koneksi Eksklusif: Pastikan printer TIDAK sedang terhubung ke HP kasir lain atau aplikasi lain. Bluetooth BLE hanya mengizinkan 1 koneksi aktif eksklusif.\n• Izin Lokasi (GPS) & Perangkat Sekitar: Di Android 12 ke atas, buka Pengaturan HP > Aplikasi > Chrome/Edge > Izin (Permissions), dan pastikan izin "Perangkat Sekitar" (Nearby Devices) serta "Lokasi" (GPS) telah diizinkan (Allow).\n• Siklus Restart: Matikan printer selama 5 detik lalu nyalakan kembali, dan lakukan restart Bluetooth pada HP kasir.',
+        highlight: '99% kendala printer mencari terus terselesaikan dengan memutus koneksi dari HP lain dan mengaktifkan izin Perangkat Sekitar.',
+      },
     ],
     tips: 'Gunakan browser Google Chrome atau Microsoft Edge untuk dukungan Web Bluetooth resmi. Untuk perangkat iOS/iPad, gunakan opsi cetak standar browser (AirPrint / System Print).',
-    warning: 'Pastikan printer Bluetooth tidak sedang terhubung secara eksklusif ke ponsel lain agar sinyal BLE dapat ditemukan oleh browser kasir.',
+    warning: 'Pastikan printer Bluetooth tidak sedang terhubung secara eksklusif ke ponsel lain agar sinyal BLE dapat ditemukan oleh browser kasir. Bluetooth BLE hanya dapat melayani satu koneksi pairing dalam satu waktu.',
   },
   {
     id: 'whatsapp_receipt',
@@ -714,7 +722,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
     ],
     tips: 'Kebijakan ini menjamin laporan rekap omzet kasir dan mutasi HPP bahan baku selalu sinkron 100% dengan fisik laci kasir.',
-    warning: 'Jangan pernah membatalkan nota yang sudah dibayar tunai hanya untuk menggabungkan pesanan susulan. Buatlah transaksi baru agar pembukuan kasir tetap tertib.',
+    warning: 'Jangan pernah membatalkan nota yang sudah dibayar tunai hanya untuk menggabungkan pesanan susulan. Buatlah transaksi baru agar pembukuan kasir tetap tertib. Perhatian: Tagihan open-tab yang masih berstatus BELUM BAYAR (UNPAID) akan memblokir proses tutup shift kasir di akhir hari sampai seluruhnya dilunasi atau dibatalkan (VOID).',
   },
   {
     id: 'payment_methods',
@@ -1052,6 +1060,162 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     tips: 'Untuk transaksi offline, prioritaskan metode pembayaran Tunai (Cash). Metode QRIS dinamis memerlukan koneksi internet aktif untuk verifikasi pelunasan seketika.',
     warning: 'Dilarang keras membersihkan cache/data browser perangkat kasir sebelum seluruh transaksi offline berhasil disinkronkan ke server cloud.',
+  },
+  {
+    id: 'sales_history_item_recap',
+    title: '25. Riwayat Penjualan, Rekap Item & Ekspor Multi-Format',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Keuangan & Analitik',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER'],
+    shortDesc: 'Navigasi terpadu Riwayat Transaksi: Sub-Tab 1 Daftar Faktur Penjualan (filter status lunas/void/belum bayar, filter shift berjalan, filter kasir cerdas, AOV, dan ringkasan WA) serta Sub-Tab 2 Rekap Item per Pembayaran (hirarki metode bayar, agregasi komposit varian/topping, toggle HPP & Margin, serta ekspor CSV Kop Dokumen & PDF A4 Landscape).',
+    actionTab: 'orders',
+    actionLabel: 'Buka Riwayat Penjualan',
+    image: '/guide/pos-terminal-transaksi.png',
+    imageCaption: 'Riwayat Transaksi Penjualan: Penyatuan Sub-Tab Faktur Penjualan & Rekap Item per Pembayaran.',
+    steps: [
+      {
+        number: 1,
+        title: 'Penyatuan Dua Sub-Tab Terpadu (Zero Clutter Sidebar)',
+        description:
+          'Menu Riwayat Transaksi menyatukan dua kebutuhan operasional dalam satu layar tanpa memecah rute sidebar: (1) Sub-Tab "Daftar Faktur Penjualan" untuk melihat nota per transaksi, cetak ulang struk kasir, pembatalan void, dan status pembayaran; serta (2) Sub-Tab "Rekap Item per Pembayaran" untuk mengaudit menu terlaris per saluran bayar.',
+      },
+      {
+        number: 2,
+        title: 'Filter Status Transaksi & Preset Shift Berjalan',
+        description:
+          'Pada Sub-Tab Faktur, kasir dan owner dapat memfilter transaksi dengan tombol cepat: [Semua Status], [Lunas (Masuk Uang)], [Dibatalkan (Void)], dan [Belum Bayar] lengkap dengan counter live. Tersedia juga preset tanggal instan "🕒 Shift Berjalan (Saat Ini)" untuk menyaring transaksi shift aktif tanpa perlu memilih jam manual.',
+        highlight: 'Kartu metrik finansial tetap menampilkan total omset riil yang masuk agar tidak keliru saat kasir memfilter nota void.',
+      },
+      {
+        number: 3,
+        title: 'Filter Kasir Cerdas & Isolasi Batas Outlet',
+        description:
+          'Saat kasir login, filter kasir secara otomatis mengunci ke namanya sendiri (Akun Saya). Dropdown kasir HANYA menampilkan staf berwewenang CASHIER di outlet aktif (bebas dari polusi akun Owner/Admin), dan kasir dilarang mengintip transaksi outlet cabang lain.',
+      },
+      {
+        number: 4,
+        title: 'Audit Rekap Item per Pembayaran & Agregasi Komposit',
+        description:
+          'Pada Sub-Tab Rekap Item, kartu metode pembayaran menerapkan hirarki bersih: [Semua], [Tunai], [Non-Tunai], dan [Split]. Memilih Non-Tunai memunculkan sub-pill filter dinamis (QRIS, Transfer, EDC). Pengelompokan menu menggunakan composite key: Nama Produk + Varian + Topping/Modifier sehingga porsi takaran bahan baku terhitung presisi tanpa flattening.',
+        highlight: 'Multi-modifier chips ditampilkan rapi beserta rincian ekstra biaya (+Rp X.XXX).',
+      },
+      {
+        number: 5,
+        title: 'Financial Intelligence HPP & Estimasi Laba Kotor (Owner Only)',
+        description:
+          'Pengguna berprivilese OWNER dan ADMIN memiliki tombol toggle [HPP & Margin]. Saat diaktifkan, ringkasan memunculkan Kartu Laba Kotor beserta akumulasi HPP dan margin %. Fitur ini disembunyikan 100% dari staf kasir demi menjaga kerahasiaan dapur bisnis.',
+      },
+      {
+        number: 6,
+        title: 'Ekspor Multi-Format: Excel CSV Kop Resmi & Dokumen PDF A4 Landscape',
+        description:
+          '• Ekspor Excel (CSV): Menghasilkan file spreadsheet dengan Kop Dokumen Resmi 6 baris (Nama Toko, Saluran, Kasir, Periode, Waktu Unduh, dan Ringkasan Agregasi) serta kolom lengkap ber-encoding UTF-8 BOM.\n• Dokumen Cetak PDF: Menggunakan kertas A4 Landscape (297mm x 210mm) yang lega (+87mm), 4 kartu ringkasan eksekutif, dan 9 kolom presisi bebas terpotong.',
+        highlight: 'Zero data mismatch — informasi di dokumen PDF 100% konsisten dengan spreadsheet Excel.',
+      },
+      {
+        number: 7,
+        title: 'Ringkasan Cepat WhatsApp (1-Klik Lapor ke Owner)',
+        description:
+          'Gunakan tombol [💬 Ringkasan WA] untuk memunculkan format teks ringkasan omset harian toko, AOV (Average Order Value), transaksi tunai vs non-tunai, dan nota open-tab. Cukup 1-klik untuk menyalin ke clipboard atau langsung mengirimkannya ke grup WhatsApp operasional toko.',
+      },
+    ],
+    tips: 'Gunakan dokumen cetak PDF A4 Landscape saat Anda membutuhkan laporan formal fisik untuk rapat evaluasi berkala atau arsip pembukuan kantor.',
+  },
+  {
+    id: 'saas_billing_tokens',
+    title: '26. Langganan SaaS, Token Kuota Transaksi & QRIS Otomatis Pakasir',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Billing & Langganan',
+    targetRoles: ['OWNER', 'ADMIN'],
+    shortDesc: 'Model tarif pay-as-you-go Well POS: Biaya aktivasi pendaftaran awal Rp 99.000 (+100 token bonus), top-up kuota transaksi (Rp 69/token, minimal 250 token), serta pembayaran instan QRIS Dinamis Pakasir dengan verifikasi otomatis tanpa bukti transfer manual.',
+    actionTab: 'billing_tokens',
+    actionLabel: 'Buka Kuota Token Bisnis',
+    image: '/guide/dashboard-ringkasan-bisnis.png',
+    imageCaption: 'Manajemen Token Kuota Transaksi SaaS: Sisa saldo, kalkulator top-up, dan pembayaran QRIS Pakasir.',
+    steps: [
+      {
+        number: 1,
+        title: 'Prinsip Kuota Token Transaksi Pay-as-You-Go',
+        description:
+          'Well POS menerapkan skema yang adil bagi pengusaha: Setiap transaksi penjualan kasir yang sukses memotong 1 kuota token SaaS. Jika pesanan dibatalkan resmi (VOID), 1 kuota token otomatis dikembalikan utuh ke saldo akun Anda.',
+        highlight: 'Biaya sistem proporsional dengan skala bisnis — hemat di hari tenang dan siap melayani di hari ramai.',
+      },
+      {
+        number: 2,
+        title: 'Biaya Aktivasi Pendaftaran Awal (Rp 99.000)',
+        description:
+          'Saat pendaftaran akun bisnis Anda disetujui Superadmin, sistem menerbitkan faktur aktivasi perdana sebesar Rp 99.000. Pembayaran ini langsung mengaktifkan status toko dan memberikan bonus 100 token kuota transaksi pertama.',
+      },
+      {
+        number: 3,
+        title: 'Kalkulator Isi Ulang Token Fleksibel (Minimal 250 Token)',
+        description:
+          'Buka menu Langganan & Kuota > Isi Ulang Token. Sistem menerapkan tarif flat terjangkau Rp 69 per token dengan batas minimal isi ulang 250 token (Rp 17.250). Tersedia paket preset cepat: 250 token, 500 token, 1.000 token, hingga kuota kustom sesuai kebutuhan toko Anda.',
+      },
+      {
+        number: 4,
+        title: 'Pembayaran Instan via QRIS Dinamis Pakasir',
+        description:
+          'Klik "Lanjut ke Pembayaran QRIS". Sistem memunculkan barcode QRIS Dinamis resmi dari gateway Pakasir lengkap dengan batas kedaluwarsa 60 menit dan nominal transaksi yang unik presisi. Pindai menggunakan aplikasi BCA, Mandiri Livin, BRImo, GoPay, OVO, Dana, atau ShopeePay.',
+        highlight: 'Zero Manual Transfer — verifikasi 100% otomatis tanpa perlu repot mengirim struk mutasi ke admin.',
+      },
+      {
+        number: 5,
+        title: 'Deteksi Otomatis & Pengiriman Faktur Resmi ke Email',
+        description:
+          'Dalam 2-5 detik setelah Anda menyelesaikan pembayaran di m-banking, webhook gateway otomatis memperbarui saldo token Anda secara live. Sistem secara bersamaan mengirimkan faktur tanda terima resmi berformat PDF ke email bisnis Anda dari billing@wellpos.id.',
+      },
+    ],
+    tips: 'Selalu pastikan saldo token kuota toko terisi di atas 50 token agar operasional kasir tidak terhambat saat jam sibuk.',
+    warning: 'QRIS Dinamis memiliki masa berlaku 60 menit. Jangan membayar ke kode QRIS yang waktu hitung mundurnya telah habis (EXPIRED). Jika kedaluwarsa, cukup buat permintaan isi ulang baru.',
+  },
+  {
+    id: 'email_otp_security',
+    title: '27. Verifikasi Email OTP, Pemulihan Sandi Mandiri & Sesi Login',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Keamanan & Akun',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER'],
+    shortDesc: 'Standar keamanan akun Well POS: Verifikasi email anti-dummy saat registrasi, pemulihan kata sandi (Password Reset) mandiri via OTP 6-digit, dan penanganan notifikasi Sesi Berakhir terpusat (Universal 401 Interceptor).',
+    actionTab: 'overview',
+    actionLabel: 'Buka Ringkasan Bisnis',
+    image: '/guide/dashboard-ringkasan-bisnis.png',
+    imageCaption: 'Keamanan Akun Bisnis: Verifikasi Email OTP Resmi & Dialog Sesi Login Terpusat.',
+    steps: [
+      {
+        number: 1,
+        title: 'Proteksi Email Registrasi Anti-Dummy',
+        description:
+          'Saat mendaftarkan akun Owner, sistem menerapkan penyaringan ketat lebih dari 3.000 domain email sampah (disposable/temp mail). Pemilik usaha wajib menggunakan alamat email aktif untuk menerima kode verifikasi OTP 6-digit.',
+        highlight: 'Menjamin integritas identitas bisnis dan kepemilikan sah toko di platform Well POS.',
+      },
+      {
+        number: 2,
+        title: 'Pemulihan Kata Sandi Mandiri (Self-Service Password Reset)',
+        description:
+          'Jika Anda lupa kata sandi login, klik tautan "Lupa Kata Sandi?" pada halaman masuk. Masukkan email terdaftar Anda; sistem akan mengirimkan kode OTP 6-digit yang berlaku selama 15 menit dari alamat email resmi noreply@wellpos.id.',
+      },
+      {
+        number: 3,
+        title: 'Pencabutan Sesi Login Otomatis (Session Revocation)',
+        description:
+          'Begitu kata sandi berhasil diperbarui dengan kata sandi baru, sistem secara otomatis mencabut seluruh sesi login lama di semua perangkat (komputer, tablet, HP kasir) demi mencegah akses tidak sah dari pihak lain.',
+        highlight: 'Standar keamanan perbankan: Sesi lama langsung dibatalkan saat kata sandi berubah.',
+      },
+      {
+        number: 4,
+        title: 'Universal 401 Interceptor & Modal Sesi Berakhir',
+        description:
+          'Sesi login kasir dan owner berlaku aktif selama 7 hari. Ketika masa aktif token habis, sistem TIDAK menampilkan layar blank atau crash, melainkan menampilkan jendela ramah "<SessionExpiredModal />" yang menginformasikan bahwa sesi Anda telah selesai demi alasan keamanan.',
+      },
+      {
+        number: 5,
+        title: 'Data Transaksi di Cloud Tetap 100% Aman',
+        description:
+          'Saat dialog sesi berakhir muncul, seluruh data transaksi, stok bahan baku, dan riwayat pesanan yang sudah tercatat di cloud tetap tersimpan aman. Pengguna cukup menekan tombol "Masuk Kembali Sekarang" untuk melanjutkan pekerjaan tanpa kehilangan data.',
+      },
+    ],
+    tips: 'Pastikan email noreply@wellpos.id dan billing@wellpos.id ditandai sebagai "Bukan Spam" di Gmail/Yahoo/Outlook Anda agar notifikasi penting selalu masuk ke kotak masuk utama.',
+    warning: 'Jangan pernah membagikan kode OTP 6-digit kepada siapa pun melalui telepon, chat WhatsApp, atau media sosial. Tim Well POS tidak pernah meminta kode OTP rahasia Anda.',
   },
 ];
 

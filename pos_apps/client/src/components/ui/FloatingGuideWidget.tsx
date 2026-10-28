@@ -99,9 +99,14 @@ const TAB_CONTEXT_MAP: Record<
     subtitle: 'Modal awal uang laci, petty cash, dan audit selisih kas.',
   },
   orders: {
-    sectionId: 'void',
-    title: 'Panduan Void & Otorisasi PIN',
-    subtitle: 'Aturan pembatalan order wajib persetujuan Supervisor.',
+    sectionId: 'sales_history_item_recap',
+    title: 'Panduan Riwayat Transaksi',
+    subtitle: 'Filter faktur, rekap item menu, dan ekspor CSV/PDF A4.',
+  },
+  billing_tokens: {
+    sectionId: 'saas_billing_tokens',
+    title: 'Panduan Token Kuota SaaS',
+    subtitle: 'Top-up saldo transaksi dan pembayaran QRIS Pakasir.',
   },
   inventory: {
     sectionId: 'transfers',
@@ -360,7 +365,7 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
             >
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-900" />
-                <span>Buka Seluruh Panduan (23 Bab Lengkap)</span>
+                <span>Buka Seluruh Panduan (27 Bab Lengkap)</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
