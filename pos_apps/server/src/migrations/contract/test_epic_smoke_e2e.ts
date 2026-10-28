@@ -57,7 +57,7 @@ export async function runEndToEndSmokeTest() {
     // =================================================================
     console.log('▶️ FLOW 1: Registrasi Owner -> Approval Superadmin -> Buat Toko -> Pairing Kasir');
     const timestamp = Date.now();
-    const testOwnerEmail = `smoke.owner.${timestamp}@example.com`;
+    const testOwnerEmail = `smoke.owner.${timestamp}@wellpos-test.com`;
     const testOwnerPhone = `+62812${Math.floor(10000000 + Math.random() * 90000000)}`;
     const testOwnerPassword = 'Password123!';
 
