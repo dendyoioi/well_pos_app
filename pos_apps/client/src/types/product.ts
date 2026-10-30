@@ -33,6 +33,36 @@ export interface ProductModifierGroup {
   options: ProductModifierOption[];
 }
 
+export interface BundleChildItem {
+  id?: string;
+  childProductId: string;
+  childVariantId?: string | null;
+  childProductName?: string;
+  childProductType?: string;
+  childUnit?: string;
+  childImageUrl?: string | null;
+  childVariantName?: string;
+  childSku?: string;
+  childBarcode?: string | null;
+  childBasePrice?: number;
+  childAverageCost?: number;
+  quantity: number;
+  costAllocationPercent?: number | null;
+  childProduct?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface ProductPriceTierItem {
+  id?: string;
+  variantId?: string | null;
+  variantName?: string;
+  minQuantity: number;
+  tierPrice: number;
+  basePrice?: number | null;
+}
+
 export interface Product {
   id: string;
   barcode: string;
@@ -53,12 +83,15 @@ export interface Product {
   warehouseStock?: number | null;
   minStockAlert: number;
   isLowStock?: boolean;
+  type?: 'STANDARD' | 'COMPOSITE' | 'SERVICE_LABOR' | string;
   productType?: string;
   hasStock?: boolean;
   hasRecipe?: boolean;
   recipeId?: string | null;
   modifiers?: ProductModifierGroup[];
   variants?: ProductVariant[];
+  priceTiers?: ProductPriceTierItem[];
+  bundleItems?: BundleChildItem[];
   createdAt?: string;
 }
 

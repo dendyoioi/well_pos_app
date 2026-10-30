@@ -397,6 +397,99 @@ export const api = {
     return res.json();
   },
 
+  getBundleItems: async (productId: string): Promise<{
+    status: string;
+    data?: {
+      productId: string;
+      productName: string;
+      productType: string;
+      estimatedHpp: number;
+      bundleItems: Array<{
+        id: string;
+        childProductId: string;
+        childVariantId?: string | null;
+        childProductName: string;
+        childProductType: string;
+        childUnit: string;
+        childImageUrl?: string | null;
+        childVariantName: string;
+        childSku: string;
+        childBarcode?: string | null;
+        childBasePrice: number;
+        childAverageCost: number;
+        quantity: number;
+        costAllocationPercent?: number | null;
+      }>;
+    };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/products/${productId}/bundle-items`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateBundleItems: async (
+    productId: string,
+    bundleItems: Array<{
+      childProductId: string;
+      childVariantId?: string | null;
+      quantity: number;
+      costAllocationPercent?: number | null;
+    }>
+  ): Promise<{ status: string; message: string }> => {
+    const res = await fetch(`/api/products/${productId}/bundle-items`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify({ bundleItems }),
+    });
+    return res.json();
+  },
+
+  getPriceTiers: async (productId: string): Promise<{
+    status: string;
+    data?: {
+      productId: string;
+      productName: string;
+      priceTiers: Array<{
+        id: string;
+        variantId?: string | null;
+        variantName: string;
+        minQuantity: number;
+        tierPrice: number;
+        basePrice?: number | null;
+      }>;
+    };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/products/${productId}/price-tiers`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updatePriceTiers: async (
+    productId: string,
+    priceTiers: Array<{
+      variantId?: string | null;
+      minQuantity: number;
+      tierPrice: number;
+    }>
+  ): Promise<{ status: string; message: string }> => {
+    const res = await fetch(`/api/products/${productId}/price-tiers`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify({ priceTiers }),
+    });
+    return res.json();
+  },
+
   bulkProductAction: async (data: {
     action: 'DELETE' | 'SET_STATUS' | 'CHANGE_CATEGORY';
     productIds: string[];

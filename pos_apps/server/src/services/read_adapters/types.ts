@@ -51,6 +51,19 @@ export interface FormattedProductDTO {
       isDefault?: boolean;
     }[];
   }[];
+  priceTiers?: {
+    id: string;
+    variantId?: string | null;
+    minQuantity: number;
+    tierPrice: number;
+  }[];
+  bundleItems?: {
+    id: string;
+    childProductId: string;
+    childProductName: string;
+    childUnit: string;
+    quantity: number;
+  }[];
   createdAt: Date;
 }
 

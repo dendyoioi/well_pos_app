@@ -16,6 +16,9 @@ import {
   Infinity as InfinityIcon,
   Package,
   Loader2,
+  Boxes,
+  Tag,
+  ChevronUp,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import type { ModifierGroup } from '../types/modifier';
@@ -85,13 +88,42 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [costPrice, setCostPrice] = useState<number>(0);
   const [basePrice, setBasePrice] = useState<number>(0);
   const [unit, setUnit] = useState('Pcs');
-  const [hasStock, setHasStock] = useState<boolean>(false); // Default F&B: Olahan Dapur / Resep BOM
   const [initialStock, setInitialStock] = useState<number>(0);
   const [editPhysicalStock, setEditPhysicalStock] = useState<number>(0);
   const [minStockAlert, setMinStockAlert] = useState<number>(5);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isCompressingImage, setIsCompressingImage] = useState(false);
+
+  // EPIC-29: Mode Produk (F&B / Ritel Standar / Paket Komposit Bundling)
+  const [productMode, setProductMode] = useState<'STANDARD' | 'FNB' | 'COMPOSITE'>('FNB');
+
+  // EPIC-29: Komponen Paket Komposit (Bundle Items)
+  const [bundleItems, setBundleItems] = useState<
+    Array<{
+      childProductId: string;
+      childVariantId?: string | null;
+      childProductName: string;
+      childUnit: string;
+      childAverageCost: number;
+      childBasePrice: number;
+      quantity: number;
+    }>
+  >([]);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState('');
+  const [selectedChildQty, setSelectedChildQty] = useState<number>(1);
+
+  // EPIC-29: Struktur Harga Grosir Bertingkat (Price Tiers)
+  const [showPriceTiers, setShowPriceTiers] = useState(false);
+  const [priceTiers, setPriceTiers] = useState<
+    Array<{
+      minQuantity: number;
+      tierPrice: number;
+    }>
+  >([]);
+  const [newTierMinQty, setNewTierMinQty] = useState<number>(3);
+  const [newTierPrice, setNewTierPrice] = useState<number>(0);
 
   // Unit Search & Add State
   const [unitList, setUnitList] = useState<string[]>(DEFAULT_UNITS);
@@ -159,6 +191,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     };
     loadModifiers();
 
+    // EPIC-29: Ambil daftar produk aktif untuk komponen penyusun paket komposit
+    api.getProducts({ isActive: 'true', outletId }).then((res) => {
+      if (res.status === 'success' && Array.isArray(res.data)) {
+        const candidates = res.data.filter(
+          (p) => p.id !== productToEdit?.id && p.productType !== 'COMPOSITE'
+        );
+        setAvailableProducts(candidates);
+      }
+    });
+
     if (productToEdit) {
       setName(productToEdit.name);
       setBarcode(productToEdit.barcode);
@@ -172,10 +214,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
       // Parse description and check for hasStock metadata / productType
       let loadedHasStock = true;
-      if (productToEdit.productType === 'COMPOSITE' || productToEdit.hasStock === false) {
+      let initialMode: 'STANDARD' | 'FNB' | 'COMPOSITE' = 'FNB';
+
+      if (productToEdit.productType === 'COMPOSITE') {
         loadedHasStock = false;
+        initialMode = 'COMPOSITE';
       } else if (productToEdit.productType === 'STANDARD' || productToEdit.hasStock === true) {
         loadedHasStock = true;
+        initialMode = 'STANDARD';
       } else {
         let rawDesc = productToEdit.description || '';
         if (rawDesc.startsWith('{')) {
@@ -195,8 +241,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         if (productToEdit.stock >= 99999) {
           loadedHasStock = false;
         }
+        initialMode = loadedHasStock ? 'STANDARD' : 'FNB';
       }
-      setHasStock(loadedHasStock);
+      setProductMode(initialMode);
       setEditPhysicalStock(productToEdit.stock >= 99999 ? 0 : (productToEdit.stock || 0));
 
       // Ensure unit is in unitList
@@ -207,6 +254,42 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       // Initialize selected modifier IDs from relational product.modifiers
       const linkedIds = productToEdit.modifiers?.map((m) => m.id) || [];
       setSelectedModifierGroupIds(linkedIds);
+
+      // EPIC-29: Ambil item bundle jika produk bertipe komposit
+      api.getBundleItems(productToEdit.id)
+        .then((bRes) => {
+          if (bRes.status === 'success' && bRes.data?.bundleItems) {
+            if (bRes.data.bundleItems.length > 0) {
+              setProductMode('COMPOSITE');
+            }
+            setBundleItems(
+              bRes.data.bundleItems.map((bi) => ({
+                childProductId: bi.childProductId,
+                childVariantId: bi.childVariantId || null,
+                childProductName: bi.childProductName,
+                childUnit: bi.childUnit,
+                childAverageCost: bi.childAverageCost || 0,
+                childBasePrice: bi.childBasePrice || 0,
+                quantity: bi.quantity,
+              }))
+            );
+          }
+        });
+
+      // EPIC-29: Ambil struktur harga grosir (price tiers)
+      api.getPriceTiers(productToEdit.id).then((tRes) => {
+        if (tRes.status === 'success' && tRes.data?.priceTiers) {
+          setPriceTiers(
+            tRes.data.priceTiers.map((pt) => ({
+              minQuantity: pt.minQuantity,
+              tierPrice: pt.tierPrice,
+            }))
+          );
+          if (tRes.data.priceTiers.length > 0) {
+            setShowPriceTiers(true);
+          }
+        }
+      });
     } else {
       // Reset form
       setName('');
@@ -216,7 +299,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCostPrice(0);
       setBasePrice(0);
       setUnit('Pcs');
-      setHasStock(false); // Default F&B: Olahan Dapur / Resep BOM (Made-to-Order)
+      setProductMode('FNB');
+      setBundleItems([]);
+      setPriceTiers([]);
+      setShowPriceTiers(false);
       setInitialStock(0);
       setMinStockAlert(5);
       setDescription('');
@@ -361,14 +447,106 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     );
   };
 
+  // EPIC-29: Tambah komponen produk ke dalam paket komposit
+  const handleAddBundleItem = () => {
+    if (!selectedChildId) return;
+    const prod = availableProducts.find((p) => p.id === selectedChildId);
+    if (!prod) return;
+
+    if (bundleItems.some((bi) => bi.childProductId === selectedChildId)) {
+      dialog.alert({
+        title: 'Komponen Sudah Ada',
+        message: `Produk "${prod.name}" sudah terdaftar di dalam paket ini. Silakan ubah kuantitasnya jika ingin menambah rasio.`,
+        variant: 'warning',
+      });
+      return;
+    }
+
+    setBundleItems((prev) => [
+      ...prev,
+      {
+        childProductId: prod.id,
+        childVariantId: prod.variants?.[0]?.id || null,
+        childProductName: prod.name,
+        childUnit: prod.unit || 'Pcs',
+        childAverageCost: prod.costPrice || 0,
+        childBasePrice: prod.price || prod.basePrice || 0,
+        quantity: Math.max(1, Number(selectedChildQty) || 1),
+      },
+    ]);
+    setSelectedChildId('');
+    setSelectedChildQty(1);
+  };
+
+  // EPIC-29: Hapus komponen dari paket komposit
+  const handleRemoveBundleItem = (childId: string) => {
+    setBundleItems((prev) => prev.filter((bi) => bi.childProductId !== childId));
+  };
+
+  // EPIC-29: Hitung total estimasi HPP komposit dari seluruh komponen
+  const estimatedBundleHpp = bundleItems.reduce(
+    (acc, bi) => acc + bi.childAverageCost * bi.quantity,
+    0
+  );
+
+  // EPIC-29: Tambah tingkat harga grosir bertingkat
+  const handleAddPriceTier = () => {
+    if (newTierMinQty < 2) {
+      dialog.alert({
+        title: 'Kuantitas Tidak Valid',
+        message: 'Minimal pembelian untuk harga grosir harus minimal 2 unit.',
+        variant: 'warning',
+      });
+      return;
+    }
+    if (newTierPrice <= 0) {
+      dialog.alert({
+        title: 'Harga Grosir Tidak Valid',
+        message: 'Harga grosir harus lebih besar dari Rp 0.',
+        variant: 'warning',
+      });
+      return;
+    }
+    if (priceTiers.some((pt) => pt.minQuantity === newTierMinQty)) {
+      dialog.alert({
+        title: 'Tier Sudah Terdaftar',
+        message: `Tingkat harga grosir untuk minimal ${newTierMinQty} unit sudah ada.`,
+        variant: 'warning',
+      });
+      return;
+    }
+
+    setPriceTiers((prev) =>
+      [...prev, { minQuantity: newTierMinQty, tierPrice: newTierPrice }].sort(
+        (a, b) => a.minQuantity - b.minQuantity
+      )
+    );
+    setNewTierMinQty((prev) => prev + 2);
+    setNewTierPrice(0);
+  };
+
+  // EPIC-29: Hapus tingkat harga grosir
+  const handleRemovePriceTier = (minQty: number) => {
+    setPriceTiers((prev) => prev.filter((pt) => pt.minQuantity !== minQty));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const isComposite = productMode === 'COMPOSITE';
+    const isStandard = productMode === 'STANDARD';
+
+    if (isComposite && bundleItems.length === 0) {
+      setError('Paket komposit wajib memiliki minimal 1 produk komponen penyusun.');
+      return;
+    }
+
     setLoading(true);
 
     // Encode metadata hasStock ke deskripsi untuk kompatibilitas filter F&B
     let finalDescription = description.trim();
-    if (!hasStock) {
+    if (!isStandard) {
       finalDescription = JSON.stringify({
         text: description.trim(),
         hasStock: false,
@@ -376,7 +554,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
 
     try {
+      let targetProductId = '';
+
       if (isEdit && productToEdit) {
+        targetProductId = productToEdit.id;
         const res = await api.updateProduct(productToEdit.id, {
           name,
           barcode,
@@ -387,24 +568,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           unit,
           description: finalDescription,
           imageUrl: imageUrl.trim() || undefined,
-          minStockAlert: hasStock ? Number(minStockAlert) : 0,
-          productType: hasStock ? 'STANDARD' : 'COMPOSITE',
-          hasStock,
-          currentStock: hasStock ? Number(editPhysicalStock) : undefined,
+          minStockAlert: isStandard ? Number(minStockAlert) : 0,
+          productType: isComposite ? 'COMPOSITE' : isStandard ? 'STANDARD' : 'COMPOSITE',
+          hasStock: isStandard,
+          currentStock: isStandard ? Number(editPhysicalStock) : undefined,
           outletId: outletId || undefined,
         });
 
-        if (res.status === 'success') {
-          // Sinkronisasi relasi modifier terpusat
-          const linkRes = await api.linkProductModifiers(productToEdit.id, selectedModifierGroupIds);
-          if (linkRes && linkRes.status === 'error') {
-            setError(linkRes.message || 'Gagal menghubungkan modifier ke produk');
-            return;
-          }
-          onSuccess();
-          onClose();
-        } else {
+        if (res.status !== 'success') {
           setError(res.message || 'Gagal memperbarui produk');
+          return;
         }
       } else {
         const res = await api.createProduct({
@@ -415,30 +588,52 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           costPrice: Number(costPrice),
           basePrice: Number(basePrice),
           unit,
-          initialStock: hasStock ? Number(initialStock) : 0,
-          minStockAlert: hasStock ? Number(minStockAlert) : 0,
+          initialStock: isStandard ? Number(initialStock) : 0,
+          minStockAlert: isStandard ? Number(minStockAlert) : 0,
           description: finalDescription,
           imageUrl: imageUrl.trim() || undefined,
           outletId: outletId || undefined,
-          productType: hasStock ? 'STANDARD' : 'COMPOSITE',
-          hasStock,
+          productType: isComposite ? 'COMPOSITE' : isStandard ? 'STANDARD' : 'COMPOSITE',
+          hasStock: isStandard,
         });
 
-        if (res.status === 'success' && res.data?.id) {
-          // Hubungkan produk baru ke modifier groups terpilih jika ada
-          if (selectedModifierGroupIds.length > 0) {
-            const linkRes = await api.linkProductModifiers(res.data.id, selectedModifierGroupIds);
-            if (linkRes && linkRes.status === 'error') {
-              setError(linkRes.message || 'Gagal menghubungkan modifier ke produk');
-              return;
-            }
-          }
-          onSuccess();
-          onClose();
-        } else {
+        if (res.status !== 'success' || !res.data?.id) {
           setError(res.message || 'Gagal menambahkan produk');
+          return;
+        }
+        targetProductId = res.data.id;
+      }
+
+      // Sinkronisasi komponen paket komposit jika dipilih
+      if (targetProductId) {
+        await api.updateBundleItems(
+          targetProductId,
+          isComposite
+            ? bundleItems.map((bi) => ({
+                childProductId: bi.childProductId,
+                childVariantId: bi.childVariantId || null,
+                quantity: bi.quantity,
+              }))
+            : []
+        );
+
+        // Sinkronisasi tingkat harga grosir bertingkat
+        await api.updatePriceTiers(
+          targetProductId,
+          priceTiers.map((pt) => ({
+            minQuantity: pt.minQuantity,
+            tierPrice: pt.tierPrice,
+          }))
+        );
+
+        // Sinkronisasi relasi modifier terpusat
+        if (selectedModifierGroupIds.length > 0) {
+          await api.linkProductModifiers(targetProductId, selectedModifierGroupIds);
         }
       }
+
+      onSuccess();
+      onClose();
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan sistem');
     } finally {
@@ -885,7 +1080,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               />
             </div>
 
-            {/* Opsi Tipe Pengelolaan: Olahan F&B (Made to Order) vs Barang Kemasan Ritel */}
+            {/* Opsi Tipe Pengelolaan: Olahan F&B (Made to Order) vs Barang Ritel vs Paket Komposit Bundling */}
             <div className="sm:col-span-2 bg-slate-50/90 border border-slate-200 rounded-2xl p-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -894,50 +1089,73 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     Tipe Produk & Kontrol Stok
                   </span>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    {!hasStock
+                    {productMode === 'COMPOSITE'
+                      ? 'Paket Komposit (Bundling): Membungkus beberapa produk jadi satuan & memotong stok masing-masing anak secara proporsional.'
+                      : productMode === 'FNB'
                       ? 'Olahan Dapur F&B (Made-to-Order): Kasir tidak diblokir sisa stok, pengurangan bahan baku dilacak via Resep/BOM.'
                       : 'Barang Kemasan Ritel Fisik: Kuantitas stok dihitung per unit dan berkurang langsung di kasir.'}
                   </p>
                 </div>
 
-                {/* Segmented Toggle Control */}
-                <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1 flex-shrink-0">
+                {/* 3-Way Segmented Toggle Control */}
+                <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1 flex-shrink-0 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setHasStock(false)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      !hasStock
+                    onClick={() => {
+                      setProductMode('FNB');
+                    }}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      productMode === 'FNB'
                         ? 'bg-blue-900 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <InfinityIcon className={`w-3.5 h-3.5 ${!hasStock ? 'text-amber-300' : 'text-slate-400'}`} />
+                    <InfinityIcon className={`w-3.5 h-3.5 ${productMode === 'FNB' ? 'text-amber-300' : 'text-slate-400'}`} />
                     Resep / Dapur F&B
                   </button>
                   <button
                     type="button"
-                    onClick={() => setHasStock(true)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      hasStock
+                    onClick={() => {
+                      setProductMode('STANDARD');
+                    }}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      productMode === 'STANDARD'
                         ? 'bg-blue-900 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${hasStock ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    Barang Ritel Fisik
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${productMode === 'STANDARD' ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    Ritel Fisik
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductMode('COMPOSITE');
+                    }}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      productMode === 'COMPOSITE'
+                        ? 'bg-amber-800 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Boxes className={`w-3.5 h-3.5 ${productMode === 'COMPOSITE' ? 'text-amber-200' : 'text-slate-400'}`} />
+                    Paket Komposit
                   </button>
                 </div>
               </div>
 
-              {/* Sub-Panel Input Stok atau Banner Bebas Stok */}
-              {!hasStock ? (
+              {/* Sub-Panel 1: Mode Resep / Dapur F&B */}
+              {productMode === 'FNB' && (
                 <div className="p-3 bg-blue-50 border border-blue-200/90 rounded-xl text-xs text-blue-950 flex items-center gap-2">
                   <span className="text-base">🍳</span>
                   <span>
                     Produk diatur sebagai <strong>Menu Olahan Dapur F&B (Made-to-Order)</strong>. Kasir dapat menjual bebas tanpa pembatasan kuantitas etalase. Bahan baku (kopi, gula, susu, dll.) dipotong otomatis saat transaksi melalui sistem <strong>Resep / BOM</strong>.
                   </span>
                 </div>
-              ) : (
+              )}
+
+              {/* Sub-Panel 2: Mode Ritel Fisik Standar */}
+              {productMode === 'STANDARD' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-200/70">
                   {!isEdit ? (
                     <div>
@@ -993,6 +1211,244 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* Sub-Panel 3: Mode Paket Komposit Bundling (EPIC-29) */}
+              {productMode === 'COMPOSITE' && (
+                <div className="pt-2.5 border-t border-slate-200/70 space-y-3">
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-2.5">
+                    <Boxes className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-950">
+                      <p className="font-bold">Paket Komposit Terpadu (Kitting)</p>
+                      <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                        Daftarkan produk-produk satuan yang menyusun paket ini. Saat kasir melakukan transaksi lunas untuk paket ini, sistem otomatis memotong stok dari masing-masing produk anak secara proporsional.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Form Tambah Produk Anak ke Paket */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-700 block">
+                      + Tambah Produk Komponen ke Paket
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                      <div className="sm:col-span-8">
+                        <select
+                          value={selectedChildId}
+                          onChange={(e) => setSelectedChildId(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-blue-900"
+                        >
+                          <option value="">-- Pilih Produk Anak --</option>
+                          {availableProducts.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.unit || 'Pcs'}) - HPP: Rp {Number(p.costPrice || 0).toLocaleString('id-ID')} | Stok: {p.stock}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <input
+                          type="number"
+                          min={1}
+                          value={selectedChildQty}
+                          onChange={(e) => setSelectedChildQty(Math.max(1, Number(e.target.value) || 1))}
+                          placeholder="Qty"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 text-center outline-none focus:border-blue-900"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <button
+                          type="button"
+                          disabled={!selectedChildId}
+                          onClick={handleAddBundleItem}
+                          className="w-full h-full py-2 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                        >
+                          Tambah
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daftar Komponen yang Telah Ditambahkan */}
+                  {bundleItems.length === 0 ? (
+                    <div className="p-4 bg-white rounded-xl border-2 border-dashed border-slate-200 text-center text-xs text-slate-400">
+                      Belum ada komponen di dalam paket. Pilih produk anak di atas untuk menambahkan.
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                      <div className="px-3 py-2 bg-slate-100/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider grid grid-cols-12 gap-2">
+                        <div className="col-span-6">Nama Komponen</div>
+                        <div className="col-span-2 text-center">Rasio Qty</div>
+                        <div className="col-span-3 text-right">Estimasi HPP</div>
+                        <div className="col-span-1 text-center">Aksi</div>
+                      </div>
+                      {bundleItems.map((bi) => (
+                        <div key={bi.childProductId} className="px-3 py-2.5 text-xs grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-6 min-w-0">
+                            <p className="font-bold text-slate-900 truncate">{bi.childProductName}</p>
+                            <p className="text-[10px] text-slate-400">Satuan: {bi.childUnit}</p>
+                          </div>
+                          <div className="col-span-2 text-center font-bold font-mono text-blue-950">
+                            {bi.quantity}x
+                          </div>
+                          <div className="col-span-3 text-right font-mono">
+                            <span className="font-bold text-slate-800">
+                              Rp {(bi.childAverageCost * bi.quantity).toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">
+                              @Rp {bi.childAverageCost.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBundleItem(bi.childProductId)}
+                              className="text-slate-400 hover:text-rose-600 p-1 rounded-lg transition-colors cursor-pointer"
+                              title="Hapus komponen"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Baris Total Estimasi HPP */}
+                      <div className="p-3 bg-amber-50/40 flex items-center justify-between gap-3 text-xs">
+                        <div>
+                          <span className="text-[11px] text-slate-500 block">Total Estimasi Modal (HPP Paket):</span>
+                          <span className="font-black text-amber-950 text-sm font-mono">
+                            Rp {estimatedBundleHpp.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        {estimatedBundleHpp > 0 && costPrice !== estimatedBundleHpp && (
+                          <button
+                            type="button"
+                            onClick={() => setCostPrice(estimatedBundleHpp)}
+                            className="px-2.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-[10px] font-bold transition-all shadow-xs cursor-pointer"
+                          >
+                            ✓ Gunakan sebagai HPP
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* EPIC-29: Panel Struktur Harga Grosir Bertingkat (Tiered Volume Pricing) */}
+            <div className="sm:col-span-2 bg-slate-50/90 border border-slate-200 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowPriceTiers(!showPriceTiers)}>
+                <div>
+                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-cyan-700" />
+                    Harga Grosir Bertingkat (Tiered Pricing)
+                  </span>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Berikan harga khusus otomatis saat kasir memasukkan jumlah pembelian tertentu (misal: beli $\ge$ 5 paket harga lebih murah).
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {priceTiers.length > 0 && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-900 border border-cyan-200">
+                      {priceTiers.length} Tier Aktif
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showPriceTiers ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {showPriceTiers && (
+                <div className="pt-2.5 border-t border-slate-200/70 space-y-3">
+                  {/* Form Tambah Tier */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-700 block">
+                      + Tambah Tingkat Harga Grosir Baru
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                      <div className="sm:col-span-4">
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                          Minimal Beli (Unit)
+                        </label>
+                        <input
+                          type="number"
+                          min={2}
+                          value={newTierMinQty}
+                          onChange={(e) => setNewTierMinQty(Math.max(2, Number(e.target.value) || 2))}
+                          placeholder="e.g. 5"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-900"
+                        />
+                      </div>
+                      <div className="sm:col-span-6">
+                        <CurrencyInput
+                          id="new-tier-price"
+                          label="Harga Satuan Grosir"
+                          value={newTierPrice}
+                          onChange={(val) => setNewTierPrice(val)}
+                          placeholder="0"
+                          inputClassName="font-bold text-cyan-950 text-xs py-2"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <button
+                          type="button"
+                          onClick={handleAddPriceTier}
+                          className="w-full py-2 bg-cyan-800 hover:bg-cyan-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                        >
+                          Tambah
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daftar Tier yang Terpasang */}
+                  {priceTiers.length === 0 ? (
+                    <div className="p-3 bg-white rounded-xl border-2 border-dashed border-slate-200 text-center text-xs text-slate-400">
+                      Belum ada struktur harga grosir. Tambahkan tier kuantitas di atas jika produk ini mendukung pembelian grosir.
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                      <div className="px-3 py-2 bg-slate-100/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider grid grid-cols-12 gap-2">
+                        <div className="col-span-4">Minimal Beli</div>
+                        <div className="col-span-4 text-right">Harga Grosir / Pcs</div>
+                        <div className="col-span-3 text-right">Hemat / Pcs</div>
+                        <div className="col-span-1 text-center">Aksi</div>
+                      </div>
+                      {priceTiers.map((pt) => {
+                        const savings = basePrice > 0 ? Math.max(0, basePrice - pt.tierPrice) : 0;
+                        return (
+                          <div key={pt.minQuantity} className="px-3 py-2 text-xs grid grid-cols-12 gap-2 items-center">
+                            <div className="col-span-4 font-bold text-slate-900 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-600" />
+                              <span>Beli &ge; {pt.minQuantity} {unit}</span>
+                            </div>
+                            <div className="col-span-4 text-right font-bold font-mono text-cyan-900">
+                              Rp {pt.tierPrice.toLocaleString('id-ID')}
+                            </div>
+                            <div className="col-span-3 text-right font-mono text-[11px] text-emerald-700 font-bold">
+                              {savings > 0 ? `-Rp ${savings.toLocaleString('id-ID')}` : '-'}
+                            </div>
+                            <div className="col-span-1 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePriceTier(pt.minQuantity)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus tingkat grosir"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

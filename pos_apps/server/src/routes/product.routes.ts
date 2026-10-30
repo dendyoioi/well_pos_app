@@ -12,6 +12,12 @@ import {
   getAvailableProductsForOutlet,
   assignProductsToOutlet,
 } from '../controllers/product.controller';
+import {
+  getBundleItems,
+  updateBundleItems,
+  getPriceTiers,
+  updatePriceTiers,
+} from '../controllers/bundle.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 
 export const productRouter = Router();
@@ -20,12 +26,16 @@ export const productRouter = Router();
 productRouter.get('/', authenticate, getProducts);
 productRouter.get('/available-for-outlet', authenticate, getAvailableProductsForOutlet);
 productRouter.get('/:id/delete-info', authenticate, getProductDeleteInfo);
+productRouter.get('/:id/bundle-items', authenticate, getBundleItems);
+productRouter.get('/:id/price-tiers', authenticate, getPriceTiers);
 productRouter.get('/:id', authenticate, getProductById);
 
 // Mutasi Katalog & Produk (Khusus Owner, Admin, Supervisor, dan Staf Gudang)
 productRouter.post('/bulk-action', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), bulkProductAction);
 productRouter.post('/bulk-import', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), bulkImportProducts);
 productRouter.post('/assign-to-outlet', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), assignProductsToOutlet);
+productRouter.put('/:id/bundle-items', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), updateBundleItems);
+productRouter.put('/:id/price-tiers', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), updatePriceTiers);
 productRouter.post('/', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), createProduct);
 productRouter.put('/:id', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), updateProduct);
 productRouter.delete('/:id', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), deleteProduct);

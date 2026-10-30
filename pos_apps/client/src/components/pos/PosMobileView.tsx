@@ -43,6 +43,7 @@ import type { QrTable } from '../../types/qr_menu';
 import { PwaInstallButton } from '../PwaInstallBanner';
 import { BluetoothSettingsModal } from './BluetoothSettingsModal';
 import { useBluetoothPrinter } from '../../hooks/useBluetoothPrinter';
+import { getEffectiveItemPricing, getCartItemSubtotal } from '../../utils/pricing';
 
 export interface PosMobileViewProps {
   activeOutlet: Outlet | null | undefined;
@@ -495,7 +496,9 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                 : 0;
               const discountedPrice = Math.max(0, price - promoDisc);
               const hasModifiers = (product.modifiers?.length || 0) > 0;
-              const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
+              const isBundle = product.type === 'COMPOSITE' || product.productType === 'COMPOSITE';
+              const hasPriceTiers = Boolean(product.priceTiers && product.priceTiers.length > 0);
+              const isComposite = isBundle || product.hasStock === false;
               const stock = product.stock ?? 0;
               const isUnlimited = isComposite || stock >= 99999;
               const isOutOfStock = !isUnlimited && stock <= 0;
@@ -571,9 +574,21 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                       <h3 className="font-extrabold text-xs text-slate-900 line-clamp-2 leading-tight">
                         {product.name}
                       </h3>
-                      <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                        {product.category?.name || 'Menu'}
-                      </p>
+                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                        <span className="text-[10px] text-slate-400 font-medium truncate">
+                          {product.category?.name || 'Menu'}
+                        </span>
+                        {isBundle && (
+                          <span className="text-[8px] font-black px-1 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                            📦 Paket
+                          </span>
+                        )}
+                        {hasPriceTiers && (
+                          <span className="text-[8px] font-bold px-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                            🏷️ Grosir
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between">
@@ -862,21 +877,43 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
             {/* Scrollable Cart Items */}
             <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 divide-y divide-slate-100">
               {cart.map((item, index) => {
-                const itemPrice = item.customPrice || item.product.price || item.product.basePrice || 0;
-                const itemNet = Math.max(0, itemPrice - (item.discountAmount || 0));
-                const itemTotal = itemNet * item.quantity;
+                const effectivePricing = getEffectiveItemPricing(item);
+                const itemPrice = effectivePricing.price;
+                const itemTotal = getCartItemSubtotal(item);
+                const isBundle = item.product.type === 'COMPOSITE' || item.product.productType === 'COMPOSITE';
+                const bundleItems = item.product.bundleItems || [];
                 const hasModifiers = item.selectedModifiers && item.selectedModifiers.length > 0;
 
                 return (
                   <div key={`${item.product.id}-${index}`} className="pt-2.5 first:pt-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-extrabold text-xs text-slate-900 leading-tight">
-                          {item.product.name}
-                        </h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-extrabold text-xs text-slate-900 leading-tight">
+                            {item.product.name}
+                          </h4>
+                          {isBundle && (
+                            <span className="text-[8px] font-black px-1 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                              📦 Paket
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[11px] font-bold font-mono text-slate-500 mt-0.5">
                           Rp {itemPrice.toLocaleString('id-ID')}
                         </div>
+
+                        {/* Rincian Komponen Paket Bundle */}
+                        {isBundle && bundleItems.length > 0 && (
+                          <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-purple-200">
+                            <span className="text-[8px] font-bold text-purple-700 block">Isi Paket:</span>
+                            {bundleItems.map((bi, biIdx) => (
+                              <p key={bi.id || biIdx} className="text-[9px] text-slate-600 flex justify-between items-center">
+                                <span>• {bi.childProductName || bi.childProduct?.name || 'Produk'}</span>
+                                <span className="font-mono text-slate-500 font-bold">{bi.quantity}x</span>
+                              </p>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Modifiers List */}
                         {hasModifiers && (
@@ -983,6 +1020,14 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                                 <span>Promo: -Rp {Number(item.discountAmount).toLocaleString('id-ID')}/pcs</span>
                               </div>
                             ) : null}
+
+                            {/* Badge Harga Grosir Bertingkat */}
+                            {effectivePricing.isTierApplied && (
+                              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-900 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                                <Tag className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                <span>Grosir ({effectivePricing.minQuantity}+): Hemat Rp {effectivePricing.tierSavingsPerUnit.toLocaleString('id-ID')}/pcs</span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1018,9 +1063,13 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                         <X className="w-3 h-3" /> Hapus
                       </button>
                       <div className="flex items-baseline gap-1">
-                        {Number(item.discountAmount || 0) > 0 ? (
+                        {effectivePricing.isTierApplied ? (
                           <span className="text-[10px] line-through text-slate-400 font-medium font-mono">
-                            Rp {(itemPrice * item.quantity).toLocaleString('id-ID')}
+                            Rp {(effectivePricing.basePrice * item.quantity).toLocaleString('id-ID')}
+                          </span>
+                        ) : Number(item.discountAmount || 0) > 0 ? (
+                          <span className="text-[10px] line-through text-slate-400 font-medium font-mono">
+                            Rp {(effectivePricing.basePrice * item.quantity).toLocaleString('id-ID')}
                           </span>
                         ) : null}
                         <span className="font-extrabold font-mono text-xs text-blue-950">

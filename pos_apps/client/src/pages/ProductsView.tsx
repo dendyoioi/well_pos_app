@@ -57,7 +57,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'FNB' | 'RETAIL'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'FNB' | 'RETAIL' | 'BUNDLE'>('all');
 
   // Multi-Select State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -127,13 +127,24 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const stats = useMemo(() => {
     const total = products.length;
     const activeCount = products.filter((p) => p.isActive).length;
+    const bundleCount = products.filter(
+      (p) => p.type === 'COMPOSITE' || p.productType === 'COMPOSITE'
+    ).length;
     const fnbCount = products.filter(
-      (p) => p.productType === 'COMPOSITE' || p.hasStock === false || (p.stock !== undefined && p.stock >= 999000)
+      (p) =>
+        p.type !== 'COMPOSITE' &&
+        p.productType !== 'COMPOSITE' &&
+        (p.hasStock === false || (p.stock !== undefined && p.stock >= 999000))
     ).length;
     const retailCount = products.filter(
-      (p) => (p.productType === 'STANDARD' || !p.productType) && p.hasStock !== false && (!p.stock || p.stock < 999000)
+      (p) =>
+        p.type !== 'COMPOSITE' &&
+        p.productType !== 'COMPOSITE' &&
+        (p.productType === 'STANDARD' || !p.productType) &&
+        p.hasStock !== false &&
+        (!p.stock || p.stock < 999000)
     ).length;
-    return { total, activeCount, fnbCount, retailCount };
+    return { total, activeCount, fnbCount, retailCount, bundleCount };
   }, [products]);
 
   const existingSkusSet = useMemo(() => {
@@ -207,16 +218,27 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     setCurrentPage(1);
   }, [searchTerm, selectedCategory, statusFilter, typeFilter]);
 
-  // Client-side filtering untuk tipe produk F&B vs Ritel Fisik
+  // Client-side filtering untuk tipe produk F&B vs Ritel Fisik vs Paket Komposit
   const filteredProducts = useMemo(() => {
     if (typeFilter === 'all') return products;
+    if (typeFilter === 'BUNDLE') {
+      return products.filter((p) => p.type === 'COMPOSITE' || p.productType === 'COMPOSITE');
+    }
     if (typeFilter === 'FNB') {
       return products.filter(
-        (p) => p.productType === 'COMPOSITE' || p.hasStock === false || (p.stock !== undefined && p.stock >= 999000)
+        (p) =>
+          p.type !== 'COMPOSITE' &&
+          p.productType !== 'COMPOSITE' &&
+          (p.hasStock === false || (p.stock !== undefined && p.stock >= 999000))
       );
     }
     return products.filter(
-      (p) => (p.productType === 'STANDARD' || !p.productType) && p.hasStock !== false && (!p.stock || p.stock < 999000)
+      (p) =>
+        p.type !== 'COMPOSITE' &&
+        p.productType !== 'COMPOSITE' &&
+        (p.productType === 'STANDARD' || !p.productType) &&
+        p.hasStock !== false &&
+        (!p.stock || p.stock < 999000)
     );
   }, [products, typeFilter]);
 
@@ -769,7 +791,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             )}
             {typeFilter !== 'all' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-blue-900 shadow-2xs">
-                Tipe: {typeFilter === 'FNB' ? 'Olahan F&B' : 'Ritel Fisik'}
+                Tipe: {typeFilter === 'FNB' ? 'Olahan F&B' : typeFilter === 'BUNDLE' ? 'Paket Komposit' : 'Ritel Fisik'}
                 <button
                   type="button"
                   onClick={() => setTypeFilter('all')}
@@ -883,6 +905,18 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             >
               <Boxes className="w-3 h-3 text-indigo-600" />
               <span>Ritel Fisik ({stats.retailCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTypeFilter(typeFilter === 'BUNDLE' ? 'all' : 'BUNDLE')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                typeFilter === 'BUNDLE'
+                  ? 'bg-purple-50 text-purple-800 border border-purple-300'
+                  : 'text-slate-500 hover:text-purple-700 hover:bg-purple-50/50'
+              }`}
+            >
+              <Package className="w-3 h-3 text-purple-600" />
+              <span>Paket Komposit ({stats.bundleCount})</span>
             </button>
           </div>
         </div>
@@ -1056,10 +1090,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   const isSelected = selectedIds.includes(p.id);
                   const marginRp = p.basePrice - p.costPrice;
                   const marginPercent = p.basePrice > 0 ? Math.round((marginRp / p.basePrice) * 100) : 0;
+                  const isBundle = p.type === 'COMPOSITE' || p.productType === 'COMPOSITE';
                   const isFnbComposite =
-                    p.productType === 'COMPOSITE' ||
-                    p.hasStock === false ||
-                    (p.stock !== undefined && p.stock >= 999000);
+                    !isBundle && (
+                      p.hasStock === false ||
+                      (p.stock !== undefined && p.stock >= 999000)
+                    );
 
                   return (
                     <tr
@@ -1107,6 +1143,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                               <span className={`font-bold ${!p.isActive ? 'line-through text-slate-500' : ''}`} title={p.name}>
                                 {p.name}
                               </span>
+                              {isBundle && (
+                                <span className="text-[10px] font-black bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full shadow-2xs shrink-0">
+                                  📦 Paket {p.bundleItems && p.bundleItems.length > 0 ? `(${p.bundleItems.length} item)` : ''}
+                                </span>
+                              )}
+                              {p.priceTiers && p.priceTiers.length > 0 && (
+                                <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full shadow-2xs shrink-0">
+                                  🏷️ Grosir ({p.priceTiers.length} tier)
+                                </span>
+                              )}
                               {p.modifiers && p.modifiers.length > 0 && (
                                 <span className="text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full shadow-2xs shrink-0">
                                   ✨ {p.modifiers.length} Custom Opsi
@@ -1203,7 +1249,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
                       {/* Stok Toko */}
                       <td className="py-3.5 px-2 text-center whitespace-nowrap">
-                        {isFnbComposite ? (
+                        {isBundle ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-purple-800 bg-purple-50 border border-purple-200 shadow-2xs whitespace-nowrap">
+                            <Package className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                            <span>Paket Komposit</span>
+                          </span>
+                        ) : isFnbComposite ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 shadow-2xs whitespace-nowrap">
                             <InfinityIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>Olahan F&amp;B</span>
@@ -1414,6 +1465,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                             ✨ {p.modifiers.length} Opsi
                           </span>
                         )}
+                        {(p.type === 'COMPOSITE' || p.productType === 'COMPOSITE') && (
+                          <span className="text-[9px] font-black bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded-full">
+                            📦 Paket {p.bundleItems && p.bundleItems.length > 0 ? `(${p.bundleItems.length})` : ''}
+                          </span>
+                        )}
+                        {p.priceTiers && p.priceTiers.length > 0 && (
+                          <span className="text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-full">
+                            🏷️ Grosir
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1435,9 +1496,11 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 font-medium block">Stok Toko</span>
                       <div className="inline-flex items-center gap-1 font-bold text-xs mt-0.5">
-                        {p.productType === 'COMPOSITE' ||
-                        p.hasStock === false ||
-                        (p.stock !== undefined && p.stock >= 999000) ? (
+                        {p.type === 'COMPOSITE' || p.productType === 'COMPOSITE' ? (
+                          <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                            Paket Komposit
+                          </span>
+                        ) : p.hasStock === false || (p.stock !== undefined && p.stock >= 999000) ? (
                           <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
                             Olahan F&amp;B (∞)
                           </span>

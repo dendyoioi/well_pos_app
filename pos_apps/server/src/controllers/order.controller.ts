@@ -380,6 +380,15 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       modifierMap = new Map(modRows.map((m) => [m.id, { id: m.id, name: m.name, priceAdjustment: Number(m.priceAdjustment || 0) }]));
     }
 
+    // Ambil struktur Harga Grosir (Product Price Tiers) untuk produk dalam keranjang
+    const priceTiersInDb = await prisma.productPriceTier.findMany({
+      where: {
+        productId: { in: uniqueProductIds },
+        tenantId: tenantId!,
+      },
+      orderBy: { minQuantity: 'desc' },
+    });
+
     // Kalkulasi Rincian Biaya
     let subtotal = 0;
     let totalCost = 0; // Akumulasi HPP barang yang terjual
@@ -387,7 +396,19 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     const preparedOrderItems = items.map((item) => {
       const p = productMap.get(item.productId)!;
       const v = item.variantId ? variantMap.get(item.variantId) : (variantsByProduct.get(item.productId)?.[0] || null);
-      const baseUnitPrice = v ? Number(v.outletPrice ?? v.basePrice) : Number(p.outletPrice ?? p.basePrice);
+      let baseUnitPrice = v ? Number(v.outletPrice ?? v.basePrice) : Number(p.outletPrice ?? p.basePrice);
+
+      // Auto-tier price: evaluasi apakah kuantitas item memicu harga grosir bertingkat
+      const matchedTier = priceTiersInDb.find(
+        (pt) =>
+          pt.productId === item.productId &&
+          (!pt.variantId || pt.variantId === (item.variantId || v?.variantId || p.variantId)) &&
+          item.quantity >= pt.minQuantity
+      );
+      if (matchedTier) {
+        baseUnitPrice = Number(matchedTier.tierPrice);
+      }
+
       const costPrice = v ? Number(v.costPrice) : Number(p.costPrice);
       const itemDiscount = item.discountAmount || 0;
 

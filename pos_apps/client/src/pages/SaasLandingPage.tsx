@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   AlertCircle,
   LogIn,
-  Boxes,
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -15,7 +14,6 @@ import {
   RefreshCw,
   ShieldCheck,
   CreditCard,
-  MessageCircle,
   Coins,
   Percent,
   Gift,
@@ -26,7 +24,6 @@ import {
   X,
   Copy,
   Tag,
-  TrendingUp,
   Calculator,
   Sparkles,
   Mail,
@@ -35,6 +32,7 @@ import {
   Clock,
   RotateCcw,
   Loader2,
+  Zap,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { formatIndonesianWhatsApp, validateIndonesianWhatsApp } from '../utils/phone';
@@ -684,16 +682,117 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
           </div>
 
           {/* =========================================================================
+              HERO 3D VISUAL SHOWCASE (Artwork Kasir 3D + Floating Pill Badges)
+          ========================================================================= */}
+          <div className="mt-8 sm:mt-12 relative max-w-5xl mx-auto w-full">
+            {/* Ambient Backlight Glow */}
+            <div className="absolute -inset-2 bg-gradient-to-r from-blue-600/30 via-indigo-500/25 to-cyan-400/30 rounded-[2.5rem] blur-2xl opacity-80 -z-10 pointer-events-none" />
+
+            {/* Main Hero Card Container */}
+            <div className="relative rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-b from-white/12 to-white/5 border border-white/20 p-2 sm:p-3.5 shadow-2xl backdrop-blur-md overflow-hidden group">
+              <div className="relative rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden aspect-[16/9] w-full bg-slate-950">
+                <img
+                  src="/images/illustrations/hero-pos-system.jpg"
+                  alt="Well POS Ekosistem Kasir Modern Tablet & Smartphone Handheld"
+                  className="w-full h-full object-cover object-center group-hover:scale-[1.015] transition-transform duration-700 ease-out"
+                  loading="eager"
+                />
+
+                {/* Floating Interactive Pill Badges over Hero Image */}
+                <div className="absolute top-2.5 left-2.5 sm:top-5 sm:left-5 flex items-center gap-2 bg-[#090d16]/85 backdrop-blur-md border border-white/20 text-white px-3 sm:px-4 py-2 rounded-2xl shadow-xl text-left">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center shrink-0">
+                    <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] sm:text-[10px] text-slate-300 block font-semibold leading-tight">Order Terbayar</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-white leading-tight">QRIS Instan &amp; Tunai</span>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-2.5 left-2.5 sm:bottom-5 sm:left-5 flex items-center gap-2 bg-[#090d16]/85 backdrop-blur-md border border-white/20 text-white px-3 sm:px-4 py-2 rounded-2xl shadow-xl text-left hidden xs:flex">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center shrink-0">
+                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] sm:text-[10px] text-slate-300 block font-semibold leading-tight">Struk Kasir Thermal</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-white leading-tight">Bluetooth 58 &amp; 80mm</span>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-2.5 right-2.5 sm:bottom-5 sm:right-5 flex items-center gap-2 bg-[#090d16]/85 backdrop-blur-md border border-white/20 text-white px-3 sm:px-4 py-2 rounded-2xl shadow-xl text-left">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center shrink-0">
+                    <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] sm:text-[10px] text-slate-300 block font-semibold leading-tight">Pay-Per-Use Token</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-amber-300 leading-tight">Rp 0 Biaya Bulanan</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* =========================================================================
+              KATEGORI MODEL BISNIS (Use Cases Retail & F&B)
+          ========================================================================= */}
+          <div className="mt-10 sm:mt-14 max-w-5xl mx-auto w-full">
+            <p className="text-[11px] sm:text-xs font-black text-blue-300 uppercase tracking-widest text-center mb-4">
+              Dirancang untuk Berbagai Jenis Usaha Retail &amp; F&amp;B
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-left">
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.02]">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xl">☕</span>
+                  <h4 className="font-extrabold text-white text-xs sm:text-sm">Kafe &amp; Kopi</h4>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Kelola meja, pesanan dine-in, variasi topping/sugar, dan resep bahan baku otomatis.
+                </p>
+              </div>
+
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.02]">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xl">🛒</span>
+                  <h4 className="font-extrabold text-white text-xs sm:text-sm">Toko &amp; Retail</h4>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Scan barcode cepat kamera HP, pencatatan kasbon pelanggan, dan stok opname praktis.
+                </p>
+              </div>
+
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.02]">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xl">🥐</span>
+                  <h4 className="font-extrabold text-white text-xs sm:text-sm">Bakery &amp; Resto</h4>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Cetak struk dapur terpisah, split bill, dan pemantauan HPP margin laba akurat.
+                </p>
+              </div>
+
+              <div className="bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.02]">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xl">💈</span>
+                  <h4 className="font-extrabold text-white text-xs sm:text-sm">Butik &amp; Jasa</h4>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Presensi staf dengan PIN, rekap shift kasir transparan, dan multi-outlet terintegrasi.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* =========================================================================
               SHOWCASE VISUAL: TABLET LANDSCAPE & SMARTPHONE HANDHELD
               (Terinspirasi dari layout kasir modern tablet + handheld overlay)
           ========================================================================= */}
-          <div id="tampilan" className="mt-12 sm:mt-18 max-w-6xl mx-auto w-full scroll-mt-24">
+          <div id="tampilan" className="mt-14 sm:mt-20 max-w-6xl mx-auto w-full scroll-mt-24">
             <div className="text-center mb-6 sm:mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold">
                 <Tablet className="w-3.5 h-3.5 text-blue-300" />
                 <span>+</span>
                 <Smartphone className="w-3.5 h-3.5 text-blue-300" />
-                <span>Cocok Dipakai di Tablet Maupun Smartphone Handheld</span>
+                <span>Simulasi Nyata: Mode Kasir Tablet &amp; Smartphone Handheld</span>
               </div>
             </div>
 
@@ -953,7 +1052,7 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
         </div>
 
         {/* =========================================================================
-            6 MANFAAT NYATA UNTUK TENANT / PEDAGANG (BAHASA MEMBUMI & PROFESIONAL)
+            4 PILAR FITUR UTAMA DENGAN ILUSTRASI VISUAL 3D (+ TATA KELOLA TOKO)
         ========================================================================= */}
         <section id="fitur" className="mt-16 sm:mt-24 pt-12 sm:pt-16 pb-16 bg-white text-slate-900 scroll-mt-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -962,125 +1061,215 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                 Fokus Pada Kemudahan Operasional
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-                6 Manfaat Nyata untuk Usaha &amp; Toko Anda
+                Fitur Lengkap untuk Memajukan Usaha Anda
               </h2>
               <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Dirancang khusus menjawab kebutuhan operasional toko sehari-hari: fleksibilitas perangkat, laporan keuangan instan, presensi karyawan, hingga kontrol stok yang jelas.
+                Dirancang khusus menjawab kebutuhan operasional toko sehari-hari: kecepatan kasir di jam sibuk, akurasi stok bahan baku, fleksibilitas pembayaran QRIS, hingga laporan laba rugi instan.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 text-left">
-              {/* Manfaat 1: Fleksibel Tablet & HP */}
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <Tablet className="w-5 h-5" />
+            {/* 4 Pilar Utama Berilustrasi 3D Modern */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 text-left mb-8">
+              {/* Pilar 1: Kasir Multi-Perangkat Tablet & Smartphone */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-3xl overflow-hidden hover:border-blue-400 hover:shadow-xl transition-all flex flex-col group">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                  <img
+                    src="/images/illustrations/cashier-service.jpg"
+                    alt="Kasir Fleksibel Tablet dan Smartphone Handheld"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-3 left-3 bg-blue-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Fleksibel Multi-Perangkat
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Fleksibel di Tablet Maupun Smartphone
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Perangkat kasir menyesuaikan kebutuhan usaha Anda. Gunakan tablet untuk meja kasir depan dengan tampilan menu dan keranjang berdampingan yang lega, atau gunakan smartphone staf toko untuk mencatat pesanan pelanggan secara cepat dan mobile.
-                  </p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Kompatibel di Multi-Perangkat</span>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">
+                      Kasir di Layar Tablet Meja Maupun Smartphone Handheld
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                      Beri staf kasir kebebasan melayani pelanggan dari meja makan dengan smartphone genggam atau gunakan tablet di meja kasir depan untuk antrean padat.
+                    </p>
+                    <ul className="space-y-2 text-xs text-slate-700">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Cetak nota thermal Bluetooth (58mm/80mm) &amp; kirim struk via WhatsApp</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Mendukung mode Dine-in (Meja), Takeaway, dan Split Bill</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Scan barcode produk instan via kamera smartphone staf</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center justify-between">
+                    <span>Pelayanan Kasir Cepat &amp; Efisien</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </div>
 
-              {/* Manfaat 2: Laporan Penjualan & Keuntungan Real-Time */}
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <TrendingUp className="w-5 h-5" />
+              {/* Pilar 2: Kontrol Stok Cerdas & Resep Bahan Baku */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-3xl overflow-hidden hover:border-blue-400 hover:shadow-xl transition-all flex flex-col group">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                  <img
+                    src="/images/illustrations/stock-inventory.jpg"
+                    alt="Manajemen Stok Cerdas dan Resep Bahan Baku"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-3 left-3 bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Zero Out-of-Stock
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Laporan Penjualan &amp; Keuntungan Real-Time
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Rekap omzet harian, laba kotor, dan produk terlaris otomatis terhitung rapi setiap pergantian shift kasir. Pantau performa toko kapan saja dari mana saja tanpa perlu hitung nota fisik secara manual.
-                  </p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Laporan Keuangan Otomatis</span>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">
+                      Manajemen Stok Real-Time &amp; Resep Bahan Baku Otomatis
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                      Setiap pesanan kopi, makanan olahan, atau retail terjual otomatis memotong persediaan bahan baku secara akurat. Dapatkan alert saat stok menipis.
+                    </p>
+                    <ul className="space-y-2 text-xs text-slate-700">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Komposisi resep menu memotong bahan dasar (susu, biji kopi, kemasan)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Stok opname berkala cepat dengan pencatatan selisih transparan</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Mutasi persediaan barang antar outlet dan gudang pasokan</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-emerald-700 flex items-center justify-between">
+                    <span>Akurasi Stok &amp; Kontrol HPP Presisi</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </div>
 
-              {/* Manfaat 3: Manajemen Stok Otomatis & Resep Bahan Baku */}
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <Boxes className="w-5 h-5" />
+              {/* Pilar 3: Pembayaran QRIS Semua Bank, Tunai & Kasbon */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-3xl overflow-hidden hover:border-blue-400 hover:shadow-xl transition-all flex flex-col group">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                  <img
+                    src="/images/illustrations/qris-payment.jpg"
+                    alt="Pembayaran QRIS Nontunai dan Manajemen Kasbon"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-3 left-3 bg-indigo-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Tanpa Biaya Sewa Mesin
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Manajemen Stok Otomatis &amp; Resep Bahan Baku
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Setiap produk atau menu olahan yang terjual otomatis memotong persediaan bahan baku secara akurat berdasarkan komposisi resep. Dapatkan notifikasi pengingat stok menipis sebelum bahan habis di jam sibuk.
-                  </p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Kontrol Bahan Baku &amp; HPP Presisi</span>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">
+                      Terima QRIS Instan, Pembayaran Tunai &amp; Buku Kasbon
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                      Terima pembayaran digital QRIS dari seluruh bank dan e-wallet (GoPay, OVO, ShopeePay, BCA, Mandiri) langsung tanpa repot menyewa mesin EDC bulanan.
+                    </p>
+                    <ul className="space-y-2 text-xs text-slate-700">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Tampilan QRIS dinamis langsung di layar kasir atau cetak struk</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Pencatatan kasbon pelanggan teratur dengan reminder jatuh tempo</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Kalkulasi uang kembalian instan dan mutasi kas kecil (petty cash)</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-indigo-700 flex items-center justify-between">
+                    <span>Transaksi Nontunai &amp; Kas Teratur</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </div>
 
-              {/* Manfaat 4: Mendukung Struk Digital via WhatsApp */}
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <MessageCircle className="w-5 h-5" />
+              {/* Pilar 4: Laporan Finansial, Laba Bersih & Z-Report Shift */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-3xl overflow-hidden hover:border-blue-400 hover:shadow-xl transition-all flex flex-col group">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                  <img
+                    src="/images/illustrations/analytics-reports.jpg"
+                    alt="Laporan Keuangan Laba Rugi dan HPP"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-3 left-3 bg-amber-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Akuntansi Instan
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Mendukung Struk Digital via WhatsApp
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Kirim bukti pembayaran langsung ke nomor WhatsApp pelanggan dalam hitungan detik. Praktis, hemat biaya roll kertas thermal kasir, dan tetap mendukung cetak nota printer fisik jika pelanggan menginginkannya.
-                  </p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Struk Digital &amp; Cetak Thermal</span>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">
+                      Laporan Keuangan, Margin Laba Kotor &amp; Tutup Shift Kasir
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                      Rekap omzet harian, laba kotor, dan produk paling laris terhitung otomatis. Slip X-Report dan Z-Report tutup shift menjamin tidak ada selisih uang laci kasir.
+                    </p>
+                    <ul className="space-y-2 text-xs text-slate-700">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Kalkulasi margin laba kotor otomatis berdasarkan HPP produk</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Rekap shift kasir (Z-Report) akurat tanpa kebocoran penerimaan kas</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Pantau performa usaha dari mana saja via smartphone owner</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="mt-5 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-amber-700 flex items-center justify-between">
+                    <span>Keputusan Bisnis Berbasis Data Nyata</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2 Fitur Tata Kelola & Keamanan Toko */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+              <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-5 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm text-slate-900 mb-1">
+                    Presensi PIN Staf &amp; Otorisasi Pembatalan (Void) Kasir
+                  </h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Setiap staf masuk dengan PIN individual. Tindakan sensitif seperti pembatalan nota (void) wajib persetujuan PIN supervisor agar integritas laci kasir terjaga.
+                  </p>
                 </div>
               </div>
 
-              {/* Manfaat 5: Fitur Absensi & Hak Akses Karyawan */}
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
+              <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-5 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">
+                  <Store className="w-5 h-5" />
+                </div>
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <UserCheck className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Fitur Absensi &amp; Hak Akses Karyawan
-                  </h3>
+                  <h4 className="font-extrabold text-sm text-slate-900 mb-1">
+                    Ekspansi Toko Baru &amp; Manajemen Multi-Outlet Tanpa Ribet
+                  </h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Catat kehadiran staf toko dengan PIN masing-masing dan atur hak akses peran kasir secara ketat. Pembatalan transaksi (void) terlindungi otorisasi supervisor agar pencatatan uang laci kasir selalu akurat.
+                    Buka toko ke-2 atau gudang pasokan dalam hitungan klik. Salin ratusan katalog produk tanpa perlu input ulang dari nol, serta pantau performa seluruh outlet sekaligus.
                   </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Presensi PIN &amp; Kontrol Kasir</span>
-                </div>
-              </div>
-
-              {/* Manfaat 6: Buka Toko Baru & Manajemen Multi-Outlet */}
-              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 sm:p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition-all">
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold mb-4">
-                    <Store className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    Buka Toko Baru &amp; Manajemen Multi-Outlet
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Ingin ekspansi ke toko ke-2 atau gudang pasokan? Anda bisa menyalin ratusan master produk tanpa perlu mengetik ulang dari awal. Mutasi pengiriman stok barang antar toko terpantau rapi dan real-time.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-200/80 text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Multi-Outlet &amp; Manajemen Gudang</span>
                 </div>
               </div>
             </div>
@@ -1147,6 +1336,75 @@ export const SaasLandingPage: React.FC<SaasLandingPageProps> = ({
                   >
                     Klaim 100 Token &rarr;
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* PERBANDINGAN BIAYA NYATA: WELL POS VS SOFTWARE POS LAIN */}
+            <div className="mb-10 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="bg-slate-900 text-white p-4 sm:p-5 text-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 block mb-1">
+                  Studi Kelayakan Biaya Operasional UMKM
+                </span>
+                <h3 className="text-base sm:text-lg font-black">
+                  Perbandingan Nyata: Well POS Token vs Software POS Konvensional
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 text-left">
+                {/* Kolom POS Konvensional */}
+                <div className="p-5 sm:p-6 bg-rose-50/30">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-black uppercase text-rose-700 bg-rose-100 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                      ❌ POS Langganan Bulanan Biasa
+                    </span>
+                    <span className="text-xs font-bold text-slate-500">Fixed Cost Tinggi</span>
+                  </div>
+                  <ul className="space-y-3 text-xs text-slate-700">
+                    <li className="flex items-start gap-2.5">
+                      <X className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span><strong>Tagihan Wajib:</strong> Rp 200.000 - Rp 500.000 tiap bulan meskipun toko sepi pelanggan</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <X className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span><strong>Toko Libur / Renovasi:</strong> Uang langganan bulanan tetap hangus dan dipotong otomatis</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <X className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span><strong>Tambah HP Staf:</strong> Dikenakan biaya lisensi tambahan per perangkat kasir</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <X className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <span><strong>Beban Finansial:</strong> Menjadi beban modal tetap yang menggerus profit margin UMKM</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Kolom Well POS */}
+                <div className="p-5 sm:p-6 bg-emerald-50/40">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-black uppercase text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                      ✓ Well POS (Pay-Per-Use Token)
+                    </span>
+                    <span className="text-xs font-bold text-emerald-700">Hemat s/d 80%</span>
+                  </div>
+                  <ul className="space-y-3 text-xs text-slate-800">
+                    <li className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 stroke-[3]" />
+                      <span><strong>Biaya Fleksibel:</strong> Hanya Rp 60 - Rp 100 per struk penjualan yang sukses</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 stroke-[3]" />
+                      <span><strong>Toko Libur / Sepi:</strong> Biaya <strong>Rp 0 (Nol Rupiah)</strong>, saldo token tidak pernah hangus!</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 stroke-[3]" />
+                      <span><strong>Bebas Multi-Device:</strong> Tambah smartphone kasir staf sepuasnya tanpa biaya tambahan</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 stroke-[3]" />
+                      <span><strong>Arus Kas Aman:</strong> Pengeluaran operasional 100% sebanding dengan omzet masuk</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>

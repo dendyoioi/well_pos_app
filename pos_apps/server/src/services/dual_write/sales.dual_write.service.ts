@@ -553,15 +553,260 @@ export class SalesDualWriteService extends BaseDualWriteService {
           unitPrice: item.unitPrice,
         });
 
-        // 2. RECIPE (BOM) & MODIFIER STOCK DEDUCTION OR DIRECT RETAIL FALLBACK
-        const recipeRows = await this.queryRaw<{ id: string; yield_quantity: string | number }>(
+        // 2. COMPOSITE BUNDLE (KITTING) OR RECIPE (BOM) OR DIRECT RETAIL FALLBACK
+        const bundleRows = await this.queryRaw<{
+          id: string;
+          child_product_id: string;
+          child_variant_id: string | null;
+          quantity: string | number;
+          child_product_name: string;
+          child_unit: string;
+          child_variant_id_actual: string;
+          child_variant_name: string;
+          child_inventory_item_id: string | null;
+          child_multiplier: string | number;
+          child_average_cost: string | number;
+        }>(
           tx,
-          `SELECT id, yield_quantity FROM "recipes" WHERE product_variant_id = $1 AND tenant_id = $2 LIMIT 1;`,
-          defaultVariantId,
+          `SELECT pbi.id, pbi.child_product_id, pbi.child_variant_id, pbi.quantity,
+                  p.name as child_product_name, COALESCE(p.unit, 'Pcs') as child_unit,
+                  pv.id as child_variant_id_actual, pv.name as child_variant_name,
+                  pv.inventory_item_id as child_inventory_item_id,
+                  COALESCE(pv.inventory_quantity_multiplier, 1.000) as child_multiplier,
+                  COALESCE(ii.average_cost, 0) as child_average_cost
+           FROM "product_bundle_items" pbi
+           JOIN "products" p ON p.id = pbi.child_product_id
+           LEFT JOIN "product_variants" pv ON pv.id = COALESCE(
+             pbi.child_variant_id,
+             (SELECT id FROM "product_variants" WHERE product_id = p.id AND tenant_id = $2 ORDER BY created_at ASC LIMIT 1)
+           )
+           LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
+           WHERE pbi.bundle_product_id = $1 AND pbi.tenant_id = $2;`,
+          item.productId,
           tenantId
         );
 
-        if (recipeRows.length > 0) {
+        if (bundleRows.length > 0) {
+          // =========================================================================
+          // A. COMPOSITE BUNDLE STOCK DEDUCTION (Multi-Product Kitting)
+          // =========================================================================
+          for (let bIdx = 0; bIdx < bundleRows.length; bIdx++) {
+            const bItem = bundleRows[bIdx];
+            const bundleRatio = Number(bItem.quantity || 1);
+            const totalChildQty = item.quantity * bundleRatio;
+            const targetChildLocId = warehouseStorageLocationId || storageLocationId;
+            const targetChildLocName = warehouseName ? `Gudang [${warehouseName}]` : `Toko [${outletName}]`;
+
+            // Cek apakah produk anak memiliki resep (BOM)
+            const childRecipeRows = await this.queryRaw<{ id: string; yield_quantity: string | number }>(
+              tx,
+              `SELECT id, yield_quantity FROM "recipes" WHERE product_variant_id = $1 AND tenant_id = $2 LIMIT 1;`,
+              bItem.child_variant_id_actual,
+              tenantId
+            );
+
+            if (childRecipeRows.length > 0) {
+              const childRecipe = childRecipeRows[0];
+              const childYieldQty = Math.max(0.001, Number(childRecipe.yield_quantity || 1.000));
+              const childRecipeItems = await this.queryRaw<{
+                inventory_item_id: string;
+                quantity: string | number;
+                ingredient_name: string;
+                canonical_uom: string;
+                average_cost: string | number;
+              }>(
+                tx,
+                `SELECT ri.inventory_item_id, ri.quantity, ii.name as ingredient_name, ii.canonical_uom, ii.average_cost
+                 FROM "recipe_items" ri
+                 JOIN "inventory_items" ii ON ii.id = ri.inventory_item_id
+                 WHERE ri.recipe_id = $1 AND ri.tenant_id = $2;`,
+                childRecipe.id,
+                tenantId
+              );
+
+              for (const cri of childRecipeItems) {
+                const rawChildNeeded = (Number(cri.quantity) / childYieldQty) * totalChildQty;
+                const childIngBalRows = await this.queryRaw<{ id: string; quantity_on_hand: string | number }>(
+                  tx,
+                  `SELECT id, quantity_on_hand FROM "inventory_balances"
+                   WHERE tenant_id = $1 AND inventory_item_id = $2 AND storage_location_id = $3 AND inventory_batch_id IS NULL
+                   FOR UPDATE;`,
+                  tenantId,
+                  cri.inventory_item_id,
+                  targetChildLocId
+                );
+
+                let cBalId: string;
+                let cBalBefore: number;
+                if (childIngBalRows.length > 0) {
+                  cBalId = childIngBalRows[0].id;
+                  cBalBefore = Number(childIngBalRows[0].quantity_on_hand || 0);
+                } else {
+                  cBalId = this.generateDeterministicUuid(`${cri.inventory_item_id}:${targetChildLocId}:unbatched_balance`);
+                  await this.executeRaw(
+                    tx,
+                    `INSERT INTO "inventory_balances" (
+                      "id", "tenant_id", "inventory_item_id", "storage_location_id", "inventory_batch_id",
+                      "quantity_on_hand", "quantity_reserved", "updated_at"
+                    ) VALUES ($1, $2, $3, $4, null, 0, 0, CURRENT_TIMESTAMP)
+                    ON CONFLICT ("id") DO NOTHING;`,
+                    cBalId,
+                    tenantId,
+                    cri.inventory_item_id,
+                    targetChildLocId
+                  );
+                  cBalBefore = 0;
+                }
+
+                const cBalAfter = cBalBefore - rawChildNeeded;
+                if (cBalAfter < 0) {
+                  const allowNeg = await this.checkNegativeStockAllowed(tx, tenantId, targetChildLocId, cri.inventory_item_id);
+                  if (!allowNeg) {
+                    throw new Error(
+                      `Stok bahan "${cri.ingredient_name}" di ${targetChildLocName} tidak mencukupi untuk komponen paket "${bItem.child_product_name}". Tersedia: ${cBalBefore} ${cri.canonical_uom}, Dibutuhkan: ${rawChildNeeded} ${cri.canonical_uom}.`
+                    );
+                  }
+                }
+
+                await this.executeRaw(
+                  tx,
+                  `UPDATE "inventory_balances" SET "quantity_on_hand" = $1, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = $2;`,
+                  cBalAfter,
+                  cBalId
+                );
+                targetRecordsAffected++;
+
+                const cLedgerId = this.generateDeterministicUuid(`${cBalId}:${orderId}:${idx}:${bIdx}:${cri.inventory_item_id}:bundle_bom`);
+                await this.executeRaw(
+                  tx,
+                  `INSERT INTO "inventory_ledgers" (
+                    "id", "tenant_id", "inventory_item_id", "storage_location_id", "inventory_batch_id",
+                    "quantity_delta", "balance_before", "balance_after", "unit_cost",
+                    "movement_type", "reference_type", "reference_id",
+                    "actor_type", "actor_user_id", "is_negative_balance", "notes", "created_at"
+                  ) VALUES (
+                    $1, $2, $3, $4, null,
+                    $5, $6, $7, $8,
+                    'SALE'::"StockMovementType", 'ORDER'::"InventoryRefType", $9,
+                    'USER'::"ActorType", $10, $11, $12, CURRENT_TIMESTAMP
+                  )
+                  ON CONFLICT ("id") DO NOTHING;`,
+                  cLedgerId,
+                  tenantId,
+                  cri.inventory_item_id,
+                  targetChildLocId,
+                  -rawChildNeeded,
+                  cBalBefore,
+                  cBalAfter,
+                  Number(cri.average_cost || 0),
+                  orderId,
+                  actorUserId,
+                  cBalAfter < 0,
+                  `BOM Paket [${prodName}] (${item.quantity}x) -> Komponen "${bItem.child_product_name}" di ${targetChildLocName}`
+                );
+                targetRecordsAffected++;
+              }
+            } else {
+              // Item anak adalah Produk Ritel Standar (Non-Recipe)
+              let childInvItemId = bItem.child_inventory_item_id;
+              if (!childInvItemId) {
+                childInvItemId = this.generateDeterministicUuid(`${bItem.child_product_id}:inventory_item`);
+              }
+
+              const childMultiplier = Number(bItem.child_multiplier || 1.000);
+              const deductedChildQty = totalChildQty * childMultiplier;
+
+              const existingChildRows = await this.queryRaw<{ id: string; quantity_on_hand: string | number }>(
+                tx,
+                `SELECT id, quantity_on_hand FROM "inventory_balances"
+                 WHERE tenant_id = $1 AND inventory_item_id = $2 AND storage_location_id = $3 AND inventory_batch_id IS NULL
+                 FOR UPDATE;`,
+                tenantId,
+                childInvItemId,
+                storageLocationId
+              );
+
+              let cBalId: string;
+              let cBalBefore: number;
+              if (existingChildRows.length > 0) {
+                cBalId = existingChildRows[0].id;
+                cBalBefore = Number(existingChildRows[0].quantity_on_hand || 0);
+              } else {
+                cBalId = this.generateDeterministicUuid(`${childInvItemId}:${storageLocationId}:unbatched_balance`);
+                await this.executeRaw(
+                  tx,
+                  `INSERT INTO "inventory_balances" (
+                    "id", "tenant_id", "inventory_item_id", "storage_location_id", "inventory_batch_id",
+                    "quantity_on_hand", "quantity_reserved", "updated_at"
+                  ) VALUES ($1, $2, $3, $4, null, 0, 0, CURRENT_TIMESTAMP)
+                  ON CONFLICT ("id") DO NOTHING;`,
+                  cBalId,
+                  tenantId,
+                  childInvItemId,
+                  storageLocationId
+                );
+                cBalBefore = 0;
+              }
+
+              const cBalAfter = cBalBefore - deductedChildQty;
+              if (cBalAfter < 0) {
+                const allowNeg = await this.checkNegativeStockAllowed(tx, tenantId, storageLocationId, childInvItemId);
+                if (!allowNeg) {
+                  throw new Error(
+                    `Stok barang komposit "${bItem.child_product_name}" di Toko [${outletName}] tidak mencukupi untuk paket "${prodName}". Tersedia: ${cBalBefore} ${bItem.child_unit}, Dibutuhkan: ${deductedChildQty} ${bItem.child_unit}.`
+                  );
+                }
+              }
+
+              await this.executeRaw(
+                tx,
+                `UPDATE "inventory_balances" SET "quantity_on_hand" = $1, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = $2;`,
+                cBalAfter,
+                cBalId
+              );
+              targetRecordsAffected++;
+
+              const cLedgerId = this.generateDeterministicUuid(`${cBalId}:${orderId}:${idx}:${bIdx}:bundle_retail`);
+              await this.executeRaw(
+                tx,
+                `INSERT INTO "inventory_ledgers" (
+                  "id", "tenant_id", "inventory_item_id", "storage_location_id", "inventory_batch_id",
+                  "quantity_delta", "balance_before", "balance_after", "unit_cost",
+                  "movement_type", "reference_type", "reference_id",
+                  "actor_type", "actor_user_id", "is_negative_balance", "notes", "created_at"
+                ) VALUES (
+                  $1, $2, $3, $4, null,
+                  $5, $6, $7, $8,
+                  'SALE'::"StockMovementType", 'ORDER'::"InventoryRefType", $9,
+                  'USER'::"ActorType", $10, $11, $12, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT ("id") DO NOTHING;`,
+                cLedgerId,
+                tenantId,
+                childInvItemId,
+                storageLocationId,
+                -deductedChildQty,
+                cBalBefore,
+                cBalAfter,
+                Number(bItem.child_average_cost || 0),
+                orderId,
+                actorUserId,
+                cBalAfter < 0,
+                `Penjualan Paket: ${prodName} (${item.quantity}x) -> ${bItem.child_product_name} (${deductedChildQty} ${bItem.child_unit}) di [${outletName}]`
+              );
+              targetRecordsAffected++;
+            }
+          }
+        } else {
+          // 3. SINGLE ITEM: RECIPE (BOM) DEDUCTION OR DIRECT RETAIL FALLBACK
+          const recipeRows = await this.queryRaw<{ id: string; yield_quantity: string | number }>(
+            tx,
+            `SELECT id, yield_quantity FROM "recipes" WHERE product_variant_id = $1 AND tenant_id = $2 LIMIT 1;`,
+            defaultVariantId,
+            tenantId
+          );
+
+          if (recipeRows.length > 0) {
           // A. F&B BOM RECIPE DEDUCTION
           const recipe = recipeRows[0];
           const yieldQty = Math.max(0.001, Number(recipe.yield_quantity || 1.000));
@@ -935,7 +1180,8 @@ export class SalesDualWriteService extends BaseDualWriteService {
           );
           targetRecordsAffected++;
         }
-      }
+      } // end bundleRows else
+    } // end for dto.items
 
       // Payments processing -> payment_transactions
       const createdPayments: Array<{

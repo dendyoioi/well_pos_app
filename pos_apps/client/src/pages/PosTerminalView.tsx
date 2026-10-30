@@ -48,6 +48,7 @@ import {
   markOfflineOrderFailed,
   clearSyncedOfflineOrders,
 } from '../utils/offlineQueue';
+import { getEffectiveItemPricing, getCartItemSubtotal } from '../utils/pricing';
 
 interface PosTerminalViewProps {
   activeOutlet?: Outlet | null;
@@ -1343,11 +1344,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
     try {
       setCheckoutLoading(true);
-      const subtotal = cart.reduce((acc, item) => {
-        const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-        const itemNet = Math.max(0, price - (item.discountAmount || 0));
-        return acc + itemNet * item.quantity;
-      }, 0);
+      const subtotal = cart.reduce((acc, item) => acc + getCartItemSubtotal(item), 0);
 
       let promoDisc = 0;
       if (appliedPromotion) {
@@ -1570,11 +1567,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const handleExecuteCheckout = async (payment: PaymentPayload, payments?: PaymentPayload[]) => {
     setCheckoutLoading(true);
     try {
-      const subtotal = cart.reduce((acc, item) => {
-        const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-        const itemNet = Math.max(0, price - (item.discountAmount || 0));
-        return acc + itemNet * item.quantity;
-      }, 0);
+      const subtotal = cart.reduce((acc, item) => acc + getCartItemSubtotal(item), 0);
 
       let promoDisc = 0;
       if (appliedPromotion) {
@@ -1713,7 +1706,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             role: (currentUserRole || 'CASHIER') as any,
           },
           orderItems: cart.map((i, idx) => {
-            const unitPrice = i.customPrice || i.product.price || i.product.basePrice || 0;
+            const pricing = getEffectiveItemPricing(i);
+            const unitPrice = pricing.price;
             return {
               id: `item-${offlineRefId}-${idx}`,
               productId: i.product.id,
@@ -1843,11 +1837,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   });
 
   // Calculate Grand Total for Payment Modal
-  const cartSubtotal = cart.reduce((acc, item) => {
-    const price = item.customPrice || item.product.price || item.product.basePrice || 0;
-    const itemNet = Math.max(0, price - (item.discountAmount || 0));
-    return acc + itemNet * item.quantity;
-  }, 0);
+  const cartSubtotal = cart.reduce((acc, item) => acc + getCartItemSubtotal(item), 0);
   const cartDiscount = Math.round((cartSubtotal * globalDiscount) / 100);
 
   let promoDiscount = 0;

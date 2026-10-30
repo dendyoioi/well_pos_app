@@ -29,6 +29,7 @@ import type { Customer } from '../../types/customer';
 import type { Outlet, OutletFee } from '../../types/outlet';
 import type { Promotion } from '../../types/promotion';
 import { Button } from '../ui';
+import { getEffectiveItemPricing, getCartItemSubtotal } from '../../utils/pricing';
 
 export interface OrderCartSidebarProps {
   outlet?: Outlet | null;
@@ -178,10 +179,8 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
 
   const selectedTableObj = availableTables.find((t) => t.tableNumber === tableNumber);
 
-  // Helper kalkulasi harga item satuan & subtotal
-  const getItemPrice = (item: CartItem) => item.customPrice || item.product.price || item.product.basePrice || 0;
-  const getItemSubtotal = (item: CartItem) =>
-    Math.max(0, (getItemPrice(item) - (item.discountAmount || 0)) * item.quantity);
+  // Helper kalkulasi subtotal item keranjang (termasuk deteksi tier grosir bertingkat)
+  const getItemSubtotal = (item: CartItem) => getCartItemSubtotal(item);
 
   // Perhitungan Subtotal
   const subtotal = cart.reduce((acc, item) => acc + getItemSubtotal(item), 0);
@@ -906,26 +905,52 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
             </p>
           </div>
         ) : (
-          cart.map((item, idx) => (
-            <div key={`${item.product.id}-${item.cartItemId || idx}`} className="pt-2 first:pt-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">
-                    {item.product.name}
-                  </h4>
-                  {item.product.category && (
-                    <p className="text-[10px] text-blue-900 font-semibold">{item.product.category.name}</p>
-                  )}
-                  {item.selectedModifiers && item.selectedModifiers.length > 0 && (
-                    <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-blue-200">
-                      {item.selectedModifiers.map((m, mIdx) => (
-                        <p key={mIdx} className="text-[10px] text-slate-600 flex justify-between items-center">
-                          <span>+ {m.option?.name || m.groupName}</span>
-                          <span className="font-mono text-slate-500 font-bold">+Rp {(m.option?.priceDelta || 0).toLocaleString('id-ID')}</span>
-                        </p>
-                      ))}
+          cart.map((item, idx) => {
+            const effectivePricing = getEffectiveItemPricing(item);
+            const isBundle = item.product.type === 'COMPOSITE' || item.product.productType === 'COMPOSITE';
+            const bundleItems = item.product.bundleItems || [];
+
+            return (
+              <div key={`${item.product.id}-${item.cartItemId || idx}`} className="pt-2 first:pt-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">
+                        {item.product.name}
+                      </h4>
+                      {isBundle && (
+                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                          📦 Paket
+                        </span>
+                      )}
                     </div>
-                  )}
+                    {item.product.category && (
+                      <p className="text-[10px] text-blue-900 font-semibold">{item.product.category.name}</p>
+                    )}
+
+                    {/* Rincian Komponen Paket Bundle */}
+                    {isBundle && bundleItems.length > 0 && (
+                      <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-purple-200">
+                        <span className="text-[9px] font-bold text-purple-700 block">Isi Paket:</span>
+                        {bundleItems.map((bi, biIdx) => (
+                          <p key={bi.id || biIdx} className="text-[10px] text-slate-600 flex justify-between items-center">
+                            <span>• {bi.childProductName || bi.childProduct?.name || 'Produk'}</span>
+                            <span className="font-mono text-slate-500 font-bold">{bi.quantity}x</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                      <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-blue-200">
+                        {item.selectedModifiers.map((m, mIdx) => (
+                          <p key={mIdx} className="text-[10px] text-slate-600 flex justify-between items-center">
+                            <span>+ {m.option?.name || m.groupName}</span>
+                            <span className="font-mono text-slate-500 font-bold">+Rp {(m.option?.priceDelta || 0).toLocaleString('id-ID')}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
 
                   {/* Inline Item Note Edit Mode */}
                   {editingNoteIdx === idx ? (
@@ -1016,13 +1041,25 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                           <span>Promo Item: -Rp {Number(item.discountAmount).toLocaleString('id-ID')}/pcs</span>
                         </div>
                       ) : null}
+
+                      {/* Badge Harga Grosir Bertingkat */}
+                      {effectivePricing.isTierApplied && (
+                        <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-900 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                          <Tag className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>Grosir ({effectivePricing.minQuantity}+): Hemat Rp {effectivePricing.tierSavingsPerUnit.toLocaleString('id-ID')}/pcs</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="flex items-baseline gap-1.5 mt-1">
-                    {Number(item.discountAmount || 0) > 0 ? (
+                    {effectivePricing.isTierApplied ? (
                       <span className="text-[10px] line-through text-slate-400 font-medium font-mono">
-                        Rp {(getItemPrice(item) * item.quantity).toLocaleString('id-ID')}
+                        Rp {(effectivePricing.basePrice * item.quantity).toLocaleString('id-ID')}
+                      </span>
+                    ) : Number(item.discountAmount || 0) > 0 ? (
+                      <span className="text-[10px] line-through text-slate-400 font-medium font-mono">
+                        Rp {(effectivePricing.basePrice * item.quantity).toLocaleString('id-ID')}
                       </span>
                     ) : null}
                     <p className="text-xs font-black font-mono text-slate-900">
@@ -1059,7 +1096,8 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                 </div>
               </div>
             </div>
-          ))
+          );
+        })
         )}
       </div>
 

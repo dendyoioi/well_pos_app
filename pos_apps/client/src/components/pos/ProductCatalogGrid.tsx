@@ -59,7 +59,9 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
               : 0;
             const discountedPrice = Math.max(0, price - promoDisc);
             const hasModifiers = (product.modifiers?.length || 0) > 0;
-            const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
+            const isBundle = product.type === 'COMPOSITE' || product.productType === 'COMPOSITE';
+            const hasPriceTiers = Boolean(product.priceTiers && product.priceTiers.length > 0);
+            const isComposite = isBundle || product.hasStock === false;
             const stock = product.stock ?? 0;
             const isUnlimited = isComposite || stock >= 99999;
             const isOutOfStock = !isUnlimited && stock <= 0;
@@ -113,6 +115,16 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                       {itemPromo && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
                           Promo {itemPromo.discountType === 'PERCENTAGE' ? `-${itemPromo.discountValue}%` : `-Rp ${itemPromo.discountValue.toLocaleString('id-ID')}`}
+                        </span>
+                      )}
+                      {isBundle && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                          📦 Paket {product.bundleItems && product.bundleItems.length > 0 ? `(${product.bundleItems.length})` : ''}
+                        </span>
+                      )}
+                      {hasPriceTiers && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                          🏷️ Grosir
                         </span>
                       )}
                       {hasModifiers && (
@@ -189,7 +201,9 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
             : 0;
           const discountedPrice = Math.max(0, price - promoDisc);
           const hasModifiers = (product.modifiers?.length || 0) > 0;
-          const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
+          const isBundle = product.type === 'COMPOSITE' || product.productType === 'COMPOSITE';
+          const hasPriceTiers = Boolean(product.priceTiers && product.priceTiers.length > 0);
+          const isComposite = isBundle || product.hasStock === false;
           const stock = product.stock ?? 0;
           const isUnlimited = isComposite || stock >= 99999;
           const isOutOfStock = !isUnlimited && stock <= 0;
@@ -280,6 +294,20 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                 <h4 className="text-[11px] sm:text-xs font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-900 transition-colors" style={{ minHeight: '2rem' }}>
                   {product.name}
                 </h4>
+                {(isBundle || hasPriceTiers) && (
+                  <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                    {isBundle && (
+                      <span className="inline-flex items-center text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                        📦 Paket {product.bundleItems && product.bundleItems.length > 0 ? `(${product.bundleItems.length})` : ''}
+                      </span>
+                    )}
+                    {hasPriceTiers && (
+                      <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                        🏷️ Grosir
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Harga & Tombol Tambah */}
@@ -312,7 +340,7 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                   {isUnlimited ? (
                     <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 font-semibold mt-1 truncate">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      Siap Saji
+                      {isBundle ? 'Paket Komposit' : 'Siap Saji'}
                     </span>
                   ) : isOutOfStock ? (
                     <span className="inline-flex items-center gap-1 text-[9px] text-rose-600 font-bold mt-1 truncate">

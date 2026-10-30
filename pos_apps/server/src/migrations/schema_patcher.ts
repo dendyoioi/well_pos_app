@@ -237,6 +237,45 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "email_verifications_email_purpose_is_verified_idx" ON "email_verifications"("email", "purpose", "is_verified");
     `,
   },
+  {
+    id: '20261029_01_product_bundles_and_price_tiers',
+    description: 'Menambahkan tabel product_bundle_items dan product_price_tiers untuk paket komposit dan harga grosir bertingkat',
+    sql: `
+      CREATE TYPE "ProductType" AS ENUM ('STANDARD', 'COMPOSITE', 'SERVICE_LABOR');
+
+      ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "type" "ProductType" DEFAULT 'STANDARD';
+
+      CREATE TABLE IF NOT EXISTS "product_bundle_items" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "bundle_product_id" TEXT NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
+        "bundle_variant_id" TEXT REFERENCES "product_variants"("id") ON DELETE CASCADE,
+        "child_product_id" TEXT NOT NULL REFERENCES "products"("id") ON DELETE RESTRICT,
+        "child_variant_id" TEXT REFERENCES "product_variants"("id") ON DELETE RESTRICT,
+        "quantity" DECIMAL(12, 4) NOT NULL DEFAULT 1.0000,
+        "cost_allocation_percent" DECIMAL(5, 2),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "product_bundle_items_tenant_id_bundle_product_id_idx" ON "product_bundle_items"("tenant_id", "bundle_product_id");
+      CREATE INDEX IF NOT EXISTS "product_bundle_items_tenant_id_child_product_id_idx" ON "product_bundle_items"("tenant_id", "child_product_id");
+
+      CREATE TABLE IF NOT EXISTS "product_price_tiers" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "product_id" TEXT NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
+        "variant_id" TEXT REFERENCES "product_variants"("id") ON DELETE CASCADE,
+        "min_quantity" INTEGER NOT NULL,
+        "tier_price" DECIMAL(15, 2) NOT NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "product_price_tiers_tenant_id_product_id_variant_id_min_quant_key" UNIQUE ("tenant_id", "product_id", "variant_id", "min_quantity")
+      );
+
+      CREATE INDEX IF NOT EXISTS "product_price_tiers_tenant_id_product_id_idx" ON "product_price_tiers"("tenant_id", "product_id");
+    `,
+  },
 ];
 
 /**

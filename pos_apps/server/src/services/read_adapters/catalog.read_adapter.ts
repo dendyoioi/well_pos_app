@@ -231,8 +231,53 @@ export class CatalogReadAdapter extends BaseReadAdapter {
             });
           }
         }
+
+        // Ambil Price Tiers & Bundle Items untuk seluruh produk
+        const [priceTierRows, bundleItemRows] = await Promise.all([
+          prisma.productPriceTier.findMany({
+            where: { productId: { in: productIds }, tenantId },
+            orderBy: { minQuantity: 'asc' },
+          }),
+          prisma.productBundleItem.findMany({
+            where: { bundleProductId: { in: productIds }, tenantId },
+            select: {
+              id: true,
+              bundleProductId: true,
+              quantity: true,
+              childProductId: true,
+              childProduct: { select: { name: true, unit: true } },
+            },
+          }),
+        ]);
+
+        for (const pt of priceTierRows) {
+          const prod = productMap.get(pt.productId);
+          if (prod) {
+            if (!prod.priceTiers) prod.priceTiers = [];
+            prod.priceTiers.push({
+              id: pt.id,
+              variantId: pt.variantId,
+              minQuantity: pt.minQuantity,
+              tierPrice: Number(pt.tierPrice),
+            });
+          }
+        }
+
+        for (const bi of bundleItemRows) {
+          const prod = productMap.get(bi.bundleProductId);
+          if (prod) {
+            if (!prod.bundleItems) prod.bundleItems = [];
+            prod.bundleItems.push({
+              id: bi.id,
+              childProductId: bi.childProductId,
+              childProductName: bi.childProduct.name,
+              childUnit: bi.childProduct.unit || 'Pcs',
+              quantity: Number(bi.quantity),
+            });
+          }
+        }
       } catch (err) {
-        console.error('Error fetching relational product modifiers:', err);
+        console.error('Error fetching relational product modifiers, price tiers, or bundles:', err);
       }
     }
 
@@ -373,6 +418,43 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       },
     ];
 
+    // Ambil price tiers & bundle items jika ada
+    let priceTiers: { id: string; variantId?: string | null; minQuantity: number; tierPrice: number }[] = [];
+    let bundleItems: { id: string; childProductId: string; childProductName: string; childUnit: string; quantity: number }[] = [];
+    try {
+      const [ptRows, biRows] = await Promise.all([
+        prisma.productPriceTier.findMany({
+          where: { productId: r.id, tenantId },
+          orderBy: { minQuantity: 'asc' },
+        }),
+        prisma.productBundleItem.findMany({
+          where: { bundleProductId: r.id, tenantId },
+          select: {
+            id: true,
+            bundleProductId: true,
+            quantity: true,
+            childProductId: true,
+            childProduct: { select: { name: true, unit: true } },
+          },
+        }),
+      ]);
+      priceTiers = ptRows.map((pt) => ({
+        id: pt.id,
+        variantId: pt.variantId,
+        minQuantity: pt.minQuantity,
+        tierPrice: Number(pt.tierPrice),
+      }));
+      bundleItems = biRows.map((bi) => ({
+        id: bi.id,
+        childProductId: bi.childProductId,
+        childProductName: bi.childProduct.name,
+        childUnit: bi.childProduct.unit || 'Pcs',
+        quantity: Number(bi.quantity),
+      }));
+    } catch (e) {
+      console.error('Error fetching tiers/bundle in getProductById:', e);
+    }
+
     return {
       id: r.id,
       name: r.name,
@@ -394,6 +476,8 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       hasStock: !isComposite,
       modifiers,
       variants,
+      priceTiers,
+      bundleItems,
       createdAt: new Date(r.created_at),
     };
   }
