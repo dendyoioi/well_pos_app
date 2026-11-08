@@ -189,18 +189,27 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
       for (const m of mods) {
         let modName = '';
         let modPrice = 0;
+        let groupLabel = '';
+
         if (typeof m === 'string') {
           modName = m;
         } else if (m?.option) {
           modName = m.option.name;
           modPrice = Number(m.option.priceDelta || 0);
+          if (m.modifierGroup?.name) {
+            groupLabel = `[${m.modifierGroup.name}] `;
+          }
         } else if (m?.name) {
           modName = m.name;
           modPrice = Number(m.priceAdjustment || m.price_adjustment || 0);
+          const gName = m.group_name || m.groupName || m.slotName || m.slot_name;
+          if (gName) {
+            groupLabel = `[${gName}] `;
+          }
         }
         if (modName) {
           const priceTag = modPrice > 0 ? (qty > 1 ? ` (+Rp ${(modPrice * qty).toLocaleString('id-ID')})` : ` (+Rp ${modPrice.toLocaleString('id-ID')})`) : '';
-          builder.line(`  + ${modName}${priceTag}`);
+          builder.line(`  + ${groupLabel}${modName}${priceTag}`);
         }
       }
     }
@@ -284,7 +293,7 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
 /**
  * Struk uji coba thermal singkat
  */
-export function buildTestPrintEscPos(paperSize: '58mm' | '80mm' = '58mm'): Uint8Array {
+export function buildTestPrintEscPos(paperSize: '58mm' | '80mm' = '58mm', deviceLabel: string = 'Hardware'): Uint8Array {
   const builder = new EscPosBuilder(paperSize);
   builder.align('center');
   builder.bold(true).size('double').line('WELL POS');
@@ -293,12 +302,169 @@ export function buildTestPrintEscPos(paperSize: '58mm' | '80mm' = '58mm'): Uint8
   builder.divider('=');
   builder.bold(true).line('TEST PRINT THERMAL OK!');
   builder.bold(false);
-  builder.line(`Format: ${paperSize}`);
+  builder.line(`Perangkat: ${deviceLabel}`);
+  builder.line(`Format Kertas: ${paperSize}`);
   builder.line(new Date().toLocaleString('id-ID'));
   builder.divider('-');
-  builder.line('Printer Bluetooth terhubung');
+  builder.line('Printer thermal terhubung');
   builder.line('dan siap digunakan untuk kasir.');
   builder.feed(4);
   builder.cut();
+  return builder.toUint8Array();
+}
+
+/**
+ * Slip Rekapitulasi Murni X-Report (Laporan Berjalan) & Z-Report (Tutup Shift)
+ * Murni ringkasan finansial kas & omzet TANPA rincian daftar transaksi per nota (Kebijakan Rule 13).
+ */
+export function buildXZReportEscPos(
+  reportData: any,
+  type: 'X' | 'Z',
+  options: EscPosOptions = {}
+): Uint8Array {
+  const paperSize = options.paperSize || '58mm';
+  const builder = new EscPosBuilder(paperSize);
+
+  const outletName = typeof reportData.outlet === 'string'
+    ? reportData.outlet
+    : reportData.outlet?.name || 'WELL POS OUTLET';
+  const outletAddr = typeof reportData.outlet === 'object' ? reportData.outlet?.address : '';
+
+  // 1. Header
+  builder.align('center');
+  builder.bold(true).size('double').line(outletName);
+  builder.bold(false).size('normal');
+  if (outletAddr) {
+    builder.line(outletAddr);
+  }
+  builder.divider('=');
+
+  // 2. Judul Laporan
+  builder.bold(true);
+  if (type === 'X') {
+    builder.line('*** LAPORAN BERJALAN (X-REPORT) ***');
+    builder.line('STATUS: SHIFT SEDANG BERJALAN');
+  } else {
+    builder.line('*** LAPORAN TUTUP SHIFT (Z-REPORT) ***');
+    builder.line('STATUS: SHIFT RESMI DITUTUP');
+  }
+  builder.bold(false);
+  builder.divider('-');
+
+  // 3. Info Shift & Kasir
+  builder.align('left');
+  builder.twoColumns('Kasir:', reportData.cashier || '-');
+  if (reportData.shiftId) {
+    builder.twoColumns('ID Shift:', `#${String(reportData.shiftId).slice(0, 8)}`);
+  }
+  if (reportData.startTime) {
+    const startStr = new Date(reportData.startTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    builder.twoColumns('Waktu Buka:', startStr);
+  }
+  if (type === 'Z' && reportData.endTime) {
+    const endStr = new Date(reportData.endTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    builder.twoColumns('Waktu Tutup:', endStr);
+  } else if (reportData.generatedAt) {
+    const genStr = new Date(reportData.generatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    builder.twoColumns('Dicetak:', genStr);
+  }
+
+  builder.divider('-');
+
+  // 4. POSISI UANG KAS DI LACI (CASH DRAWER RECONCILIATION)
+  builder.bold(true).line('POSISI UANG KAS LACI:');
+  builder.bold(false);
+
+  const startingCash = Number(reportData.cashDrawer?.startingCash || 0);
+  const cashSales = Number(reportData.cashDrawer?.totalCashSales ?? reportData.cashDrawer?.cashSales ?? 0);
+  const debtCashIn = Number(reportData.totalDebtCashIn ?? reportData.cashDrawer?.totalDebtCashIn ?? 0);
+  const totalCashIn = Number(reportData.cashDrawer?.totalCashIn || 0);
+  const totalCashOut = Number(reportData.cashDrawer?.totalCashOut || 0);
+  const expectedCash = Number(reportData.cashDrawer?.expectedCash ?? reportData.cashDrawer?.expectedCashInDrawer ?? 0);
+
+  builder.twoColumns('  Modal Awal (Cash):', `Rp ${startingCash.toLocaleString('id-ID')}`);
+  builder.twoColumns('  + Penjualan Tunai:', `Rp ${cashSales.toLocaleString('id-ID')}`);
+  if (debtCashIn > 0) {
+    builder.twoColumns('  + Pelunasan Kasbon:', `Rp ${debtCashIn.toLocaleString('id-ID')}`);
+  }
+  if (totalCashIn > 0) {
+    builder.twoColumns('  + Kas Masuk (In):', `Rp ${totalCashIn.toLocaleString('id-ID')}`);
+  }
+  if (totalCashOut > 0) {
+    builder.twoColumns('  - Kas Keluar (Out):', `Rp ${totalCashOut.toLocaleString('id-ID')}`);
+  }
+  builder.divider('-');
+  builder.bold(true).twoColumns('Total Kas Sistem:', `Rp ${expectedCash.toLocaleString('id-ID')}`);
+  builder.bold(false);
+
+  // Jika Z-Report: tampilkan uang fisik & selisih kas
+  if (type === 'Z' && reportData.cashDrawer?.actualCash !== undefined) {
+    const actualCash = Number(reportData.cashDrawer.actualCash || 0);
+    const diff = Number(reportData.cashDrawer.difference || 0);
+    const diffSign = diff > 0 ? '+' : '';
+
+    builder.twoColumns('Kas Fisik Aktual:', `Rp ${actualCash.toLocaleString('id-ID')}`);
+    builder.bold(true);
+    if (diff === 0) {
+      builder.twoColumns('Status Selisih:', 'SEIMBANG (Rp 0)');
+    } else if (diff > 0) {
+      builder.twoColumns('Selisih Kas (+):', `${diffSign}Rp ${diff.toLocaleString('id-ID')} (LEBIH)`);
+    } else {
+      builder.twoColumns('Selisih Kas (-):', `Rp ${diff.toLocaleString('id-ID')} (KURANG)`);
+    }
+    builder.bold(false);
+  }
+
+  builder.divider('-');
+
+  // 5. REKAPITULASI OMSET & METODE PEMBAYARAN
+  builder.bold(true).line('RINGKASAN OMSET & METODE:');
+  builder.bold(false);
+
+  const qrisSales = Number(
+    reportData.nonCashSummary?.totalQrisSales ??
+    reportData.paymentSummary?.qrisSales ??
+    0
+  );
+  const totalRevenue = Number(
+    reportData.nonCashSummary?.totalRevenue ??
+    reportData.paymentSummary?.netRevenue ??
+    (cashSales + qrisSales)
+  );
+
+  builder.twoColumns('  Tunai (Cash):', `Rp ${cashSales.toLocaleString('id-ID')}`);
+  builder.twoColumns('  Non-Tunai / QRIS:', `Rp ${qrisSales.toLocaleString('id-ID')}`);
+  builder.divider('-');
+  builder.bold(true).twoColumns('TOTAL OMSET (NET):', `Rp ${totalRevenue.toLocaleString('id-ID')}`);
+  builder.bold(false);
+
+  // 6. STATISTIK PENJUALAN
+  const totalTx = Number(
+    reportData.totalTransactions ??
+    reportData.transactionSummary?.totalOrders ??
+    0
+  );
+  if (totalTx > 0) {
+    builder.divider('-');
+    builder.twoColumns('Jumlah Transaksi:', `${totalTx} Nota`);
+    const avgTicket = Math.round(totalRevenue / totalTx);
+    builder.twoColumns('Rata-rata per Nota:', `Rp ${avgTicket.toLocaleString('id-ID')}`);
+  }
+
+  // 7. Kolom Pengesahan Tanda Tangan
+  builder.divider('-');
+  builder.align('center');
+  builder.line('LEMBAR PENGESAHAN:');
+  builder.feed(1);
+  builder.twoColumns('Kasir Bertugas,', 'Supervisor/Owner,');
+  builder.feed(3);
+  builder.twoColumns('(...............)', '(...............)');
+
+  // 8. Footer Watermark
+  builder.feed(1);
+  builder.line('Well POS - Pure Financial Slip');
+  builder.feed(4);
+  builder.cut();
+
   return builder.toUint8Array();
 }

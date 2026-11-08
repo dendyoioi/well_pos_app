@@ -30,7 +30,6 @@ import {
   Ticket,
   FileText,
   ArrowLeftRight,
-  Bluetooth,
 } from 'lucide-react';
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
@@ -42,7 +41,7 @@ import { OrdersView } from './OrdersView';
 import { BackofficeLayout } from '../components/saas/BackofficeLayout';
 import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
 import { PwaInstallButton } from '../components/PwaInstallBanner';
-import { BluetoothSettingsModal } from '../components/pos/BluetoothSettingsModal';
+import { ThermalPrinterModal } from '../components/pos/ThermalPrinterModal';
 import { api } from '../services/api';
 import type { QrLiveOrder } from '../types/qr_menu';
 
@@ -1059,7 +1058,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               </div>
             </div>
 
-            {/* Bottom Actions Drawer: Printer Bluetooth, Pasang PWA, PIN Lock & Logout */}
+            {/* Bottom Actions Drawer: Printer Thermal & Kasir, Pasang PWA, PIN Lock & Logout */}
             <div className="pt-3 border-t border-slate-100 space-y-2">
               <button
                 type="button"
@@ -1069,8 +1068,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                 }}
                 className="w-full py-2.5 px-3 rounded-xl bg-blue-50/80 hover:bg-blue-100 text-blue-900 border border-blue-200/80 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
               >
-                <Bluetooth className="w-4 h-4 text-blue-700" />
-                <span>Pengaturan Printer Bluetooth</span>
+                <Printer className="w-4 h-4 text-blue-700" />
+                <span>Pengaturan Printer Thermal</span>
               </button>
 
               <PwaInstallButton className="w-full justify-center" />
@@ -1168,15 +1167,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
         {/* User Profile & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {/* Tombol Pengaturan Printer Bluetooth Kasir (Desktop/Tablet) */}
+          {/* Tombol Pengaturan Printer Hardware Kasir (Desktop/Tablet) */}
           <button
             type="button"
             onClick={() => setBluetoothModalOpen(true)}
             className="hidden sm:inline-flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-all font-bold text-xs items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
-            title="Pengaturan & Tes Printer Bluetooth Thermal"
+            title="Pengaturan &amp; Tes Printer Kasir (Bluetooth, USB &amp; Laci)"
           >
-            <Bluetooth className="w-3.5 h-3.5 text-blue-700" />
-            <span className="hidden md:inline">Printer BT</span>
+            <Printer className="w-3.5 h-3.5 text-blue-700" />
+            <span className="hidden md:inline">Printer Thermal</span>
           </button>
 
           {/* Tombol Pasang PWA (Desktop/Tablet, di Mobile sudah ada di drawer dan banner) */}
@@ -2063,10 +2062,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           </Suspense>
         )}
 
-        {/* Modal Pengaturan Printer Bluetooth Kasir */}
-        <BluetoothSettingsModal
+        {/* Modal Pengaturan Printer Thermal & Hardware Kasir */}
+        <ThermalPrinterModal
           isOpen={bluetoothModalOpen}
           onClose={() => setBluetoothModalOpen(false)}
+          defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
         />
       </main>
     </div>

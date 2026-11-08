@@ -12,6 +12,7 @@ import {
 import { api } from '../services/api';
 import type { XReportData } from '../types/shift';
 import { printElementViaThermalIframe } from '../utils/thermalPrinter';
+import { useThermalPrinterHub } from '../hooks/useThermalPrinterHub';
 
 interface XReportModalProps {
   isOpen: boolean;
@@ -47,13 +48,22 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
     }
   }, [isOpen]);
 
+  const printerHub = useThermalPrinterHub();
+
   if (!isOpen) return null;
 
-  const handlePrint = () => {
-    printElementViaThermalIframe('x-report-printable', {
-      paperWidth,
-      title: `X-Report Laporan Berjalan - ${data?.outlet?.name || 'Well POS'}`,
-    });
+  const handlePrint = async () => {
+    if (!data) return;
+    try {
+      await printerHub.printXZReport(data, 'X', {
+        paperSize: paperWidth,
+      });
+    } catch {
+      printElementViaThermalIframe('x-report-printable', {
+        paperWidth,
+        title: `X-Report Laporan Berjalan - ${data?.outlet?.name || 'Well POS'}`,
+      });
+    }
   };
 
   return (

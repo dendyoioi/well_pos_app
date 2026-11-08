@@ -1,0 +1,469 @@
+import React, { useState } from 'react';
+import {
+  Printer,
+  Bluetooth,
+  Usb,
+  X,
+  Power,
+  Coins,
+  AlertCircle,
+  CheckCircle2,
+  HelpCircle,
+  Zap,
+  Sliders,
+  Check,
+} from 'lucide-react';
+import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
+
+export interface ThermalPrinterModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  defaultPaperSize?: '58mm' | '80mm';
+}
+
+export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
+  isOpen,
+  onClose,
+  defaultPaperSize,
+}) => {
+  const hub = useThermalPrinterHub();
+  const [activeTab, setActiveTab] = useState<'connection' | 'preferences'>('connection');
+  const [testingPrint, setTestingPrint] = useState(false);
+  const [testingDrawer, setTestingDrawer] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  React.useEffect(() => {
+    if (defaultPaperSize && !localStorage.getItem('wellpos_printer_paper_size')) {
+      hub.setPaperSize(defaultPaperSize);
+    }
+  }, [defaultPaperSize]);
+
+  if (!isOpen) return null;
+
+  const handleConnectBluetooth = async () => {
+    setStatusMessage(null);
+    const ok = await hub.connectBluetooth();
+    if (ok) {
+      setStatusMessage({
+        type: 'success',
+        text: `Printer Bluetooth "${hub.deviceName || 'Thermal'}" berhasil terhubung!`,
+      });
+    }
+  };
+
+  const handleConnectUsb = async () => {
+    setStatusMessage(null);
+    const ok = await hub.connectUsb();
+    if (ok) {
+      setStatusMessage({
+        type: 'success',
+        text: `Printer USB "${hub.deviceName || 'Thermal'}" berhasil terhubung!`,
+      });
+    }
+  };
+
+  const handleDisconnect = () => {
+    hub.disconnect();
+    setStatusMessage({
+      type: 'success',
+      text: 'Koneksi perangkat printer kasir telah diputuskan.',
+    });
+  };
+
+  const handleTestPrint = async () => {
+    setTestingPrint(true);
+    setStatusMessage(null);
+    try {
+      await hub.testPrint(hub.paperSize);
+      setStatusMessage({
+        type: 'success',
+        text: `Struk uji coba (${hub.paperSize}) berhasil dicetak!`,
+      });
+    } catch (err: any) {
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Gagal mencetak struk uji coba.',
+      });
+    } finally {
+      setTestingPrint(false);
+    }
+  };
+
+  const handleTestDrawer = async () => {
+    setTestingDrawer(true);
+    setStatusMessage(null);
+    try {
+      const ok = await hub.kickCashDrawer();
+      if (ok) {
+        setStatusMessage({
+          type: 'success',
+          text: 'Sinyal pembuka laci kasir 24V (Drawer Kick) berhasil dikirim.',
+        });
+      } else {
+        throw new Error('Gagal mengirim sinyal ke laci kasir.');
+      }
+    } catch (err: any) {
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Gagal mengirim sinyal ke laci kasir.',
+      });
+    } finally {
+      setTestingDrawer(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in zoom-in-95 duration-200">
+        {/* Header Modal */}
+        <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-blue-200 shrink-0">
+              <Printer className="w-5 h-5 text-blue-300" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-sm sm:text-base text-white tracking-tight truncate">
+                Printer Thermal &amp; Laci Kasir
+              </h3>
+              <p className="text-[11px] text-blue-200/90 font-medium truncate">
+                Integrasi Hardware Direct ESC/POS (Bluetooth, USB &amp; Drawer)
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            title="Tutup Jendela"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex items-center border-b border-slate-200 bg-slate-50 px-4 pt-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('connection')}
+            className={`py-2 px-3 text-xs font-extrabold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'connection'
+                ? 'border-blue-900 text-blue-950 bg-white rounded-t-xl'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>Koneksi Perangkat</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('preferences')}
+            className={`py-2 px-3 text-xs font-extrabold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'preferences'
+                ? 'border-blue-900 text-blue-950 bg-white rounded-t-xl'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5 text-blue-700" />
+            <span>Otomasi &amp; Kertas</span>
+          </button>
+        </div>
+
+        {/* Scrollable Content Body */}
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1">
+          {/* Status Alert Message */}
+          {statusMessage && (
+            <div
+              className={`p-3 rounded-2xl border text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+                statusMessage.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}
+            >
+              {statusMessage.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <span className="flex-1">{statusMessage.text}</span>
+            </div>
+          )}
+
+          {/* TAB 1: KONEKSI PERANGKAT */}
+          {activeTab === 'connection' && (
+            <div className="space-y-4">
+              {/* Active Device Card */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-colors ${
+                        hub.isConnected
+                          ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                          : hub.isConnecting
+                          ? 'bg-blue-600 text-white animate-pulse'
+                          : 'bg-slate-200 text-slate-500'
+                      }`}
+                    >
+                      {hub.connectionType === 'usb' ? (
+                        <Usb className="w-6 h-6" />
+                      ) : (
+                        <Bluetooth className="w-6 h-6" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
+                          {hub.isConnected
+                            ? hub.deviceName || 'Printer Thermal Terhubung'
+                            : hub.isConnecting
+                            ? 'Sedang Menghubungkan...'
+                            : 'Belum Ada Printer Terhubung'}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            hub.isConnected
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : hub.isConnecting
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {hub.isConnected
+                            ? `● Terhubung (${hub.connectionType.toUpperCase()})`
+                            : hub.isConnecting
+                            ? '● Menghubungkan'
+                            : '○ Terputus'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
+                        {hub.isConnected
+                          ? 'Siap mencetak nota kasir seketika & memicu laci kasir otomatis.'
+                          : 'Pilih jalur koneksi Bluetooth nirkabel atau kabel USB di bawah ini.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {hub.isConnected && (
+                    <button
+                      type="button"
+                      onClick={handleDisconnect}
+                      className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="Putus Koneksi"
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Putus</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Last Error Message */}
+                {hub.printError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span className="flex-1">{hub.printError}</span>
+                  </div>
+                )}
+
+                {/* Connection Buttons */}
+                {!hub.isConnected && (
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleConnectBluetooth}
+                      disabled={hub.isConnecting}
+                      className="w-full py-3 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-900/20 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Bluetooth className="w-4 h-4 text-blue-300" />
+                      <span>Pindai &amp; Hubungkan Printer Bluetooth</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleConnectUsb}
+                      disabled={hub.isConnecting}
+                      className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-slate-900/20 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Usb className="w-4 h-4 text-emerald-400" />
+                      <span>Hubungkan Printer Kabel USB (WebUSB)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Uji Coba Hardware (Jika Terhubung) */}
+              {hub.isConnected && (
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3">
+                  <h4 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <Printer className="w-4 h-4 text-blue-900" />
+                    <span>Uji Coba Perangkat Keras Kasir</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTestPrint}
+                      disabled={testingPrint}
+                      className="py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Printer className="w-4 h-4 text-blue-700" />
+                      <span>{testingPrint ? 'Mencetak...' : `Cetak Uji Coba (${hub.paperSize})`}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleTestDrawer}
+                      disabled={testingDrawer}
+                      className="py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Coins className="w-4 h-4 text-amber-700" />
+                      <span>{testingDrawer ? 'Mengirim Sinyal...' : 'Uji Buka Laci Kasir'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Panduan & Info Perangkat */}
+              <div className="p-4 rounded-2xl border border-blue-100 bg-blue-50/50 space-y-2">
+                <h4 className="text-xs font-extrabold text-blue-950 flex items-center gap-1.5">
+                  <HelpCircle className="w-4 h-4 text-blue-700" />
+                  <span>Panduan Kompatibilitas Hardware:</span>
+                </h4>
+                <ul className="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc list-inside">
+                  <li>
+                    <strong>Kabel USB (WebUSB):</strong> Cocok untuk kasir Laptop / PC Windows, Mac, dan tablet Android yang menggunakan kabel printer USB langsung tanpa repot install driver.
+                  </li>
+                  <li>
+                    <strong>Bluetooth BLE:</strong> Kompatibel dengan semua printer thermal portabel (Panda, Xprinter, Goojprt, Iware, MPT-II, RPP02N).
+                  </li>
+                  <li>
+                    <strong>Di iPhone / iPad (iOS):</strong> Safari iOS membatasi Web Bluetooth &amp; WebUSB secara default. Kasir iOS dapat membuka Well POS via browser <em>Bluefy</em> di App Store untuk koneksi Bluetooth langsung, atau mencetak via opsi dialog AirPrint standar.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: PREFERENSI OTOMASI & KERTAS */}
+          {activeTab === 'preferences' && (
+            <div className="space-y-4">
+              {/* Paper Size Selector */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2">
+                <label className="text-xs font-extrabold text-slate-900 block">
+                  Ukuran Lebar Kertas Thermal
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Sesuaikan dengan jenis printer thermal gulung yang Anda gunakan di kasir.
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => hub.setPaperSize('58mm')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      hub.paperSize === '58mm'
+                        ? 'border-blue-900 bg-blue-50/80 text-blue-950 font-black shadow-xs ring-2 ring-blue-900/20'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-700 font-bold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">58 mm</span>
+                      {hub.paperSize === '58mm' && <Check className="w-4 h-4 text-blue-900" />}
+                    </div>
+                    <span className="text-[10px] text-slate-500 block font-normal mt-0.5">
+                      Portabel / Kasir Mini (32 Kolom)
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => hub.setPaperSize('80mm')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      hub.paperSize === '80mm'
+                        ? 'border-blue-900 bg-blue-50/80 text-blue-950 font-black shadow-xs ring-2 ring-blue-900/20'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-700 font-bold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">80 mm</span>
+                      {hub.paperSize === '80mm' && <Check className="w-4 h-4 text-blue-900" />}
+                    </div>
+                    <span className="text-[10px] text-slate-500 block font-normal mt-0.5">
+                      Desktop Kasir Standar (48 Kolom)
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Auto Print Toggle */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <label className="text-xs font-extrabold text-slate-900 block">
+                      Cetak Otomatis (Auto-Print on Checkout)
+                    </label>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Otomatis mencetak struk kasir begitu pembayaran transaksi berhasil diselesaikan.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => hub.setAutoPrint(!hub.autoPrintEnabled)}
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      hub.autoPrintEnabled ? 'bg-blue-900' : 'bg-slate-300'
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        hub.autoPrintEnabled ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Cash Drawer Kick Toggle */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <label className="text-xs font-extrabold text-slate-900 block">
+                      Buka Laci Kasir Otomatis (Cash Drawer Kick)
+                    </label>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Kirimkan pulsa 24V (ESC p 0 25 250) ke port RJ11 laci kasir setiap kali transaksi tunai (Cash) dibayarkan.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => hub.setDrawerKick(!hub.drawerKickEnabled)}
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                      hub.drawerKickEnabled ? 'bg-blue-900' : 'bg-slate-300'
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        hub.drawerKickEnabled ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Sticky Footer (Rule 10: Canonical Responsive Sticky Action Footer) */}
+        <div className="p-3 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between">
+          <div className="text-[11px] font-medium text-slate-500">
+            Status: <span className="font-bold text-slate-800">{hub.isConnected ? `${hub.deviceName} (${hub.connectionType})` : 'Fallback Browser'}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="py-2.5 px-6 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
+          >
+            Selesai
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

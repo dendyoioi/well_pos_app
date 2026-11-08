@@ -16,7 +16,6 @@ import {
   Check,
   Coins,
   Sparkles,
-  Bluetooth,
   Zap,
   RefreshCw,
   AlertCircle,
@@ -26,7 +25,7 @@ import type { Order } from '../types/order';
 import { generateReceiptPdf } from '../utils/receiptPdf';
 import { usePlan } from '../hooks/usePlan';
 import { api } from '../services/api';
-import { useBluetoothPrinter } from '../hooks/useBluetoothPrinter';
+import { useThermalPrinterHub } from '../hooks/useThermalPrinterHub';
 import { WhatsAppInput } from './ui/WhatsAppInput';
 
 interface OrderSuccessModalProps {
@@ -69,10 +68,9 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   // Virtual Cash Drawer Simulator State
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Bluetooth Thermal Printer Hook & State
-  const btPrinter = useBluetoothPrinter();
-  const [btPrintSuccess, setBtPrintSuccess] = useState(false);
-  const [btPrintError, setBtPrintError] = useState<string | null>(null);
+  // Hardware Thermal Printer Hub Hook & Auto-print State
+  const printerHub = useThermalPrinterHub();
+  const [autoPrinted, setAutoPrinted] = useState(false);
 
   // Digital Receipt View Modes (Zero Stacked Modals Policy)
   type ReceiptModalView = 'RECEIPT' | 'WHATSAPP' | 'EMAIL';
@@ -115,9 +113,9 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   const kickDrawer = () => {
     setDrawerOpen(true);
 
-    // Kirim sinyal ESC/POS fisik jika printer Bluetooth terhubung
-    if (btPrinter.isConnected) {
-      btPrinter.kickDrawer().catch(() => {});
+    // Kirim sinyal ESC/POS fisik jika printer terhubung & drawer kick diaktifkan
+    if (printerHub.isConnected && printerHub.drawerKickEnabled) {
+      printerHub.kickCashDrawer().catch(() => {});
     }
 
     // Play subtle audio tone using Web Audio API if permitted
@@ -147,35 +145,43 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
     }, 3500);
   };
 
-  const handleDirectBluetoothPrint = async () => {
-    setBtPrintError(null);
-    setBtPrintSuccess(false);
+  const handleDirectHardwarePrint = async () => {
     try {
-      if (!btPrinter.isConnected) {
-        const ok = await btPrinter.connect();
-        if (!ok) return;
-      }
-
-      await btPrinter.printReceipt(order, {
+      await printerHub.printReceipt(order, {
         paperSize,
         showQueueNumber: order?.outlet?.receiptConfig?.showQueueNumber !== false,
         showWatermark,
         footerText: order?.outlet?.receiptConfig?.footerText,
       });
 
-      // Jika ada pembayaran cash, picu laci kasir
+      // Jika ada pembayaran cash dan drawer kick diaktifkan, picu laci kasir
       const hasCash = order?.payments?.some((p: any) => (p.method || (p as any).paymentMethod) === 'CASH');
-      if (hasCash) {
-        await btPrinter.kickDrawer().catch(() => {});
+      if (hasCash && printerHub.drawerKickEnabled) {
+        await printerHub.kickCashDrawer().catch(() => {});
       }
-
-      setBtPrintSuccess(true);
-      setTimeout(() => setBtPrintSuccess(false), 3000);
     } catch (err: any) {
-      setBtPrintError(err.message || 'Gagal mencetak ke printer Bluetooth');
-      setTimeout(() => setBtPrintError(null), 4000);
+      console.warn('Direct hardware print failed:', err);
     }
   };
+
+  // Otomasi Cetak Struk (Auto-Print on Checkout)
+  React.useEffect(() => {
+    if (isOpen && order && printerHub.autoPrintEnabled && !autoPrinted) {
+      setAutoPrinted(true);
+      printerHub.printReceipt(order, {
+        paperSize,
+        showQueueNumber: order?.outlet?.receiptConfig?.showQueueNumber !== false,
+        showWatermark,
+        footerText: order?.outlet?.receiptConfig?.footerText,
+      }).catch((e) => console.warn('Auto-print error:', e));
+    }
+  }, [isOpen, order?.id, printerHub.autoPrintEnabled, autoPrinted]);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setAutoPrinted(false);
+    }
+  }, [isOpen]);
 
   // Auto kick drawer if payment contains CASH
   React.useEffect(() => {
@@ -895,50 +901,56 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
 
         {/* Footer Actions Grid (Screen only) */}
         <div className="p-4 border-t border-slate-200 bg-white space-y-2.5 no-print">
-          {/* Direct Bluetooth 1-Click Print Button */}
-          {btPrinter.isSupported && (
-            <div className="space-y-1">
-              <button
-                type="button"
-                onClick={handleDirectBluetoothPrint}
-                disabled={btPrinter.isPrinting}
-                className={`w-full py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99] disabled:opacity-50 ${
-                  btPrinter.isConnected
-                    ? 'bg-blue-900 hover:bg-blue-800 text-white shadow-blue-900/20'
-                    : 'bg-slate-900 hover:bg-slate-800 text-white'
-                }`}
-              >
-                {btPrinter.isPrinting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-blue-200" />
-                    <span>Mencetak ke {btPrinter.deviceName || 'Printer Bluetooth'}...</span>
-                  </>
-                ) : btPrintSuccess ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-300">✓ Struk Berhasil Dicetak Langsung!</span>
-                  </>
-                ) : btPrinter.isConnected ? (
-                  <>
-                    <Zap className="w-4 h-4 text-amber-400" />
-                    <span>⚡ Cetak Langsung Bluetooth ({btPrinter.deviceName || paperSize})</span>
-                  </>
-                ) : (
-                  <>
-                    <Bluetooth className="w-4 h-4 text-blue-400" />
-                    <span>⚡ Hubungkan &amp; Cetak Langsung (Bluetooth)</span>
-                  </>
-                )}
-              </button>
-
-              {btPrintError && (
-                <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in">
-                  <X className="w-3.5 h-3.5 shrink-0" />
-                  <span>{btPrintError}</span>
-                </div>
+          {/* Direct Hardware (Bluetooth / USB) 1-Click Print Button */}
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={handleDirectHardwarePrint}
+              disabled={printerHub.isPrinting}
+              className={`w-full py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99] disabled:opacity-50 ${
+                printerHub.isConnected
+                  ? 'bg-blue-900 hover:bg-blue-800 text-white shadow-blue-900/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
+              }`}
+            >
+              {printerHub.isPrinting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-blue-200" />
+                  <span>Mencetak ke {printerHub.deviceName || 'Printer Thermal'}...</span>
+                </>
+              ) : printerHub.printSuccess ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="text-emerald-300">✓ Struk Berhasil Dicetak Langsung!</span>
+                </>
+              ) : printerHub.isConnected ? (
+                <>
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  <span>
+                    ⚡ Cetak Langsung {printerHub.connectionType === 'usb' ? 'USB' : 'Bluetooth'} (
+                    {printerHub.deviceName || paperSize})
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Printer className="w-4 h-4 text-blue-300" />
+                  <span>⚡ Cetak Struk Langsung ({paperSize})</span>
+                </>
               )}
-            </div>
-          )}
+            </button>
+
+            {printerHub.printError && (
+              <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in">
+                <X className="w-3.5 h-3.5 shrink-0" />
+                <span>{printerHub.printError}</span>
+              </div>
+            )}
+            {autoPrinted && printerHub.autoPrintEnabled && (
+              <div className="text-[10px] text-center font-bold text-emerald-600 animate-in fade-in">
+                ✓ Otomasi Cetak Aktif: Struk otomatis dikirim ke printer
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-4 gap-1.5">
             {/* Tombol Cetak Thermal Browser */}

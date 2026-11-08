@@ -20,6 +20,7 @@ import { api } from '../services/api';
 import type { Shift, ZReportData } from '../types/shift';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { printElementViaThermalIframe } from '../utils/thermalPrinter';
+import { useThermalPrinterHub } from '../hooks/useThermalPrinterHub';
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zReportData, setZReportData] = useState<ZReportData | null>(null);
   const [paperWidth, setPaperWidth] = useState<'58mm' | '80mm'>('80mm');
+  const printerHub = useThermalPrinterHub();
   const [showOrdersList, setShowOrdersList] = useState<boolean>(false);
   const [showDenomCalculator, setShowDenomCalculator] = useState<boolean>(false);
   const [denominations, setDenominations] = useState<{ [key: number]: number }>({
@@ -197,11 +199,18 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
     }
   };
 
-  const handlePrint = () => {
-    printElementViaThermalIframe('z-report-printable', {
-      paperWidth,
-      title: `Z-Report Tutup Shift - ${currentShift?.outlet?.name || 'Well POS'}`,
-    });
+  const handlePrint = async () => {
+    if (!zReportData) return;
+    try {
+      await printerHub.printXZReport(zReportData, 'Z', {
+        paperSize: paperWidth,
+      });
+    } catch {
+      printElementViaThermalIframe('z-report-printable', {
+        paperWidth,
+        title: `Z-Report Tutup Shift - ${currentShift?.outlet?.name || 'Well POS'}`,
+      });
+    }
   };
 
   const handleFinish = () => {

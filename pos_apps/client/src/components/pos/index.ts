@@ -6,5 +6,6 @@ export * from './HoldOrdersModal';
 export * from './OpenTabsModal';
 export * from './PosMobileView';
 export * from './BluetoothSettingsModal';
+export * from './ThermalPrinterModal';
 export * from './BarcodeCameraScannerModal';
 export * from './ComboSlotModal';

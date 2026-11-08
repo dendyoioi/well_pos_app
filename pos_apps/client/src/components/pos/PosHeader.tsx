@@ -14,7 +14,7 @@ import {
   ChevronDown,
   ArrowDownCircle,
   Smartphone,
-  Bluetooth,
+  Printer,
   UserCheck,
 } from 'lucide-react';
 import type { Outlet, SalesChannelConfig } from '../../types/outlet';
@@ -23,7 +23,8 @@ import type { Shift } from '../../types/shift';
 import type { OrderChannel } from '../../types/order';
 import { Button, Badge } from '../ui';
 import { PwaInstallButton } from '../PwaInstallBanner';
-import { BluetoothSettingsModal } from './BluetoothSettingsModal';
+import { ThermalPrinterModal } from './ThermalPrinterModal';
+import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 
 export interface PosHeaderProps {
   activeOutlet?: Outlet | null;
@@ -69,7 +70,8 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   onOpenAttendance,
 }) => {
   const [onlineDropdownOpen, setOnlineDropdownOpen] = useState(false);
-  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
+  const [printerModalOpen, setPrinterModalOpen] = useState(false);
+  const printerHub = useThermalPrinterHub();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -307,16 +309,25 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           </Button>
         )}
 
-        {/* Tombol Pengaturan Printer Bluetooth Kasir */}
+        {/* Tombol Pengaturan Printer Hardware Kasir */}
         <Button
           variant="outline"
           size="sm"
-          icon={<Bluetooth className="w-3.5 h-3.5 text-blue-900" />}
-          onClick={() => setBluetoothModalOpen(true)}
+          icon={
+            <div className="relative">
+              <Printer className="w-3.5 h-3.5 text-blue-900" />
+              {printerHub.isConnected && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              )}
+            </div>
+          }
+          onClick={() => setPrinterModalOpen(true)}
           className="text-xs hidden sm:inline-flex"
-          title="Pengaturan & Tes Koneksi Printer Bluetooth Thermal"
+          title="Pengaturan &amp; Tes Koneksi Printer Kasir (Bluetooth, USB &amp; Laci)"
         >
-          <span className="hidden sm:inline">Printer BT</span>
+          <span className="hidden sm:inline">
+            {printerHub.isConnected ? (printerHub.connectionType === 'usb' ? 'Printer USB' : 'Printer BT') : 'Printer'}
+          </span>
         </Button>
 
         {/* Tombol Pasang Aplikasi PWA */}
@@ -398,10 +409,11 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         )}
       </div>
 
-      {/* Modal Pengaturan & Tes Printer Bluetooth Kasir */}
-      <BluetoothSettingsModal
-        isOpen={bluetoothModalOpen}
-        onClose={() => setBluetoothModalOpen(false)}
+      {/* Modal Pengaturan & Tes Printer Hardware Kasir */}
+      <ThermalPrinterModal
+        isOpen={printerModalOpen}
+        onClose={() => setPrinterModalOpen(false)}
+        defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
       />
     </div>
   );

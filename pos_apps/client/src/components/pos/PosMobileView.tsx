@@ -24,7 +24,7 @@ import {
   LogOut,
   Users,
   Bike,
-  Bluetooth,
+  Printer,
   Camera,
   WifiOff,
   CloudUpload,
@@ -41,8 +41,8 @@ import type { Promotion, ActiveItemDiscount } from '../../types/promotion';
 import type { Shift } from '../../types/shift';
 import type { QrTable } from '../../types/qr_menu';
 import { PwaInstallButton } from '../PwaInstallBanner';
-import { BluetoothSettingsModal } from './BluetoothSettingsModal';
-import { useBluetoothPrinter } from '../../hooks/useBluetoothPrinter';
+import { ThermalPrinterModal } from './ThermalPrinterModal';
+import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 import { getEffectiveItemPricing, getCartItemSubtotal } from '../../utils/pricing';
 
 export interface PosMobileViewProps {
@@ -198,12 +198,12 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [showCustomerInputs, setShowCustomerInputs] = useState(false);
-  const [bluetoothModalOpen, setBluetoothModalOpen] = useState(false);
+  const [printerModalOpen, setPrinterModalOpen] = useState(false);
   const [editingMobileNoteIdx, setEditingMobileNoteIdx] = useState<number | null>(null);
   const [tempMobileNoteText, setTempMobileNoteText] = useState('');
 
 
-  const btPrinter = useBluetoothPrinter();
+  const printerHub = useThermalPrinterHub();
 
   // Deteksi khusus apakah sedang berjalan sebagai PWA Standalone di iPhone / Handheld
   const isPwaStandalone = useMemo(() => {
@@ -1536,22 +1536,22 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                   type="button"
                   onClick={() => {
                     setQuickMenuOpen(false);
-                    setBluetoothModalOpen(true);
+                    setPrinterModalOpen(true);
                   }}
                   className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-900 text-slate-800 font-bold text-xs flex items-center justify-between transition-colors border border-slate-200 text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Bluetooth className={`w-4 h-4 ${btPrinter.isConnected ? 'text-emerald-600' : 'text-blue-900'}`} />
-                    <span>Printer Bluetooth</span>
+                    <Printer className={`w-4 h-4 ${printerHub.isConnected ? 'text-emerald-600' : 'text-blue-900'}`} />
+                    <span>Printer Thermal &amp; Kasir</span>
                   </div>
                   <span
                     className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                      btPrinter.isConnected
+                      printerHub.isConnected
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                         : 'bg-slate-200 text-slate-600'
                     }`}
                   >
-                    {btPrinter.isConnected ? '● Terhubung' : 'Terputus'}
+                    {printerHub.isConnected ? `● Terhubung (${printerHub.connectionType.toUpperCase()})` : 'Terputus'}
                   </span>
                 </button>
               </div>
@@ -1608,10 +1608,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         </div>
       )}
 
-      {/* 7. Modal Pengaturan Printer Bluetooth Kasir */}
-      <BluetoothSettingsModal
-        isOpen={bluetoothModalOpen}
-        onClose={() => setBluetoothModalOpen(false)}
+      {/* 7. Modal Pengaturan Printer Thermal & Hardware Kasir */}
+      <ThermalPrinterModal
+        isOpen={printerModalOpen}
+        onClose={() => setPrinterModalOpen(false)}
         defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
       />
     </div>
