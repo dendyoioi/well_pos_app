@@ -20,7 +20,8 @@
     "dev:client": "npm run dev --prefix pos_apps/client",
     "build:client": "npm run build --prefix pos_apps/client",
     "build:server": "npm run build --prefix pos_apps/server",
-    "db:backup": "npm run db:backup --prefix pos_apps/server"
+    "db:backup": "npm run db:backup --prefix pos_apps/server",
+    "db:pull:live": "npm run db:pull:live --prefix pos_apps/server"
   },
   "keywords": [
     "pos",

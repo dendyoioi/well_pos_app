@@ -25,7 +25,8 @@
     "db:studio": "prisma studio",
     "db:remote:patch": "tsx scripts/exec_remote_sql.ts --patch",
     "db:remote:sql": "tsx scripts/exec_remote_sql.ts --sql",
-    "db:backup": "tsx scripts/backup_remote_db.ts"
+    "db:backup": "tsx scripts/backup_remote_db.ts",
+    "db:pull:live": "tsx scripts/sync_remote_to_local.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -44,11 +45,13 @@
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^10.0.10",
+    "pg": "^8.23.1",
     "prisma": "^5.22.0",
     "typescript": "^5.6.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/pg": "^8.23.1",
     "tsx": "^4.19.1"
   }
 }
