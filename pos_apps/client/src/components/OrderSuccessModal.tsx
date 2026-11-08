@@ -76,7 +76,20 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   const [cupAutoPrinted, setCupAutoPrinted] = useState(false);
 
   // Cup Label Sticker Setup (Opt-in from Backoffice receiptConfig)
-  const cupLabelConfig = order?.outlet?.receiptConfig?.cupLabelConfig;
+  const rawReceiptConfig = order?.outlet?.receiptConfig || (order?.outlet as any)?.receipt_config;
+  const parsedReceiptConfig = React.useMemo(() => {
+    if (!rawReceiptConfig) return null;
+    if (typeof rawReceiptConfig === 'string') {
+      try {
+        return JSON.parse(rawReceiptConfig);
+      } catch {
+        return null;
+      }
+    }
+    return rawReceiptConfig;
+  }, [rawReceiptConfig]);
+
+  const cupLabelConfig = parsedReceiptConfig?.cupLabelConfig;
   const isCupLabelEnabled = Boolean(cupLabelConfig?.enabled);
   const cupItems = React.useMemo(() => {
     if (!isCupLabelEnabled || !order) return [];

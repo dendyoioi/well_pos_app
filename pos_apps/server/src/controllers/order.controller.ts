@@ -879,7 +879,9 @@ export const checkoutOrder = async (req: Request, res: Response) => {
           name: outletRows[0].name,
           address: outletRows[0].address,
           phone: outletRows[0].phone,
-          receiptConfig: outletRows[0].receipt_config,
+          receiptConfig: typeof outletRows[0].receipt_config === 'string'
+            ? (() => { try { return JSON.parse(outletRows[0].receipt_config); } catch { return null; } })()
+            : outletRows[0].receipt_config,
         } : null,
         cashier: cashierRows[0] || null,
         customer: customerRows[0] || null,
