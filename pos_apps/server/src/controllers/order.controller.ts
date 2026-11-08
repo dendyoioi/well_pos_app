@@ -20,6 +20,7 @@ const orderItemSchema = z.object({
   quantity: z.number().int().positive('Jumlah harus minimal 1'),
   discountAmount: z.number().min(0).default(0),
   modifierItemIds: z.array(z.string().uuid()).optional().default([]),
+  selectedBundleItemIds: z.array(z.string().uuid()).optional().default([]),
   notes: z.string().optional().nullable(),
 });
 
@@ -364,7 +365,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       }
     }
 
-    // Resolusi data Modifier dan kalkulasi biaya ekstra
+    // Resolusi data Modifier dan Bundle Combo Slots serta kalkulasi biaya ekstra
     const allModifierItemIds = Array.from(
       new Set(items.flatMap((i) => i.modifierItemIds || []))
     );
@@ -378,6 +379,19 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         allModifierItemIds
       );
       modifierMap = new Map(modRows.map((m) => [m.id, { id: m.id, name: m.name, priceAdjustment: Number(m.priceAdjustment || 0) }]));
+    }
+
+    const allSelectedBundleItemIds = Array.from(
+      new Set(items.flatMap((i) => i.selectedBundleItemIds || []))
+    );
+
+    let bundleItemMap = new Map<string, { id: string; priceAdjustment: number }>();
+    if (allSelectedBundleItemIds.length > 0) {
+      const bRows = await prisma.productBundleItem.findMany({
+        where: { id: { in: allSelectedBundleItemIds }, tenantId: tenantId! },
+        select: { id: true, priceAdjustment: true },
+      });
+      bundleItemMap = new Map(bRows.map((b) => [b.id, { id: b.id, priceAdjustment: Number(b.priceAdjustment || 0) }]));
     }
 
     // Ambil struktur Harga Grosir (Product Price Tiers) untuk produk dalam keranjang
@@ -412,12 +426,16 @@ export const checkoutOrder = async (req: Request, res: Response) => {
       const costPrice = v ? Number(v.costPrice) : Number(p.costPrice);
       const itemDiscount = item.discountAmount || 0;
 
-      // Tambahkan biaya ekstra modifier
+      // Tambahkan biaya ekstra modifier dan pilihan slot combo paket
       const modifierExtra = (item.modifierItemIds || []).reduce(
         (acc, mid) => acc + (modifierMap.get(mid)?.priceAdjustment || 0),
         0
       );
-      const unitPrice = baseUnitPrice + modifierExtra;
+      const bundleExtra = (item.selectedBundleItemIds || []).reduce(
+        (acc, bid) => acc + (bundleItemMap.get(bid)?.priceAdjustment || 0),
+        0
+      );
+      const unitPrice = baseUnitPrice + modifierExtra + bundleExtra;
       const itemSubtotal = (unitPrice - itemDiscount) * item.quantity;
 
       subtotal += itemSubtotal;
@@ -428,6 +446,7 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         variantId: item.variantId || v?.variantId || p.variantId,
         variantName: v?.variantName || null,
         modifierItemIds: item.modifierItemIds || [],
+        selectedBundleItemIds: item.selectedBundleItemIds || [],
         notes: item.notes || null,
         quantity: item.quantity,
         costPrice,

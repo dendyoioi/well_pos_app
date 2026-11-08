@@ -418,6 +418,9 @@ export const api = {
         childBasePrice: number;
         childAverageCost: number;
         quantity: number;
+        slotName?: string | null;
+        priceAdjustment?: number;
+        isDefault?: boolean;
         costAllocationPercent?: number | null;
       }>;
     };
@@ -435,6 +438,9 @@ export const api = {
       childProductId: string;
       childVariantId?: string | null;
       quantity: number;
+      slotName?: string | null;
+      priceAdjustment?: number;
+      isDefault?: boolean;
       costAllocationPercent?: number | null;
     }>
   ): Promise<{ status: string; message: string }> => {

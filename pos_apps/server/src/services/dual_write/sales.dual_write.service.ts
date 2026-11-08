@@ -502,7 +502,7 @@ export class SalesDualWriteService extends BaseDualWriteService {
         }
 
         // Resolusi Modifiers Snapshot jika ada
-        let modifiersSnapshotJson: string | null = null;
+        const snapshotItems: Array<{ id: string; name: string; price_adjustment: string | number; group_name: string }> = [];
         if (item.modifierItemIds && item.modifierItemIds.length > 0) {
           const modRows = await this.queryRaw<{ id: string; name: string; price_adjustment: string | number; group_name: string }>(
             tx,
@@ -513,10 +513,89 @@ export class SalesDualWriteService extends BaseDualWriteService {
             item.modifierItemIds,
             tenantId
           );
-          if (modRows.length > 0) {
-            modifiersSnapshotJson = JSON.stringify(modRows);
+          snapshotItems.push(...modRows);
+        }
+
+        // Resolusi Komponen Bundle (Kitting Fixed & Dynamic Slot Combo)
+        const bundleRows = await this.queryRaw<{
+          id: string;
+          child_product_id: string;
+          child_variant_id: string | null;
+          quantity: string | number;
+          slot_name: string | null;
+          price_adjustment: string | number;
+          is_default: boolean;
+          child_product_name: string;
+          child_unit: string;
+          child_variant_id_actual: string;
+          child_variant_name: string;
+          child_inventory_item_id: string | null;
+          child_multiplier: string | number;
+          child_average_cost: string | number;
+        }>(
+          tx,
+          `SELECT pbi.id, pbi.child_product_id, pbi.child_variant_id, pbi.quantity,
+                  pbi.slot_name, COALESCE(pbi.price_adjustment, 0) as price_adjustment, COALESCE(pbi.is_default, false) as is_default,
+                  p.name as child_product_name, COALESCE(p.unit, 'Pcs') as child_unit,
+                  pv.id as child_variant_id_actual, pv.name as child_variant_name,
+                  pv.inventory_item_id as child_inventory_item_id,
+                  COALESCE(pv.inventory_quantity_multiplier, 1.000) as child_multiplier,
+                  COALESCE(ii.average_cost, 0) as child_average_cost
+           FROM "product_bundle_items" pbi
+           JOIN "products" p ON p.id = pbi.child_product_id
+           LEFT JOIN "product_variants" pv ON pv.id = COALESCE(
+             pbi.child_variant_id,
+             (SELECT id FROM "product_variants" WHERE product_id = p.id AND tenant_id = $2 ORDER BY created_at ASC LIMIT 1)
+           )
+           LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
+           WHERE pbi.bundle_product_id = $1 AND pbi.tenant_id = $2;`,
+          item.productId,
+          tenantId
+        );
+
+        // Filter komponen bundle aktif (Komponen tetap selalu dipotong, komponen slot hanya yang dipilih)
+        const activeBundleRows: typeof bundleRows = [];
+        if (bundleRows.length > 0) {
+          const slotGroups = new Map<string, typeof bundleRows>();
+          for (const bRow of bundleRows) {
+            if (!bRow.slot_name || bRow.slot_name.trim() === '') {
+              activeBundleRows.push(bRow);
+            } else {
+              const sName = bRow.slot_name.trim();
+              if (!slotGroups.has(sName)) slotGroups.set(sName, []);
+              slotGroups.get(sName)!.push(bRow);
+            }
+          }
+
+          const selectedIds = new Set(item.selectedBundleItemIds || []);
+          for (const [sName, sItems] of slotGroups.entries()) {
+            const chosen = sItems.filter((it) => selectedIds.has(it.id));
+            if (chosen.length > 0) {
+              activeBundleRows.push(...chosen);
+              for (const ch of chosen) {
+                snapshotItems.push({
+                  id: ch.id,
+                  name: ch.child_product_name,
+                  price_adjustment: ch.price_adjustment,
+                  group_name: sName,
+                });
+              }
+            } else {
+              const defaultItem = sItems.find((it) => it.is_default) || sItems[0];
+              if (defaultItem) {
+                activeBundleRows.push(defaultItem);
+                snapshotItems.push({
+                  id: defaultItem.id,
+                  name: defaultItem.child_product_name,
+                  price_adjustment: defaultItem.price_adjustment,
+                  group_name: sName,
+                });
+              }
+            }
           }
         }
+
+        const modifiersSnapshotJson = snapshotItems.length > 0 ? JSON.stringify(snapshotItems) : null;
 
         // Insert target order_items (termasuk modifiers_snapshot & notes)
         await this.executeRaw(
@@ -553,45 +632,12 @@ export class SalesDualWriteService extends BaseDualWriteService {
           unitPrice: item.unitPrice,
         });
 
-        // 2. COMPOSITE BUNDLE (KITTING) OR RECIPE (BOM) OR DIRECT RETAIL FALLBACK
-        const bundleRows = await this.queryRaw<{
-          id: string;
-          child_product_id: string;
-          child_variant_id: string | null;
-          quantity: string | number;
-          child_product_name: string;
-          child_unit: string;
-          child_variant_id_actual: string;
-          child_variant_name: string;
-          child_inventory_item_id: string | null;
-          child_multiplier: string | number;
-          child_average_cost: string | number;
-        }>(
-          tx,
-          `SELECT pbi.id, pbi.child_product_id, pbi.child_variant_id, pbi.quantity,
-                  p.name as child_product_name, COALESCE(p.unit, 'Pcs') as child_unit,
-                  pv.id as child_variant_id_actual, pv.name as child_variant_name,
-                  pv.inventory_item_id as child_inventory_item_id,
-                  COALESCE(pv.inventory_quantity_multiplier, 1.000) as child_multiplier,
-                  COALESCE(ii.average_cost, 0) as child_average_cost
-           FROM "product_bundle_items" pbi
-           JOIN "products" p ON p.id = pbi.child_product_id
-           LEFT JOIN "product_variants" pv ON pv.id = COALESCE(
-             pbi.child_variant_id,
-             (SELECT id FROM "product_variants" WHERE product_id = p.id AND tenant_id = $2 ORDER BY created_at ASC LIMIT 1)
-           )
-           LEFT JOIN "inventory_items" ii ON ii.id = pv.inventory_item_id
-           WHERE pbi.bundle_product_id = $1 AND pbi.tenant_id = $2;`,
-          item.productId,
-          tenantId
-        );
-
-        if (bundleRows.length > 0) {
+        if (activeBundleRows.length > 0) {
           // =========================================================================
-          // A. COMPOSITE BUNDLE STOCK DEDUCTION (Multi-Product Kitting)
+          // A. COMPOSITE BUNDLE STOCK DEDUCTION (Fixed + Selected Slot Options)
           // =========================================================================
-          for (let bIdx = 0; bIdx < bundleRows.length; bIdx++) {
-            const bItem = bundleRows[bIdx];
+          for (let bIdx = 0; bIdx < activeBundleRows.length; bIdx++) {
+            const bItem = activeBundleRows[bIdx];
             const bundleRatio = Number(bItem.quantity || 1);
             const totalChildQty = item.quantity * bundleRatio;
             const targetChildLocId = warehouseStorageLocationId || storageLocationId;

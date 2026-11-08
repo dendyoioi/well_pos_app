@@ -11,6 +11,9 @@ const bundleItemInputSchema = z.object({
   childVariantId: z.string().uuid('ID varian anak tidak valid').optional().nullable(),
   quantity: z.number().positive('Jumlah produk anak harus lebih dari 0').default(1),
   costAllocationPercent: z.number().min(0).max(100).optional().nullable(),
+  slotName: z.string().max(100).optional().nullable(),
+  priceAdjustment: z.number().min(0, 'Penyesuaian harga tidak boleh negatif').default(0),
+  isDefault: z.boolean().default(false),
 });
 
 const updateBundleItemsSchema = z.object({
@@ -106,6 +109,22 @@ export const getBundleItems = async (req: Request, res: Response) => {
       childAverageCost: bi.childVariant?.inventoryItem?.averageCost ? Number(bi.childVariant.inventoryItem.averageCost) : 0,
       quantity: Number(bi.quantity),
       costAllocationPercent: bi.costAllocationPercent ? Number(bi.costAllocationPercent) : null,
+      slotName: bi.slotName || null,
+      priceAdjustment: Number(bi.priceAdjustment || 0),
+      isDefault: Boolean(bi.isDefault),
+    }));
+
+    // Kelompokkan slot dinamis jika ada
+    const slotsMap = new Map<string, typeof formatted>();
+    for (const it of formatted) {
+      if (it.slotName) {
+        if (!slotsMap.has(it.slotName)) slotsMap.set(it.slotName, []);
+        slotsMap.get(it.slotName)!.push(it);
+      }
+    }
+    const slots = Array.from(slotsMap.entries()).map(([slotName, items]) => ({
+      slotName,
+      items,
     }));
 
     // Hitung total estimasi HPP komposit dari akumulasi produk anak
@@ -119,6 +138,7 @@ export const getBundleItems = async (req: Request, res: Response) => {
         productType: product.type,
         estimatedHpp,
         bundleItems: formatted,
+        bundleSlots: slots,
       },
     });
   } catch (error: any) {
@@ -249,6 +269,9 @@ export const updateBundleItems = async (req: Request, res: Response) => {
             childVariantId: bi.childVariantId || null,
             quantity: bi.quantity,
             costAllocationPercent: bi.costAllocationPercent || null,
+            slotName: bi.slotName?.trim() || null,
+            priceAdjustment: bi.priceAdjustment || 0,
+            isDefault: Boolean(bi.isDefault),
           })),
         });
       }

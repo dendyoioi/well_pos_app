@@ -36,6 +36,22 @@ export interface FormattedProductDTO {
   isBundle?: boolean;
   bundleLimitStock?: number | null;
   bundleBottleneckItem?: string | null;
+  bundleSlotsCount?: number;
+  bundleSlots?: {
+    slotName: string;
+    items: {
+      id: string;
+      childProductId: string;
+      childProductName: string;
+      childUnit: string;
+      quantity: number;
+      priceAdjustment: number;
+      isDefault: boolean;
+      childStock?: number;
+      isRecipe?: boolean;
+      isOutOfStock?: boolean;
+    }[];
+  }[];
   variants?: {
     id: string;
     sku?: string;
@@ -67,6 +83,9 @@ export interface FormattedProductDTO {
     childProductName: string;
     childUnit: string;
     quantity: number;
+    slotName?: string | null;
+    priceAdjustment?: number;
+    isDefault?: boolean;
     childStock?: number;
     isRecipe?: boolean;
     maxBundleUnits?: number;

@@ -48,14 +48,23 @@ export interface BundleChildItem {
   childAverageCost?: number;
   quantity: number;
   costAllocationPercent?: number | null;
+  slotName?: string | null;
+  priceAdjustment?: number;
+  isDefault?: boolean;
   childStock?: number;
   isRecipe?: boolean;
   maxBundleUnits?: number;
   isBottleneck?: boolean;
+  isOutOfStock?: boolean;
   childProduct?: {
     id: string;
     name: string;
   };
+}
+
+export interface BundleSlotGroup {
+  slotName: string;
+  items: BundleChildItem[];
 }
 
 export interface ProductPriceTierItem {
@@ -96,6 +105,8 @@ export interface Product {
   isBundle?: boolean;
   bundleLimitStock?: number | null;
   bundleBottleneckItem?: string | null;
+  bundleSlotsCount?: number;
+  bundleSlots?: BundleSlotGroup[];
   modifiers?: ProductModifierGroup[];
   variants?: ProductVariant[];
   priceTiers?: ProductPriceTierItem[];

@@ -112,6 +112,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       childAverageCost: number;
       childBasePrice: number;
       quantity: number;
+      slotName?: string;
+      priceAdjustment?: number;
+      isDefault?: boolean;
     }>
   >([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -306,6 +309,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 childAverageCost: bi.childAverageCost || 0,
                 childBasePrice: bi.childBasePrice || 0,
                 quantity: bi.quantity,
+                slotName: bi.slotName || '',
+                priceAdjustment: bi.priceAdjustment || 0,
+                isDefault: Boolean(bi.isDefault),
               }))
             );
           }
@@ -534,6 +540,35 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setBundleItems((prev) => prev.filter((bi) => bi.childProductId !== childId));
   };
 
+  // EPIC-29: Update Slot Pilihan Dinamis (Combo Slot)
+  const handleUpdateBundleItemSlot = (childId: string, slotName: string) => {
+    setBundleItems((prev) =>
+      prev.map((bi) => (bi.childProductId === childId ? { ...bi, slotName } : bi))
+    );
+  };
+
+  const handleUpdateBundleItemPriceAdjustment = (childId: string, priceAdjustment: number) => {
+    setBundleItems((prev) =>
+      prev.map((bi) => (bi.childProductId === childId ? { ...bi, priceAdjustment } : bi))
+    );
+  };
+
+  const handleUpdateBundleItemDefault = (childId: string, isDefault: boolean) => {
+    setBundleItems((prev) => {
+      const currentSlot = prev.find((p) => p.childProductId === childId)?.slotName;
+      return prev.map((bi) => {
+        if (bi.childProductId === childId) {
+          return { ...bi, isDefault };
+        }
+        // Jika dalam slot yang sama dan diset true, reset item lain di slot yang sama agar single default
+        if (isDefault && currentSlot && bi.slotName === currentSlot) {
+          return { ...bi, isDefault: false };
+        }
+        return bi;
+      });
+    });
+  };
+
   // EPIC-29: Hitung total estimasi HPP komposit dari seluruh komponen
   const estimatedBundleHpp = bundleItems.reduce(
     (acc, bi) => acc + bi.childAverageCost * bi.quantity,
@@ -665,6 +700,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 childProductId: bi.childProductId,
                 childVariantId: bi.childVariantId || null,
                 quantity: bi.quantity,
+                slotName: bi.slotName && bi.slotName.trim() !== '' ? bi.slotName.trim() : null,
+                priceAdjustment: bi.priceAdjustment || 0,
+                isDefault: Boolean(bi.isDefault),
               }))
             : []
         );
@@ -1593,88 +1631,132 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         const isRetail = originalProd ? !originalProd.hasRecipe && originalProd.productType !== 'COMPOSITE' : false;
 
                         return (
-                          <div key={bi.childProductId} className="px-3.5 py-3 text-xs grid grid-cols-12 gap-2 items-center hover:bg-slate-50/50 transition-colors">
-                            {/* Nama & Tipe Komponen */}
-                            <div className="col-span-6 min-w-0 flex items-center gap-2.5">
-                              {originalProd?.imageUrl ? (
-                                <img
-                                  src={originalProd.imageUrl}
-                                  alt={bi.childProductName}
-                                  className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200"
-                                />
-                              ) : (
-                                <div
-                                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                    isRetail ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'
-                                  }`}
-                                >
-                                  {isRetail ? <Store className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <p className="font-bold text-slate-900 truncate">{bi.childProductName}</p>
-                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                  <span
-                                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                                      isRetail
-                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                        : 'bg-blue-50 text-blue-800 border border-blue-200'
+                          <div key={bi.childProductId} className="px-3.5 py-3 text-xs hover:bg-slate-50/50 transition-colors space-y-2">
+                            <div className="grid grid-cols-12 gap-2 items-center">
+                              {/* Nama & Tipe Komponen */}
+                              <div className="col-span-6 min-w-0 flex items-center gap-2.5">
+                                {originalProd?.imageUrl ? (
+                                  <img
+                                    src={originalProd.imageUrl}
+                                    alt={bi.childProductName}
+                                    className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                      isRetail ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'
                                     }`}
                                   >
-                                    {isRetail ? `Stok: ${originalProd?.stock || 0} ${bi.childUnit}` : 'Resep Dapur'}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400">
-                                    Harga Satuan: Rp {Number(bi.childBasePrice || 0).toLocaleString('id-ID')}
-                                  </span>
+                                    {isRetail ? <Store className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="font-bold text-slate-900 truncate">{bi.childProductName}</p>
+                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span
+                                      className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                        isRetail
+                                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                          : 'bg-blue-50 text-blue-800 border border-blue-200'
+                                      }`}
+                                    >
+                                      {isRetail ? `Stok: ${originalProd?.stock || 0} ${bi.childUnit}` : 'Resep Dapur'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                      Harga Satuan: Rp {Number(bi.childBasePrice || 0).toLocaleString('id-ID')}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            {/* Kontrol Stepper Kuantitas Komponen */}
-                            <div className="col-span-3 flex items-center justify-center">
-                              <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 shadow-2xs">
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateBundleItemQty(bi.childProductId, -1)}
-                                  className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 rounded transition-colors cursor-pointer"
-                                  title="Kurangi kuantitas"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </button>
-                                <span className="w-8 text-center font-black font-mono text-xs text-blue-950">
-                                  {bi.quantity}x
+                              {/* Kontrol Stepper Kuantitas Komponen */}
+                              <div className="col-span-3 flex items-center justify-center">
+                                <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateBundleItemQty(bi.childProductId, -1)}
+                                    className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 rounded transition-colors cursor-pointer"
+                                    title="Kurangi kuantitas"
+                                  >
+                                    <Minus className="w-3 h-3" />
+                                  </button>
+                                  <span className="w-8 text-center font-black font-mono text-xs text-blue-950">
+                                    {bi.quantity}x
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateBundleItemQty(bi.childProductId, 1)}
+                                    className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 rounded transition-colors cursor-pointer"
+                                    title="Tambah kuantitas"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Subtotal Kontribusi HPP */}
+                              <div className="col-span-2 text-right font-mono">
+                                <span className="font-black text-slate-900 block text-xs">
+                                  Rp {(bi.childAverageCost * bi.quantity).toLocaleString('id-ID')}
                                 </span>
+                                <span className="text-[10px] text-slate-400 block">
+                                  @Rp {bi.childAverageCost.toLocaleString('id-ID')}
+                                </span>
+                              </div>
+
+                              {/* Tombol Hapus */}
+                              <div className="col-span-1 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateBundleItemQty(bi.childProductId, 1)}
-                                  className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 rounded transition-colors cursor-pointer"
-                                  title="Tambah kuantitas"
+                                  onClick={() => handleRemoveBundleItem(bi.childProductId)}
+                                  className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Hapus komponen dari paket"
                                 >
-                                  <Plus className="w-3 h-3" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
 
-                            {/* Subtotal Kontribusi HPP */}
-                            <div className="col-span-2 text-right font-mono">
-                              <span className="font-black text-slate-900 block text-xs">
-                                Rp {(bi.childAverageCost * bi.quantity).toLocaleString('id-ID')}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block">
-                                @Rp {bi.childAverageCost.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-
-                            {/* Tombol Hapus */}
-                            <div className="col-span-1 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveBundleItem(bi.childProductId)}
-                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                                title="Hapus komponen dari paket"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                            {/* Bar Konfigurasi Slot Dinamis (Mix & Match) */}
+                            <div className="flex flex-wrap items-center gap-2.5 pt-1.5 border-t border-slate-100 text-[11px] bg-slate-50/60 p-2 rounded-xl">
+                              <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">Slot Opsi:</span>
+                                <input
+                                  type="text"
+                                  placeholder="Kosongkan jika komponen tetap (misal: Pilih Minuman)"
+                                  value={bi.slotName || ''}
+                                  onChange={(e) => handleUpdateBundleItemSlot(bi.childProductId, e.target.value)}
+                                  className="flex-1 px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none placeholder:text-slate-400"
+                                />
+                              </div>
+                              {bi.slotName && bi.slotName.trim() !== '' && (
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-500 shrink-0 text-[10px] font-bold uppercase">Ekstra:</span>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1 text-[10px] text-slate-400 font-bold">+Rp</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="500"
+                                        placeholder="0"
+                                        value={bi.priceAdjustment || ''}
+                                        onChange={(e) => handleUpdateBundleItemPriceAdjustment(bi.childProductId, Number(e.target.value || 0))}
+                                        className="w-24 pl-8 pr-2 py-1 text-xs font-mono bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(bi.isDefault)}
+                                      onChange={(e) => handleUpdateBundleItemDefault(bi.childProductId, e.target.checked)}
+                                      className="rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer"
+                                    />
+                                    <span className="text-[11px] font-semibold">Opsi Bawaan</span>
+                                  </label>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

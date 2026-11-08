@@ -587,7 +587,9 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                                 : 'bg-purple-50 text-purple-700 border-purple-200'
                             }`}
                           >
-                            📦 Paket {hasBundleStockLimit ? (isOutOfStock ? `(Habis)` : `(${stock})`) : ''}
+                            {product.bundleSlotsCount && product.bundleSlotsCount > 0
+                              ? `✨ Kombo (${product.bundleSlotsCount})`
+                              : `📦 Paket ${hasBundleStockLimit ? (isOutOfStock ? `(Habis)` : `(${stock})`) : ''}`}
                           </span>
                         )}
                         {hasPriceTiers && (

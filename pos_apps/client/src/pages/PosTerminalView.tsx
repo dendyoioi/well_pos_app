@@ -18,6 +18,7 @@ import {
   OpenTabsModal,
   PosMobileView,
   BarcodeCameraScannerModal,
+  ComboSlotModal,
 } from '../components/pos';
 import { VoucherSelectionModal } from '../components/pos/VoucherSelectionModal';
 import { SplitBillModal } from '../components/pos/SplitBillModal';
@@ -213,6 +214,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   // Modifier Selection State
   const [modifierModalOpen, setModifierModalOpen] = useState(false);
   const [selectedProductForModifier, setSelectedProductForModifier] = useState<Product | null>(null);
+
+  // Combo Slot Selection State (EPIC-29 Option 2)
+  const [comboModalOpen, setComboModalOpen] = useState(false);
+  const [selectedProductForCombo, setSelectedProductForCombo] = useState<Product | null>(null);
 
   // On-Demand Packaging Fees
   const [onDemandQuantities, setOnDemandQuantities] = useState<Record<string, number>>({});
@@ -1024,12 +1029,49 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       return;
     }
 
-    if (product.modifiers && product.modifiers.length > 0) {
+    if (product.bundleSlotsCount && product.bundleSlotsCount > 0 && product.bundleSlots && product.bundleSlots.length > 0) {
+      setSelectedProductForCombo(product);
+      setComboModalOpen(true);
+    } else if (product.modifiers && product.modifiers.length > 0) {
       setSelectedProductForModifier(product);
       setModifierModalOpen(true);
     } else {
       addToCart(product);
     }
+  };
+
+  const handleConfirmComboSlot = (payload: {
+    product: Product;
+    selectedItems: { slotName: string; item: any }[];
+    selectedBundleItemIds: string[];
+    finalPrice: number;
+    note?: string;
+  }) => {
+    const { product, selectedItems, selectedBundleItemIds, finalPrice, note } = payload;
+    const cartItemId = `${product.id}_combo_${Date.now()}`;
+    const promoDisc = calculateItemPromoDiscount(product, null, finalPrice);
+    setCart((prev) => [
+      ...prev,
+      {
+        cartItemId,
+        product,
+        quantity: 1,
+        discountAmount: promoDisc,
+        selectedModifiers: selectedItems.map((si) => ({
+          groupName: si.slotName,
+          option: {
+            id: si.item.id,
+            name: si.item.childProductName,
+            priceDelta: Number(si.item.priceAdjustment || 0),
+          },
+        })),
+        selectedBundleItemIds,
+        itemNote: note || '',
+        customPrice: finalPrice,
+      },
+    ]);
+    setComboModalOpen(false);
+    setSelectedProductForCombo(null);
   };
 
   const handleConfirmModifier = (payload: {
@@ -1416,6 +1458,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           quantity: i.quantity,
           discountAmount: i.discountAmount,
           notes: i.itemNote,
+          modifierItemIds: i.selectedModifiers?.map((m) => m.option?.id).filter(Boolean),
+          selectedBundleItemIds: (i as any).selectedBundleItemIds || undefined,
         })),
         channel: targetChannel,
         tableNumber: tableNumber ? tableNumber.trim() : undefined,
@@ -1644,6 +1688,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           discountAmount: i.discountAmount,
           notes: i.itemNote || undefined,
           modifierItemIds: i.selectedModifiers?.map((m) => m.option?.id).filter(Boolean),
+          selectedBundleItemIds: (i as any).selectedBundleItemIds || undefined,
         })),
         channel: targetChannel,
         tableNumber: tableNumber ? tableNumber.trim() : undefined,
@@ -2284,6 +2329,17 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         }}
         product={selectedProductForModifier}
         onConfirm={handleConfirmModifier}
+      />
+
+      {/* Combo Slot Selection Modal (EPIC-29 Option 2) */}
+      <ComboSlotModal
+        isOpen={comboModalOpen}
+        onClose={() => {
+          setComboModalOpen(false);
+          setSelectedProductForCombo(null);
+        }}
+        product={selectedProductForCombo}
+        onConfirm={handleConfirmComboSlot}
       />
 
       {/* Supervisor Fees & Packaging Modals */}

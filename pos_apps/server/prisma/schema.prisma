@@ -473,6 +473,9 @@ model ProductBundleItem {
   childVariantId        String?  @map("child_variant_id")
   quantity              Decimal  @default(1.0000) @map("quantity") @db.Decimal(12, 4)
   costAllocationPercent Decimal? @map("cost_allocation_percent") @db.Decimal(5, 2)
+  slotName              String?  @map("slot_name") @db.VarChar(100)
+  priceAdjustment       Decimal  @default(0) @map("price_adjustment") @db.Decimal(15, 2)
+  isDefault             Boolean  @default(false) @map("is_default")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 

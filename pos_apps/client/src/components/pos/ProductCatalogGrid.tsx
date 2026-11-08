@@ -120,7 +120,9 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                       )}
                       {isBundle && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
-                          📦 Paket {product.bundleItems && product.bundleItems.length > 0 ? `(${product.bundleItems.length})` : ''}
+                          {product.bundleSlotsCount && product.bundleSlotsCount > 0
+                            ? `✨ Kombo (${product.bundleSlotsCount} Pilihan)`
+                            : `📦 Paket ${product.bundleItems && product.bundleItems.length > 0 ? `(${product.bundleItems.length})` : ''}`}
                         </span>
                       )}
                       {hasPriceTiers && (
@@ -323,7 +325,9 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
                     {isBundle && (
                       <span className="inline-flex items-center text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200">
-                        📦 Paket {product.bundleItems && product.bundleItems.length > 0 ? `(${product.bundleItems.length})` : ''}
+                        {product.bundleSlotsCount && product.bundleSlotsCount > 0
+                          ? `✨ Kombo (${product.bundleSlotsCount} Pilihan)`
+                          : `📦 Paket ${product.bundleItems && product.bundleItems.length > 0 ? `(${product.bundleItems.length})` : ''}`}
                       </span>
                     )}
                     {hasPriceTiers && (

@@ -276,6 +276,15 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "product_price_tiers_tenant_id_product_id_idx" ON "product_price_tiers"("tenant_id", "product_id");
     `,
   },
+  {
+    id: '20261108_01_product_bundle_combo_slots',
+    description: 'Menambahkan kolom slot_name, price_adjustment, dan is_default pada product_bundle_items untuk mendukung paket kombo dinamis berpilihan (mix & match)',
+    sql: `
+      ALTER TABLE "product_bundle_items" ADD COLUMN IF NOT EXISTS "slot_name" VARCHAR(100);
+      ALTER TABLE "product_bundle_items" ADD COLUMN IF NOT EXISTS "price_adjustment" DECIMAL(15, 2) DEFAULT 0;
+      ALTER TABLE "product_bundle_items" ADD COLUMN IF NOT EXISTS "is_default" BOOLEAN DEFAULT FALSE;
+    `,
+  },
 ];
 
 /**

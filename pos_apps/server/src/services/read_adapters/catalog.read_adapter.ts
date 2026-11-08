@@ -253,6 +253,9 @@ export class CatalogReadAdapter extends BaseReadAdapter {
               quantity: true,
               childProductId: true,
               childVariantId: true,
+              slotName: true,
+              priceAdjustment: true,
+              isDefault: true,
               childProduct: {
                 select: {
                   id: true,
@@ -317,11 +320,15 @@ export class CatalogReadAdapter extends BaseReadAdapter {
             limitStock,
             bottleneckItem,
             hasStock,
+            bundleSlots,
+            bundleSlotsCount,
           } = this.processBundleBottleneck(items, outletStorageLocationId);
 
           prod.bundleItems = processedItems;
           prod.bundleLimitStock = limitStock;
           prod.bundleBottleneckItem = bottleneckItem;
+          prod.bundleSlots = bundleSlots;
+          prod.bundleSlotsCount = bundleSlotsCount;
 
           if (limitStock !== null) {
             prod.stock = limitStock;
@@ -475,6 +482,8 @@ export class CatalogReadAdapter extends BaseReadAdapter {
     // Ambil price tiers & bundle items jika ada
     let priceTiers: { id: string; variantId?: string | null; minQuantity: number; tierPrice: number }[] = [];
     let bundleItems: any[] = [];
+    let bundleSlots: any[] = [];
+    let bundleSlotsCount = 0;
     let bundleLimitStock: number | null = null;
     let bundleBottleneckItem: string | null = null;
     let finalStock = stock;
@@ -496,6 +505,9 @@ export class CatalogReadAdapter extends BaseReadAdapter {
             quantity: true,
             childProductId: true,
             childVariantId: true,
+            slotName: true,
+            priceAdjustment: true,
+            isDefault: true,
             childProduct: {
               select: {
                 id: true,
@@ -540,6 +552,8 @@ export class CatalogReadAdapter extends BaseReadAdapter {
         bundleItems = bottleneckRes.items;
         bundleLimitStock = bottleneckRes.limitStock;
         bundleBottleneckItem = bottleneckRes.bottleneckItem;
+        bundleSlots = bottleneckRes.bundleSlots;
+        bundleSlotsCount = bottleneckRes.bundleSlotsCount;
 
         if (bundleLimitStock !== null) {
           finalStock = bundleLimitStock;
@@ -576,6 +590,8 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       isBundle: bundleItems.length > 0,
       bundleLimitStock,
       bundleBottleneckItem,
+      bundleSlotsCount,
+      bundleSlots,
       modifiers,
       variants,
       priceTiers,
@@ -597,6 +613,9 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       childProductName: string;
       childUnit: string;
       quantity: number;
+      slotName?: string | null;
+      priceAdjustment?: number;
+      isDefault?: boolean;
       childStock?: number;
       isRecipe: boolean;
       maxBundleUnits: number;
@@ -605,6 +624,22 @@ export class CatalogReadAdapter extends BaseReadAdapter {
     limitStock: number | null;
     bottleneckItem: string | null;
     hasStock: boolean;
+    bundleSlotsCount: number;
+    bundleSlots: {
+      slotName: string;
+      items: {
+        id: string;
+        childProductId: string;
+        childProductName: string;
+        childUnit: string;
+        quantity: number;
+        priceAdjustment: number;
+        isDefault: boolean;
+        childStock?: number;
+        isRecipe?: boolean;
+        isOutOfStock?: boolean;
+      }[];
+    }[];
   } {
     const processedItems: {
       id: string;
@@ -612,6 +647,9 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       childProductName: string;
       childUnit: string;
       quantity: number;
+      slotName?: string | null;
+      priceAdjustment?: number;
+      isDefault?: boolean;
       childStock?: number;
       isRecipe: boolean;
       maxBundleUnits: number;
@@ -642,6 +680,9 @@ export class CatalogReadAdapter extends BaseReadAdapter {
         childProductName: child?.name || 'Komponen',
         childUnit: child?.unit || 'Pcs',
         quantity: Number(bi.quantity),
+        slotName: bi.slotName || null,
+        priceAdjustment: Number(bi.priceAdjustment || 0),
+        isDefault: Boolean(bi.isDefault),
         childStock: isRecipe ? undefined : childStock,
         isRecipe,
         maxBundleUnits,
@@ -649,18 +690,83 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       });
     }
 
-    const physicalItems = processedItems.filter((it) => !it.isRecipe);
-    if (physicalItems.length === 0) {
+    // Kelompokkan slot dinamis (mix & match)
+    const slotsMap = new Map<string, any[]>();
+    for (const it of processedItems) {
+      if (it.slotName && it.slotName.trim() !== '') {
+        const sName = it.slotName.trim();
+        if (!slotsMap.has(sName)) slotsMap.set(sName, []);
+        slotsMap.get(sName)!.push({
+          id: it.id,
+          childProductId: it.childProductId,
+          childProductName: it.childProductName,
+          childUnit: it.childUnit,
+          quantity: it.quantity,
+          priceAdjustment: it.priceAdjustment || 0,
+          isDefault: Boolean(it.isDefault),
+          childStock: it.childStock,
+          isRecipe: it.isRecipe,
+          isOutOfStock: !it.isRecipe && (it.childStock !== undefined && it.childStock < it.quantity),
+        });
+      }
+    }
+
+    const bundleSlots = Array.from(slotsMap.entries()).map(([slotName, slotItems]) => ({
+      slotName,
+      items: slotItems,
+    }));
+    const bundleSlotsCount = bundleSlots.length;
+
+    // Evaluasi bottleneck fisik (fixed vs slot)
+    const fixedPhysicalItems = processedItems.filter((it) => !it.isRecipe && (!it.slotName || it.slotName.trim() === ''));
+    const slotPhysicalGroups = Array.from(slotsMap.values()).map((slotGroup) =>
+      slotGroup.filter((item) => !item.isRecipe)
+    );
+
+    // Jika seluruh komponen (fixed maupun slot) adalah resep masakan, stock limit = null
+    const allPhysical = processedItems.filter((it) => !it.isRecipe);
+    if (allPhysical.length === 0) {
       return {
         items: processedItems,
         limitStock: null,
         bottleneckItem: null,
         hasStock: false,
+        bundleSlotsCount,
+        bundleSlots,
       };
     }
 
-    const minUnits = Math.min(...physicalItems.map((it) => it.maxBundleUnits));
-    const bottleneck = physicalItems.find((it) => it.maxBundleUnits === minUnits);
+    let minUnits = 99999;
+    let bottleneckItem: string | null = null;
+
+    // 1. Cek fixed components bottleneck
+    for (const fp of fixedPhysicalItems) {
+      if (fp.maxBundleUnits < minUnits) {
+        minUnits = fp.maxBundleUnits;
+        bottleneckItem = fp.childProductName;
+      }
+    }
+
+    // 2. Cek slot components bottleneck (kapasitas slot = opsi max tersedia dalam slot tsb)
+    for (const slotGroup of slotPhysicalGroups) {
+      if (slotGroup.length > 0) {
+        const slotMaxUnits = Math.max(...slotGroup.map((it) => {
+          const matchingProcessed = processedItems.find((p) => p.id === it.id);
+          return matchingProcessed ? matchingProcessed.maxBundleUnits : 0;
+        }));
+        if (slotMaxUnits < minUnits) {
+          minUnits = slotMaxUnits;
+          bottleneckItem = `Pilihan Slot`;
+        }
+      }
+    }
+
+    if (minUnits === 99999) {
+      minUnits = 0;
+    }
+
+    // Tandai isBottleneck pada item yang membatasi
+    const bottleneck = fixedPhysicalItems.find((it) => it.maxBundleUnits === minUnits);
     if (bottleneck) {
       bottleneck.isBottleneck = true;
     }
@@ -668,8 +774,10 @@ export class CatalogReadAdapter extends BaseReadAdapter {
     return {
       items: processedItems,
       limitStock: Math.max(0, minUnits),
-      bottleneckItem: bottleneck ? bottleneck.childProductName : null,
+      bottleneckItem,
       hasStock: true,
+      bundleSlotsCount,
+      bundleSlots,
     };
   }
 

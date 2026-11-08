@@ -120,6 +120,7 @@ export interface CheckoutItemDTO {
   productId: string;
   variantId?: string | null;
   modifierItemIds?: string[];
+  selectedBundleItemIds?: string[];
   modifiersSnapshot?: any;
   quantity: number;
   costPrice: number;
