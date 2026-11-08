@@ -48,6 +48,10 @@ export interface BundleChildItem {
   childAverageCost?: number;
   quantity: number;
   costAllocationPercent?: number | null;
+  childStock?: number;
+  isRecipe?: boolean;
+  maxBundleUnits?: number;
+  isBottleneck?: boolean;
   childProduct?: {
     id: string;
     name: string;
@@ -83,11 +87,15 @@ export interface Product {
   warehouseStock?: number | null;
   minStockAlert: number;
   isLowStock?: boolean;
+  isOutOfStock?: boolean;
   type?: 'STANDARD' | 'COMPOSITE' | 'SERVICE_LABOR' | string;
   productType?: string;
   hasStock?: boolean;
   hasRecipe?: boolean;
   recipeId?: string | null;
+  isBundle?: boolean;
+  bundleLimitStock?: number | null;
+  bundleBottleneckItem?: string | null;
   modifiers?: ProductModifierGroup[];
   variants?: ProductVariant[];
   priceTiers?: ProductPriceTierItem[];

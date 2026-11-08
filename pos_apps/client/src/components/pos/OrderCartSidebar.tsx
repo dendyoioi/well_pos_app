@@ -907,7 +907,7 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
         ) : (
           cart.map((item, idx) => {
             const effectivePricing = getEffectiveItemPricing(item);
-            const isBundle = item.product.type === 'COMPOSITE' || item.product.productType === 'COMPOSITE';
+            const isBundle = Boolean(item.product.isBundle || (item.product.bundleItems && item.product.bundleItems.length > 0));
             const bundleItems = item.product.bundleItems || [];
 
             return (
@@ -931,11 +931,37 @@ export const OrderCartSidebar: React.FC<OrderCartSidebarProps> = ({
                     {/* Rincian Komponen Paket Bundle */}
                     {isBundle && bundleItems.length > 0 && (
                       <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-purple-200">
-                        <span className="text-[9px] font-bold text-purple-700 block">Isi Paket:</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-bold text-purple-700 block">Isi Paket:</span>
+                          {item.product.bundleLimitStock !== null && item.product.bundleLimitStock !== undefined && (
+                            <span className="text-[9px] font-black text-purple-800 bg-purple-50 px-1 rounded border border-purple-200">
+                              Maks: {item.product.bundleLimitStock} paket
+                            </span>
+                          )}
+                        </div>
                         {bundleItems.map((bi, biIdx) => (
-                          <p key={bi.id || biIdx} className="text-[10px] text-slate-600 flex justify-between items-center">
-                            <span>• {bi.childProductName || bi.childProduct?.name || 'Produk'}</span>
-                            <span className="font-mono text-slate-500 font-bold">{bi.quantity}x</span>
+                          <p
+                            key={bi.id || biIdx}
+                            className={`text-[10px] flex justify-between items-center rounded px-1 ${
+                              bi.isBottleneck ? 'text-amber-900 bg-amber-50 font-semibold' : 'text-slate-600'
+                            }`}
+                          >
+                            <span>
+                              • {bi.childProductName || bi.childProduct?.name || 'Produk'}
+                              {bi.childStock !== undefined ? (
+                                <span className="text-[9px] font-normal text-slate-400 ml-1">
+                                  (Stok: {bi.childStock} {bi.childUnit || ''})
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-normal text-emerald-600 ml-1">(Dapur)</span>
+                              )}
+                              {bi.isBottleneck && (
+                                <span className="text-[8px] font-black text-amber-700 ml-1 px-1 py-0.2 rounded bg-amber-100">
+                                  Pembatas
+                                </span>
+                              )}
+                            </span>
+                            <span className="font-mono text-slate-500 font-bold ml-1">{bi.quantity}x</span>
                           </p>
                         ))}
                       </div>

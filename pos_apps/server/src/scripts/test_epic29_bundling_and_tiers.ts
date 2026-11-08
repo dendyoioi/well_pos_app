@@ -104,7 +104,7 @@ async function runEpic29IntegrationTest() {
         tenantId: tenant.id,
         outletId: outlet.id,
         name: 'Toko Utama',
-        type: 'STORE',
+        type: 'STOREFRONT',
       },
     });
   }
@@ -215,7 +215,7 @@ async function runEpic29IntegrationTest() {
 
   // 4. Eksekusi Penjualan Kasir (Checkout 3 unit Paket Hemat Duo)
   console.log(`[4/5] Menjalankan Transaksi Kasir: Beli 3x "${bundleName}"...`);
-  const salesService = new SalesDualWriteService(prisma);
+  const salesService = new SalesDualWriteService();
   const invoiceNumber = `INV-BNDL-${Date.now().toString().slice(-6)}`;
 
   const checkoutResult = await prisma.$transaction(async (tx) => {
@@ -251,7 +251,7 @@ async function runEpic29IntegrationTest() {
     );
   });
 
-  const createdOrderId = checkoutResult.targetDetails?.orderId || checkoutResult.data?.order?.id;
+  const createdOrderId = checkoutResult.targetDetails?.orderId;
   console.log(`      ✅ Order Sukses: Invoice ${invoiceNumber} (ID: ${createdOrderId})`);
 
   // Verifikasi Pemotongan Stok Item Anak

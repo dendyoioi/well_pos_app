@@ -496,11 +496,12 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                 : 0;
               const discountedPrice = Math.max(0, price - promoDisc);
               const hasModifiers = (product.modifiers?.length || 0) > 0;
-              const isBundle = product.type === 'COMPOSITE' || product.productType === 'COMPOSITE';
+              const isBundle = Boolean(product.isBundle || (product.bundleItems && product.bundleItems.length > 0));
               const hasPriceTiers = Boolean(product.priceTiers && product.priceTiers.length > 0);
-              const isComposite = isBundle || product.hasStock === false;
+              const isCompositeRecipe = !isBundle && product.hasStock === false;
+              const hasBundleStockLimit = isBundle && product.bundleLimitStock !== null && product.bundleLimitStock !== undefined;
               const stock = product.stock ?? 0;
-              const isUnlimited = isComposite || stock >= 99999;
+              const isUnlimited = isCompositeRecipe || (isBundle && !hasBundleStockLimit) || stock >= 99999;
               const isOutOfStock = !isUnlimited && stock <= 0;
               const inCartQty = cartProductQuantities.get(product.id) || 0;
 
@@ -579,8 +580,14 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                           {product.category?.name || 'Menu'}
                         </span>
                         {isBundle && (
-                          <span className="text-[8px] font-black px-1 rounded bg-purple-50 text-purple-700 border border-purple-200">
-                            📦 Paket
+                          <span
+                            className={`text-[8px] font-black px-1 rounded border ${
+                              isOutOfStock
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-purple-50 text-purple-700 border-purple-200'
+                            }`}
+                          >
+                            📦 Paket {hasBundleStockLimit ? (isOutOfStock ? `(Habis)` : `(${stock})`) : ''}
                           </span>
                         )}
                         {hasPriceTiers && (
@@ -880,7 +887,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                 const effectivePricing = getEffectiveItemPricing(item);
                 const itemPrice = effectivePricing.price;
                 const itemTotal = getCartItemSubtotal(item);
-                const isBundle = item.product.type === 'COMPOSITE' || item.product.productType === 'COMPOSITE';
+                const isBundle = Boolean(item.product.isBundle || (item.product.bundleItems && item.product.bundleItems.length > 0));
                 const bundleItems = item.product.bundleItems || [];
                 const hasModifiers = item.selectedModifiers && item.selectedModifiers.length > 0;
 
@@ -905,11 +912,37 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                         {/* Rincian Komponen Paket Bundle */}
                         {isBundle && bundleItems.length > 0 && (
                           <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-purple-200">
-                            <span className="text-[8px] font-bold text-purple-700 block">Isi Paket:</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8px] font-bold text-purple-700 block">Isi Paket:</span>
+                              {item.product.bundleLimitStock !== null && item.product.bundleLimitStock !== undefined && (
+                                <span className="text-[8px] font-black text-purple-800 bg-purple-50 px-1 rounded border border-purple-200">
+                                  Maks: {item.product.bundleLimitStock} paket
+                                </span>
+                              )}
+                            </div>
                             {bundleItems.map((bi, biIdx) => (
-                              <p key={bi.id || biIdx} className="text-[9px] text-slate-600 flex justify-between items-center">
-                                <span>• {bi.childProductName || bi.childProduct?.name || 'Produk'}</span>
-                                <span className="font-mono text-slate-500 font-bold">{bi.quantity}x</span>
+                              <p
+                                key={bi.id || biIdx}
+                                className={`text-[9px] flex justify-between items-center rounded px-0.5 ${
+                                  bi.isBottleneck ? 'text-amber-900 bg-amber-50 font-semibold' : 'text-slate-600'
+                                }`}
+                              >
+                                <span>
+                                  • {bi.childProductName || bi.childProduct?.name || 'Produk'}
+                                  {bi.childStock !== undefined ? (
+                                    <span className="text-[8px] font-normal text-slate-400 ml-1">
+                                      (Stok: {bi.childStock} {bi.childUnit || ''})
+                                    </span>
+                                  ) : (
+                                    <span className="text-[8px] font-normal text-emerald-600 ml-1">(Dapur)</span>
+                                  )}
+                                  {bi.isBottleneck && (
+                                    <span className="text-[7px] font-black text-amber-700 ml-1 px-1 py-0.2 rounded bg-amber-100">
+                                      Pembatas
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="font-mono text-slate-500 font-bold ml-1">{bi.quantity}x</span>
                               </p>
                             ))}
                           </div>

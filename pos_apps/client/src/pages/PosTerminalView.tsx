@@ -960,13 +960,17 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       return;
     }
 
-    const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
+    const isBundle = Boolean(product.isBundle || (product.bundleItems && product.bundleItems.length > 0));
+    const isCompositeRecipe = !isBundle && product.hasStock === false;
+    const hasBundleStockLimit = isBundle && product.bundleLimitStock !== null && product.bundleLimitStock !== undefined;
     const stock = product.stock ?? 0;
-    const isUnlimited = isComposite || stock >= 99999;
+    const isUnlimited = isCompositeRecipe || (isBundle && !hasBundleStockLimit) || stock >= 99999;
     if (!isUnlimited && stock <= 0) {
       dialog.alert({
-        title: 'Stok Produk Habis',
-        message: `Stok "${product.name}" saat ini habis (0)!`,
+        title: isBundle ? 'Stok Paket Habis' : 'Stok Produk Habis',
+        message: isBundle
+          ? `Paket "${product.name}" tidak dapat dipesan karena stok komponen "${product.bundleBottleneckItem || 'anak'}" telah habis!`
+          : `Stok "${product.name}" saat ini habis (0)!`,
         variant: 'warning',
       });
       return;
@@ -978,7 +982,9 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         if (!isUnlimited && existing.quantity >= stock) {
           dialog.alert({
             title: 'Batas Stok Tercapai',
-            message: `Jumlah pesanan untuk "${product.name}" melebihi stok yang tersedia (${stock} ${product.unit})!`,
+            message: isBundle
+              ? `Jumlah pesanan paket "${product.name}" telah mencapai batas maksimum (${stock} paket) karena komponen "${product.bundleBottleneckItem || 'anak'}" terbatas!`
+              : `Jumlah pesanan untuk "${product.name}" melebihi stok yang tersedia (${stock} ${product.unit})!`,
             variant: 'warning',
           });
           return prev;
@@ -1002,13 +1008,17 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       return;
     }
 
-    const isComposite = product.productType === 'COMPOSITE' || product.hasStock === false;
+    const isBundle = Boolean(product.isBundle || (product.bundleItems && product.bundleItems.length > 0));
+    const isCompositeRecipe = !isBundle && product.hasStock === false;
+    const hasBundleStockLimit = isBundle && product.bundleLimitStock !== null && product.bundleLimitStock !== undefined;
     const stock = product.stock ?? 0;
-    const isUnlimited = isComposite || stock >= 99999;
+    const isUnlimited = isCompositeRecipe || (isBundle && !hasBundleStockLimit) || stock >= 99999;
     if (!isUnlimited && stock <= 0) {
       dialog.alert({
-        title: 'Stok Produk Habis',
-        message: `Stok "${product.name}" saat ini habis (0)!`,
+        title: isBundle ? 'Stok Paket Habis' : 'Stok Produk Habis',
+        message: isBundle
+          ? `Paket "${product.name}" tidak dapat dipesan karena stok komponen "${product.bundleBottleneckItem || 'anak'}" telah habis!`
+          : `Stok "${product.name}" saat ini habis (0)!`,
         variant: 'warning',
       });
       return;
@@ -1057,12 +1067,17 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       if (newQty <= 0) {
         updated.splice(index, 1);
       } else {
+        const isBundle = Boolean(item.product.isBundle || (item.product.bundleItems && item.product.bundleItems.length > 0));
+        const isCompositeRecipe = !isBundle && item.product.hasStock === false;
+        const hasBundleStockLimit = isBundle && item.product.bundleLimitStock !== null && item.product.bundleLimitStock !== undefined;
         const stock = item.product.stock ?? 0;
-        const isUnlimited = stock >= 99999;
+        const isUnlimited = isCompositeRecipe || (isBundle && !hasBundleStockLimit) || stock >= 99999;
         if (!isUnlimited && newQty > stock) {
           dialog.alert({
             title: 'Batas Stok Tercapai',
-            message: `Jumlah pesanan untuk "${item.product.name}" melebihi stok tersedia (${stock} ${item.product.unit})!`,
+            message: isBundle
+              ? `Jumlah pesanan paket "${item.product.name}" melebihi stok yang dapat dipenuhi (${stock} paket) karena komponen "${item.product.bundleBottleneckItem || 'anak'}" terbatas!`
+              : `Jumlah pesanan untuk "${item.product.name}" melebihi stok tersedia (${stock} ${item.product.unit})!`,
             variant: 'warning',
           });
           return prev;

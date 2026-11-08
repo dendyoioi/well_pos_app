@@ -59,11 +59,12 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
               : 0;
             const discountedPrice = Math.max(0, price - promoDisc);
             const hasModifiers = (product.modifiers?.length || 0) > 0;
-            const isBundle = product.type === 'COMPOSITE' || product.productType === 'COMPOSITE';
+            const isBundle = Boolean(product.isBundle || (product.bundleItems && product.bundleItems.length > 0));
             const hasPriceTiers = Boolean(product.priceTiers && product.priceTiers.length > 0);
-            const isComposite = isBundle || product.hasStock === false;
+            const isCompositeRecipe = !isBundle && product.hasStock === false;
+            const hasBundleStockLimit = isBundle && product.bundleLimitStock !== null && product.bundleLimitStock !== undefined;
             const stock = product.stock ?? 0;
-            const isUnlimited = isComposite || stock >= 99999;
+            const isUnlimited = isCompositeRecipe || (isBundle && !hasBundleStockLimit) || stock >= 99999;
             const isOutOfStock = !isUnlimited && stock <= 0;
             const inCartQty = cartProductQuantities?.get(product.id) || 0;
 
@@ -164,7 +165,30 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                       </p>
                     )}
                     <p className={`text-[10px] font-medium ${isOutOfStock ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
-                      {isUnlimited ? (isComposite ? 'Tersedia (Olahan F&B)' : 'Tersedia') : isOutOfStock ? 'Stok Habis (0)' : `Stok: ${stock}`}
+                      {isBundle ? (
+                        hasBundleStockLimit ? (
+                          isOutOfStock ? (
+                            `Habis (${product.bundleBottleneckItem || 'Komponen'})`
+                          ) : (
+                            <span>
+                              Stok: <strong className="text-purple-700 font-bold">{stock} Paket</strong>
+                              {product.bundleBottleneckItem && (
+                                <span className="text-[9px] text-slate-400 block sm:inline sm:ml-1">
+                                  (Batas: {product.bundleBottleneckItem})
+                                </span>
+                              )}
+                            </span>
+                          )
+                        ) : (
+                          'Tersedia (Olahan Dapur)'
+                        )
+                      ) : isUnlimited ? (
+                        isCompositeRecipe ? 'Tersedia (Olahan F&B)' : 'Tersedia'
+                      ) : isOutOfStock ? (
+                        'Stok Habis (0)'
+                      ) : (
+                        `Stok: ${stock}`
+                      )}
                     </p>
                   </div>
                   <button
@@ -201,11 +225,12 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
             : 0;
           const discountedPrice = Math.max(0, price - promoDisc);
           const hasModifiers = (product.modifiers?.length || 0) > 0;
-          const isBundle = product.type === 'COMPOSITE' || product.productType === 'COMPOSITE';
+          const isBundle = Boolean(product.isBundle || (product.bundleItems && product.bundleItems.length > 0));
           const hasPriceTiers = Boolean(product.priceTiers && product.priceTiers.length > 0);
-          const isComposite = isBundle || product.hasStock === false;
+          const isCompositeRecipe = !isBundle && product.hasStock === false;
+          const hasBundleStockLimit = isBundle && product.bundleLimitStock !== null && product.bundleLimitStock !== undefined;
           const stock = product.stock ?? 0;
-          const isUnlimited = isComposite || stock >= 99999;
+          const isUnlimited = isCompositeRecipe || (isBundle && !hasBundleStockLimit) || stock >= 99999;
           const isOutOfStock = !isUnlimited && stock <= 0;
           const inCartQty = cartProductQuantities?.get(product.id) || 0;
 
@@ -337,10 +362,29 @@ export const ProductCatalogGrid: React.FC<ProductCatalogGridProps> = ({
                       </span>
                     </p>
                   )}
-                  {isUnlimited ? (
+                  {isBundle ? (
+                    hasBundleStockLimit ? (
+                      isOutOfStock ? (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-rose-600 font-bold mt-1 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                          Habis ({product.bundleBottleneckItem || 'Komponen'})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[9px] text-purple-700 font-semibold mt-1 truncate" title={product.bundleBottleneckItem ? `Dibatasi oleh stok ${product.bundleBottleneckItem}` : undefined}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+                          Stok: {stock} Paket
+                        </span>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 font-semibold mt-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        Paket Siap Saji
+                      </span>
+                    )
+                  ) : isUnlimited ? (
                     <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 font-semibold mt-1 truncate">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      {isBundle ? 'Paket Komposit' : 'Siap Saji'}
+                      Siap Saji
                     </span>
                   ) : isOutOfStock ? (
                     <span className="inline-flex items-center gap-1 text-[9px] text-rose-600 font-bold mt-1 truncate">

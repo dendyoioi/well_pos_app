@@ -28,10 +28,14 @@ export interface FormattedProductDTO {
   warehouseStock: number | null;
   minStockAlert: number;
   isLowStock: boolean;
+  isOutOfStock?: boolean;
   productType?: string;
   hasStock?: boolean;
   hasRecipe?: boolean;
   recipeId?: string | null;
+  isBundle?: boolean;
+  bundleLimitStock?: number | null;
+  bundleBottleneckItem?: string | null;
   variants?: {
     id: string;
     sku?: string;
@@ -63,6 +67,10 @@ export interface FormattedProductDTO {
     childProductName: string;
     childUnit: string;
     quantity: number;
+    childStock?: number;
+    isRecipe?: boolean;
+    maxBundleUnits?: number;
+    isBottleneck?: boolean;
   }[];
   createdAt: Date;
 }

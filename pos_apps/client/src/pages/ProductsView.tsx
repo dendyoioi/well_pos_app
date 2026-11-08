@@ -128,19 +128,17 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     const total = products.length;
     const activeCount = products.filter((p) => p.isActive).length;
     const bundleCount = products.filter(
-      (p) => p.type === 'COMPOSITE' || p.productType === 'COMPOSITE'
+      (p) => Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0))
     ).length;
     const fnbCount = products.filter(
       (p) =>
-        p.type !== 'COMPOSITE' &&
-        p.productType !== 'COMPOSITE' &&
-        (p.hasStock === false || (p.stock !== undefined && p.stock >= 999000))
+        !Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0)) &&
+        (p.hasRecipe || p.hasStock === false || (p.stock !== undefined && p.stock >= 999000))
     ).length;
     const retailCount = products.filter(
       (p) =>
-        p.type !== 'COMPOSITE' &&
-        p.productType !== 'COMPOSITE' &&
-        (p.productType === 'STANDARD' || !p.productType) &&
+        !Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0)) &&
+        !p.hasRecipe &&
         p.hasStock !== false &&
         (!p.stock || p.stock < 999000)
     ).length;
@@ -222,21 +220,19 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const filteredProducts = useMemo(() => {
     if (typeFilter === 'all') return products;
     if (typeFilter === 'BUNDLE') {
-      return products.filter((p) => p.type === 'COMPOSITE' || p.productType === 'COMPOSITE');
+      return products.filter((p) => Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0)));
     }
     if (typeFilter === 'FNB') {
       return products.filter(
         (p) =>
-          p.type !== 'COMPOSITE' &&
-          p.productType !== 'COMPOSITE' &&
-          (p.hasStock === false || (p.stock !== undefined && p.stock >= 999000))
+          !Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0)) &&
+          (p.hasRecipe || p.hasStock === false || (p.stock !== undefined && p.stock >= 999000))
       );
     }
     return products.filter(
       (p) =>
-        p.type !== 'COMPOSITE' &&
-        p.productType !== 'COMPOSITE' &&
-        (p.productType === 'STANDARD' || !p.productType) &&
+        !Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0)) &&
+        !p.hasRecipe &&
         p.hasStock !== false &&
         (!p.stock || p.stock < 999000)
     );
@@ -1090,9 +1086,10 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                   const isSelected = selectedIds.includes(p.id);
                   const marginRp = p.basePrice - p.costPrice;
                   const marginPercent = p.basePrice > 0 ? Math.round((marginRp / p.basePrice) * 100) : 0;
-                  const isBundle = p.type === 'COMPOSITE' || p.productType === 'COMPOSITE';
+                  const isBundle = Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0));
                   const isFnbComposite =
                     !isBundle && (
+                      p.hasRecipe ||
                       p.hasStock === false ||
                       (p.stock !== undefined && p.stock >= 999000)
                     );
@@ -1250,10 +1247,30 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                       {/* Stok Toko */}
                       <td className="py-3.5 px-2 text-center whitespace-nowrap">
                         {isBundle ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-purple-800 bg-purple-50 border border-purple-200 shadow-2xs whitespace-nowrap">
-                            <Package className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                            <span>Paket Komposit</span>
-                          </span>
+                          p.bundleLimitStock !== null && p.bundleLimitStock !== undefined ? (
+                            p.bundleLimitStock <= 0 ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-rose-800 bg-rose-50 border border-rose-200 shadow-2xs whitespace-nowrap"
+                                title={`Stok habis karena komponen "${p.bundleBottleneckItem || 'anak'}" kosong`}
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                <span>Habis (0 Paket)</span>
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-purple-800 bg-purple-50 border border-purple-200 shadow-2xs whitespace-nowrap"
+                                title={p.bundleBottleneckItem ? `Dibatasi stok ${p.bundleBottleneckItem}` : undefined}
+                              >
+                                <Package className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                <span>{p.bundleLimitStock} Paket</span>
+                              </span>
+                            )
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-purple-800 bg-purple-50 border border-purple-200 shadow-2xs whitespace-nowrap">
+                              <Package className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                              <span>Paket Komposit</span>
+                            </span>
+                          )
                         ) : isFnbComposite ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 shadow-2xs whitespace-nowrap">
                             <InfinityIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -1496,10 +1513,22 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 font-medium block">Stok Toko</span>
                       <div className="inline-flex items-center gap-1 font-bold text-xs mt-0.5">
-                        {p.type === 'COMPOSITE' || p.productType === 'COMPOSITE' ? (
-                          <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                            Paket Komposit
-                          </span>
+                        {Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0)) ? (
+                          p.bundleLimitStock !== null && p.bundleLimitStock !== undefined ? (
+                            p.bundleLimitStock <= 0 ? (
+                              <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                                Habis (0 Paket)
+                              </span>
+                            ) : (
+                              <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                                {p.bundleLimitStock} Paket
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                              Paket Komposit
+                            </span>
+                          )
                         ) : p.hasStock === false || (p.stock !== undefined && p.stock >= 999000) ? (
                           <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[10px] font-bold">
                             Olahan F&amp;B (∞)

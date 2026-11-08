@@ -173,7 +173,12 @@ export const updateBundleItems = async (req: Request, res: Response) => {
       // Validasi produk anak ada dan milik tenant yang sama
       const child = await prisma.product.findFirst({
         where: { id: item.childProductId, tenantId },
-        select: { id: true, name: true, type: true },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          bundleItemsAsParent: { select: { id: true } },
+        },
       });
 
       if (!child) {
@@ -183,11 +188,11 @@ export const updateBundleItems = async (req: Request, res: Response) => {
         });
       }
 
-      // Anti-Circular: Anak dilarang berupa COMPOSITE (Paket di dalam paket dilarang demi integritas stok)
-      if (child.type === 'COMPOSITE') {
+      // Anti-Circular: Anak dilarang berupa paket komposit lain yang sudah membundel produk anak (paket di dalam paket dilarang)
+      if (child.bundleItemsAsParent && child.bundleItemsAsParent.length > 0) {
         return res.status(400).json({
           status: 'error',
-          message: `Produk "${child.name}" adalah paket komposit. Paket komposit dilarang membundel paket komposit lain untuk mencegah loop stok berantai.`,
+          message: `Produk "${child.name}" adalah paket komposit (bundle) yang sudah memiliki komponen anak. Paket komposit dilarang membundel paket komposit lain untuk mencegah loop stok berantai.`,
         });
       }
 
@@ -215,11 +220,17 @@ export const updateBundleItems = async (req: Request, res: Response) => {
           data: { type: 'COMPOSITE' },
         });
       } else if (bundleItems.length === 0 && parentProduct.type === 'COMPOSITE') {
-        // Jika bundle items dikosongkan, kembalikan ke STANDARD
-        await tx.product.update({
-          where: { id },
-          data: { type: 'STANDARD' },
+        // Jika bundle items dikosongkan, cek apakah ada resep F&B sebelum rollback ke STANDARD
+        const hasRecipe = await tx.recipe.findFirst({
+          where: { productVariant: { productId: id } },
+          select: { id: true },
         });
+        if (!hasRecipe) {
+          await tx.product.update({
+            where: { id },
+            data: { type: 'STANDARD' },
+          });
+        }
       }
 
       // B. Hapus item bundle eksisting

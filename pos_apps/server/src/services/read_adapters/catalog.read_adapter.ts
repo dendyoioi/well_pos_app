@@ -110,6 +110,7 @@ export class CatalogReadAdapter extends BaseReadAdapter {
         pv.barcode,
         pv.price as variant_price,
         r.id as recipe_id,
+        COALESCE(pbi_sub.bundle_count, 0) as bundle_items_count,
         COALESCE(rc.recipe_cogs, ii.average_cost, 0) as cost_price,
         COALESCE(ib_outlet.quantity_on_hand, 0) as outlet_stock,
         COALESCE(ib_wh.quantity_on_hand, NULL) as warehouse_stock,
@@ -118,6 +119,11 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       LEFT JOIN "categories" c ON c.id = p.category_id
       JOIN "product_variants" pv ON pv.product_id = p.id AND pv.is_active = true
       LEFT JOIN "recipes" r ON r.product_variant_id = pv.id
+      LEFT JOIN (
+        SELECT bundle_product_id, COUNT(*) as bundle_count
+        FROM "product_bundle_items"
+        GROUP BY bundle_product_id
+      ) pbi_sub ON pbi_sub.bundle_product_id = p.id
       LEFT JOIN (
         SELECT 
           r_sub.product_variant_id,
@@ -176,6 +182,7 @@ export class CatalogReadAdapter extends BaseReadAdapter {
           hasStock: !isComposite,
           hasRecipe: Boolean(r.recipe_id),
           recipeId: r.recipe_id || null,
+          isBundle: Number(r.bundle_items_count || 0) > 0,
           variants: [variantObj],
           createdAt: new Date(r.created_at),
         });
@@ -245,7 +252,36 @@ export class CatalogReadAdapter extends BaseReadAdapter {
               bundleProductId: true,
               quantity: true,
               childProductId: true,
-              childProduct: { select: { name: true, unit: true } },
+              childVariantId: true,
+              childProduct: {
+                select: {
+                  id: true,
+                  name: true,
+                  unit: true,
+                  type: true,
+                  variants: {
+                    where: { isActive: true },
+                    select: {
+                      id: true,
+                      name: true,
+                      recipe: { select: { id: true } },
+                      inventoryItem: {
+                        select: {
+                          id: true,
+                          balances: outletStorageLocationId
+                            ? {
+                                where: { storageLocationId: outletStorageLocationId },
+                                select: { quantityOnHand: true },
+                              }
+                            : {
+                                select: { quantityOnHand: true },
+                              },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           }),
         ]);
@@ -263,17 +299,35 @@ export class CatalogReadAdapter extends BaseReadAdapter {
           }
         }
 
+        // Kelompokkan bundle items per produk induk dan kalkulasi dynamic stock bottleneck
+        const bundleItemsByProduct = new Map<string, any[]>();
         for (const bi of bundleItemRows) {
-          const prod = productMap.get(bi.bundleProductId);
-          if (prod) {
-            if (!prod.bundleItems) prod.bundleItems = [];
-            prod.bundleItems.push({
-              id: bi.id,
-              childProductId: bi.childProductId,
-              childProductName: bi.childProduct.name,
-              childUnit: bi.childProduct.unit || 'Pcs',
-              quantity: Number(bi.quantity),
-            });
+          if (!bundleItemsByProduct.has(bi.bundleProductId)) {
+            bundleItemsByProduct.set(bi.bundleProductId, []);
+          }
+          bundleItemsByProduct.get(bi.bundleProductId)!.push(bi);
+        }
+
+        for (const [prodId, items] of bundleItemsByProduct.entries()) {
+          const prod = productMap.get(prodId);
+          if (!prod) continue;
+
+          const {
+            items: processedItems,
+            limitStock,
+            bottleneckItem,
+            hasStock,
+          } = this.processBundleBottleneck(items, outletStorageLocationId);
+
+          prod.bundleItems = processedItems;
+          prod.bundleLimitStock = limitStock;
+          prod.bundleBottleneckItem = bottleneckItem;
+
+          if (limitStock !== null) {
+            prod.stock = limitStock;
+            prod.hasStock = hasStock;
+            prod.isOutOfStock = limitStock <= 0;
+            prod.isLowStock = limitStock <= prod.minStockAlert;
           }
         }
       } catch (err) {
@@ -420,7 +474,14 @@ export class CatalogReadAdapter extends BaseReadAdapter {
 
     // Ambil price tiers & bundle items jika ada
     let priceTiers: { id: string; variantId?: string | null; minQuantity: number; tierPrice: number }[] = [];
-    let bundleItems: { id: string; childProductId: string; childProductName: string; childUnit: string; quantity: number }[] = [];
+    let bundleItems: any[] = [];
+    let bundleLimitStock: number | null = null;
+    let bundleBottleneckItem: string | null = null;
+    let finalStock = stock;
+    let finalHasStock = !isComposite;
+    let finalIsOutOfStock = isComposite ? false : stock <= 0;
+    let finalIsLowStock = isComposite ? false : stock <= minAlert;
+
     try {
       const [ptRows, biRows] = await Promise.all([
         prisma.productPriceTier.findMany({
@@ -434,7 +495,36 @@ export class CatalogReadAdapter extends BaseReadAdapter {
             bundleProductId: true,
             quantity: true,
             childProductId: true,
-            childProduct: { select: { name: true, unit: true } },
+            childVariantId: true,
+            childProduct: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                type: true,
+                variants: {
+                  where: { isActive: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    recipe: { select: { id: true } },
+                    inventoryItem: {
+                      select: {
+                        id: true,
+                        balances: outletStorageLocationId
+                          ? {
+                              where: { storageLocationId: outletStorageLocationId },
+                              select: { quantityOnHand: true },
+                            }
+                          : {
+                              select: { quantityOnHand: true },
+                            },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         }),
       ]);
@@ -444,13 +534,20 @@ export class CatalogReadAdapter extends BaseReadAdapter {
         minQuantity: pt.minQuantity,
         tierPrice: Number(pt.tierPrice),
       }));
-      bundleItems = biRows.map((bi) => ({
-        id: bi.id,
-        childProductId: bi.childProductId,
-        childProductName: bi.childProduct.name,
-        childUnit: bi.childProduct.unit || 'Pcs',
-        quantity: Number(bi.quantity),
-      }));
+
+      if (biRows.length > 0) {
+        const bottleneckRes = this.processBundleBottleneck(biRows, outletStorageLocationId);
+        bundleItems = bottleneckRes.items;
+        bundleLimitStock = bottleneckRes.limitStock;
+        bundleBottleneckItem = bottleneckRes.bottleneckItem;
+
+        if (bundleLimitStock !== null) {
+          finalStock = bundleLimitStock;
+          finalHasStock = bottleneckRes.hasStock;
+          finalIsOutOfStock = bundleLimitStock <= 0;
+          finalIsLowStock = bundleLimitStock <= minAlert;
+        }
+      }
     } catch (e) {
       console.error('Error fetching tiers/bundle in getProductById:', e);
     }
@@ -468,17 +565,111 @@ export class CatalogReadAdapter extends BaseReadAdapter {
       imageUrl: r.image_url || null,
       isActive: Boolean(r.is_active),
       category: r.category_id ? { id: r.category_id, name: r.category_name } : null,
-      stock,
+      stock: finalStock,
       warehouseStock: r.warehouse_stock !== null ? Number(r.warehouse_stock) : null,
       minStockAlert: minAlert,
-      isLowStock: isComposite ? false : stock <= minAlert,
+      isLowStock: finalIsLowStock,
       productType: r.product_type || (isComposite ? 'COMPOSITE' : 'STANDARD'),
-      hasStock: !isComposite,
+      hasStock: finalHasStock,
+      hasRecipe: Boolean(r.recipe_id),
+      recipeId: r.recipe_id || null,
+      isBundle: bundleItems.length > 0,
+      bundleLimitStock,
+      bundleBottleneckItem,
       modifiers,
       variants,
       priceTiers,
       bundleItems,
       createdAt: new Date(r.created_at),
+    };
+  }
+
+  /**
+   * Helper internal untuk memproses dynamic stock bottleneck dari produk komposit bundle.
+   */
+  private processBundleBottleneck(
+    bundleItems: any[],
+    outletStorageLocationId: string | null
+  ): {
+    items: {
+      id: string;
+      childProductId: string;
+      childProductName: string;
+      childUnit: string;
+      quantity: number;
+      childStock?: number;
+      isRecipe: boolean;
+      maxBundleUnits: number;
+      isBottleneck: boolean;
+    }[];
+    limitStock: number | null;
+    bottleneckItem: string | null;
+    hasStock: boolean;
+  } {
+    const processedItems: {
+      id: string;
+      childProductId: string;
+      childProductName: string;
+      childUnit: string;
+      quantity: number;
+      childStock?: number;
+      isRecipe: boolean;
+      maxBundleUnits: number;
+      isBottleneck: boolean;
+    }[] = [];
+
+    for (const bi of bundleItems) {
+      const child = bi.childProduct;
+      const childVariants = child?.variants || [];
+      const matchedVariant = bi.childVariantId
+        ? childVariants.find((v: any) => v.id === bi.childVariantId)
+        : childVariants[0];
+
+      const isRecipe = Boolean(matchedVariant?.recipe?.id);
+      let childStock = 0;
+      let maxBundleUnits = 99999;
+
+      if (!isRecipe) {
+        const balances = matchedVariant?.inventoryItem?.balances || [];
+        childStock = balances.reduce((sum: number, b: any) => sum + Number(b.quantityOnHand || 0), 0);
+        const ratio = Math.max(0.0001, Number(bi.quantity || 1));
+        maxBundleUnits = Math.floor(Math.max(0, childStock) / ratio);
+      }
+
+      processedItems.push({
+        id: bi.id,
+        childProductId: bi.childProductId,
+        childProductName: child?.name || 'Komponen',
+        childUnit: child?.unit || 'Pcs',
+        quantity: Number(bi.quantity),
+        childStock: isRecipe ? undefined : childStock,
+        isRecipe,
+        maxBundleUnits,
+        isBottleneck: false,
+      });
+    }
+
+    const physicalItems = processedItems.filter((it) => !it.isRecipe);
+    if (physicalItems.length === 0) {
+      return {
+        items: processedItems,
+        limitStock: null,
+        bottleneckItem: null,
+        hasStock: false,
+      };
+    }
+
+    const minUnits = Math.min(...physicalItems.map((it) => it.maxBundleUnits));
+    const bottleneck = physicalItems.find((it) => it.maxBundleUnits === minUnits);
+    if (bottleneck) {
+      bottleneck.isBottleneck = true;
+    }
+
+    return {
+      items: processedItems,
+      limitStock: Math.max(0, minUnits),
+      bottleneckItem: bottleneck ? bottleneck.childProductName : null,
+      hasStock: true,
     };
   }
 
