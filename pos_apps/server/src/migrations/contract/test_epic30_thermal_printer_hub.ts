@@ -199,3 +199,4 @@ runEpic30ThermalPrinterTests().catch((e) => {
   console.error('Fatal Test Runner Error:', e);
   process.exit(1);
 });
+

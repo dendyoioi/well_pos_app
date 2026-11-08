@@ -456,3 +456,4 @@ class ThermalPrinterHubService {
 }
 
 export const thermalPrinterHub = new ThermalPrinterHubService();
+

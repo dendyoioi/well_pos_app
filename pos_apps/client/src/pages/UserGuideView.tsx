@@ -523,58 +523,70 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   },
   {
     id: 'bluetooth_printer',
-    title: '14. Printer Kasir Bluetooth Thermal (Web Bluetooth BLE)',
+    title: '14. Printer Thermal Kasir, Kabel USB & Laci Kasir (Hardware Hub ESC/POS)',
     category: 'OWNER_ADMIN',
     categoryLabel: 'Perangkat & Printer',
     targetRoles: ['OWNER', 'ADMIN', 'CASHIER'],
-    shortDesc: 'Koneksi nirkabel printer kasir Bluetooth (58mm / 80mm ESC/POS) langsung dari browser tablet/laptop kasir tanpa kabel USB dan driver tambahan.',
+    shortDesc: 'Integrasi hardware kasir menyeluruh: Koneksi nirkabel Bluetooth (BLE) atau kabel data USB (WebUSB tanpa install driver), cetak otomatis (Auto-Print), pemicu buka laci kasir 24V (Cash Drawer Kick), dan slip murni X/Z-Report.',
     actionTab: 'settings_receipt',
     actionLabel: 'Buka Pengaturan Struk & Printer',
     image: '/guide/onboarding-format-struk.png',
-    imageCaption: 'Konfigurasi Printer Thermal & Tombol Koneksi Bluetooth BLE pada Pengaturan Resto.',
+    imageCaption: 'Hardware Hub: Konfigurasi Printer Bluetooth, Kabel USB, Auto-Print & Laci Kasir.',
     steps: [
       {
         number: 1,
-        title: 'Nyalakan Printer & Aktifkan Bluetooth Perangkat',
+        title: 'Pilih Jalur Koneksi: Kabel USB (WebUSB) atau Bluetooth (BLE)',
         description:
-          'Pastikan printer thermal kasir (58mm atau 80mm) dalam posisi menyala dengan kertas terpasang rapi, dan Bluetooth pada tablet / laptop kasir aktif.',
+          'Well POS mendukung 2 opsi koneksi hardware langsung:\n• Kabel USB (WebUSB): Pasang kabel printer kasir langsung ke Laptop / PC / Tablet Android. Bekerja langsung dari browser Chrome/Edge tanpa perlu instal driver printer Windows/Mac tambahan.\n• Bluetooth (BLE): Hubungkan printer kasir mini portabel secara nirkabel dari tablet atau smartphone kasir.',
+        highlight: 'WebUSB & Web Bluetooth murni — bekerja langsung di browser kasir tanpa aplikasi pihak ketiga.',
       },
       {
         number: 2,
-        title: 'Sambungkan via Web Bluetooth',
+        title: 'Hubungkan Perangkat melalui Modal Printer Kasir',
         description:
-          'Buka menu Pengaturan Resto > Format Struk Kasir (atau tombol sambung di jendela sukses transaksi kasir). Klik tombol "Sambungkan Printer Bluetooth". Pop-up browser Chrome/Edge akan memindai printer terdekat.',
-        highlight: 'Web Bluetooth BLE murni — bekerja langsung di browser tanpa instalasi driver desktop.',
+          'Buka menu Pengaturan Toko > Format Struk & Printer (atau klik tombol "Printer" di header kasir POS). Klik tombol "Hubungkan Printer Kabel USB (WebUSB)" atau "Pindai & Hubungkan Printer Bluetooth". Pop-up native browser akan meminta Anda memilih nama printer kasir.',
       },
       {
         number: 3,
-        title: 'Pilih Nama Printer Kasir & Sandingkan',
+        title: 'Pilih Ukuran Kertas: 58mm (Portabel) vs 80mm (Desktop)',
         description:
-          'Pilih nama printer Anda (misalnya: RPP02N, PT-210, MPT-II, Thermal Printer) lalu klik Sandingkan (Pair). Status indikator printer akan berubah hijau menjadi "Terhubung".',
+          'Pilih format kertas yang sesuai dengan perangkat kasir Anda:\n• 58mm (32 Kolom): Format standar untuk printer mini portabel saku kasir.\n• 80mm (48 Kolom): Format standar untuk printer meja kasir desktop berkecepatan tinggi.',
       },
       {
         number: 4,
-        title: 'Uji Cetak Struk & Buka Laci Kas',
+        title: 'Aktifkan Otomasi Cetak (Auto-Print on Checkout)',
         description:
-          'Tekan tombol "Uji Cetak Struk" untuk memverifikasi keluaran nota thermal, dan tekan "Buka Laci Kas" jika printer tersambung dengan laci kasir RJ11.',
+          'Nyalakan sakelar "Cetak Otomatis (Auto-Print on Checkout)". Setiap kali pembayaran transaksi kasir tuntas, nota belanja langsung otomatis dicetak ke printer dalam 1 detik tanpa perlu kasir menekan tombol cetak lagi.',
+        highlight: 'Mempercepat antrean kasir di jam sibuk hingga 3x lebih cepat.',
       },
       {
         number: 5,
-        title: 'Cetak 1-Klik Saat Transaksi Kasir Selesai',
+        title: 'Pemicu Laci Kasir Otomatis (Cash Drawer Kick 24V)',
         description:
-          'Setiap kali transaksi checkout berhasil di POS, klik tombol "Cetak Struk Bluetooth" di jendela sukses pembayaran. Nota langsung tercetak dalam hitungan detik.',
-        highlight: 'Proses cetak 100% read-only dan tidak membebani mutasi database kasir.',
+          'Nyalakan sakelar "Buka Laci Kasir Otomatis (Auto Kick Drawer)". Setiap kali pembayaran tunai (CASH) diproses, sistem otomatis mengirimkan sinyal pulsa 24V (ESC p 0 25 250) melalui kabel RJ11 printer untuk membuka laci kasir fisik.',
       },
       {
         number: 6,
+        title: 'Uji Coba Cetak (Test Print) & Uji Buka Laci',
+        description:
+          'Gunakan tombol "Cetak Uji Coba" dan "Uji Buka Laci Kasir" pada jendela modal untuk memastikan printer fisik dan laci kasir berfungsi normal sebelum memulai sesi shift toko.',
+      },
+      {
+        number: 7,
+        title: 'Slip Rekapitulasi Murni X-Report & Z-Report (Kebijakan Rule 13)',
+        description:
+          'Saat mencetak laporan shift kasir berjalan (X-Report) atau laporan tutup shift (Z-Report), printer mencetak rekapitulasi finansial murni (Modal Kas, Penjualan Tunai/QRIS, Mutasi Kas, Kas Fisik Aktual, dan Selisih Kas) TANPA mencetak deretan nota transaksi individual, guna menghemat kertas thermal roll.',
+        highlight: 'Format Pure Summary menjamin pergantian shift kasir cepat dan ramah lingkungan.',
+      },
+      {
+        number: 8,
         title: 'Panduan Mengatasi Printer "Mencari Perangkat Terus" (Android & Samsung)',
         description:
-          'Jika printer Bluetooth (misal Blueprint, Panda, Thermal 58/80mm) mengalami kendala selalu mencari perangkat terus tanpa terdeteksi pada HP Android/Samsung A-Series:\n• Lepas Koneksi Eksklusif: Pastikan printer TIDAK sedang terhubung ke HP kasir lain atau aplikasi lain. Bluetooth BLE hanya mengizinkan 1 koneksi aktif eksklusif.\n• Izin Lokasi (GPS) & Perangkat Sekitar: Di Android 12 ke atas, buka Pengaturan HP > Aplikasi > Chrome/Edge > Izin (Permissions), dan pastikan izin "Perangkat Sekitar" (Nearby Devices) serta "Lokasi" (GPS) telah diizinkan (Allow).\n• Siklus Restart: Matikan printer selama 5 detik lalu nyalakan kembali, dan lakukan restart Bluetooth pada HP kasir.',
-        highlight: '99% kendala printer mencari terus terselesaikan dengan memutus koneksi dari HP lain dan mengaktifkan izin Perangkat Sekitar.',
+          'Jika printer Bluetooth mengalami kendala mencari terus tanpa terdeteksi pada HP Android/Samsung:\n• Lepas Koneksi Eksklusif: Pastikan printer TIDAK sedang terhubung ke HP kasir lain. Bluetooth BLE hanya mengizinkan 1 koneksi aktif.\n• Izin Lokasi (GPS) & Perangkat Sekitar: Di Android 12+, buka Pengaturan HP > Aplikasi > Chrome/Edge > Izin (Permissions), dan izinkan "Perangkat Sekitar" (Nearby Devices) serta "Lokasi" (GPS).\n• Siklus Restart: Matikan printer selama 5 detik lalu nyalakan kembali.',
       },
     ],
-    tips: 'Gunakan browser Google Chrome atau Microsoft Edge untuk dukungan Web Bluetooth resmi. Untuk perangkat iOS/iPad, gunakan opsi cetak standar browser (AirPrint / System Print).',
-    warning: 'Pastikan printer Bluetooth tidak sedang terhubung secara eksklusif ke ponsel lain agar sinyal BLE dapat ditemukan oleh browser kasir. Bluetooth BLE hanya dapat melayani satu koneksi pairing dalam satu waktu.',
+    tips: 'Gunakan browser Google Chrome atau Microsoft Edge untuk dukungan WebUSB & Web Bluetooth terbaik. Untuk kasir iPhone/iPad, kasir dapat menggunakan browser khusus BLE (Bluefy di App Store) atau menggunakan opsi cetak dialog AirPrint standar.',
+    warning: 'Pastikan kabel RJ11 dari laci kasir terpasang kencang ke soket belakang printer kasir agar sinyal tendangan 24V dapat membuka kunci laci kasir secara sempurna.',
   },
   {
     id: 'whatsapp_receipt',
@@ -1216,6 +1228,61 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     tips: 'Pastikan email noreply@wellpos.id dan billing@wellpos.id ditandai sebagai "Bukan Spam" di Gmail/Yahoo/Outlook Anda agar notifikasi penting selalu masuk ke kotak masuk utama.',
     warning: 'Jangan pernah membagikan kode OTP 6-digit kepada siapa pun melalui telepon, chat WhatsApp, atau media sosial. Tim Well POS tidak pernah meminta kode OTP rahasia Anda.',
+  },
+  {
+    id: 'composite_combo_slots',
+    title: '28. Paket Komposit, Kitting Stok & Menu Kombo Dinamis (Mix-and-Match)',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Katalog & Menu',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER'],
+    shortDesc: 'Panduan lengkap produk komposit (Bundle Kitting): Penggabungan multi-produk tanpa rakitan fisik, evaluasi otomatis stok pembatas (bottleneck stock), pembuatan opsi kombo per-slot (Mix & Match), penyesuaian harga ekstra, dan pemotongan stok dinamis saat checkout.',
+    actionTab: 'products',
+    actionLabel: 'Buka Manajemen Katalog Menu',
+    image: '/guide/dashboard-ringkasan-bisnis.png',
+    imageCaption: 'Katalog Komposit & Dialog Pemilihan Opsi Kombo Kasir (Combo Slot Modal).',
+    steps: [
+      {
+        number: 1,
+        title: 'Konsep Dasar Paket Komposit (Bundle Kitting)',
+        description:
+          'Produk Komposit adalah produk paket yang tersusun dari beberapa produk individual (baik produk ritel jadi maupun menu resep dapur BOM). Berbeda dari produk manufaktur, produk kitting tidak perlu dirakit fisik sebelum dijual; stoknya dihitung dinamis dari ketersediaan produk-produk pembentuknya.',
+        highlight: 'Contoh: "Paket Hemat Bento" terdiri dari 1 Nasi Putih + 1 Pilihan Lauk + 1 Pilihan Minuman.',
+      },
+      {
+        number: 2,
+        title: 'Kalkulasi Otomatis Stok Pembatas (Bottleneck Stock Evaluation)',
+        description:
+          'Sistem secara cerdas menghitung kapasitas paket berdasarkan produk komponen yang memiliki saldo terendah (bottleneck). Jika stok Bento memiliki Nasi (10 porsi), Daging (5 porsi), dan Teh (20 botol), maka stok paket otomatis bernilai 5 porsi dengan penanda "Pembatas: Daging". Jika salah satu komponen bernilai 0, sistem otomatis mengunci paket menjadi "Habis".',
+        highlight: 'Mencegah kasir menjual paket yang bahan bakunya sudah habis di dapur/gudang.',
+      },
+      {
+        number: 3,
+        title: 'Membuat Slot Pilihan Dinamis (Slot-Based Combo)',
+        description:
+          'Saat membuat atau mengedit produk di tab "Komponen Paket / Bundle", Anda dapat mengelompokkan komponen ke dalam nama Slot Opsi (misal: "Pilihan Lauk Utama" dan "Pilihan Minuman Segar"). Komponen tanpa nama slot akan diperlakukan sebagai komponen tetap (selalu disertakan).',
+      },
+      {
+        number: 4,
+        title: 'Atur Penyesuaian Harga Ekstra (+Rp) & Opsi Bawaan (Default)',
+        description:
+          'Tiap opsi dalam slot dapat diatur biaya ekstranya (misal: Ayam Goreng +Rp 0 sebagai opsi standar/default, sedangkan Beef Yakiniku +Rp 5.000). Kasir dan pelanggan dapat meng-upgrade pilihan dengan harga yang dihitung otomatis saat checkout.',
+      },
+      {
+        number: 5,
+        title: 'Alur Kasir POS: Dialog Opsi Kombo (<ComboSlotModal />)',
+        description:
+          'Di kasir POS (desktop maupun smartphone), produk kombo ditandai dengan badge "✨ Kombo (X Pilihan)". Saat kasir mengetuk item, jendela pilihan kombo muncul seketika untuk memilih lauk dan minuman. Keranjang belanja mencatat rincian pilihan kasir lengkap dengan ringkasan harga.',
+        highlight: 'Zero Stacked Modals: Memilih opsi kombo cepat tanpa menutup atau menumpuk layar kasir.',
+      },
+      {
+        number: 6,
+        title: 'Pemotongan Stok Selektif & Snapshot Struk Thermal',
+        description:
+          'Saat transaksi selesai dibayar, backend secara selektif HANYA memotong stok dari opsi slot yang dipilih (opsi yang tidak dipilih stoknya tetap 100% utuh). Pilihan kombo otomatis tercatat di modifiers snapshot dan tercetak rapi pada struk belanja thermal kasir (58mm/80mm) dan tampilan pesanan dapur.',
+      },
+    ],
+    tips: 'Gunakan produk komposit untuk promo bundling "Buy 1 Get 1", paket sarapan pagi, paket bento kantor, atau paket hampers lebaran untuk meningkatkan rata-rata penjualan per transaksi (Basket Size).',
+    warning: 'Sistem menerapkan perlindungan anti-circular dependency yang ketat: Sebuah paket komposit dilarang memasukkan dirinya sendiri atau paket komposit lain yang merujuk balik padanya.',
   },
 ];
 

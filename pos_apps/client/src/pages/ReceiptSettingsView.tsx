@@ -8,6 +8,8 @@ import {
   Monitor,
   Store,
   Bluetooth,
+  Usb,
+  Sliders,
   Zap,
   Power,
   Coins,
@@ -19,7 +21,8 @@ import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 import { ThermalReceiptPreview } from '../components/ThermalReceiptPreview';
-import { useBluetoothPrinter } from '../hooks/useBluetoothPrinter';
+import { useThermalPrinterHub } from '../hooks/useThermalPrinterHub';
+import { ThermalPrinterModal } from '../components/pos/ThermalPrinterModal';
 
 interface ReceiptSettingsViewProps {
   activeOutlet: Outlet | null;
@@ -31,7 +34,8 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   onOutletUpdated,
 }) => {
   const dialog = useDialog();
-  const btPrinter = useBluetoothPrinter();
+  const printerHub = useThermalPrinterHub();
+  const [hardwareModalOpen, setHardwareModalOpen] = useState(false);
   const [testingBt, setTestingBt] = useState(false);
   const [kickingBt, setKickingBt] = useState(false);
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
@@ -129,20 +133,31 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 
   const handleConnectBluetooth = async () => {
     try {
-      const ok = await btPrinter.connect();
+      const ok = await printerHub.connectBluetooth();
       if (ok) {
-        dialog.toast(`Printer Bluetooth "${btPrinter.deviceName || 'Thermal'}" berhasil terhubung!`, 'success');
+        dialog.toast(`Printer Bluetooth "${printerHub.deviceName || 'Thermal'}" berhasil terhubung!`, 'success');
       }
     } catch (err: any) {
       dialog.toast(err.message || 'Gagal menghubungkan printer Bluetooth', 'error');
     }
   };
 
+  const handleConnectUsb = async () => {
+    try {
+      const ok = await printerHub.connectUsb();
+      if (ok) {
+        dialog.toast(`Printer USB "${printerHub.deviceName || 'Thermal'}" berhasil terhubung!`, 'success');
+      }
+    } catch (err: any) {
+      dialog.toast(err.message || 'Gagal menghubungkan printer USB', 'error');
+    }
+  };
+
   const handleTestPrint = async () => {
     setTestingBt(true);
     try {
-      await btPrinter.testPrint(paperSize);
-      dialog.toast('Cetak uji coba berhasil dikirim ke printer Bluetooth!', 'success');
+      await printerHub.testPrint(paperSize);
+      dialog.toast('Cetak uji coba berhasil dikirim ke printer!', 'success');
     } catch (err: any) {
       dialog.toast(err.message || 'Gagal mengirim cetak uji coba', 'error');
     } finally {
@@ -153,7 +168,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   const handleTestKickDrawer = async () => {
     setKickingBt(true);
     try {
-      await btPrinter.kickDrawer();
+      await printerHub.kickCashDrawer();
       dialog.toast('Sinyal pemicu laci kasir (ESC/POS 24V) berhasil dikirim!', 'success');
     } catch (err: any) {
       dialog.toast(err.message || 'Gagal memicu laci kasir', 'error');
@@ -282,85 +297,99 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             </div>
           </div>
 
-          {/* 2. Koneksi Printer Thermal Bluetooth (Direct 1-Klik) */}
+          {/* 2. Koneksi Printer Thermal Kasir & Hardware Hub */}
           <div className="pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
               <label className="block text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Bluetooth className="w-4 h-4 text-blue-900" />
-                <span>2. Printer Bluetooth Thermal (1-Klik Cetak Langsung)</span>
+                <Printer className="w-4 h-4 text-blue-900" />
+                <span>2. Hardware Hub: Printer Kasir &amp; Laci Kasir (Direct ESC/POS)</span>
               </label>
+              <button
+                type="button"
+                onClick={() => setHardwareModalOpen(true)}
+                className="text-[11px] font-extrabold text-blue-900 hover:text-blue-950 flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-xl transition-all"
+              >
+                <Sliders className="w-3.5 h-3.5 text-blue-700" />
+                <span>Pengaturan Lengkap &amp; Otomasi</span>
+              </button>
             </div>
             <p className="text-xs text-slate-500 font-medium mb-3">
-              Hubungkan printer thermal fisik Anda (Panda, Goojprt, Iware, RPP02N, Epson, Xprinter) untuk mencetak struk kasir seketika tanpa membuka pop-up print browser.
+              Hubungkan printer thermal fisik Anda (Panda, Goojprt, Iware, RPP02N, Epson, Xprinter) via Bluetooth nirkabel atau kabel USB langsung tanpa repot install driver.
             </p>
 
             <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                    btPrinter.isConnected
+                    printerHub.isConnected
                       ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                       : 'bg-slate-200 text-slate-500'
                   }`}>
-                    <Bluetooth className="w-5 h-5" />
+                    {printerHub.connectionType === 'usb' ? (
+                      <Usb className="w-5 h-5 text-emerald-700" />
+                    ) : (
+                      <Bluetooth className="w-5 h-5 text-blue-900" />
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-extrabold text-slate-900">
-                        {btPrinter.isConnected
-                          ? btPrinter.deviceName || 'Printer Bluetooth Terhubung'
+                        {printerHub.isConnected
+                          ? printerHub.deviceName || 'Printer Thermal Terhubung'
                           : 'Belum Ada Printer Terhubung'}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                        btPrinter.isConnected
+                        printerHub.isConnected
                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                           : 'bg-slate-200 text-slate-600'
                       }`}>
-                        {btPrinter.isConnected ? '● Terhubung' : 'Terputus'}
+                        {printerHub.isConnected ? `● Terhubung (${printerHub.connectionType.toUpperCase()})` : 'Terputus'}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {btPrinter.isConnected
-                        ? 'Siap mencetak langsung via Web Bluetooth API (ESC/POS).'
-                        : 'Nyalakan Bluetooth & printer thermal Anda, lalu klik hubungkan.'}
+                      {printerHub.isConnected
+                        ? `Siap mencetak langsung via ${printerHub.connectionType === 'usb' ? 'WebUSB (Kabel)' : 'Web Bluetooth BLE'} (ESC/POS).`
+                        : 'Pilih jalur koneksi Bluetooth nirkabel atau kabel USB di bawah ini.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {btPrinter.isConnected ? (
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {printerHub.isConnected ? (
                     <button
                       type="button"
-                      onClick={btPrinter.disconnect}
+                      onClick={printerHub.disconnect}
                       className="h-10 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <Power className="w-3.5 h-3.5" />
                       <span>Putus</span>
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleConnectBluetooth}
-                      disabled={btPrinter.isConnecting}
-                      className="h-10 px-4 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
-                    >
-                      {btPrinter.isConnecting ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Mencari Printer...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Hubungkan Printer Bluetooth</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleConnectBluetooth}
+                        disabled={printerHub.isConnecting}
+                        className="h-10 px-3.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                      >
+                        <Bluetooth className="w-3.5 h-3.5 text-blue-300" />
+                        <span>Hubungkan Bluetooth</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConnectUsb}
+                        disabled={printerHub.isConnecting}
+                        className="h-10 px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                      >
+                        <Usb className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Hubungkan Kabel USB</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {btPrinter.isConnected && (
+              {printerHub.isConnected && (
                 <div className="pt-3 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -383,10 +412,10 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 </div>
               )}
 
-              {btPrinter.lastError && (
+              {printerHub.lastError && (
                 <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                  <span>{btPrinter.lastError}</span>
+                  <span>{printerHub.lastError}</span>
                 </div>
               )}
             </div>
@@ -688,6 +717,13 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
           )}
         </button>
       </div>
+
+      {/* Modal Pengaturan Hardware Printer & Laci Kasir */}
+      <ThermalPrinterModal
+        isOpen={hardwareModalOpen}
+        onClose={() => setHardwareModalOpen(false)}
+        defaultPaperSize={paperSize}
+      />
     </div>
   );
 };
