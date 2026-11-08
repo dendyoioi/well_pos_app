@@ -143,12 +143,26 @@ export interface WhatsAppConfig {
   customFooter?: string;
 }
 
+export interface CupLabelConfig {
+  enabled: boolean;
+  paperSize: '40x30mm' | '50x30mm' | '40x20mm' | '50x40mm';
+  autoPrintOnCheckout?: boolean;
+  onlyBeverages?: boolean;
+  showStoreName?: boolean;
+  showCustomerName?: boolean;
+  showOrderNumber?: boolean;
+  showModifiers?: boolean;
+  showPrice?: boolean;
+  customHeader?: string;
+}
+
 export interface ReceiptConfig {
   paperSize: '58mm' | '80mm';
   footerText?: string;
   showQueueNumber?: boolean;
   showWatermark?: boolean; // Default true: Tampilkan watermark "Powered by Well POS"
   whatsappConfig?: WhatsAppConfig;
+  cupLabelConfig?: CupLabelConfig;
 }
 
 export interface SalesChannelConfig {

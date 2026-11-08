@@ -1,18 +1,37 @@
 /**
  * Unified Hardware Thermal Printer Hub Service
  * Manages Bluetooth Low Energy (BLE), WebUSB, and Browser Iframe Fallback.
- * Provides 1-click direct receipt printing, auto-print on checkout,
- * and 24V Cash Drawer kick pulses (ESC p 0 25 250).
+ * Provides Dual-Printer Support:
+ *   1. Primary: Receipt Printer (ESC/POS 58mm / 80mm) with Cash Drawer Kick Pulse
+ *   2. Secondary: Cup Label Sticker Printer (TSPL / ESC/POS Label 40x30mm, 50x30mm) for F&B Coffee Shops
  */
 
 import { buildReceiptEscPos, buildTestPrintEscPos, buildXZReportEscPos } from '../utils/escpos';
 import type { EscPosOptions } from '../utils/escpos';
 import { printElementViaThermalIframe } from '../utils/thermalPrinter';
+import {
+  buildCupLabelsTspl,
+  buildCupLabelsEscPos,
+  buildTestCupLabelTspl,
+  getCupItemsFromOrder,
+  type CupItemDetail,
+} from '../utils/cupLabel';
 
 export type PrinterConnectionType = 'bluetooth' | 'usb' | 'system';
+export type LabelPrinterConnectionType = 'bluetooth' | 'usb' | 'none';
 export type PrinterHubStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+export interface LabelPrinterState {
+  connectionType: LabelPrinterConnectionType;
+  status: PrinterHubStatus;
+  deviceName: string | null;
+  paperSize: '40x30mm' | '50x30mm' | '40x20mm' | '50x40mm';
+  protocol: 'tspl' | 'escpos';
+  lastError: string | null;
+}
+
 export interface PrinterHubState {
+  // Receipt Printer (Primary)
   connectionType: PrinterConnectionType;
   status: PrinterHubStatus;
   deviceName: string | null;
@@ -20,34 +39,47 @@ export interface PrinterHubState {
   autoPrintEnabled: boolean;
   drawerKickEnabled: boolean;
   lastError: string | null;
+
+  // Cup Label Sticker Printer (Secondary - F&B Barista)
+  labelPrinter: LabelPrinterState;
 }
 
 export interface PrinterHubListener {
   (state: PrinterHubState): void;
 }
 
-// Known GATT Service UUIDs for popular thermal receipt printers
+// Known GATT Service UUIDs for popular thermal receipt & label printers
 const KNOWN_BT_SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb', // Standard Printer Service
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Posnet / Xprinter
   '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC Transparent UART
-  '0000ff00-0000-1000-8000-00805f9b34fb', // Generic Chinese Printers (Goojprt, Panda, MPT-II)
+  '0000ff00-0000-1000-8000-00805f9b34fb', // Generic Chinese Printers (Goojprt, Panda, MPT-II, Xprinter Label)
   '0000ae00-0000-1000-8000-00805f9b34fb', // RPP02N / Iware
   '0000af30-0000-1000-8000-00805f9b34fb',
 ];
 
 class ThermalPrinterHubService {
-  // Bluetooth state
+  // Primary (Receipt) Bluetooth state
   private btDevice: any = null;
   private btCharacteristic: any = null;
 
-  // WebUSB state
+  // Primary (Receipt) WebUSB state
   private usbDevice: any = null;
   private usbInterfaceNumber: number | null = null;
   private usbEndpointNumber: number | null = null;
 
+  // Secondary (Cup Label) Bluetooth state
+  private labelBtDevice: any = null;
+  private labelBtCharacteristic: any = null;
+
+  // Secondary (Cup Label) WebUSB state
+  private labelUsbDevice: any = null;
+  private labelUsbInterfaceNumber: number | null = null;
+  private labelUsbEndpointNumber: number | null = null;
+
   // Core state
   private state: PrinterHubState = {
+    // Primary
     connectionType: 'system',
     status: 'disconnected',
     deviceName: null,
@@ -55,12 +87,23 @@ class ThermalPrinterHubService {
     autoPrintEnabled: false,
     drawerKickEnabled: true,
     lastError: null,
+
+    // Secondary (Cup Label)
+    labelPrinter: {
+      connectionType: 'none',
+      status: 'disconnected',
+      deviceName: null,
+      paperSize: '40x30mm',
+      protocol: 'tspl',
+      lastError: null,
+    },
   };
 
   private listeners: Set<PrinterHubListener> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined') {
+      // Primary preferences
       const savedType = localStorage.getItem('wellpos_printer_type') as PrinterConnectionType | null;
       const savedName = localStorage.getItem('wellpos_printer_name');
       const savedPaperSize = localStorage.getItem('wellpos_printer_paper_size') as '58mm' | '80mm' | null;
@@ -72,6 +115,17 @@ class ThermalPrinterHubService {
       if (savedPaperSize) this.state.paperSize = savedPaperSize;
       if (savedAutoPrint !== null) this.state.autoPrintEnabled = savedAutoPrint === 'true';
       if (savedDrawerKick !== null) this.state.drawerKickEnabled = savedDrawerKick !== 'false';
+
+      // Secondary (Label) preferences
+      const savedLabelType = localStorage.getItem('wellpos_label_printer_type') as LabelPrinterConnectionType | null;
+      const savedLabelName = localStorage.getItem('wellpos_label_printer_name');
+      const savedLabelPaper = localStorage.getItem('wellpos_label_paper_size') as '40x30mm' | '50x30mm' | '40x20mm' | '50x40mm' | null;
+      const savedLabelProto = localStorage.getItem('wellpos_label_protocol') as 'tspl' | 'escpos' | null;
+
+      if (savedLabelType) this.state.labelPrinter.connectionType = savedLabelType;
+      if (savedLabelName) this.state.labelPrinter.deviceName = savedLabelName;
+      if (savedLabelPaper) this.state.labelPrinter.paperSize = savedLabelPaper;
+      if (savedLabelProto) this.state.labelPrinter.protocol = savedLabelProto;
     }
   }
 
@@ -84,7 +138,10 @@ class ThermalPrinterHubService {
   }
 
   getState(): PrinterHubState {
-    return { ...this.state };
+    return {
+      ...this.state,
+      labelPrinter: { ...this.state.labelPrinter },
+    };
   }
 
   addListener(listener: PrinterHubListener): () => void {
@@ -105,6 +162,12 @@ class ThermalPrinterHubService {
     localStorage.setItem('wellpos_printer_paper_size', this.state.paperSize);
     localStorage.setItem('wellpos_autoprint_enabled', String(this.state.autoPrintEnabled));
     localStorage.setItem('wellpos_drawer_kick_enabled', String(this.state.drawerKickEnabled));
+
+    // Secondary preferences
+    localStorage.setItem('wellpos_label_printer_type', this.state.labelPrinter.connectionType);
+    localStorage.setItem('wellpos_label_printer_name', this.state.labelPrinter.deviceName || '');
+    localStorage.setItem('wellpos_label_paper_size', this.state.labelPrinter.paperSize);
+    localStorage.setItem('wellpos_label_protocol', this.state.labelPrinter.protocol);
   }
 
   setPaperSize(size: '58mm' | '80mm') {
@@ -125,15 +188,32 @@ class ThermalPrinterHubService {
     this.notify();
   }
 
+  // Label configuration setters
+  setLabelPaperSize(size: '40x30mm' | '50x30mm' | '40x20mm' | '50x40mm') {
+    this.state.labelPrinter.paperSize = size;
+    this.savePreferences();
+    this.notify();
+  }
+
+  setLabelProtocol(protocol: 'tspl' | 'escpos') {
+    this.state.labelPrinter.protocol = protocol;
+    this.savePreferences();
+    this.notify();
+  }
+
+  // =========================================================================
+  // 1. PRIMARY PRINTER: RECEIPT (STRUK KASIR)
+  // =========================================================================
+
   /**
-   * Hubungkan printer via Web Bluetooth (BLE)
+   * Hubungkan printer struk via Web Bluetooth (BLE)
    */
   async connectBluetooth(): Promise<boolean> {
     if (!this.isBluetoothSupported()) {
       const isIos = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
       const errMsg = isIos
         ? 'Apple (Safari iOS) membatasi Web Bluetooth langsung. Buka aplikasi via browser Bluefy di iOS atau gunakan perangkat Android/Laptop.'
-        : 'Browser Anda belum mendukung Web Bluetooth API. Gunakan Chrome atau Edge.';
+        : 'Browser Anda belum mendukung Web Bluetooth API. Gunakan Google Chrome atau Microsoft Edge.';
       this.state.lastError = errMsg;
       this.state.status = 'error';
       this.notify();
@@ -168,47 +248,7 @@ class ThermalPrinterHubService {
       const server = await device.gatt.connect();
 
       // Scan characteristics for writable endpoint
-      let targetCharacteristic: any = null;
-
-      // 1. Check known printer services first
-      for (const serviceUuid of KNOWN_BT_SERVICES) {
-        try {
-          const service = await server.getPrimaryService(serviceUuid);
-          const chars = await service.getCharacteristics();
-          for (const c of chars) {
-            if (c.properties.write || c.properties.writeWithoutResponse) {
-              targetCharacteristic = c;
-              break;
-            }
-          }
-          if (targetCharacteristic) break;
-        } catch {
-          // Continue to next service
-        }
-      }
-
-      // 2. Scan all services fallback
-      if (!targetCharacteristic) {
-        try {
-          const allServices = await server.getPrimaryServices();
-          for (const s of allServices) {
-            try {
-              const chars = await s.getCharacteristics();
-              for (const c of chars) {
-                if (c.properties.write || c.properties.writeWithoutResponse) {
-                  targetCharacteristic = c;
-                  break;
-                }
-              }
-              if (targetCharacteristic) break;
-            } catch {
-              // Ignore
-            }
-          }
-        } catch {
-          // Ignore
-        }
-      }
+      let targetCharacteristic = await this.findWritableCharacteristic(server);
 
       if (!targetCharacteristic) {
         throw new Error('Tidak ditemukan saluran transmisi ESC/POS yang cocok pada printer Bluetooth ini.');
@@ -230,11 +270,11 @@ class ThermalPrinterHubService {
   }
 
   /**
-   * Hubungkan printer thermal via WebUSB (Kabel USB)
+   * Hubungkan printer struk thermal via WebUSB (Kabel USB)
    */
   async connectUsb(): Promise<boolean> {
     if (!this.isUsbSupported()) {
-      const errMsg = 'Browser ini belum mendukung WebUSB. Gunakan Google Chrome, Microsoft Edge, atau Opera pada Laptop/PC/Android.';
+      const errMsg = 'Browser ini belum mendukung WebUSB. Gunakan Google Chrome atau Microsoft Edge pada Laptop/PC/Android.';
       this.state.lastError = errMsg;
       this.state.status = 'error';
       this.notify();
@@ -258,23 +298,7 @@ class ThermalPrinterHubService {
         await device.selectConfiguration(1);
       }
 
-      // Cari interface dan bulk OUT endpoint
-      let matchedInterface: any = null;
-      let matchedEndpointNumber: number | null = null;
-
-      for (const iface of device.configuration.interfaces) {
-        for (const alt of iface.alternates) {
-          for (const ep of alt.endpoints) {
-            if (ep.direction === 'out' && (ep.type === 'bulk' || ep.type === 'interrupt')) {
-              matchedInterface = iface;
-              matchedEndpointNumber = ep.endpointNumber;
-              break;
-            }
-          }
-          if (matchedEndpointNumber !== null) break;
-        }
-        if (matchedEndpointNumber !== null) break;
-      }
+      const { matchedInterface, matchedEndpointNumber } = this.findUsbBulkOutEndpoint(device);
 
       if (!matchedInterface || matchedEndpointNumber === null) {
         await device.close();
@@ -304,7 +328,7 @@ class ThermalPrinterHubService {
   }
 
   /**
-   * Putuskan koneksi aktif
+   * Putuskan koneksi printer struk
    */
   disconnect() {
     try {
@@ -330,32 +354,18 @@ class ThermalPrinterHubService {
   }
 
   /**
-   * Kirim buffer mentah ESC/POS (Uint8Array) ke perangkat aktif
+   * Kirim buffer mentah (Uint8Array) ke printer struk aktif
    */
   async printRaw(data: Uint8Array): Promise<void> {
     if (this.state.status !== 'connected') {
-      throw new Error('Printer hardware belum terhubung.');
+      throw new Error('Printer struk hardware belum terhubung.');
     }
 
-    // 1. Mode Bluetooth BLE
     if (this.state.connectionType === 'bluetooth') {
-      if (!this.btCharacteristic) {
-        throw new Error('Saluran transmisi Bluetooth tidak aktif.');
-      }
-      const CHUNK_SIZE = 100;
-      for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-        const chunk = data.slice(i, i + CHUNK_SIZE);
-        if (this.btCharacteristic.writeValueWithoutResponse) {
-          await this.btCharacteristic.writeValueWithoutResponse(chunk);
-        } else {
-          await this.btCharacteristic.writeValue(chunk);
-        }
-        await new Promise((r) => setTimeout(r, 20));
-      }
+      await this.sendBtData(this.btCharacteristic, data);
       return;
     }
 
-    // 2. Mode WebUSB
     if (this.state.connectionType === 'usb') {
       if (!this.usbDevice || !this.usbDevice.opened || this.usbEndpointNumber === null) {
         throw new Error('Koneksi USB printer tidak aktif atau terputus.');
@@ -366,6 +376,312 @@ class ThermalPrinterHubService {
 
     throw new Error('Tipe koneksi printer tidak didukung untuk pengiriman data mentah.');
   }
+
+  // =========================================================================
+  // 2. SECONDARY PRINTER: CUP LABEL STICKER (BARISTA F&B)
+  // =========================================================================
+
+  /**
+   * Hubungkan printer stiker label cup via Web Bluetooth (BLE)
+   */
+  async connectLabelBluetooth(): Promise<boolean> {
+    if (!this.isBluetoothSupported()) {
+      const isIos = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const errMsg = isIos
+        ? 'Apple (Safari iOS) membatasi Web Bluetooth langsung. Buka aplikasi via browser Bluefy di iOS.'
+        : 'Browser Anda belum mendukung Web Bluetooth API.';
+      this.state.labelPrinter.lastError = errMsg;
+      this.state.labelPrinter.status = 'error';
+      this.notify();
+      throw new Error(errMsg);
+    }
+
+    try {
+      this.state.labelPrinter.status = 'connecting';
+      this.state.labelPrinter.lastError = null;
+      this.notify();
+
+      const navBluetooth = (navigator as any).bluetooth;
+      const device = await navBluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: KNOWN_BT_SERVICES,
+      });
+
+      if (!device) {
+        throw new Error('Tidak ada perangkat Bluetooth label yang dipilih.');
+      }
+
+      this.labelBtDevice = device;
+      const devName = device.name || 'Printer Label Cup';
+      this.state.labelPrinter.deviceName = devName;
+
+      device.addEventListener('gattserverdisconnected', () => {
+        this.labelBtCharacteristic = null;
+        this.state.labelPrinter.status = 'disconnected';
+        this.notify();
+      });
+
+      const server = await device.gatt.connect();
+      const targetCharacteristic = await this.findWritableCharacteristic(server);
+
+      if (!targetCharacteristic) {
+        throw new Error('Tidak ditemukan saluran transmisi data pada printer label Bluetooth ini.');
+      }
+
+      this.labelBtCharacteristic = targetCharacteristic;
+      this.state.labelPrinter.connectionType = 'bluetooth';
+      this.state.labelPrinter.status = 'connected';
+      this.state.labelPrinter.lastError = null;
+      this.savePreferences();
+      this.notify();
+      return true;
+    } catch (err: any) {
+      this.state.labelPrinter.status = 'error';
+      this.state.labelPrinter.lastError = err.message || 'Gagal menghubungkan printer label Bluetooth.';
+      this.notify();
+      throw err;
+    }
+  }
+
+  /**
+   * Hubungkan printer label cup via WebUSB
+   */
+  async connectLabelUsb(): Promise<boolean> {
+    if (!this.isUsbSupported()) {
+      const errMsg = 'Browser belum mendukung WebUSB untuk printer label.';
+      this.state.labelPrinter.lastError = errMsg;
+      this.state.labelPrinter.status = 'error';
+      this.notify();
+      throw new Error(errMsg);
+    }
+
+    try {
+      this.state.labelPrinter.status = 'connecting';
+      this.state.labelPrinter.lastError = null;
+      this.notify();
+
+      const navUsb = (navigator as any).usb;
+      const device = await navUsb.requestDevice({ filters: [] });
+
+      if (!device) {
+        throw new Error('Tidak ada perangkat USB label yang dipilih.');
+      }
+
+      await device.open();
+      if (device.configuration === null) {
+        await device.selectConfiguration(1);
+      }
+
+      const { matchedInterface, matchedEndpointNumber } = this.findUsbBulkOutEndpoint(device);
+      if (!matchedInterface || matchedEndpointNumber === null) {
+        await device.close();
+        throw new Error('Printer USB Label tidak memiliki endpoint kirim data (Bulk OUT).');
+      }
+
+      await device.claimInterface(matchedInterface.interfaceNumber);
+
+      this.labelUsbDevice = device;
+      this.labelUsbInterfaceNumber = matchedInterface.interfaceNumber;
+      this.labelUsbEndpointNumber = matchedEndpointNumber;
+
+      const devName = device.productName || device.manufacturerName || 'Printer Label USB';
+      this.state.labelPrinter.deviceName = devName;
+      this.state.labelPrinter.connectionType = 'usb';
+      this.state.labelPrinter.status = 'connected';
+      this.state.labelPrinter.lastError = null;
+      this.savePreferences();
+      this.notify();
+      return true;
+    } catch (err: any) {
+      this.state.labelPrinter.status = 'error';
+      this.state.labelPrinter.lastError = err.message || 'Gagal menghubungkan printer label USB.';
+      this.notify();
+      throw err;
+    }
+  }
+
+  /**
+   * Putuskan koneksi printer label cup
+   */
+  disconnectLabel() {
+    try {
+      if (this.state.labelPrinter.connectionType === 'bluetooth' && this.labelBtDevice?.gatt?.connected) {
+        this.labelBtDevice.gatt.disconnect();
+      } else if (this.state.labelPrinter.connectionType === 'usb' && this.labelUsbDevice?.opened) {
+        if (this.labelUsbInterfaceNumber !== null) {
+          this.labelUsbDevice.releaseInterface(this.labelUsbInterfaceNumber).catch(() => {});
+        }
+        this.labelUsbDevice.close().catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Label printer disconnect error:', e);
+    } finally {
+      this.labelBtDevice = null;
+      this.labelBtCharacteristic = null;
+      this.labelUsbDevice = null;
+      this.labelUsbInterfaceNumber = null;
+      this.labelUsbEndpointNumber = null;
+      this.state.labelPrinter.status = 'disconnected';
+      this.notify();
+    }
+  }
+
+  /**
+   * Kirim buffer mentah (TSPL / ESC/POS) ke printer label aktif
+   */
+  async printLabelRaw(data: Uint8Array): Promise<void> {
+    if (this.state.labelPrinter.status !== 'connected') {
+      throw new Error('Printer stiker label cup belum terhubung.');
+    }
+
+    if (this.state.labelPrinter.connectionType === 'bluetooth') {
+      await this.sendBtData(this.labelBtCharacteristic, data);
+      return;
+    }
+
+    if (this.state.labelPrinter.connectionType === 'usb') {
+      if (!this.labelUsbDevice || !this.labelUsbDevice.opened || this.labelUsbEndpointNumber === null) {
+        throw new Error('Koneksi USB printer label terputus.');
+      }
+      await this.labelUsbDevice.transferOut(this.labelUsbEndpointNumber, data);
+      return;
+    }
+
+    throw new Error('Koneksi printer label tidak valid.');
+  }
+
+  /**
+   * Cetak stiker label cup untuk satu pesanan penuh
+   */
+  async printCupLabels(
+    order: any,
+    options: {
+      onlyBeverages?: boolean;
+      paperSize?: '40x30mm' | '50x30mm' | '40x20mm' | '50x40mm';
+      protocol?: 'tspl' | 'escpos';
+    } = {}
+  ): Promise<{ success: boolean; cupCount: number; error?: string }> {
+    const onlyBeverages = options.onlyBeverages ?? true;
+    const paperSize = options.paperSize || this.state.labelPrinter.paperSize;
+    const protocol = options.protocol || this.state.labelPrinter.protocol;
+
+    const cups: CupItemDetail[] = getCupItemsFromOrder(order, onlyBeverages);
+    if (!cups || cups.length === 0) {
+      return { success: true, cupCount: 0 };
+    }
+
+    if (this.state.labelPrinter.status !== 'connected') {
+      // Jika printer label belum terhubung, cek apakah printer receipt terhubung dan mau dipakai
+      throw new Error(
+        'Printer stiker label cup belum terhubung. Pasangkan printer label via Bluetooth atau USB di Pengaturan Struk.'
+      );
+    }
+
+    try {
+      const rawData =
+        protocol === 'escpos'
+          ? buildCupLabelsEscPos(cups, { paperSize, outletName: order.outlet?.name })
+          : buildCupLabelsTspl(cups, { paperSize, outletName: order.outlet?.name });
+
+      await this.printLabelRaw(rawData);
+      return { success: true, cupCount: cups.length };
+    } catch (err: any) {
+      console.error('Print cup label error:', err);
+      return { success: false, cupCount: cups.length, error: err.message };
+    }
+  }
+
+  /**
+   * Uji coba cetak stiker cup barista
+   */
+  async testPrintLabel(paperSize?: '40x30mm' | '50x30mm'): Promise<void> {
+    const size = paperSize || (this.state.labelPrinter.paperSize === '50x30mm' ? '50x30mm' : '40x30mm');
+    const rawData = buildTestCupLabelTspl(size);
+    await this.printLabelRaw(rawData);
+  }
+
+  // =========================================================================
+  // 3. UTILITY METHODS (GATT, USB ENDPOINT & CHUNK SENDING)
+  // =========================================================================
+
+  private async findWritableCharacteristic(server: any): Promise<any> {
+    // 1. Scan known services
+    for (const serviceUuid of KNOWN_BT_SERVICES) {
+      try {
+        const service = await server.getPrimaryService(serviceUuid);
+        const chars = await service.getCharacteristics();
+        for (const c of chars) {
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            return c;
+          }
+        }
+      } catch {
+        // Continue
+      }
+    }
+
+    // 2. Scan all services fallback
+    try {
+      const allServices = await server.getPrimaryServices();
+      for (const s of allServices) {
+        try {
+          const chars = await s.getCharacteristics();
+          for (const c of chars) {
+            if (c.properties.write || c.properties.writeWithoutResponse) {
+              return c;
+            }
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
+    return null;
+  }
+
+  private findUsbBulkOutEndpoint(device: any): { matchedInterface: any; matchedEndpointNumber: number | null } {
+    let matchedInterface: any = null;
+    let matchedEndpointNumber: number | null = null;
+
+    for (const iface of device.configuration.interfaces) {
+      for (const alt of iface.alternates) {
+        for (const ep of alt.endpoints) {
+          if (ep.direction === 'out' && (ep.type === 'bulk' || ep.type === 'interrupt')) {
+            matchedInterface = iface;
+            matchedEndpointNumber = ep.endpointNumber;
+            break;
+          }
+        }
+        if (matchedEndpointNumber !== null) break;
+      }
+      if (matchedEndpointNumber !== null) break;
+    }
+
+    return { matchedInterface, matchedEndpointNumber };
+  }
+
+  private async sendBtData(characteristic: any, data: Uint8Array): Promise<void> {
+    if (!characteristic) {
+      throw new Error('Saluran transmisi Bluetooth tidak aktif.');
+    }
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+      const chunk = data.slice(i, i + CHUNK_SIZE);
+      if (characteristic.writeValueWithoutResponse) {
+        await characteristic.writeValueWithoutResponse(chunk);
+      } else {
+        await characteristic.writeValue(chunk);
+      }
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  }
+
+  // =========================================================================
+  // 4. PRINT RECEIPT, X/Z REPORT & CASH DRAWER KICK
+  // =========================================================================
 
   /**
    * Cetak struk pesanan (Direct ESC/POS atau Dialog Iframe Fallback)
@@ -384,7 +700,6 @@ class ThermalPrinterHubService {
           paperSize,
         });
 
-        // Kirim sinyal laci kasir jika pembayaran tunai dan drawer kick aktif
         const hasCash = order.payments?.some((p: any) => (p.method || p.paymentMethod) === 'CASH');
         if (hasCash && this.state.drawerKickEnabled) {
           await this.kickCashDrawer().catch(() => {});
@@ -394,13 +709,11 @@ class ThermalPrinterHubService {
         return { success: true, mode: this.state.connectionType };
       } catch (err: any) {
         console.warn('Hardware print failed, falling back to iframe print:', err);
-        // Fallback to browser iframe print
         printElementViaThermalIframe('thermal-receipt-content', { paperWidth: paperSize });
         return { success: true, mode: 'system', error: err.message };
       }
     }
 
-    // Default Fallback: Cetak via browser print dialog yang terisolasi di iframe
     printElementViaThermalIframe('thermal-receipt-content', { paperWidth: paperSize });
     return { success: true, mode: 'system' };
   }
@@ -427,7 +740,6 @@ class ThermalPrinterHubService {
       }
     }
 
-    // Fallback: cetak elemen X/Z report lewat iframe
     const elementId = type === 'X' ? 'x-report-printable' : 'z-report-printable';
     printElementViaThermalIframe(elementId, {
       paperWidth: paperSize,
@@ -456,4 +768,3 @@ class ThermalPrinterHubService {
 }
 
 export const thermalPrinterHub = new ThermalPrinterHubService();
-

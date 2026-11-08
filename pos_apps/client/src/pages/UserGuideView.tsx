@@ -580,9 +580,17 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         number: 8,
-        title: 'Panduan Mengatasi Printer "Mencari Perangkat Terus" (Android & Samsung)',
+        title: 'Syarat Spesifikasi Perangkat & Panduan Izin Android / Samsung',
         description:
-          'Jika printer Bluetooth mengalami kendala mencari terus tanpa terdeteksi pada HP Android/Samsung:\n• Lepas Koneksi Eksklusif: Pastikan printer TIDAK sedang terhubung ke HP kasir lain. Bluetooth BLE hanya mengizinkan 1 koneksi aktif.\n• Izin Lokasi (GPS) & Perangkat Sekitar: Di Android 12+, buka Pengaturan HP > Aplikasi > Chrome/Edge > Izin (Permissions), dan izinkan "Perangkat Sekitar" (Nearby Devices) serta "Lokasi" (GPS).\n• Siklus Restart: Matikan printer selama 5 detik lalu nyalakan kembali.',
+          'Spesifikasi minimal & pengaturan izin untuk menghubungkan printer thermal:\n• Sistem Operasi Android: Minimal Android 8.0 (Oreo), direkomendasikan Android 10 atau lebih tinggi.\n• Browser Kasir: Google Chrome v100+ atau Microsoft Edge.\n• Izin Wajib Android 12+: Buka Pengaturan HP > Aplikasi > Chrome > Izin (Permissions), lalu aktifkan izin "Perangkat di Sekitar" (Nearby Devices) serta "Lokasi" (GPS). Tanpa izin ini, sistem Android akan memblokir browser saat memindai Bluetooth.\n• Siklus Restart: Jika printer mencari terus, matikan printer selama 5 detik lalu nyalakan kembali, dan pastikan printer tidak sedang terhubung ke HP kasir lain (1 printer BLE hanya untuk 1 HP aktif).',
+        highlight: 'Izin "Nearby Devices" di Android 12+ wajib aktif agar browser Chrome diizinkan mendeteksi printer Bluetooth.',
+      },
+      {
+        number: 9,
+        title: 'Spesifikasi & Solusi untuk Perangkat Apple iOS (iPhone & iPad)',
+        description:
+          'Pengaturan khusus untuk perangkat iPhone dan iPad (iPadOS):\n• Sistem Operasi iOS: Minimal iOS 14.0 atau iPadOS 14+.\n• Kebijakan Apple Safari: Safari iOS secara default membatasi Web Bluetooth di browser standar.\n• Solusi Resmi Bluetooth di iOS: Unduh aplikasi browser gratis "Bluefy - Web BLE Browser" dari Apple App Store. Buka aplikasi kasir Well POS melalui browser Bluefy tersebut untuk langsung menghubungkan printer Bluetooth tanpa kendala.\n• Solusi Jaringan / AirPrint: Jika kasir menggunakan printer jaringan WiFi/LAN yang mendukung AirPrint, Anda dapat mencetak nota langsung dari Safari via tombol "Browser Print".',
+        highlight: 'Gunakan browser Bluefy di iOS untuk koneksi Bluetooth langsung tanpa hambatan.',
       },
     ],
     tips: 'Gunakan browser Google Chrome atau Microsoft Edge untuk dukungan WebUSB & Web Bluetooth terbaik. Untuk kasir iPhone/iPad, kasir dapat menggunakan browser khusus BLE (Bluefy di App Store) atau menggunakan opsi cetak dialog AirPrint standar.',
@@ -1283,6 +1291,68 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     tips: 'Gunakan produk komposit untuk promo bundling "Buy 1 Get 1", paket sarapan pagi, paket bento kantor, atau paket hampers lebaran untuk meningkatkan rata-rata penjualan per transaksi (Basket Size).',
     warning: 'Sistem menerapkan perlindungan anti-circular dependency yang ketat: Sebuah paket komposit dilarang memasukkan dirinya sendiri atau paket komposit lain yang merujuk balik padanya.',
+  },
+  {
+    id: 'cup_label_printer',
+    title: '29. Printer Stiker Label Cup Barista (F&B Setup) & Arsitektur Dual-Printer',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Perangkat & Printer',
+    targetRoles: ['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER'],
+    shortDesc: 'Panduan lengkap cetak stiker label cup/kemasan F&B (seperti Starbucks, Kopi Kenangan, Fore, Chatime): Fitur opt-in dari Backoffice, ekspansi otomatis pesanan kuantitas N menjadi N lembar stiker individu, format protokol TSPL/ESC-POS, arsitektur Dual-Printer (1 perangkat kasir mengoperasikan 2 printer sekaligus), dan spesifikasi perangkat Android/iOS.',
+    actionTab: 'settings_receipt',
+    actionLabel: 'Buka Pengaturan Stiker Cup',
+    image: '/guide/onboarding-format-struk.png',
+    imageCaption: 'Pengaturan Stiker Label Cup: Konfigurasi printer kedua, ukuran label (40x30mm), dan otomasi cetak.',
+    steps: [
+      {
+        number: 1,
+        title: 'Konsep Stiker Label Cup & Pengaturan Opt-In (Backoffice)',
+        description:
+          'Stiker label cup adalah stiker thermal berperekat yang ditempelkan pada cup kopi, cup teh boba, atau kemasan makanan takeaway agar barista dan staf dapur dapat menyiapkan racikan minuman secara akurat tanpa tertukar. Fitur ini bersifat OPT-IN (dinonaktifkan secara default) sehingga toko retail pakaian atau minimarket tidak terganggu.\nUntuk mengaktifkannya: Buka menu Pengaturan Toko > Format Struk & Printer > Bagian 8 "Cetak Stiker Label Cup / Minuman (Barista F&B)" > aktifkan saklar toggle.',
+        highlight: 'Fitur opt-in murni — toko non-F&B tetap bersih tanpa tombol atau konfigurasi stiker cup.',
+      },
+      {
+        number: 2,
+        title: 'Arsitektur Dual-Printer (1 Device Kasir = 2 Printer Bersamaan)',
+        description:
+          'Well POS dirancang dengan arsitektur Dual-Hardware Hub: Satu tablet atau laptop kasir dapat menghubungkan 2 printer fisik sekaligus secara independen:\n• Printer A (Slot 1 - Struk): Printer thermal gulung 58mm/80mm (ESC/POS) untuk nota belanja pelanggan & pembuka laci kasir tunai.\n• Printer B (Slot 2 - Label): Printer stiker berperekat ber-sensor gap (TSPL) seperti Xprinter XP-237B/365B, Panda Label, HPRT, Iware, Blueprint.\nKeduanya dapat dipasangkan secara fleksibel melalui Bluetooth BLE atau kabel USB.',
+        highlight: 'Kasir tidak perlu repot ganti kertas atau mencabut kabel — kedua printer standby berdampingan.',
+      },
+      {
+        number: 3,
+        title: 'Pilihan Ukuran Stiker: 40 × 30 mm (Standar Cafe) hingga 50 × 30 mm',
+        description:
+          'Pilih ukuran kertas stiker roll yang terpasang di printer label Anda:\n• 40 × 30 mm: Standar resmi kedai kopi modern (Starbucks, Kopi Kenangan, Fore, Janji Jiwa).\n• 50 × 30 mm: Format label lebar untuk menu dengan varian modifikasi ekstra banyak.\n• 40 × 20 mm: Format ringkas hemat tempat.\n• 50 × 40 mm: Format ekstra luas untuk packaging bento atau box makanan.',
+      },
+      {
+        number: 4,
+        title: 'Ekspansi Otomatis Kuantitas (Quantity Unrolling [1/N])',
+        description:
+          'Jika pelanggan memesan 1 menu dengan kuantitas 3 (misal: 3 Kopi Susu Aren gula aren 50%), sistem secara cerdas mengekspansinya menjadi 3 lembar stiker fisik berturut-turut:\n• Lembar 1: KOPI SUSU AREN • Cup [1/3] • Dimas • 14:30\n• Lembar 2: KOPI SUSU AREN • Cup [2/3] • Dimas • 14:30\n• Lembar 3: KOPI SUSU AREN • Cup [3/3] • Dimas • 14:30\nBarista dapat langsung menempelkan tiap stiker ke masing-masing cup minuman.',
+        highlight: 'Mencegah minuman tertukar di meja antrean pengambilan barista.',
+      },
+      {
+        number: 5,
+        title: 'Saring Otomatis Kategori Minuman (Beverages Filter)',
+        description:
+          'Jika opsi "Saring Hanya Kategori Minuman" diaktifkan, maka saat transaksi memuat kombinasi makanan dan minuman (misal: 1 Nasi Goreng + 2 Kopi Latte), printer stiker HANYA akan mencetak 2 lembar stiker untuk Kopi Latte saja. Makanan tidak akan dicetak ke stiker cup.',
+      },
+      {
+        number: 6,
+        title: 'Otomasi Cetak (Auto-Print on Checkout) & Cetak Ulang Manual',
+        description:
+          'Saat kasir menekan tombol Selesaikan Transaksi, stiker cup otomatis dicetak seketika dalam hitungan detik. Jika kertas stiker macet atau barista membutuhkan cetak ulang, di layar sukses transaksi tersedia tombol manual "🏷️ Cetak Stiker Cup (X Cup)" untuk mencetak ulang hanya dengan 1 kali klik.',
+      },
+      {
+        number: 7,
+        title: 'Syarat Spesifikasi Perangkat Kasir (Android & Apple iOS)',
+        description:
+          'Berikut persyaratan spesifikasi perangkat kasir agar printer struk dan printer label berjalan stabil:\n• PERANGKAT ANDROID:\n  - Sistem Operasi: Android 8.0 (Oreo) ke atas, disarankan Android 10, 11, 12, 13, atau 14+.\n  - Browser: Google Chrome versi 100+ atau Microsoft Edge.\n  - Izin Wajib: Pada Android 12+, buka Pengaturan HP > Aplikasi > Chrome > Izin (Permissions), lalu aktifkan izin "Perangkat di Sekitar (Nearby Devices)" dan "Lokasi (Location)".\n  - Kabel USB: Mendukung koneksi kabel langsung via adaptor USB OTG (On-The-Go).\n• PERANGKAT APPLE iOS (iPhone & iPad):\n  - Sistem Operasi: iOS 14.0 atau iPadOS 14+.\n  - Browser Khusus BLE: Karena Apple Safari membatasi Web Bluetooth langsung, gunakan browser gratis "Bluefy - Web BLE Browser" (tersedia di Apple App Store) untuk membuka aplikasi kasir Well POS.\n  - Printer Jaringan / AirPrint: Jika menggunakan printer jaringan LAN/WiFi, dapat dicetak langsung via dialog bawaan iOS.',
+        highlight: 'Android 10+ dengan Chrome 100+ atau iOS dengan Bluefy menjamin stabilitas Dual-Printer 100%.',
+      },
+    ],
+    tips: 'Gunakan kertas stiker thermal tipe "Direct Thermal" berpelindung tahan air dan tahan minyak agar tulisan racikan kopi tidak luntur saat cup terkena kondensasi es dingin.',
+    warning: 'Pastikan sensor gap (jarak antar label 2mm) pada printer label dalam kondisi bersih dari sisa lem agar printer dapat mendeteksi batas potongan label dengan presisi.',
   },
 ];
 

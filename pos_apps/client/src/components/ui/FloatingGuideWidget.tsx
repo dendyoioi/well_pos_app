@@ -365,7 +365,7 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
             >
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-900" />
-                <span>Buka Seluruh Panduan (28 Bab Lengkap)</span>
+                <span>Buka Seluruh Panduan (29 Bab Lengkap)</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             </button>

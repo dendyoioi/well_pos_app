@@ -1,4 +1,5 @@
 import type { Product } from './product';
+import type { ReceiptConfig } from './outlet';
 
 export interface CartItem {
   cartItemId?: string; // unique key for items with different modifiers
@@ -156,19 +157,7 @@ export interface Order {
     name: string;
     address: string | null;
     phone: string | null;
-    receiptConfig?: {
-      paperSize: '58mm' | '80mm';
-      footerText?: string;
-      showQueueNumber?: boolean;
-      showWatermark?: boolean;
-      whatsappConfig?: {
-        enabled?: boolean;
-        apiKey?: string;
-        senderNumber?: string;
-        usePlatformGateway?: boolean;
-        usePlatformFallback?: boolean;
-      };
-    } | null;
+    receiptConfig?: ReceiptConfig | null;
   };
   cashier?: {
     id?: string;

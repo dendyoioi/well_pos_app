@@ -20,12 +20,14 @@ import {
   RefreshCw,
   AlertCircle,
   ArrowLeft,
+  Tag,
 } from 'lucide-react';
 import type { Order } from '../types/order';
 import { generateReceiptPdf } from '../utils/receiptPdf';
 import { usePlan } from '../hooks/usePlan';
 import { api } from '../services/api';
 import { useThermalPrinterHub } from '../hooks/useThermalPrinterHub';
+import { getCupItemsFromOrder } from '../utils/cupLabel';
 import { WhatsAppInput } from './ui/WhatsAppInput';
 
 interface OrderSuccessModalProps {
@@ -71,6 +73,53 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   // Hardware Thermal Printer Hub Hook & Auto-print State
   const printerHub = useThermalPrinterHub();
   const [autoPrinted, setAutoPrinted] = useState(false);
+  const [cupAutoPrinted, setCupAutoPrinted] = useState(false);
+
+  // Cup Label Sticker Setup (Opt-in from Backoffice receiptConfig)
+  const cupLabelConfig = order?.outlet?.receiptConfig?.cupLabelConfig;
+  const isCupLabelEnabled = Boolean(cupLabelConfig?.enabled);
+  const cupItems = React.useMemo(() => {
+    if (!isCupLabelEnabled || !order) return [];
+    return getCupItemsFromOrder(order, cupLabelConfig?.onlyBeverages ?? true);
+  }, [order, isCupLabelEnabled, cupLabelConfig?.onlyBeverages]);
+  const cupCount = cupItems.length;
+
+  const handlePrintCupLabels = async () => {
+    if (!order || cupCount === 0) return;
+    try {
+      await printerHub.printCupLabels(order, {
+        onlyBeverages: cupLabelConfig?.onlyBeverages ?? true,
+        paperSize: cupLabelConfig?.paperSize || '40x30mm',
+      });
+    } catch (err: any) {
+      console.warn('Print cup label error:', err);
+    }
+  };
+
+  // Otomasi Cetak Stiker Cup Barista
+  React.useEffect(() => {
+    if (
+      isOpen &&
+      order &&
+      isCupLabelEnabled &&
+      cupCount > 0 &&
+      cupLabelConfig?.autoPrintOnCheckout !== false &&
+      printerHub.isLabelConnected &&
+      !cupAutoPrinted
+    ) {
+      setCupAutoPrinted(true);
+      printerHub.printCupLabels(order, {
+        onlyBeverages: cupLabelConfig?.onlyBeverages ?? true,
+        paperSize: cupLabelConfig?.paperSize || '40x30mm',
+      }).catch((e) => console.warn('Auto print cup label error:', e));
+    }
+  }, [isOpen, order?.id, isCupLabelEnabled, cupCount, cupLabelConfig, printerHub.isLabelConnected, cupAutoPrinted]);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setCupAutoPrinted(false);
+    }
+  }, [isOpen]);
 
   // Digital Receipt View Modes (Zero Stacked Modals Policy)
   type ReceiptModalView = 'RECEIPT' | 'WHATSAPP' | 'EMAIL';
@@ -951,6 +1000,54 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Tombol Cetak Stiker Cup Barista (Opt-in: Hanya jika diaktifkan & ada item cup) */}
+          {isCupLabelEnabled && cupCount > 0 && (
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={handlePrintCupLabels}
+                disabled={printerHub.isPrintingLabel}
+                className={`w-full py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-[0.99] disabled:opacity-50 ${
+                  printerHub.isLabelConnected
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300'
+                }`}
+              >
+                {printerHub.isPrintingLabel ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-200" />
+                    <span>Mencetak {cupCount} Stiker Cup Barista...</span>
+                  </>
+                ) : printerHub.labelPrintSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-emerald-700">✓ {cupCount} Stiker Cup Berhasil Dicetak!</span>
+                  </>
+                ) : (
+                  <>
+                    <Tag className="w-4 h-4 text-amber-400" />
+                    <span>
+                      🏷️ Cetak Stiker Label ({cupCount} Cup Minuman)
+                      {printerHub.isLabelConnected ? ` • ${printerHub.labelPrinter.deviceName || 'Label'}` : ''}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              {printerHub.labelPrintError && (
+                <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in">
+                  <X className="w-3.5 h-3.5 shrink-0" />
+                  <span>{printerHub.labelPrintError}</span>
+                </div>
+              )}
+              {cupAutoPrinted && (
+                <div className="text-[10px] text-center font-bold text-amber-700 animate-in fade-in">
+                  ✓ Otomasi Stiker Cup Aktif: {cupCount} label otomatis dikirim ke printer barista
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-4 gap-1.5">
             {/* Tombol Cetak Thermal Browser */}
