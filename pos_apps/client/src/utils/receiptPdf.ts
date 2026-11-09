@@ -333,6 +333,10 @@ export const generateReceiptPdf = (
     doc.setFont('courier', 'bold');
     doc.setFontSize(paperSize === '58mm' ? 5.5 : 6.5);
     doc.text('Powered by Well POS', widthMm / 2, y, { align: 'center' });
+    y += 2.8;
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(paperSize === '58mm' ? 4.8 : 5.8);
+    doc.text('wellpos.id', widthMm / 2, y, { align: 'center' });
   }
 
   // Unduh File PDF

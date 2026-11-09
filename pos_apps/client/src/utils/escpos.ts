@@ -272,7 +272,9 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
   // 7. Footer Struk
   builder.divider('-');
   builder.align('center');
-  const footer = options.footerText || 'Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @wellpos.id';
+  const footer = options.footerText !== undefined && options.footerText !== null
+    ? options.footerText
+    : 'Terima kasih atas kunjungan Anda!';
   const footerLines = footer.split('\n');
   for (const fLine of footerLines) {
     if (fLine.trim()) {
@@ -281,6 +283,7 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
   }
   if (options.showWatermark !== false) {
     builder.line('Powered by Well POS');
+    builder.line('wellpos.id');
   }
 
   // Berikan spasi kosong & potong

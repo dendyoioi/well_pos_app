@@ -53,7 +53,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   serviceCharge,
   grandTotal,
   paymentMethod = 'QRIS STATIS LUNAS',
-  footerText = 'Terima kasih atas kunjungan Anda!\nFollow IG kami: @wellpos.id',
+  footerText = 'Terima kasih atas kunjungan Anda!',
   showControls = true,
 }) => {
   // Sample default items if not provided
@@ -259,8 +259,9 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
 
           {/* Signature / Watermark */}
           {showWatermark && (
-            <div className="text-center text-[8px] text-slate-400 pt-1">
-              Powered by Well POS
+            <div className="text-center text-[8px] text-slate-400 pt-1 space-y-0.5">
+              <div>Powered by Well POS</div>
+              <div>wellpos.id</div>
             </div>
           )}
         </div>

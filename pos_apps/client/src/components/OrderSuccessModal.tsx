@@ -519,7 +519,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       `PEMBAYARAN:\n${paymentsText}\n` +
       `--------------------------------\n` +
       `Terima kasih telah berbelanja di ${outletName}! Simpan struk ini sebagai bukti transaksi resmi.` +
-      (showWatermark ? `\n\n_Powered by Well POS_` : '');
+      (showWatermark ? `\n\n_Powered by Well POS_\n_wellpos.id_` : '');
   };
 
   const handleOpenWhatsAppReal = () => {
@@ -994,8 +994,9 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
           <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-0.5">
             <div>Terima kasih telah berbelanja! Bukti pembayaran yang sah.</div>
             {showWatermark && (
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wide pt-1">
-                Powered by Well POS
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wide pt-1 space-y-0.5">
+                <div>Powered by Well POS</div>
+                <div>wellpos.id</div>
               </div>
             )}
           </div>

@@ -182,7 +182,7 @@ export class WhatsAppService {
       `Terima kasih telah berbelanja di ${order.outlet?.name || 'kami'}!\nSimpan bukti transaksi ini sebagai bukti pembayaran resmi.`;
 
     const showWatermark = order.outlet?.receiptConfig?.showWatermark !== false;
-    const watermarkText = showWatermark ? '\n\n_Powered by Well POS_' : '';
+    const watermarkText = showWatermark ? '\n\n_Powered by Well POS_\n_wellpos.id_' : '';
 
     return (
       `*${outletName}*\n` +

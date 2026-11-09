@@ -42,7 +42,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   const [testingBt, setTestingBt] = useState(false);
   const [kickingBt, setKickingBt] = useState(false);
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
-  const [footerText, setFooterText] = useState('Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @wellpos.id');
+  const [footerText, setFooterText] = useState('Terima kasih atas kunjungan Anda!');
   const [showQueueNumber, setShowQueueNumber] = useState(true);
   const [showWatermark, setShowWatermark] = useState(true);
 
@@ -562,20 +562,20 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
               rows={3}
               value={footerText}
               onChange={(e) => setFooterText(e.target.value)}
-              placeholder="Contoh: Terima kasih atas kunjungan Anda!\nFollow Instagram kami: @toko.anda"
+              placeholder="Contoh: Terima kasih atas kunjungan Anda!"
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-hidden font-mono"
             />
           </div>
 
-          {/* 6. Watermark Struk Kasir ("Powered by Well POS") */}
+          {/* 6. Watermark Struk Kasir ("Powered by Well POS - wellpos.id") */}
           <div className="pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
-                  6. Watermark Struk (&quot;Powered by Well POS&quot;)
+                  6. Watermark Struk (&quot;Powered by Well POS - wellpos.id&quot;)
                 </label>
                 <p className="text-xs text-slate-500 font-medium">
-                  Tampilkan identitas branding &quot;Powered by Well POS&quot; di bagian paling bawah struk kasir, nota PDF, cetak printer thermal fisik, dan pesan WhatsApp.
+                  Tampilkan identitas branding &quot;Powered by Well POS&quot; dan &quot;wellpos.id&quot; di bagian paling bawah struk kasir, nota PDF, cetak printer thermal fisik, dan pesan WhatsApp.
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
