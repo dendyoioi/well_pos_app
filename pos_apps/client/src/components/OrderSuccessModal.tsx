@@ -100,6 +100,19 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   const handlePrintCupLabels = async () => {
     if (!order || cupCount === 0) return;
     try {
+      if (!printerHub.isLabelConnected) {
+        const reconnected = await printerHub.tryAutoReconnectLabel();
+        if (!reconnected) {
+          if (printerHub.labelPrinter.connectionType === 'usb' && printerHub.isUsbSupported) {
+            const ok = await printerHub.connectLabelUsb();
+            if (!ok) return;
+          } else if (printerHub.isBluetoothSupported) {
+            const ok = await printerHub.connectLabelBluetooth();
+            if (!ok) return;
+          }
+        }
+      }
+
       await printerHub.printCupLabels(order, {
         onlyBeverages: cupLabelConfig?.onlyBeverages ?? true,
         paperSize: cupLabelConfig?.paperSize || '40x30mm',
@@ -209,6 +222,21 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
 
   const handleDirectHardwarePrint = async () => {
     try {
+      if (!printerHub.isConnected) {
+        // Coba auto reconnect dulu tanpa dialog
+        const reconnected = await printerHub.tryAutoReconnect();
+        if (!reconnected) {
+          // Jika belum terhubung, hubungkan langsung ke printer hardware (Bukan print dialog browser!)
+          if (printerHub.connectionType === 'usb' && printerHub.isUsbSupported) {
+            const ok = await printerHub.connectUsb();
+            if (!ok) return;
+          } else if (printerHub.isBluetoothSupported) {
+            const ok = await printerHub.connectBluetooth();
+            if (!ok) return;
+          }
+        }
+      }
+
       await printerHub.printReceipt(order, {
         paperSize,
         showQueueNumber: order?.outlet?.receiptConfig?.showQueueNumber !== false,
@@ -230,14 +258,28 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   React.useEffect(() => {
     if (isOpen && order && printerHub.autoPrintEnabled && !autoPrinted) {
       setAutoPrinted(true);
-      printerHub.printReceipt(order, {
-        paperSize,
-        showQueueNumber: order?.outlet?.receiptConfig?.showQueueNumber !== false,
-        showWatermark,
-        footerText: order?.outlet?.receiptConfig?.footerText,
-      }).catch((e) => console.warn('Auto-print error:', e));
+      if (printerHub.isConnected) {
+        printerHub.printReceipt(order, {
+          paperSize,
+          showQueueNumber: order?.outlet?.receiptConfig?.showQueueNumber !== false,
+          showWatermark,
+          footerText: order?.outlet?.receiptConfig?.footerText,
+        }).catch((e) => console.warn('Auto-print error:', e));
+      } else {
+        // Coba auto-reconnect di latar belakang tanpa memunculkan dialog cetak browser
+        printerHub.tryAutoReconnect().then((connected) => {
+          if (connected) {
+            printerHub.printReceipt(order, {
+              paperSize,
+              showQueueNumber: order?.outlet?.receiptConfig?.showQueueNumber !== false,
+              showWatermark,
+              footerText: order?.outlet?.receiptConfig?.footerText,
+            }).catch((e) => console.warn('Auto-print error:', e));
+          }
+        });
+      }
     }
-  }, [isOpen, order?.id, printerHub.autoPrintEnabled, autoPrinted]);
+  }, [isOpen, order?.id, printerHub.autoPrintEnabled, printerHub.isConnected, autoPrinted]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -993,10 +1035,15 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
                     {printerHub.deviceName || paperSize})
                   </span>
                 </>
+              ) : printerHub.deviceName ? (
+                <>
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  <span>⚡ Sambungkan &amp; Cetak Langsung ({printerHub.deviceName})</span>
+                </>
               ) : (
                 <>
                   <Printer className="w-4 h-4 text-blue-300" />
-                  <span>⚡ Cetak Struk Langsung ({paperSize})</span>
+                  <span>⚡ Hubungkan &amp; Cetak Langsung ({paperSize})</span>
                 </>
               )}
             </button>

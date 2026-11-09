@@ -206,6 +206,110 @@ class ThermalPrinterHubService {
   // =========================================================================
 
   /**
+   * Helper internal: Menghubungkan ke instance Web Bluetooth Device
+   */
+  async connectBtDevice(device: any): Promise<boolean> {
+    this.btDevice = device;
+    const devName = device.name || 'Printer Bluetooth';
+    this.state.deviceName = devName;
+
+    device.addEventListener('gattserverdisconnected', () => {
+      this.btCharacteristic = null;
+      this.state.status = 'disconnected';
+      this.notify();
+    });
+
+    const server = await device.gatt.connect();
+    const targetCharacteristic = await this.findWritableCharacteristic(server);
+
+    if (!targetCharacteristic) {
+      throw new Error('Tidak ditemukan saluran transmisi ESC/POS yang cocok pada printer Bluetooth ini.');
+    }
+
+    this.btCharacteristic = targetCharacteristic;
+    this.state.connectionType = 'bluetooth';
+    this.state.status = 'connected';
+    this.state.lastError = null;
+    this.savePreferences();
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Helper internal: Menghubungkan ke instance WebUSB Device
+   */
+  async connectUsbDevice(device: any): Promise<boolean> {
+    await device.open();
+    if (device.configuration === null) {
+      await device.selectConfiguration(1);
+    }
+
+    const { matchedInterface, matchedEndpointNumber } = this.findUsbBulkOutEndpoint(device);
+
+    if (!matchedInterface || matchedEndpointNumber === null) {
+      await device.close();
+      throw new Error('Perangkat USB yang dipilih tidak memiliki saluran kirim data printer (Bulk OUT Endpoint).');
+    }
+
+    await device.claimInterface(matchedInterface.interfaceNumber);
+
+    this.usbDevice = device;
+    this.usbInterfaceNumber = matchedInterface.interfaceNumber;
+    this.usbEndpointNumber = matchedEndpointNumber;
+
+    const devName = device.productName || device.manufacturerName || 'Printer USB Thermal';
+    this.state.deviceName = devName;
+    this.state.connectionType = 'usb';
+    this.state.status = 'connected';
+    this.state.lastError = null;
+    this.savePreferences();
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Coba auto-reconnect printer struk yang tersimpan tanpa membuka pop-up pemilih
+   */
+  async tryAutoReconnect(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    if (this.state.status === 'connected') return true;
+
+    // 1. Coba auto-reconnect WebUSB jika sebelumnya tipe USB
+    if (this.state.connectionType === 'usb' && this.isUsbSupported()) {
+      try {
+        const devices = await (navigator as any).usb.getDevices();
+        if (devices && devices.length > 0) {
+          const target = devices.find((d: any) => d.productName === this.state.deviceName) || devices[0];
+          if (target) {
+            return await this.connectUsbDevice(target);
+          }
+        }
+      } catch (err) {
+        console.warn('[PrinterHub] Auto-reconnect USB failed:', err);
+      }
+    }
+
+    // 2. Coba auto-reconnect Web Bluetooth jika didukung (Chromium getDevices)
+    if (this.state.connectionType === 'bluetooth' && this.isBluetoothSupported()) {
+      try {
+        if (typeof (navigator as any).bluetooth?.getDevices === 'function') {
+          const devices = await (navigator as any).bluetooth.getDevices();
+          if (devices && devices.length > 0) {
+            const target = devices.find((d: any) => d.name === this.state.deviceName) || devices[0];
+            if (target) {
+              return await this.connectBtDevice(target);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[PrinterHub] Auto-reconnect Bluetooth failed:', err);
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Hubungkan printer struk via Web Bluetooth (BLE)
    */
   async connectBluetooth(): Promise<boolean> {
@@ -235,32 +339,7 @@ class ThermalPrinterHubService {
         throw new Error('Tidak ada perangkat Bluetooth yang dipilih.');
       }
 
-      this.btDevice = device;
-      const devName = device.name || 'Printer Bluetooth';
-      this.state.deviceName = devName;
-
-      device.addEventListener('gattserverdisconnected', () => {
-        this.btCharacteristic = null;
-        this.state.status = 'disconnected';
-        this.notify();
-      });
-
-      const server = await device.gatt.connect();
-
-      // Scan characteristics for writable endpoint
-      let targetCharacteristic = await this.findWritableCharacteristic(server);
-
-      if (!targetCharacteristic) {
-        throw new Error('Tidak ditemukan saluran transmisi ESC/POS yang cocok pada printer Bluetooth ini.');
-      }
-
-      this.btCharacteristic = targetCharacteristic;
-      this.state.connectionType = 'bluetooth';
-      this.state.status = 'connected';
-      this.state.lastError = null;
-      this.savePreferences();
-      this.notify();
-      return true;
+      return await this.connectBtDevice(device);
     } catch (err: any) {
       this.state.status = 'error';
       this.state.lastError = err.message || 'Gagal menghubungkan ke printer Bluetooth.';
@@ -293,32 +372,7 @@ class ThermalPrinterHubService {
         throw new Error('Tidak ada perangkat USB yang dipilih.');
       }
 
-      await device.open();
-      if (device.configuration === null) {
-        await device.selectConfiguration(1);
-      }
-
-      const { matchedInterface, matchedEndpointNumber } = this.findUsbBulkOutEndpoint(device);
-
-      if (!matchedInterface || matchedEndpointNumber === null) {
-        await device.close();
-        throw new Error('Perangkat USB yang dipilih tidak memiliki saluran kirim data printer (Bulk OUT Endpoint).');
-      }
-
-      await device.claimInterface(matchedInterface.interfaceNumber);
-
-      this.usbDevice = device;
-      this.usbInterfaceNumber = matchedInterface.interfaceNumber;
-      this.usbEndpointNumber = matchedEndpointNumber;
-
-      const devName = device.productName || device.manufacturerName || 'Printer USB Thermal';
-      this.state.deviceName = devName;
-      this.state.connectionType = 'usb';
-      this.state.status = 'connected';
-      this.state.lastError = null;
-      this.savePreferences();
-      this.notify();
-      return true;
+      return await this.connectUsbDevice(device);
     } catch (err: any) {
       this.state.status = 'error';
       this.state.lastError = err.message || 'Gagal menghubungkan printer kabel USB.';
@@ -382,6 +436,107 @@ class ThermalPrinterHubService {
   // =========================================================================
 
   /**
+   * Helper internal: Menghubungkan ke instance Web Bluetooth Device untuk Label
+   */
+  async connectLabelBtDevice(device: any): Promise<boolean> {
+    this.labelBtDevice = device;
+    const devName = device.name || 'Printer Label Cup';
+    this.state.labelPrinter.deviceName = devName;
+
+    device.addEventListener('gattserverdisconnected', () => {
+      this.labelBtCharacteristic = null;
+      this.state.labelPrinter.status = 'disconnected';
+      this.notify();
+    });
+
+    const server = await device.gatt.connect();
+    const targetCharacteristic = await this.findWritableCharacteristic(server);
+
+    if (!targetCharacteristic) {
+      throw new Error('Tidak ditemukan saluran transmisi data pada printer label Bluetooth ini.');
+    }
+
+    this.labelBtCharacteristic = targetCharacteristic;
+    this.state.labelPrinter.connectionType = 'bluetooth';
+    this.state.labelPrinter.status = 'connected';
+    this.state.labelPrinter.lastError = null;
+    this.savePreferences();
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Helper internal: Menghubungkan ke instance WebUSB Device untuk Label
+   */
+  async connectLabelUsbDevice(device: any): Promise<boolean> {
+    await device.open();
+    if (device.configuration === null) {
+      await device.selectConfiguration(1);
+    }
+
+    const { matchedInterface, matchedEndpointNumber } = this.findUsbBulkOutEndpoint(device);
+    if (!matchedInterface || matchedEndpointNumber === null) {
+      await device.close();
+      throw new Error('Printer USB Label tidak memiliki endpoint kirim data (Bulk OUT).');
+    }
+
+    await device.claimInterface(matchedInterface.interfaceNumber);
+
+    this.labelUsbDevice = device;
+    this.labelUsbInterfaceNumber = matchedInterface.interfaceNumber;
+    this.labelUsbEndpointNumber = matchedEndpointNumber;
+
+    const devName = device.productName || device.manufacturerName || 'Printer Label USB';
+    this.state.labelPrinter.deviceName = devName;
+    this.state.labelPrinter.connectionType = 'usb';
+    this.state.labelPrinter.status = 'connected';
+    this.state.labelPrinter.lastError = null;
+    this.savePreferences();
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Coba auto-reconnect printer stiker label tanpa membuka pop-up pemilih
+   */
+  async tryAutoReconnectLabel(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    if (this.state.labelPrinter.status === 'connected') return true;
+
+    if (this.state.labelPrinter.connectionType === 'usb' && this.isUsbSupported()) {
+      try {
+        const devices = await (navigator as any).usb.getDevices();
+        if (devices && devices.length > 0) {
+          const target = devices.find((d: any) => d.productName === this.state.labelPrinter.deviceName) || devices[0];
+          if (target) {
+            return await this.connectLabelUsbDevice(target);
+          }
+        }
+      } catch (err) {
+        console.warn('[PrinterHub] Auto-reconnect Label USB error:', err);
+      }
+    }
+
+    if (this.state.labelPrinter.connectionType === 'bluetooth' && this.isBluetoothSupported()) {
+      try {
+        if (typeof (navigator as any).bluetooth?.getDevices === 'function') {
+          const devices = await (navigator as any).bluetooth.getDevices();
+          if (devices && devices.length > 0) {
+            const target = devices.find((d: any) => d.name === this.state.labelPrinter.deviceName) || devices[0];
+            if (target) {
+              return await this.connectLabelBtDevice(target);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[PrinterHub] Auto-reconnect Label Bluetooth error:', err);
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Hubungkan printer stiker label cup via Web Bluetooth (BLE)
    */
   async connectLabelBluetooth(): Promise<boolean> {
@@ -411,30 +566,7 @@ class ThermalPrinterHubService {
         throw new Error('Tidak ada perangkat Bluetooth label yang dipilih.');
       }
 
-      this.labelBtDevice = device;
-      const devName = device.name || 'Printer Label Cup';
-      this.state.labelPrinter.deviceName = devName;
-
-      device.addEventListener('gattserverdisconnected', () => {
-        this.labelBtCharacteristic = null;
-        this.state.labelPrinter.status = 'disconnected';
-        this.notify();
-      });
-
-      const server = await device.gatt.connect();
-      const targetCharacteristic = await this.findWritableCharacteristic(server);
-
-      if (!targetCharacteristic) {
-        throw new Error('Tidak ditemukan saluran transmisi data pada printer label Bluetooth ini.');
-      }
-
-      this.labelBtCharacteristic = targetCharacteristic;
-      this.state.labelPrinter.connectionType = 'bluetooth';
-      this.state.labelPrinter.status = 'connected';
-      this.state.labelPrinter.lastError = null;
-      this.savePreferences();
-      this.notify();
-      return true;
+      return await this.connectLabelBtDevice(device);
     } catch (err: any) {
       this.state.labelPrinter.status = 'error';
       this.state.labelPrinter.lastError = err.message || 'Gagal menghubungkan printer label Bluetooth.';
@@ -467,31 +599,7 @@ class ThermalPrinterHubService {
         throw new Error('Tidak ada perangkat USB label yang dipilih.');
       }
 
-      await device.open();
-      if (device.configuration === null) {
-        await device.selectConfiguration(1);
-      }
-
-      const { matchedInterface, matchedEndpointNumber } = this.findUsbBulkOutEndpoint(device);
-      if (!matchedInterface || matchedEndpointNumber === null) {
-        await device.close();
-        throw new Error('Printer USB Label tidak memiliki endpoint kirim data (Bulk OUT).');
-      }
-
-      await device.claimInterface(matchedInterface.interfaceNumber);
-
-      this.labelUsbDevice = device;
-      this.labelUsbInterfaceNumber = matchedInterface.interfaceNumber;
-      this.labelUsbEndpointNumber = matchedEndpointNumber;
-
-      const devName = device.productName || device.manufacturerName || 'Printer Label USB';
-      this.state.labelPrinter.deviceName = devName;
-      this.state.labelPrinter.connectionType = 'usb';
-      this.state.labelPrinter.status = 'connected';
-      this.state.labelPrinter.lastError = null;
-      this.savePreferences();
-      this.notify();
-      return true;
+      return await this.connectLabelUsbDevice(device);
     } catch (err: any) {
       this.state.labelPrinter.status = 'error';
       this.state.labelPrinter.lastError = err.message || 'Gagal menghubungkan printer label USB.';

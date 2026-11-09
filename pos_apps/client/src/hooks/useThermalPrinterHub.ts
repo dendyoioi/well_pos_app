@@ -20,7 +20,18 @@ export function useThermalPrinterHub() {
     const unsubscribe = thermalPrinterHub.addListener((newState) => {
       setState(newState);
     });
+    // Auto-reconnect hardware yang telah di-pair sebelumnya tanpa dialog pop-up
+    thermalPrinterHub.tryAutoReconnect().catch(() => {});
+    thermalPrinterHub.tryAutoReconnectLabel().catch(() => {});
     return unsubscribe;
+  }, []);
+
+  const tryAutoReconnect = useCallback(async () => {
+    return await thermalPrinterHub.tryAutoReconnect();
+  }, []);
+
+  const tryAutoReconnectLabel = useCallback(async () => {
+    return await thermalPrinterHub.tryAutoReconnectLabel();
   }, []);
 
   // Primary (Receipt) connection methods
@@ -241,6 +252,7 @@ export function useThermalPrinterHub() {
     isUsbSupported: thermalPrinterHub.isUsbSupported(),
 
     // Primary printer actions
+    tryAutoReconnect,
     connectBluetooth,
     connectUsb,
     disconnect,
@@ -253,6 +265,7 @@ export function useThermalPrinterHub() {
     kickCashDrawer,
 
     // Label printer actions
+    tryAutoReconnectLabel,
     connectLabelBluetooth,
     connectLabelUsb,
     disconnectLabel,
