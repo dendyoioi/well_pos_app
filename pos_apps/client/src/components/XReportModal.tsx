@@ -8,6 +8,8 @@ import {
   AlertCircle,
   Loader2,
   Wallet,
+  Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { XReportData } from '../types/shift';
@@ -49,21 +51,49 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
   }, [isOpen]);
 
   const printerHub = useThermalPrinterHub();
+  const [printSuccessMsg, setPrintSuccessMsg] = useState<string | null>(null);
+  const [printErrMsg, setPrintErrMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handlePrint = async () => {
+  const handleDirectPrint = async () => {
     if (!data) return;
+    setPrintErrMsg(null);
+    setPrintSuccessMsg(null);
     try {
-      await printerHub.printXZReport(data, 'X', {
+      if (!printerHub.isConnected) {
+        // Coba auto reconnect dulu
+        const reconnected = await printerHub.tryAutoReconnect();
+        if (!reconnected) {
+          if (printerHub.connectionType === 'usb' && printerHub.isUsbSupported) {
+            const ok = await printerHub.connectUsb();
+            if (!ok) return;
+          } else if (printerHub.isBluetoothSupported) {
+            const ok = await printerHub.connectBluetooth();
+            if (!ok) return;
+          }
+        }
+      }
+
+      const res = await printerHub.printXZReport(data, 'X', {
         paperSize: paperWidth,
       });
-    } catch {
-      printElementViaThermalIframe('x-report-printable', {
-        paperWidth,
-        title: `X-Report Laporan Berjalan - ${data?.outlet?.name || 'Well POS'}`,
-      });
+
+      if (res.mode === 'bluetooth' || res.mode === 'usb') {
+        setPrintSuccessMsg(`✓ Slip X-Report Berhasil Dicetak ke Printer ${res.mode === 'bluetooth' ? 'Bluetooth' : 'USB'}!`);
+        setTimeout(() => setPrintSuccessMsg(null), 3500);
+      }
+    } catch (err: any) {
+      setPrintErrMsg(err.message || 'Gagal mencetak ke printer');
+      setTimeout(() => setPrintErrMsg(null), 4000);
     }
+  };
+
+  const handleBrowserPrint = () => {
+    printElementViaThermalIframe('x-report-printable', {
+      paperWidth,
+      title: `X-Report Laporan Berjalan - ${data?.outlet?.name || 'Well POS'}`,
+    });
   };
 
   return (
@@ -320,22 +350,78 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between no-print">
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            Tutup
-          </button>
+        <div className="p-4 bg-white border-t border-slate-200 flex flex-col gap-2.5 no-print">
+          {printSuccessMsg && (
+            <div className="text-[11px] font-bold text-center text-emerald-700 bg-emerald-50 border border-emerald-200 py-1.5 px-3 rounded-xl animate-in fade-in flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{printSuccessMsg}</span>
+            </div>
+          )}
+          {printErrMsg && (
+            <div className="text-[11px] font-bold text-center text-rose-700 bg-rose-50 border border-rose-200 py-1.5 px-3 rounded-xl animate-in fade-in">
+              {printErrMsg}
+            </div>
+          )}
 
-          <button
-            onClick={handlePrint}
-            disabled={!data}
-            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            <Printer className="w-4 h-4 stroke-[2.5]" />
-            <span>Cetak Slip X-Report</span>
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              Tutup
+            </button>
+
+            <div className="flex items-center gap-2">
+              {/* Tombol Cadangan Browser */}
+              <button
+                type="button"
+                onClick={handleBrowserPrint}
+                disabled={!data}
+                className="px-3 py-2.5 border border-slate-200 hover:border-blue-300 bg-white hover:bg-blue-50/50 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title="Cetak via dialog browser standar"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                <span>Browser</span>
+              </button>
+
+              {/* Tombol Utama: Direct Hardware (Bluetooth / USB) Print */}
+              <button
+                type="button"
+                onClick={handleDirectPrint}
+                disabled={!data || printerHub.isPrinting}
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-[0.99] ${
+                  printerHub.isConnected
+                    ? 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
+                    : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
+                }`}
+              >
+                {printerHub.isPrinting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-200" />
+                    <span>Mencetak X-Report...</span>
+                  </>
+                ) : printerHub.isConnected ? (
+                  <>
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span>
+                      ⚡ Cetak Langsung {printerHub.connectionType === 'usb' ? 'USB' : 'Bluetooth'} (
+                      {printerHub.deviceName || paperWidth})
+                    </span>
+                  </>
+                ) : printerHub.deviceName ? (
+                  <>
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span>⚡ Sambungkan &amp; Cetak ({printerHub.deviceName})</span>
+                  </>
+                ) : (
+                  <>
+                    <Printer className="w-4 h-4 text-blue-300" />
+                    <span>⚡ Hubungkan &amp; Cetak ({paperWidth})</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

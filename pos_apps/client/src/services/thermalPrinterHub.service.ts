@@ -834,17 +834,28 @@ class ThermalPrinterHubService {
     reportData: any,
     type: 'X' | 'Z',
     options: EscPosOptions = {}
-  ): Promise<{ success: boolean; mode: 'bluetooth' | 'usb' | 'system' }> {
+  ): Promise<{ success: boolean; mode: 'bluetooth' | 'usb' | 'system'; error?: string }> {
     const paperSize = options.paperSize || this.state.paperSize;
-    const isHardwareConnected = this.state.status === 'connected';
+    let isHardwareConnected = this.state.status === 'connected';
+
+    // Coba auto-reconnect hardware jika sebelumnya pernah di-pair
+    if (!isHardwareConnected) {
+      isHardwareConnected = await this.tryAutoReconnect();
+    }
 
     if (isHardwareConnected && (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')) {
       try {
         const rawBytes = buildXZReportEscPos(reportData, type, { ...options, paperSize });
         await this.printRaw(rawBytes);
         return { success: true, mode: this.state.connectionType };
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Hardware X/Z report print failed, falling back to iframe:', err);
+        const elementId = type === 'X' ? 'x-report-printable' : 'z-report-printable';
+        printElementViaThermalIframe(elementId, {
+          paperWidth: paperSize,
+          title: `${type}-Report Kasir`,
+        });
+        return { success: true, mode: 'system', error: err.message };
       }
     }
 

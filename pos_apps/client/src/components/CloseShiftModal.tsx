@@ -15,6 +15,8 @@ import {
   Calculator,
   Coins,
   RotateCcw,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Shift, ZReportData } from '../types/shift';
@@ -55,6 +57,8 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const [zReportData, setZReportData] = useState<ZReportData | null>(null);
   const [paperWidth, setPaperWidth] = useState<'58mm' | '80mm'>('80mm');
   const printerHub = useThermalPrinterHub();
+  const [printSuccessMsg, setPrintSuccessMsg] = useState<string | null>(null);
+  const [printErrMsg, setPrintErrMsg] = useState<string | null>(null);
   const [showOrdersList, setShowOrdersList] = useState<boolean>(false);
   const [showDenomCalculator, setShowDenomCalculator] = useState<boolean>(false);
   const [denominations, setDenominations] = useState<{ [key: number]: number }>({
@@ -199,18 +203,44 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
     }
   };
 
-  const handlePrint = async () => {
+  const handleDirectPrint = async () => {
     if (!zReportData) return;
+    setPrintErrMsg(null);
+    setPrintSuccessMsg(null);
     try {
-      await printerHub.printXZReport(zReportData, 'Z', {
+      if (!printerHub.isConnected) {
+        // Coba auto reconnect dulu
+        const reconnected = await printerHub.tryAutoReconnect();
+        if (!reconnected) {
+          if (printerHub.connectionType === 'usb' && printerHub.isUsbSupported) {
+            const ok = await printerHub.connectUsb();
+            if (!ok) return;
+          } else if (printerHub.isBluetoothSupported) {
+            const ok = await printerHub.connectBluetooth();
+            if (!ok) return;
+          }
+        }
+      }
+
+      const res = await printerHub.printXZReport(zReportData, 'Z', {
         paperSize: paperWidth,
       });
-    } catch {
-      printElementViaThermalIframe('z-report-printable', {
-        paperWidth,
-        title: `Z-Report Tutup Shift - ${currentShift?.outlet?.name || 'Well POS'}`,
-      });
+
+      if (res.mode === 'bluetooth' || res.mode === 'usb') {
+        setPrintSuccessMsg(`✓ Slip Z-Report Berhasil Dicetak ke Printer ${res.mode === 'bluetooth' ? 'Bluetooth' : 'USB'}!`);
+        setTimeout(() => setPrintSuccessMsg(null), 3500);
+      }
+    } catch (err: any) {
+      setPrintErrMsg(err.message || 'Gagal mencetak ke printer');
+      setTimeout(() => setPrintErrMsg(null), 4000);
     }
+  };
+
+  const handleBrowserPrint = () => {
+    printElementViaThermalIframe('z-report-printable', {
+      paperWidth,
+      title: `Z-Report Tutup Shift - ${currentShift?.outlet?.name || 'Well POS'}`,
+    });
   };
 
   const handleFinish = () => {
@@ -839,18 +869,79 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               </div>
             </div>
 
+            {/* Feedback Cetak Langsung */}
+            {(printSuccessMsg || printErrMsg) && (
+              <div className="px-4 sm:px-6 pt-3 no-print">
+                {printSuccessMsg && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center justify-between">
+                    <span>{printSuccessMsg}</span>
+                  </div>
+                )}
+                {printErrMsg && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold flex items-center justify-between">
+                    <span>{printErrMsg}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Sticky Actions for Step 2 */}
-            <div className="p-4 sm:px-6 bg-white border-t border-slate-200 flex items-center justify-center gap-3 no-print shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] w-full">
+            <div className="p-4 sm:px-6 bg-white border-t border-slate-200 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 no-print shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] w-full">
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                {/* Tombol Cadangan Browser */}
+                <button
+                  type="button"
+                  onClick={handleBrowserPrint}
+                  disabled={!zReportData}
+                  className="px-3 py-2.5 border border-slate-200 hover:border-blue-300 bg-white hover:bg-blue-50/50 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Cetak via dialog browser standar"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Browser</span>
+                </button>
+
+                {/* Tombol Utama: Direct Hardware (Bluetooth / USB) Print */}
+                <button
+                  type="button"
+                  onClick={handleDirectPrint}
+                  disabled={!zReportData || printerHub.isPrinting}
+                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer active:scale-[0.99] ${
+                    printerHub.isConnected
+                      ? 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
+                      : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
+                  }`}
+                >
+                  {printerHub.isPrinting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-200" />
+                      <span>Mencetak Z-Report...</span>
+                    </>
+                  ) : printerHub.isConnected ? (
+                    <>
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span>
+                        ⚡ Cetak Langsung {printerHub.connectionType === 'usb' ? 'USB' : 'Bluetooth'} (
+                        {printerHub.deviceName || paperWidth})
+                      </span>
+                    </>
+                  ) : printerHub.deviceName ? (
+                    <>
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span>⚡ Sambungkan &amp; Cetak ({printerHub.deviceName})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4 text-blue-300" />
+                      <span>⚡ Hubungkan &amp; Cetak ({paperWidth})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               <button
-                onClick={handlePrint}
-                className="h-10 flex-1 max-w-[180px] rounded-xl border-2 border-blue-900 text-blue-950 font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Cetak Z-Report</span>
-              </button>
-              <button
+                type="button"
                 onClick={handleFinish}
-                className="h-10 flex-1 max-w-[180px] bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
               >
                 <span>Selesai</span>
                 <ArrowRight className="w-4 h-4" />

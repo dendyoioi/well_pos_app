@@ -243,3 +243,4 @@ export async function syncRemoteToLocalDatabase(options: SyncLocalOptions = {}):
     await client.end().catch(() => {});
   }
 }
+
