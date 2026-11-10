@@ -1,4 +1,4 @@
-import { syncRemoteToLocalDatabase } from '../src/services/dbSyncLocal.service';
+import { syncRemoteToLocalDatabase } from './dbSyncLocal.service';
 
 // Eksekusi langsung jika dipanggil via CLI
 if (require.main === module) {

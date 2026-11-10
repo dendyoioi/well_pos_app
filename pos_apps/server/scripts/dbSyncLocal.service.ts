@@ -2,7 +2,7 @@ import { Client } from 'pg';
 import path from 'path';
 import fs from 'fs';
 import { spawnSync } from 'child_process';
-import { executeDatabaseBackup, BackupResult } from './dbBackup.service';
+import { executeDatabaseBackup, BackupResult } from '../src/services/dbBackup.service';
 
 export interface SyncLocalResult {
   success: boolean;
@@ -105,7 +105,7 @@ export async function syncRemoteToLocalDatabase(options: SyncLocalOptions = {}):
   }
 
   // 2. Baca file snapshot JSON
-  const serverDir = path.resolve(__dirname, '../..');
+  const serverDir = path.resolve(__dirname, '..');
   const jsonPath = path.join(serverDir, 'backups', backupResult.jsonFile);
   if (!fs.existsSync(jsonPath)) {
     const err = `File snapshot tidak ditemukan di: ${jsonPath}`;
@@ -137,7 +137,7 @@ export async function syncRemoteToLocalDatabase(options: SyncLocalOptions = {}):
     const existingTablesRes = await client.query(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';`
     );
-    const existingTableNames = new Set(existingTablesRes.rows.map((r) => r.table_name));
+    const existingTableNames = new Set(existingTablesRes.rows.map((r: any) => r.table_name));
 
     // 4. Truncate semua tabel yang ada terlebih dahulu
     const tablesToTruncate = Object.keys(snapshotData).filter((t) => existingTableNames.has(t));
