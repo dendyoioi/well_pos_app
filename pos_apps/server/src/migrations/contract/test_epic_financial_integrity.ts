@@ -211,7 +211,7 @@ export async function runFinancialIntegritySuite() {
       `Sistem menolak: "${unauthorizedVoidRes.data?.message}"`
     );
 
-    // 12.3 Percobaan Void dengan PIN Supervisor yang Salah (Wajib Ditolak 401)
+    // 12.3 Percobaan Void dengan PIN Supervisor yang Salah (Wajib Ditolak 403 atau 401)
     const wrongPinVoidRes = await request(`/api/orders/${voidOrderId}/void`, {
       method: 'POST',
       headers: cashierHeaders,
@@ -221,8 +221,8 @@ export async function runFinancialIntegritySuite() {
       }),
     });
     record(
-      '12.3 Proteksi Void dengan PIN Palsu/Salah (Wajib Ditolak HTTP 401)',
-      wrongPinVoidRes.status === 401,
+      '12.3 Proteksi Void dengan PIN Palsu/Salah (Wajib Ditolak HTTP 403 atau 401)',
+      wrongPinVoidRes.status === 403 || wrongPinVoidRes.status === 401,
       `Sistem menolak: "${wrongPinVoidRes.data?.message}"`
     );
 

@@ -436,9 +436,8 @@ export const updateOutletFees = async (req: Request, res: Response) => {
           tenantId: tenantId || undefined,
           role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
           isActive: true,
-          pinHash: { not: null },
         },
-        select: { id: true, pinHash: true },
+        select: { id: true, pinHash: true, passwordHash: true },
       });
 
       let spvValid = false;
@@ -447,12 +446,17 @@ export const updateOutletFees = async (req: Request, res: Response) => {
           spvValid = true;
           break;
         }
+        if (spv.passwordHash && (await bcrypt.compare(supervisorPin, spv.passwordHash))) {
+          spvValid = true;
+          break;
+        }
       }
 
       if (!spvValid) {
-        return res.status(401).json({
+        return res.status(403).json({
           status: 'error',
-          message: 'PIN Supervisor tidak valid atau akun dinonaktifkan',
+          code: 'INVALID_SUPERVISOR_PIN',
+          message: 'PIN Supervisor atau Owner tidak valid atau akun dinonaktifkan',
         });
       }
     }

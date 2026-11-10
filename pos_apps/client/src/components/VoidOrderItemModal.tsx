@@ -272,10 +272,10 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
             <div className="relative">
               <input
                 type="password"
-                maxLength={6}
-                placeholder={isPrivileged ? 'Opsional: Masukkan PIN Supervisor lain jika didelegasikan' : 'Masukkan PIN 6 Digit Supervisor'}
+                maxLength={32}
+                placeholder={isPrivileged ? 'Opsional: Masukkan PIN Supervisor / Kata Sandi Owner' : 'Masukkan PIN Supervisor atau Kata Sandi Owner'}
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setPin(e.target.value)}
                 disabled={loading}
                 className="w-full px-3.5 py-2.5 pr-10 border border-slate-300 rounded-xl text-xs font-mono tracking-widest text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
               />
@@ -286,7 +286,7 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
             <p className="mt-1 text-[11px] text-slate-400">
               {isPrivileged
                 ? 'Sebagai Supervisor/Owner, Anda dapat langsung mengesahkan tanpa PIN, atau masukkan PIN rekan pengawas.'
-                : 'Kasir wajib memanggil Supervisor/Owner untuk memasukkan PIN persetujuan sebelum item dapat dibatalkan.'}
+                : 'Kasir wajib memanggil Supervisor/Owner untuk memasukkan PIN persetujuan (atau kata sandi Owner) sebelum item dapat dibatalkan.'}
             </p>
           </div>
         </div>

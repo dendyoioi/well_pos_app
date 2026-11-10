@@ -2327,28 +2327,38 @@ export const voidOrder = async (req: Request, res: Response) => {
     let approvedByUser: { id: string; name: string; role: Role } | null = null;
 
     if (pin && typeof pin === 'string' && pin.trim().length > 0) {
-      // Cari supervisor / admin / owner aktif pada tenant ini yang memiliki PIN cocok
+      // Cari supervisor / admin / owner aktif pada tenant ini
       const spvCandidates = await prisma.user.findMany({
         where: {
           tenantId: tenantId || undefined,
           role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
           isActive: true,
-          pinHash: { not: null },
         },
-        select: { id: true, name: true, role: true, pinHash: true },
+        select: { id: true, name: true, role: true, pinHash: true, passwordHash: true },
       });
 
       for (const spv of spvCandidates) {
+        // Cek PIN 4-6 digit supervisor/owner
         if (spv.pinHash && (await bcrypt.compare(pin.trim(), spv.pinHash))) {
+          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
+          break;
+        }
+        // Fleksibilitas: Jika Owner/Admin belum membuat PIN khusus, izinkan otorisasi via kata sandi akun Owner/Admin
+        if (spv.passwordHash && (await bcrypt.compare(pin.trim(), spv.passwordHash))) {
           approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
           break;
         }
       }
 
       if (!approvedByUser) {
-        return res.status(401).json({
+        const hasConfiguredPin = spvCandidates.some((s) => s.pinHash !== null);
+        const errMsg = hasConfiguredPin
+          ? 'PIN Supervisor atau Owner tidak valid'
+          : 'Toko belum memiliki Supervisor atau Owner dengan PIN aktif. Silakan masukkan kata sandi Owner atau atur PIN di menu Pengguna & Staf.';
+        return res.status(403).json({
           status: 'error',
-          message: 'PIN Supervisor atau Owner tidak valid',
+          code: 'INVALID_SUPERVISOR_PIN',
+          message: errMsg,
         });
       }
     } else if (isPrivilegedUser) {
@@ -2357,6 +2367,7 @@ export const voidOrder = async (req: Request, res: Response) => {
     } else {
       return res.status(403).json({
         status: 'error',
+        code: 'SUPERVISOR_PIN_REQUIRED',
         message: 'PIN persetujuan dari Supervisor atau Owner wajib dimasukkan',
       });
     }
@@ -2654,9 +2665,8 @@ export const voidOrderItem = async (req: Request, res: Response) => {
           tenantId: tenantId || undefined,
           role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
           isActive: true,
-          pinHash: { not: null },
         },
-        select: { id: true, name: true, role: true, pinHash: true },
+        select: { id: true, name: true, role: true, pinHash: true, passwordHash: true },
       });
 
       for (const spv of spvCandidates) {
@@ -2664,15 +2674,31 @@ export const voidOrderItem = async (req: Request, res: Response) => {
           approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
           break;
         }
+        if (spv.passwordHash && (await bcrypt.compare(pin.trim(), spv.passwordHash))) {
+          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
+          break;
+        }
       }
 
       if (!approvedByUser) {
-        return res.status(401).json({ status: 'error', message: 'PIN Supervisor atau Owner tidak valid' });
+        const hasConfiguredPin = spvCandidates.some((s) => s.pinHash !== null);
+        const errMsg = hasConfiguredPin
+          ? 'PIN Supervisor atau Owner tidak valid'
+          : 'Toko belum memiliki Supervisor atau Owner dengan PIN aktif. Silakan masukkan kata sandi Owner atau atur PIN di menu Pengguna & Staf.';
+        return res.status(403).json({
+          status: 'error',
+          code: 'INVALID_SUPERVISOR_PIN',
+          message: errMsg,
+        });
       }
     } else if (isPrivilegedUser) {
       approvedByUser = { id: currentUser.id, name: currentUser.name || currentUser.email, role: currentUser.role };
     } else {
-      return res.status(403).json({ status: 'error', message: 'PIN persetujuan dari Supervisor atau Owner wajib dimasukkan' });
+      return res.status(403).json({
+        status: 'error',
+        code: 'SUPERVISOR_PIN_REQUIRED',
+        message: 'PIN persetujuan dari Supervisor atau Owner wajib dimasukkan',
+      });
     }
 
     // 2. Ambil detail pesanan & item target

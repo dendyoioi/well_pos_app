@@ -238,23 +238,22 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
 
             {isPrivileged ? (
               <p className="text-[11px] text-slate-500">
-                Anda sedang login sebagai <strong>{currentUser?.name || currentUser?.role}</strong>. PIN opsional (bisa langsung diproses atau masukkan PIN supervisor lain).
+                Anda sedang login sebagai <strong>{currentUser?.name || currentUser?.role}</strong>. Otorisasi otomatis aktif (PIN opsional).
               </p>
             ) : (
               <p className="text-[11px] text-slate-500">
-                Kasir wajib meminta Supervisor atau Owner untuk memasukkan 6-digit PIN otorisasi mereka di bawah ini.
+                Kasir wajib meminta Supervisor atau Owner untuk memasukkan PIN otorisasi (4–6 digit) atau kata sandi Owner di bawah ini.
               </p>
             )}
 
             <div className="relative">
               <input
                 type="password"
-                inputMode="numeric"
-                maxLength={8}
+                maxLength={32}
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                placeholder={isPrivileged ? 'PIN Otorisasi (Opsional)' : 'Masukkan 6 Digit PIN Supervisor'}
-                className="w-full px-4 py-2.5 text-center font-mono text-base tracking-[0.3em] font-black border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 transition-all bg-slate-50 focus:bg-white"
+                onChange={(e) => setPin(e.target.value)}
+                placeholder={isPrivileged ? 'PIN Otorisasi (Opsional)' : 'Masukkan PIN Supervisor atau Kata Sandi Owner'}
+                className="w-full px-4 py-2.5 text-center font-mono text-base tracking-[0.2em] font-black border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 transition-all bg-slate-50 focus:bg-white"
                 autoComplete="off"
               />
             </div>

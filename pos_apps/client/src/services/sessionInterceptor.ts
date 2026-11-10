@@ -35,14 +35,35 @@ export function initSessionInterceptor() {
           : input.toString();
 
       // Abaikan SEMUA endpoint auth, pre-login, dan validasi latar belakang awal
-      // (401 di sini adalah normal saat kredensial salah, token lama invalid, atau pairing kasir)
-      const isAuthOrPreLoginEndpoint =
+      // Serta pengecualian proteksi: aksi in-app berbasis PIN (void order, void item, absensi, supervisor fees)
+      // agar kasir tidak terlempar ke halaman login jika salah memasukkan PIN supervisor!
+      const isExemptEndpoint =
         urlString.includes('/api/auth/') ||
         urlString.includes('/api/platform/auth/') ||
         urlString.includes('/api/health') ||
-        urlString.includes('/api/saas/');
+        urlString.includes('/api/saas/') ||
+        urlString.includes('/void') ||
+        urlString.includes('/void-item') ||
+        urlString.includes('/attendance') ||
+        urlString.includes('/fees');
 
-      if (!isAuthOrPreLoginEndpoint && urlString.includes('/api/')) {
+      if (!isExemptEndpoint && urlString.includes('/api/')) {
+        // Periksa body response sebelum membersihkan sesi:
+        // Jangan pernah mencabut sesi jika error berasal dari validasi PIN supervisor in-app
+        try {
+          const clone = response.clone();
+          const body = await clone.json().catch(() => null);
+          if (
+            body?.code === 'INVALID_SUPERVISOR_PIN' ||
+            body?.code === 'SUPERVISOR_PIN_REQUIRED' ||
+            (typeof body?.message === 'string' && body.message.toLowerCase().includes('pin'))
+          ) {
+            return response;
+          }
+        } catch {
+          // Abaikan clone error
+        }
+
         const isPlatform = urlString.includes('/api/platform/');
 
         // KRITIS: HANYA picu jika sebelumnya memang ADA sesi aktif tersimpan di perangkat!
