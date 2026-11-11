@@ -485,14 +485,14 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   // ==========================================
   if (viewMode === 'FORM') {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto pb-28 sm:pb-16 font-sans">
+      <div className="space-y-6 max-w-4xl mx-auto pb-36 sm:pb-16 font-sans">
         {/* Breadcrumb & Top Navigation */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setViewMode('LIST')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors shadow-xs cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Kembali</span>
@@ -501,6 +501,20 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
               Staf / <span className="text-blue-950 font-bold">{formMode === 'CREATE' ? 'Tambah Staf' : 'Ubah Staf'}</span>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => handleFormSubmit(e as any)}
+            disabled={submitting}
+            className="h-9 px-4 bg-blue-900 hover:bg-blue-950 active:scale-95 text-white font-extrabold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            {submitting ? (
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+            )}
+            <span>{formMode === 'CREATE' ? 'Tambah Staf' : 'Simpan'}</span>
+          </button>
         </div>
 
         {/* Title Header */}
@@ -854,19 +868,19 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             </div>
           </div>
 
-          {/* Action Buttons (Desktop & Mobile Safe-Area Sticky Footer) */}
-          <div className="fixed bottom-0 left-0 right-0 sm:static p-4 sm:p-0 bg-white/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t border-slate-200 z-30 flex items-center justify-end gap-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4 sm:border-t sm:border-slate-200 shadow-lg sm:shadow-none">
+          {/* Action Buttons in Page Flow (Selalu terlihat di akhir form saat di-scroll) */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => setViewMode('LIST')}
-              className="h-10 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs sm:text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
+              className="h-11 px-5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs sm:text-sm rounded-xl transition-colors shadow-xs cursor-pointer flex items-center justify-center"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="h-10 px-6 bg-blue-900 hover:bg-blue-950 active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              className="h-11 px-6 bg-blue-900 hover:bg-blue-950 active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -874,7 +888,38 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                   <span>Menyimpan...</span>
                 </>
               ) : (
-                <span>Simpan</span>
+                <>
+                  <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                  <span>{formMode === 'CREATE' ? 'Tambah Staf Baru' : 'Simpan Perubahan'}</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Mobile Sticky Action Bar: z-40 agar duduk di atas Bottom Nav Bar saat form aktif */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 px-4 flex items-center justify-between gap-3 shadow-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={() => setViewMode('LIST')}
+              className="h-11 px-4 bg-slate-100 active:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 h-11 px-5 bg-blue-900 active:bg-blue-950 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Menyimpan...</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                  <span>{formMode === 'CREATE' ? 'Tambah Staf Baru' : 'Simpan Perubahan'}</span>
+                </>
               )}
             </button>
           </div>
