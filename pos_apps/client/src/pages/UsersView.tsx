@@ -904,36 +904,40 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           </p>
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto shrink-0">
-          <button
-            type="button"
-            onClick={handleRevokeAllSessions}
-            disabled={revokingAll || staffList.length === 0}
-            className="flex-1 sm:flex-initial h-10 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            title="Keluarkan paksa seluruh kasir & staf di semua tablet toko"
-          >
-            <LogOut className="w-4 h-4 text-amber-600" />
-            <span>{revokingAll ? 'Mencabut...' : 'Cabut Semua Sesi Kasir'}</span>
-          </button>
-
-          {onNavigateToRoles && (
-            <button
-              onClick={onNavigateToRoles}
-              className="flex-1 sm:flex-initial h-10 px-4 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Shield className="w-4 h-4 text-blue-900" />
-              <span>Akses & Peran</span>
-            </button>
-          )}
-
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0">
+          {/* Tombol Utama: Tambah Staf (Paling menonjol & urutan pertama) */}
           <button
             type="button"
             onClick={handleOpenCreateForm}
-            className="flex-1 sm:flex-initial h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            className="w-full sm:w-auto h-11 sm:h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-[0.98]"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>Tambah Staf</span>
+            <UserPlus className="w-4 h-4 stroke-[2.5]" />
+            <span>+ Tambah Staf Baru</span>
           </button>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {onNavigateToRoles && (
+              <button
+                type="button"
+                onClick={onNavigateToRoles}
+                className="flex-1 sm:flex-initial h-10 px-3.5 bg-slate-50 hover:bg-slate-100 text-blue-950 border border-slate-200 font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Shield className="w-4 h-4 text-blue-900" />
+                <span>Akses &amp; Peran</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleRevokeAllSessions}
+              disabled={revokingAll || staffList.length === 0}
+              className="flex-1 sm:flex-initial h-10 px-3.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Keluarkan paksa seluruh kasir & staf di semua tablet toko"
+            >
+              <LogOut className="w-4 h-4 text-amber-600" />
+              <span>{revokingAll ? 'Mencabut...' : 'Cabut Semua Sesi Kasir'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1073,6 +1077,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                     : 'Admin'}
                 </button>
               ))}
+
+              <button
+                type="button"
+                onClick={handleOpenCreateForm}
+                className="hidden sm:inline-flex h-10 px-3.5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs shadow-xs items-center gap-1.5 cursor-pointer shrink-0 ml-auto"
+                title="Tambah Staf Baru"
+              >
+                <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>+ Tambah</span>
+              </button>
             </div>
           </div>
 
@@ -1102,8 +1116,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                 </tr>
               ) : filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
-                    Tidak ditemukan staf dengan kriteria tersebut.
+                  <td colSpan={7} className="py-12 text-center text-slate-500 font-medium">
+                    <p className="text-sm text-slate-500 mb-3">Tidak ditemukan staf dengan kriteria tersebut.</p>
+                    <button
+                      type="button"
+                      onClick={handleOpenCreateForm}
+                      className="inline-flex items-center gap-2 h-9 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Tambah Staf Baru</span>
+                    </button>
                   </td>
                 </tr>
               ) : (
@@ -1261,8 +1283,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
               <p className="font-semibold text-xs">Memuat daftar staf...</p>
             </div>
           ) : filteredStaff.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 font-medium text-xs">
-              Tidak ditemukan staf dengan kriteria tersebut.
+            <div className="py-12 px-4 text-center text-slate-500">
+              <p className="font-medium text-xs text-slate-500 mb-3">Tidak ditemukan staf dengan kriteria tersebut.</p>
+              <button
+                type="button"
+                onClick={handleOpenCreateForm}
+                className="inline-flex items-center gap-2 h-9 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>+ Tambah Staf Baru</span>
+              </button>
             </div>
           ) : (
             paginatedStaff.map((u) => {
@@ -1382,6 +1412,19 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             itemLabel="staf"
           />
         )}
+      </div>
+
+      {/* Floating Action Button (FAB) untuk Mobile & PWA: Selalu Melayang di Atas Bottom Nav */}
+      <div className="md:hidden fixed bottom-20 right-4 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <button
+          type="button"
+          onClick={handleOpenCreateForm}
+          className="h-12 px-4 bg-blue-900 active:bg-blue-950 text-white font-black text-xs rounded-full shadow-2xl shadow-blue-950/40 border-2 border-blue-500/30 flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+          title="Tambah Staf Baru"
+        >
+          <UserPlus className="w-4 h-4 stroke-[2.5]" />
+          <span>+ Tambah Staf</span>
+        </button>
       </div>
         </>
       )}
