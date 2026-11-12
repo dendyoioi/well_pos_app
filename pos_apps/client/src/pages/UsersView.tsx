@@ -868,8 +868,8 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             </div>
           </div>
 
-          {/* Action Buttons in Page Flow (Selalu terlihat di akhir form saat di-scroll) */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
+          {/* Action Buttons in Page Flow (Khusus Desktop & Tablet - Tersembunyi di Mobile agar Tidak Dobel dengan Sticky Bar) */}
+          <div className="hidden sm:flex bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-6 items-center justify-end gap-3">
             <button
               type="button"
               onClick={() => setViewMode('LIST')}
