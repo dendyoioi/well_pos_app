@@ -46,6 +46,8 @@ export interface PosHeaderProps {
   channelsConfig?: SalesChannelConfig[];
   onToggleHandheldMode?: () => void;
   onOpenAttendance?: () => void;
+  currentUser?: { name?: string; role?: string; email?: string } | null;
+  onLogout?: () => void;
 }
 
 export const PosHeader: React.FC<PosHeaderProps> = ({
@@ -68,6 +70,8 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   channelsConfig,
   onToggleHandheldMode,
   onOpenAttendance,
+  currentUser,
+  onLogout,
 }) => {
   const [onlineDropdownOpen, setOnlineDropdownOpen] = useState(false);
   const [printerModalOpen, setPrinterModalOpen] = useState(false);
@@ -136,11 +140,20 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
               </Badge>
             )}
           </div>
-          <p className="text-[11px] text-slate-500 font-medium">
-            {currentShift
-              ? `Modal Awal: Rp ${(currentShift.startingCash || 0).toLocaleString('id-ID')}`
-              : 'Kasir belum membuka shift'}
-          </p>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <span>
+              {currentShift
+                ? `Modal: Rp ${(currentShift.startingCash || 0).toLocaleString('id-ID')}`
+                : 'Belum buka shift'}
+            </span>
+            <span>•</span>
+            <span className="font-extrabold text-blue-950 flex items-center gap-1 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/60">
+              <UserCheck className="w-3 h-3 text-blue-900 shrink-0" />
+              <span className="truncate max-w-[120px]">
+                {currentShift?.cashier?.name || currentUser?.name || 'Kasir'}
+              </span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -363,6 +376,19 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         )}
 
         {/* Shift Actions */}
+        {onLogout && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Lock className="w-3.5 h-3.5 text-amber-700" />}
+            onClick={onLogout}
+            className="text-xs border-amber-200 hover:bg-amber-50 text-amber-900 font-bold"
+            title="Kunci Layar / Ganti Kasir (PIN Lock)"
+          >
+            <span className="hidden sm:inline">Ganti Kasir</span>
+          </Button>
+        )}
+
         {currentShift ? (
           <>
             {onOpenCashExpense && (

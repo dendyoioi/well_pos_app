@@ -942,8 +942,10 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 type="button"
                 onClick={handleFinish}
                 className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                title="Selesaikan penutupan shift dan kunci terminal untuk pergantian kasir berikutnya"
               >
-                <span>Selesai</span>
+                <Lock className="w-3.5 h-3.5 text-blue-200" />
+                <span>Selesai &amp; Kunci Kasir</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

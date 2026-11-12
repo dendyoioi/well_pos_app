@@ -2065,6 +2065,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             channelsConfig={activeOutlet?.channelsConfig || undefined}
             onToggleHandheldMode={() => setHandheldModeOverride(true)}
             onOpenAttendance={() => setStaffAttendanceModalOpen(true)}
+            currentUser={currentUser}
+            onLogout={onLogout}
           />
 
           {/* Banner Status Offline / Antrean Offline PWA (Desktop/Tablet) */}
@@ -2303,6 +2305,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
             onShiftClosed={() => {
               setCurrentShift(null);
               setCloseShiftModalOpen(false);
+              // Kunci terminal / logout otomatis setelah tutup shift agar kasir berikutnya wajib login dengan ID & PIN akunnya sendiri
+              if (onLogout && (currentUserRole === 'CASHIER' || activeUser?.role === 'CASHIER')) {
+                onLogout();
+              }
             }}
           />
           <XReportModal
