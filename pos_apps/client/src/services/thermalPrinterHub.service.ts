@@ -77,6 +77,9 @@ class ThermalPrinterHubService {
   private labelUsbInterfaceNumber: number | null = null;
   private labelUsbEndpointNumber: number | null = null;
 
+  // Heartbeat Timer untuk Bluetooth Low Energy (Anti-Sleep Ping)
+  private btHeartbeatTimer: any = null;
+
   // Core state
   private state: PrinterHubState = {
     // Primary
@@ -126,6 +129,20 @@ class ThermalPrinterHubService {
       if (savedLabelName) this.state.labelPrinter.deviceName = savedLabelName;
       if (savedLabelPaper) this.state.labelPrinter.paperSize = savedLabelPaper;
       if (savedLabelProto) this.state.labelPrinter.protocol = savedLabelProto;
+
+      // Otomatis pulihkan koneksi saat layar/tab kasir kembali aktif
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            if (
+              this.state.status !== 'connected' &&
+              (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')
+            ) {
+              this.tryAutoReconnect().catch(() => {});
+            }
+          }
+        });
+      }
     }
   }
 
@@ -206,6 +223,38 @@ class ThermalPrinterHubService {
   // =========================================================================
 
   /**
+   * Heartbeat berkala (Anti-Sleep BLE): Kirim pulse status query setiap 35 detik
+   * agar modul Bluetooth printer (Blueprint ECO 58D, dsb.) tidak sleep / memutus koneksi.
+   */
+  private startBtHeartbeat() {
+    this.stopBtHeartbeat();
+    if (typeof window === 'undefined') return;
+
+    this.btHeartbeatTimer = setInterval(async () => {
+      if (this.state.status === 'connected' && this.state.connectionType === 'bluetooth' && this.btCharacteristic) {
+        try {
+          // ESC/POS DLE EOT 1 status query (0x10, 0x04, 0x01): benign query, zero paper movement, keeps BLE GATT link alive
+          const pingBytes = new Uint8Array([0x10, 0x04, 0x01]);
+          if (typeof this.btCharacteristic.writeValueWithoutResponse === 'function') {
+            await this.btCharacteristic.writeValueWithoutResponse(pingBytes);
+          } else {
+            await this.btCharacteristic.writeValue(pingBytes);
+          }
+        } catch (e) {
+          console.warn('[PrinterHub] BT Heartbeat ping error (link may have dropped):', e);
+        }
+      }
+    }, 35000);
+  }
+
+  private stopBtHeartbeat() {
+    if (this.btHeartbeatTimer) {
+      clearInterval(this.btHeartbeatTimer);
+      this.btHeartbeatTimer = null;
+    }
+  }
+
+  /**
    * Helper internal: Menghubungkan ke instance Web Bluetooth Device
    */
   async connectBtDevice(device: any): Promise<boolean> {
@@ -214,9 +263,20 @@ class ThermalPrinterHubService {
     this.state.deviceName = devName;
 
     device.addEventListener('gattserverdisconnected', () => {
+      console.warn('[PrinterHub] GATT server disconnected for device:', devName);
       this.btCharacteristic = null;
       this.state.status = 'disconnected';
+      this.stopBtHeartbeat();
       this.notify();
+
+      // Silent auto-reconnect attempt in background after 2.5s without user prompt
+      if (this.state.connectionType === 'bluetooth' && this.btDevice) {
+        setTimeout(() => {
+          if (this.state.status !== 'connected') {
+            this.tryAutoReconnect().catch(() => {});
+          }
+        }, 2500);
+      }
     });
 
     const server = await device.gatt.connect();
@@ -230,6 +290,7 @@ class ThermalPrinterHubService {
     this.state.connectionType = 'bluetooth';
     this.state.status = 'connected';
     this.state.lastError = null;
+    this.startBtHeartbeat();
     this.savePreferences();
     this.notify();
     return true;
@@ -289,8 +350,29 @@ class ThermalPrinterHubService {
       }
     }
 
-    // 2. Coba auto-reconnect Web Bluetooth jika didukung (Chromium getDevices)
+    // 2. Coba auto-reconnect Web Bluetooth
     if (this.state.connectionType === 'bluetooth' && this.isBluetoothSupported()) {
+      // Prioritas 1: Gunakan in-memory btDevice (sudah ter-authorized di sesi ini, tanpa popup picker!)
+      if (this.btDevice && this.btDevice.gatt) {
+        try {
+          console.log('[PrinterHub] Mencoba silent reconnect ke in-memory btDevice...');
+          const server = await this.btDevice.gatt.connect();
+          const targetChar = await this.findWritableCharacteristic(server);
+          if (targetChar) {
+            this.btCharacteristic = targetChar;
+            this.state.status = 'connected';
+            this.state.lastError = null;
+            this.startBtHeartbeat();
+            this.notify();
+            console.log('[PrinterHub] Silent reconnect in-memory BERHASIL!');
+            return true;
+          }
+        } catch (err) {
+          console.warn('[PrinterHub] In-memory btDevice reconnect failed:', err);
+        }
+      }
+
+      // Prioritas 2: Coba melalui Chromium getDevices() jika browser mendukung
       try {
         if (typeof (navigator as any).bluetooth?.getDevices === 'function') {
           const devices = await (navigator as any).bluetooth.getDevices();
@@ -302,7 +384,7 @@ class ThermalPrinterHubService {
           }
         }
       } catch (err) {
-        console.warn('[PrinterHub] Auto-reconnect Bluetooth failed:', err);
+        console.warn('[PrinterHub] Auto-reconnect Bluetooth via getDevices failed:', err);
       }
     }
 
@@ -386,6 +468,7 @@ class ThermalPrinterHubService {
    */
   disconnect() {
     try {
+      this.stopBtHeartbeat();
       if (this.state.connectionType === 'bluetooth' && this.btDevice?.gatt?.connected) {
         this.btDevice.gatt.disconnect();
       } else if (this.state.connectionType === 'usb' && this.usbDevice?.opened) {
@@ -799,7 +882,12 @@ class ThermalPrinterHubService {
     options: EscPosOptions = {}
   ): Promise<{ success: boolean; mode: 'bluetooth' | 'usb' | 'system'; error?: string }> {
     const paperSize = options.paperSize || this.state.paperSize;
-    const isHardwareConnected = this.state.status === 'connected';
+    let isHardwareConnected = this.state.status === 'connected';
+
+    // Coba auto-reconnect hardware jika sebelumnya pernah di-pair
+    if (!isHardwareConnected && (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')) {
+      isHardwareConnected = await this.tryAutoReconnect();
+    }
 
     if (isHardwareConnected && (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')) {
       try {
