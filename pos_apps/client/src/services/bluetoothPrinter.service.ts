@@ -16,11 +16,18 @@ export interface BluetoothPrinterListener {
 // Known GATT Service UUIDs for popular thermal receipt printers
 const KNOWN_PRINTER_SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb', // Standard Printer Service
-  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Posnet / Xprinter
-  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC Transparent UART
+  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 UART (Blueprint ECO 58D, Lite 58, Panda, Eppos, Zywell)
+  '0000ffe5-0000-1000-8000-00805f9b34fb', // Alternate HM-10 / Feasycom UART
+  '0000fee7-0000-1000-8000-00805f9b34fb', // Tencent AirSync / Blueprint BLE
   '0000ff00-0000-1000-8000-00805f9b34fb', // Generic Chinese Printers (Goojprt, Panda, MPT-II)
+  '0000fff0-0000-1000-8000-00805f9b34fb', // Common 16-bit BLE UART
+  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC Transparent UART
+  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Posnet / Xprinter
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic Semiconductor UART Service (NUS)
   '0000ae00-0000-1000-8000-00805f9b34fb', // RPP02N / Iware
   '0000af30-0000-1000-8000-00805f9b34fb',
+  '000018f1-0000-1000-8000-00805f9b34fb',
+  'd973f2e0-b19e-11e2-9e96-0800200c9a66',
 ];
 
 class BluetoothPrinterService {

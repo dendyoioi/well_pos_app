@@ -37,6 +37,7 @@ import type { KitchenTicketData } from '../components/KitchenTicketModal';
 import { StaffAttendanceModal } from '../components/pos/StaffAttendanceModal';
 import { usePlan } from '../hooks/usePlan';
 import { useDialog } from '../context/DialogContext';
+import { screenWakeLock } from '../services/screenWakeLock.service';
 import { api, customerApi, authStorage, attendanceApi } from '../services/api';
 import type { User } from '../types/auth';
 import { soundService } from '../utils/sound';
@@ -105,6 +106,14 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       }
     }
   }, [activeOutlet?.id, activeOutlet?.timezone]);
+
+  // Jaga layar tablet/HP kasir tetap menyala (Screen Wake Lock) agar OS tidak mematikan koneksi Bluetooth
+  useEffect(() => {
+    screenWakeLock.requestWakeLock().catch(() => {});
+    return () => {
+      screenWakeLock.releaseWakeLock();
+    };
+  }, []);
 
   const triggerProUpgrade = (featureName: string) => {
     setUpgradeFeatureHighlight(featureName);

@@ -51,11 +51,18 @@ export interface PrinterHubListener {
 // Known GATT Service UUIDs for popular thermal receipt & label printers
 const KNOWN_BT_SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb', // Standard Printer Service
-  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Posnet / Xprinter
-  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC Transparent UART
+  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 UART (Blueprint ECO 58D, Lite 58, Panda, Eppos, Zywell)
+  '0000ffe5-0000-1000-8000-00805f9b34fb', // Alternate HM-10 / Feasycom UART
+  '0000fee7-0000-1000-8000-00805f9b34fb', // Tencent AirSync / Blueprint BLE
   '0000ff00-0000-1000-8000-00805f9b34fb', // Generic Chinese Printers (Goojprt, Panda, MPT-II, Xprinter Label)
+  '0000fff0-0000-1000-8000-00805f9b34fb', // Common 16-bit BLE UART
+  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC Transparent UART
+  'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Posnet / Xprinter
+  '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic Semiconductor UART Service (NUS)
   '0000ae00-0000-1000-8000-00805f9b34fb', // RPP02N / Iware
   '0000af30-0000-1000-8000-00805f9b34fb',
+  '000018f1-0000-1000-8000-00805f9b34fb',
+  'd973f2e0-b19e-11e2-9e96-0800200c9a66',
 ];
 
 class ThermalPrinterHubService {
@@ -77,8 +84,12 @@ class ThermalPrinterHubService {
   private labelUsbInterfaceNumber: number | null = null;
   private labelUsbEndpointNumber: number | null = null;
 
-  // Heartbeat Timer untuk Bluetooth Low Energy (Anti-Sleep Ping)
+  // Heartbeat Timer & Auto-reconnect untuk Bluetooth Low Energy (Anti-Sleep Ping)
   private btHeartbeatTimer: any = null;
+  private btReconnectTimer: any = null;
+  private btReconnectAttempts: number = 0;
+  private lastUserInteractionTime: number = 0;
+  private cachedBtChar: any = null;
 
   // Core state
   private state: PrinterHubState = {
@@ -134,6 +145,7 @@ class ThermalPrinterHubService {
       if (typeof document !== 'undefined') {
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
+            this.btReconnectAttempts = 0;
             if (
               this.state.status !== 'connected' &&
               (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')
@@ -142,6 +154,25 @@ class ThermalPrinterHubService {
             }
           }
         });
+
+        // Trigger silent auto-reconnect saat kasir menyentuh layar setelah jeda
+        window.addEventListener(
+          'pointerdown',
+          () => {
+            const now = Date.now();
+            if (now - this.lastUserInteractionTime > 12000) {
+              this.lastUserInteractionTime = now;
+              if (
+                this.state.status !== 'connected' &&
+                this.state.connectionType === 'bluetooth' &&
+                this.btDevice
+              ) {
+                this.tryAutoReconnect().catch(() => {});
+              }
+            }
+          },
+          { passive: true }
+        );
       }
     }
   }
@@ -265,18 +296,13 @@ class ThermalPrinterHubService {
     device.addEventListener('gattserverdisconnected', () => {
       console.warn('[PrinterHub] GATT server disconnected for device:', devName);
       this.btCharacteristic = null;
+      this.cachedBtChar = null;
       this.state.status = 'disconnected';
       this.stopBtHeartbeat();
       this.notify();
 
-      // Silent auto-reconnect attempt in background after 2.5s without user prompt
-      if (this.state.connectionType === 'bluetooth' && this.btDevice) {
-        setTimeout(() => {
-          if (this.state.status !== 'connected') {
-            this.tryAutoReconnect().catch(() => {});
-          }
-        }, 2500);
-      }
+      // Silent auto-reconnect attempt sequence in background without user prompt
+      this.scheduleBtAutoReconnect();
     });
 
     const server = await device.gatt.connect();
@@ -329,6 +355,36 @@ class ThermalPrinterHubService {
   }
 
   /**
+   * Jadwalkan auto-reconnect berkala dengan exponential backoff jika koneksi Bluetooth terputus
+   */
+  private scheduleBtAutoReconnect() {
+    if (typeof window === 'undefined') return;
+    if (this.btReconnectTimer) {
+      clearTimeout(this.btReconnectTimer);
+      this.btReconnectTimer = null;
+    }
+    if (!this.btDevice || this.state.connectionType !== 'bluetooth' || this.state.status === 'connected') return;
+
+    // Retry backoff: 1.5s, 4s, 8s, 15s, 30s (hingga 5x percobaan bertahap)
+    const delays = [1500, 4000, 8000, 15000, 30000];
+    const delay = delays[Math.min(this.btReconnectAttempts, delays.length - 1)];
+
+    this.btReconnectTimer = setTimeout(async () => {
+      if (this.state.status === 'connected' || !this.btDevice) return;
+      console.log(`[PrinterHub] Auto-reconnect retry #${this.btReconnectAttempts + 1}...`);
+      const ok = await this.tryAutoReconnect();
+      if (!ok) {
+        this.btReconnectAttempts++;
+        if (this.btReconnectAttempts < 6) {
+          this.scheduleBtAutoReconnect();
+        }
+      } else {
+        this.btReconnectAttempts = 0;
+      }
+    }, delay);
+  }
+
+  /**
    * Coba auto-reconnect printer struk yang tersimpan tanpa membuka pop-up pemilih
    */
   async tryAutoReconnect(): Promise<boolean> {
@@ -354,21 +410,27 @@ class ThermalPrinterHubService {
     if (this.state.connectionType === 'bluetooth' && this.isBluetoothSupported()) {
       // Prioritas 1: Gunakan in-memory btDevice (sudah ter-authorized di sesi ini, tanpa popup picker!)
       if (this.btDevice && this.btDevice.gatt) {
-        try {
-          console.log('[PrinterHub] Mencoba silent reconnect ke in-memory btDevice...');
-          const server = await this.btDevice.gatt.connect();
-          const targetChar = await this.findWritableCharacteristic(server);
-          if (targetChar) {
-            this.btCharacteristic = targetChar;
-            this.state.status = 'connected';
-            this.state.lastError = null;
-            this.startBtHeartbeat();
-            this.notify();
-            console.log('[PrinterHub] Silent reconnect in-memory BERHASIL!');
-            return true;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            console.log(`[PrinterHub] Mencoba silent reconnect ke in-memory btDevice (attempt ${attempt})...`);
+            const server = await this.btDevice.gatt.connect();
+            const targetChar = await this.findWritableCharacteristic(server);
+            if (targetChar) {
+              this.btCharacteristic = targetChar;
+              this.state.status = 'connected';
+              this.state.lastError = null;
+              this.btReconnectAttempts = 0;
+              this.startBtHeartbeat();
+              this.notify();
+              console.log('[PrinterHub] Silent reconnect in-memory BERHASIL!');
+              return true;
+            }
+          } catch (err) {
+            console.warn(`[PrinterHub] In-memory btDevice reconnect attempt ${attempt} failed:`, err);
+            if (attempt === 1) {
+              await new Promise((r) => setTimeout(r, 500));
+            }
           }
-        } catch (err) {
-          console.warn('[PrinterHub] In-memory btDevice reconnect failed:', err);
         }
       }
 
@@ -469,6 +531,12 @@ class ThermalPrinterHubService {
   disconnect() {
     try {
       this.stopBtHeartbeat();
+      if (this.btReconnectTimer) {
+        clearTimeout(this.btReconnectTimer);
+        this.btReconnectTimer = null;
+      }
+      this.btReconnectAttempts = 0;
+      this.cachedBtChar = null;
       if (this.state.connectionType === 'bluetooth' && this.btDevice?.gatt?.connected) {
         this.btDevice.gatt.disconnect();
       } else if (this.state.connectionType === 'usb' && this.usbDevice?.opened) {
@@ -796,6 +864,13 @@ class ThermalPrinterHubService {
   // =========================================================================
 
   private async findWritableCharacteristic(server: any): Promise<any> {
+    // 0. Cache hit jika characteristic masih valid
+    if (this.cachedBtChar && (this.cachedBtChar.properties?.write || this.cachedBtChar.properties?.writeWithoutResponse)) {
+      try {
+        return this.cachedBtChar;
+      } catch {}
+    }
+
     // 1. Scan known services
     for (const serviceUuid of KNOWN_BT_SERVICES) {
       try {
@@ -803,6 +878,7 @@ class ThermalPrinterHubService {
         const chars = await service.getCharacteristics();
         for (const c of chars) {
           if (c.properties.write || c.properties.writeWithoutResponse) {
+            this.cachedBtChar = c;
             return c;
           }
         }
@@ -819,6 +895,7 @@ class ThermalPrinterHubService {
           const chars = await s.getCharacteristics();
           for (const c of chars) {
             if (c.properties.write || c.properties.writeWithoutResponse) {
+              this.cachedBtChar = c;
               return c;
             }
           }

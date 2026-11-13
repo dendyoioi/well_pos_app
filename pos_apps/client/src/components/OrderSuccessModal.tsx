@@ -226,13 +226,18 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
         // Coba auto reconnect dulu tanpa dialog
         const reconnected = await printerHub.tryAutoReconnect();
         if (!reconnected) {
-          // Jika belum terhubung, hubungkan langsung ke printer hardware (Bukan print dialog browser!)
-          if (printerHub.connectionType === 'usb' && printerHub.isUsbSupported) {
-            const ok = await printerHub.connectUsb();
-            if (!ok) return;
-          } else if (printerHub.isBluetoothSupported) {
-            const ok = await printerHub.connectBluetooth();
-            if (!ok) return;
+          // Beri jeda sejenak dan coba sekali lagi secara hening di memori sebelum memunculkan popup dialog browser
+          await new Promise((r) => setTimeout(r, 450));
+          const secondTry = await printerHub.tryAutoReconnect();
+          if (!secondTry) {
+            // Jika belum terhubung sama sekali (misal sesi browser baru dimuat ulang), hubungkan via dialog picker
+            if (printerHub.connectionType === 'usb' && printerHub.isUsbSupported) {
+              const ok = await printerHub.connectUsb();
+              if (!ok) return;
+            } else if (printerHub.isBluetoothSupported) {
+              const ok = await printerHub.connectBluetooth();
+              if (!ok) return;
+            }
           }
         }
       }
