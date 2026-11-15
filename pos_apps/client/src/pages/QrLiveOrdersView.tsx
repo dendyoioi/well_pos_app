@@ -68,9 +68,21 @@ export const QrLiveOrdersView: React.FC<QrLiveOrdersViewProps> = ({ activeOutlet
   useEffect(() => {
     if (!autoRefresh || !activeOutlet) return;
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchOrders();
     }, 10000);
-    return () => clearInterval(interval);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchOrders();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [autoRefresh, activeOutlet?.id]);
 
   const handleUpdateStatus = async (

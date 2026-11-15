@@ -81,6 +81,8 @@ export const App: React.FC = () => {
   // Polling status mode pemeliharaan sistem
   useEffect(() => {
     const checkSystemStatus = async () => {
+      // Lewati polling jika tab browser sedang di latar belakang / layar nonaktif
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const res = await api.getSystemStatus();
         if (res.status === 'success' && res.data) {
@@ -96,8 +98,19 @@ export const App: React.FC = () => {
     };
 
     checkSystemStatus();
-    const interval = setInterval(checkSystemStatus, 25000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkSystemStatus, 60000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkSystemStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Listen to hash changes for deep linking

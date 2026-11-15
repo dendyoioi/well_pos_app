@@ -1,3 +1,4 @@
+import './services/apiBase'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -12,18 +13,6 @@ initGlobalErrorMonitor();
 
 // Registrasi Service Worker PWA (Offline shell caching & install)
 pwaService.registerServiceWorker();
-
-// Prefiks global /api bila VITE_API_URL diatur di environment cloud (Vercel)
-const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-if (apiBase) {
-  const originalFetch = window.fetch;
-  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-    if (typeof input === 'string' && input.startsWith('/api')) {
-      input = `${apiBase}${input}`;
-    }
-    return originalFetch(input, init);
-  };
-}
 
 // Inisialisasi Global 401 Session Lifetime Interceptor (Mencegah layar blank saat token expired 7 hari)
 initSessionInterceptor();

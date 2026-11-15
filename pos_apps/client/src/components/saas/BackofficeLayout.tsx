@@ -174,8 +174,22 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
   useEffect(() => {
     fetchTenantNotifications();
-    const interval = setInterval(fetchTenantNotifications, 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchTenantNotifications();
+    }, 60000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchTenantNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
