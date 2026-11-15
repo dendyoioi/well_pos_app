@@ -609,6 +609,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
 
       // Auto-refresh hening di latar belakang setiap 60 detik tanpa flicker/kedip UI
       const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         loadPlatformData(true);
       }, 60000);
 

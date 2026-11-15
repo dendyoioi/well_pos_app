@@ -46,12 +46,24 @@ export const MaintenancePage: React.FC<MaintenancePageProps> = ({
     }
   };
 
-  // Polling status pemeliharaan setiap 15 detik
+  // Polling status pemeliharaan setiap 30 detik (hemat bandwidth)
   useEffect(() => {
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       checkStatus();
-    }, 15000);
-    return () => clearInterval(interval);
+    }, 30000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const message =

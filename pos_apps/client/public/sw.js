@@ -93,7 +93,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. Aset Statis (JS, CSS, Gambar, Fonts): Stale-While-Revalidate
+  // 4. Aset Statis Ber-hash (/assets/*): Cache-First murni (Hemat 100% request CDN untuk file immutable)
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+          }
+          return networkResponse;
+        });
+      })
+    );
+    return;
+  }
+
+  // 5. Aset Statis Lainnya (Gambar, Fonts): Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request)
