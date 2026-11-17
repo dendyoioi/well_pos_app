@@ -6,13 +6,13 @@ export const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/$/, '');
   }
-  // Auto-detection untuk deployment Vercel / Beta:
-  // Jika sedang berjalan di domain beta.wellpos.id atau *.vercel.app,
+  // Auto-detection untuk deployment Vercel / Domain Resmi Well POS:
+  // Jika sedang berjalan di domain wellpos.id, beta.wellpos.id, atau *.vercel.app,
   // langsung arahkan seluruh pemanggilan API ke backend Render Singapore
   // tanpa melewati reverse proxy Vercel Edge (mencegah kehabisan kuota 1.000.000 CDN requests).
   if (typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
-    if (hostname.endsWith('.vercel.app') || hostname === 'beta.wellpos.id') {
+    if (hostname.endsWith('.vercel.app') || hostname.endsWith('wellpos.id')) {
       return 'https://wellpos-api-dev.onrender.com';
     }
   }
