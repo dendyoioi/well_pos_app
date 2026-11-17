@@ -720,13 +720,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <tr>
                       <td colSpan={7} className="px-5 py-14 text-center text-slate-400">
                         <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                        <p className="text-sm font-bold text-slate-700">Tidak ada bahan baku yang cocok</p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-sm font-bold text-slate-700">Belum ada bahan baku dapur terdaftar</p>
+                        <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                           {ingredientSearch || ingredientStatusFilter !== 'ALL'
                             ? 'Coba sesuaikan kata kunci pencarian atau reset filter status stok.'
-                            : 'Mulai dengan menambahkan item bahan baku dapur baru.'}
+                            : 'Daftarkan bahan baku mentah (seperti tahu, cabai, minyak, ayam, kemasan) agar dapat dilakukan Stok Masuk dan dihubungkan ke resep menu.'}
                         </p>
-                        {(ingredientSearch || ingredientStatusFilter !== 'ALL') && (
+                        {ingredientSearch || ingredientStatusFilter !== 'ALL' ? (
                           <button
                             type="button"
                             onClick={() => {
@@ -736,6 +736,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             className="mt-3 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                           >
                             Reset Semua Filter
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setCreateIngredientModalOpen(true)}
+                            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-md shadow-blue-900/20 transition-all cursor-pointer active:scale-95"
+                          >
+                            <Plus className="w-4 h-4 shrink-0" />
+                            <span>Tambah Bahan Baku Pertama</span>
                           </button>
                         )}
                       </td>
