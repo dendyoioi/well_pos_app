@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Store,
   UtensilsCrossed,
+  FileText,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Outlet } from '../types/outlet';
@@ -570,6 +571,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                             ? new Date(shift.endTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
                             : 'Sekarang'}
                         </div>
+                        {shift.notes && (
+                          <div className="text-[10px] text-slate-500 font-medium truncate max-w-[200px] mt-0.5" title={shift.notes}>
+                            📝 {shift.notes}
+                          </div>
+                        )}
                       </td>
 
                       {/* Modal Awal */}
@@ -734,6 +740,13 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                       )}
                     </div>
                   </div>
+
+                  {shift.notes && (
+                    <div className="text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200/80 truncate">
+                      <span className="font-bold text-slate-700">Catatan: </span>
+                      <span>{shift.notes}</span>
+                    </div>
+                  )}
 
                   {/* Action Button */}
                   <button
@@ -928,6 +941,21 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                     </span>
                   </div>
                 </div>
+
+                {/* Catatan Kasir jika ada */}
+                {selectedShift.notes && (
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl flex items-start gap-2.5 text-xs">
+                    <FileText className="w-4 h-4 text-blue-900 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <span className="font-extrabold text-blue-950 block text-[11px] uppercase tracking-wider mb-0.5">
+                        Catatan Kasir
+                      </span>
+                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed font-medium">
+                        {selectedShift.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
               {/* Rekap Item Terjual Selama Shift */}
               <div>

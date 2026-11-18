@@ -108,6 +108,7 @@ export interface XReportData {
     paymentMethod: string;
   }>;
   allOrders?: ShiftOrder[];
+  notes?: string | null;
 }
 
 export interface ZReportData {

@@ -18,7 +18,7 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
   outletName,
 }) => {
   const [startingCash, setStartingCash] = useState<number>(200000);
-  const [notes, setNotes] = useState<string>('Modal awal kasir');
+  const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -122,17 +122,17 @@ export const StartShiftModal: React.FC<StartShiftModalProps> = ({
               </div>
             </div>
 
-            {/* Catatan / Keterangan */}
+            {/* Catatan / Keterangan Buka Shift */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Catatan Pembukaan Shift (Opsional)
+                Catatan Buka Shift (Opsional)
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Contoh: Buka shift pagi, uang laci pas"
-                className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
+                placeholder="Contoh: Cup awal 100, uang laci pas"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all resize-none leading-relaxed"
               />
             </div>
           </div>

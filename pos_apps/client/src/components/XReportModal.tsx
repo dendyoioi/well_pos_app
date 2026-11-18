@@ -340,6 +340,14 @@ export const XReportModal: React.FC<XReportModalProps> = ({ isOpen, onClose }) =
                 )}
               </div>
 
+              {/* Catatan Kasir jika ada */}
+              {data.notes && data.notes !== 'Buka shift kasir harian' && (
+                <div className="border-t border-dashed border-slate-300 pt-2 text-[10px] text-slate-600 italic">
+                  <span className="font-bold not-italic text-slate-700">Catatan Kasir: </span>
+                  {data.notes}
+                </div>
+              )}
+
               {/* Footer */}
               <div className="text-center pt-1 text-[10px] text-slate-400">
                 <p>Dokumen ini adalah laporan sementara (X-Report).</p>

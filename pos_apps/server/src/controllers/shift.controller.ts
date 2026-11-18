@@ -467,6 +467,7 @@ export const getXReport = async (req: Request, res: Response) => {
           totalTax,
           totalService,
         },
+        notes: activeShift.notes,
         recentOrders,
         allOrders,
       },
@@ -687,6 +688,26 @@ export const closeShift = async (req: Request, res: Response) => {
 
     const endTime = new Date();
 
+    // Gabungkan catatan pembukaan shift & penutupan shift agar tidak saling menimpa
+    const openingNotes =
+      activeShift.notes &&
+      activeShift.notes !== 'Buka shift kasir harian' &&
+      !activeShift.notes.startsWith('Tutup shift.')
+        ? activeShift.notes.trim()
+        : '';
+    const closingNotes = notes?.trim() || '';
+
+    let combinedNotes = '';
+    if (openingNotes && closingNotes) {
+      combinedNotes = `[Buka: ${openingNotes}] • [Tutup: ${closingNotes}]`;
+    } else if (closingNotes) {
+      combinedNotes = closingNotes;
+    } else if (openingNotes) {
+      combinedNotes = `[Buka: ${openingNotes}]`;
+    } else {
+      combinedNotes = `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Kas keluar: Rp ${totalCashOut.toLocaleString('id-ID')}. Pelunasan kasbon: Rp ${totalDebtCashIn.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`;
+    }
+
     const closedShift = await prisma.shift.update({
       where: { id: activeShift.id },
       data: {
@@ -695,7 +716,7 @@ export const closeShift = async (req: Request, res: Response) => {
         actualEnding: actualCash,
         cashDifference: difference,
         status: ShiftStatus.CLOSED,
-        notes: notes || `Tutup shift. Kas fisik: Rp ${actualCash.toLocaleString('id-ID')}. Kas keluar: Rp ${totalCashOut.toLocaleString('id-ID')}. Pelunasan kasbon: Rp ${totalDebtCashIn.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`,
+        notes: combinedNotes,
       },
       include: {
         outlet: true,

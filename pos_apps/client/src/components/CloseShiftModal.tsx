@@ -614,14 +614,14 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               {/* Catatan Tutup Shift */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Catatan Serah Terima Kasir (Opsional)
+                  Catatan Tutup Shift (Opsional)
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Contoh: Ada uang kembalian receh belum ditukar"
-                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all"
+                  placeholder="Contoh: Sisa cup 20, selisih nilai kasir -5000 rupiah"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-900 focus:bg-white rounded-xl text-xs text-slate-800 outline-none transition-all resize-none leading-relaxed"
                 />
               </div>
             </div>
