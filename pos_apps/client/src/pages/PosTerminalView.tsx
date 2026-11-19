@@ -925,6 +925,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     refreshOfflineQueueCount();
 
     const syncInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       if (navigator.onLine) {
         getOfflineQueueCount(activeOutlet?.id).then((stats) => {
           setPendingOfflineCount(stats.pending);

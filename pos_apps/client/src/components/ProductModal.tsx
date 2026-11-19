@@ -395,9 +395,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     try {
       const result = await compressImage(file, {
-        maxWidth: 600,
-        maxHeight: 600,
-        quality: 0.8,
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.75,
         mimeType: 'image/webp',
       });
       setImageUrl(result.dataUrl);

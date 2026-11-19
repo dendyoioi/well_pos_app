@@ -4,6 +4,7 @@ import { StockMovementType } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { catalogDualWriteService } from '../services/dual_write';
 import { catalogReadAdapter, isReadFromTargetEnabled } from '../services/read_adapters';
+import { cacheService } from '../services/cache.service';
 
 // Skema validasi pembuatan produk baru
 const createProductSchema = z.object({
@@ -84,6 +85,17 @@ export const getProducts = async (req: Request, res: Response) => {
       }
     }
 
+    // Optimasi Bandwidth & Koneksi Supabase: Cek cache in-memory untuk request berulang
+    const cacheKey = `cache:tenant:${userTenantId}:products:${targetOutletId || 'all'}:${categoryId || 'all'}:${isActive ?? 'all'}:${search ? search.toString().trim().toLowerCase() : ''}`;
+    const cachedData = await cacheService.get<{ data: any[]; meta: any }>(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({
+        status: 'success',
+        data: cachedData.data,
+        meta: cachedData.meta,
+      });
+    }
+
     const result = await catalogReadAdapter.getProducts({
       tenantId: userTenantId || '',
       outletId: targetOutletId,
@@ -91,6 +103,10 @@ export const getProducts = async (req: Request, res: Response) => {
       search: search as string,
       isActive: isActive as string,
     });
+
+    // Simpan di cache in-memory selama 30 detik (memotong query TCP ke Supabase)
+    await cacheService.set(cacheKey, result, 30);
+
     return res.status(200).json({
       status: 'success',
       data: result.data,
@@ -304,6 +320,9 @@ export const createProduct = async (req: Request, res: Response) => {
       };
     });
 
+    // Invalidate cache katalog produk tenant
+    await cacheService.delByPrefix(`cache:tenant:${userTenantId}:products`);
+
     return res.status(201).json({
       status: 'success',
       message: 'Produk berhasil ditambahkan',
@@ -457,6 +476,9 @@ export const updateProduct = async (req: Request, res: Response) => {
       );
       return prodRows[0];
     });
+
+    // Invalidate cache katalog produk tenant
+    await cacheService.delByPrefix(`cache:tenant:${userTenantId}:products`);
 
     return res.status(200).json({
       status: 'success',
@@ -618,6 +640,9 @@ export const deleteProduct = async (req: Request, res: Response) => {
         outletId
       );
 
+      // Invalidate cache katalog produk tenant
+      await cacheService.delByPrefix(`cache:tenant:${userTenantId}:products`);
+
       return res.status(200).json({
         status: 'success',
         message: `Produk "${existing.name}" berhasil dilepas dari ${outlet?.name || 'toko / outlet ini'}. Riwayat transaksi masa lalu tetap aman.`,
@@ -632,6 +657,9 @@ export const deleteProduct = async (req: Request, res: Response) => {
         actorUserId: req.user?.id,
       });
     });
+
+    // Invalidate cache katalog produk tenant
+    await cacheService.delByPrefix(`cache:tenant:${userTenantId}:products`);
 
     return res.status(200).json({
       status: 'success',
@@ -673,6 +701,7 @@ export const bulkProductAction = async (req: Request, res: Response) => {
     }
 
     const { action, productIds, isActive, categoryId, outletId } = parseResult.data;
+    const tenantId = req.user?.tenantId || req.tenantId || (req.headers['x-tenant-id'] as string);
 
     if (action === 'DELETE') {
       if (outletId) {
@@ -688,6 +717,7 @@ export const bulkProductAction = async (req: Request, res: Response) => {
           outletId
         );
 
+        if (tenantId) await cacheService.delByPrefix(`cache:tenant:${tenantId}:products`);
         return res.status(200).json({
           status: 'success',
           message: `Berhasil melepas ${deletedBalances.length} produk dari toko / outlet ini. Riwayat transaksi masa lalu tetap aman.`,
@@ -699,6 +729,7 @@ export const bulkProductAction = async (req: Request, res: Response) => {
         data: { isActive: false },
       });
 
+      if (tenantId) await cacheService.delByPrefix(`cache:tenant:${tenantId}:products`);
       return res.status(200).json({
         status: 'success',
         message: `Berhasil menghapus/menonaktifkan ${productIds.length} produk terpilih`,
@@ -718,6 +749,7 @@ export const bulkProductAction = async (req: Request, res: Response) => {
         data: { isActive },
       });
 
+      if (tenantId) await cacheService.delByPrefix(`cache:tenant:${tenantId}:products`);
       return res.status(200).json({
         status: 'success',
         message: `Berhasil mengubah status ${productIds.length} produk menjadi ${isActive ? 'Aktif' : 'Nonaktif'}`,
@@ -747,6 +779,10 @@ export const bulkProductAction = async (req: Request, res: Response) => {
         where: { id: { in: productIds } },
         data: { categoryId },
       });
+
+      if (tenantId) {
+        await cacheService.delByPrefix(`cache:tenant:${tenantId}:products`);
+      }
 
       return res.status(200).json({
         status: 'success',
@@ -924,6 +960,8 @@ export const assignProductsToOutlet = async (req: Request, res: Response) => {
       where: { id: { in: assignments.map((a) => a.productId) } },
       data: { isActive: true },
     });
+
+    await cacheService.delByPrefix(`cache:tenant:${userTenantId}:products`);
 
     return res.status(200).json({
       status: 'success',
@@ -1174,6 +1212,8 @@ export const bulkImportProducts = async (req: Request, res: Response) => {
         });
       }
     }
+
+    await cacheService.delByPrefix(`cache:tenant:${userTenantId}:products`);
 
     return res.status(200).json({
       status: 'success',

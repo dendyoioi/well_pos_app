@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { healthRouter } from './routes/health';
@@ -35,6 +36,11 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware global
 app.use(securityHeaders);
+// Kompresi HTTP (Gzip/Deflate) untuk menghemat outbound bandwidth hingga 70-85%
+app.use(compression({
+  threshold: 1024, // Hanya kompres payload >= 1 KB
+  level: 6,        // Rasio kompresi optimal tanpa membebani CPU
+}));
 // Fix T3: CORS dengan whitelist origin fleksibel (mendukung '*', localhost, dan *.vercel.app)
 const rawOrigins = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const allowedOrigins = rawOrigins.split(',').map(s => s.trim()).filter(Boolean);

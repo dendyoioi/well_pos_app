@@ -91,11 +91,11 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
 
     setIsCompressing(true);
     try {
-      // Untuk barcode QRIS, 800px dengan kualitas 0.85 memastikan barcode terbaca tajam oleh kamera
+      // Untuk barcode QRIS, 600px dengan kualitas 0.8 memastikan barcode terbaca tajam oleh kamera & hemat bandwidth
       const result = await compressImage(file, {
-        maxWidth: 800,
-        maxHeight: 800,
-        quality: 0.85,
+        maxWidth: 600,
+        maxHeight: 600,
+        quality: 0.8,
         mimeType: 'image/webp',
       });
       setImageUrl(result.dataUrl);

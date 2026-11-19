@@ -16,8 +16,14 @@ interface BackupSchedulerState {
   totalBackupsRun: number;
 }
 
+const isRenderEnvironment = process.env.RENDER === 'true';
+
 const state: BackupSchedulerState = {
-  enabled: process.env.BACKUP_CRON_ENABLED !== 'false',
+  // Di lingkungan Render (Dev/Hobby), matikan scheduler backup otomatis agar tidak menguras kuota bandwidth
+  // eksternal (Service-Initiated data transfer ke Supabase), kecuali jika diaktifkan eksplisit via BACKUP_CRON_ENABLED='true'.
+  enabled: isRenderEnvironment
+    ? process.env.BACKUP_CRON_ENABLED === 'true'
+    : process.env.BACKUP_CRON_ENABLED !== 'false',
   scheduledHourWib: parseInt(process.env.BACKUP_CRON_HOUR || '3', 10), // Default pukul 03:00 WIB
   totalBackupsRun: 0,
 };
