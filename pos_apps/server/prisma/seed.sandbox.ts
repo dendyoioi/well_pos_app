@@ -135,6 +135,8 @@ export async function runSandboxSeed() {
     await prisma.cashMovement.deleteMany({ where: { tenantId: tId } });
     await prisma.order.deleteMany({ where: { tenantId: tId } });
     await prisma.shift.deleteMany({ where: { tenantId: tId } });
+    await prisma.productBundleItem.deleteMany({ where: { tenantId: tId } });
+    await prisma.productPriceTier.deleteMany({ where: { tenantId: tId } });
     await prisma.inventoryLedger.deleteMany({ where: { tenantId: tId } });
     await prisma.inventoryBalance.deleteMany({ where: { tenantId: tId } });
     await prisma.productVariant.deleteMany({ where: { tenantId: tId } });
