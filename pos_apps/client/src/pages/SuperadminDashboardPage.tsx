@@ -37,7 +37,7 @@ import {
   UserPlus,
   FileText,
   Trash2,
-  DollarSign,
+  Banknote,
   Printer,
   QrCode,
   Plus,
@@ -3784,7 +3784,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl relative overflow-hidden">
                   <div className="flex items-center justify-between text-slate-400 mb-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider">Total Kas Masuk (Lunas)</span>
-                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                    <Banknote className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div className="text-2xl font-black text-emerald-400">{formatRupiah(totalRevenue)}</div>
                   <span className="text-[10px] text-slate-500 mt-1 block">Dari {paidInvoices.length} transaksi faktur berhasil</span>

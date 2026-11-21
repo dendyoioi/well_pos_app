@@ -8,7 +8,6 @@ import {
   Calendar,
   Phone,
   Receipt,
-  DollarSign,
   CreditCard,
   Banknote,
   QrCode,
@@ -479,7 +478,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
                                 onClick={() => handleOpenPay(debt)}
                                 className="h-8 px-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                               >
-                                <DollarSign className="w-3.5 h-3.5" />
+                                <Banknote className="w-3.5 h-3.5" />
                                 <span>Bayar</span>
                               </button>
                             )}
@@ -852,7 +851,7 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
                   }}
                   className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
                 >
-                  <DollarSign className="w-4 h-4" />
+                  <Banknote className="w-4 h-4" />
                   <span>Catat Pelunasan Sekarang</span>
                 </button>
               )}

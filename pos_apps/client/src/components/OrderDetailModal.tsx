@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   PackageX,
   Clock,
+  Shirt,
 } from 'lucide-react';
 import type { Order, OrderChannel } from '../types/order';
 import { ORDER_CHANNEL_LABELS } from '../types/order';
@@ -92,7 +93,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Receipt className="w-5 h-5" />
+              {isOrderLaundry ? <Shirt className="w-5 h-5" /> : <Receipt className="w-5 h-5" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -158,7 +159,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           )}
 
           {/* Susulan / Menu Tambahan Banner */}
-          {isSusulan && (
+          {isSusulan && !isOrderLaundry && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-amber-900">
               <UtensilsCrossed className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
               <div className="text-xs space-y-0.5">
@@ -233,7 +234,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           {/* Items Detail Table */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
-              <span>Daftar Menu / Produk ({order.orderItems?.length || 0} Item)</span>
+              <span>{isOrderLaundry ? 'Daftar Layanan / Cucian' : 'Daftar Menu / Produk'} ({order.orderItems?.length || 0} Item)</span>
             </div>
 
             <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
@@ -241,7 +242,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                     <tr>
-                      <th className="py-2.5 px-3">Produk</th>
+                      <th className="py-2.5 px-3">{isOrderLaundry ? 'Layanan Cucian' : 'Produk'}</th>
                       <th className="py-2.5 px-2 text-right">Harga Satuan</th>
                       <th className="py-2.5 px-2 text-center">Qty</th>
                       <th className="py-2.5 px-2 text-right">Diskon</th>
@@ -256,7 +257,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       const itemDisc = Number(item.discountAmount || 0);
                       const unitPrice = Number(item.unitPrice || 0);
                       const subtotal = Number(item.subtotal || 0);
-                      const prodName = item.product?.name || item.productName || item.name || 'Produk';
+                      const prodName = item.product?.name || item.productName || item.name || (isOrderLaundry ? 'Layanan Cucian' : 'Produk');
                       const variantName = item.variantName || item.productVariant?.name;
                       const rawMods = item.modifiers || item.modifiersSnapshot || item.selectedModifiers || [];
                       const mods = Array.isArray(rawMods) ? rawMods : [];

@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronRight,
   Bell,
-  Lock,
   LogOut,
   CreditCard,
   LayoutDashboard,
@@ -42,6 +41,8 @@ import {
   ClipboardList,
   UserCog,
   TicketPercent,
+  FileText,
+  Printer,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -507,7 +508,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   : 'text-slate-700 hover:bg-indigo-50/60'
               }`}
             >
-              <Receipt className="w-4 h-4 shrink-0" />
+              <ClipboardList className="w-4 h-4 shrink-0" />
               <span>Mutasi &amp; Transfer Toko</span>
             </button>
           </div>
@@ -1138,7 +1139,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 title={isLaundryMode ? 'Pengadaan Bahan (PO)' : 'Pengadaan (PO)'}
               >
                 <span className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 shrink-0 lg:hidden" />
+                  {isLaundryMode ? (
+                    <FileText className="w-4 h-4 shrink-0 lg:hidden" />
+                  ) : (
+                    <Receipt className="w-4 h-4 shrink-0 lg:hidden" />
+                  )}
                   <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Pengadaan Bahan (PO)' : 'Pengadaan (PO)'}</span>
                 </span>
               </button>
@@ -1513,7 +1518,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 title="Format Struk & Tag Pakaian"
               >
                 <span className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 shrink-0 lg:hidden" />
+                  {isLaundryMode ? (
+                    <Printer className="w-4 h-4 shrink-0 lg:hidden" />
+                  ) : (
+                    <Receipt className="w-4 h-4 shrink-0 lg:hidden" />
+                  )}
                   <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Format Struk & Tag Pakaian' : 'Format Struk Kasir'}</span>
                 </span>
               </button>
@@ -2226,13 +2235,6 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={onLogout}
-                  title="Kunci Layar (PIN Lock)"
-                  className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors cursor-pointer"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={onLogout}
                   title="Keluar Akun"
                   className="p-1.5 rounded-lg bg-white hover:bg-rose-50 hover:text-rose-600 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
                 >
@@ -2277,7 +2279,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     activeTab === 'stock_movements' ? 'text-indigo-900 font-black' : 'text-slate-500 hover:text-slate-800 font-medium'
                   }`}
                 >
-                  <Receipt className="w-5 h-5" />
+                  <ClipboardList className="w-5 h-5" />
                   <span className="text-[10px]">Mutasi</span>
                 </button>
 

@@ -15,6 +15,7 @@ import {
   Store,
   UtensilsCrossed,
   FileText,
+  Shirt,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Outlet } from '../types/outlet';
@@ -671,7 +672,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-slate-400 pl-5.5 block truncate">{outletName}</span>
+                      <span className="text-[11px] text-slate-400 pl-6 block truncate">{outletName}</span>
                     </div>
 
                     {!isClosed && shift.status === 'OPEN' ? (
@@ -966,7 +967,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               <div>
                 <div className="flex items-center justify-between mb-2.5">
                   <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900" />
+                    {isLaundryMode ? (
+                      <Shirt className="w-3.5 h-3.5 text-blue-900" />
+                    ) : (
+                      <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900" />
+                    )}
                     <span>
                       {isLaundryMode ? 'Rekap Layanan Terjual' : 'Rekap Item Terjual'} ({selectedShift.soldItemsSummary?.length || 0} {isLaundryMode ? 'Layanan' : 'Menu'})
                     </span>

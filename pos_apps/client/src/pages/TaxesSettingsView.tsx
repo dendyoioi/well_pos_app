@@ -5,7 +5,6 @@ import {
   Store,
   HelpCircle,
   Building2,
-  DollarSign,
   Package,
   Plus,
   Trash2,
@@ -22,6 +21,7 @@ import {
   ShoppingBag,
   Loader2,
   ChevronDown,
+  Shirt,
 } from 'lucide-react';
 import type { Outlet, OutletFee, FeeType, FeeChannelScope, FeeCategory } from '../types/outlet';
 import { normalizeOutletFees } from '../types/outlet';
@@ -30,6 +30,7 @@ import { formatRupiah } from '../utils/currency';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { useDialog } from '../context/DialogContext';
 import { api } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 
 interface TaxesSettingsViewProps {
   activeOutlet: Outlet | null;
@@ -66,6 +67,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
   currentUserRole,
 }) => {
   const dialog = useDialog();
+  const isLaundryMode = checkIsLaundry(activeOutlet);
   const [activeTab, setActiveTab] = useState<SettingsTab>('TAX');
   const [feesModalOpen, setFeesModalOpen] = useState(false);
 
@@ -140,7 +142,9 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
 
   // State Simulasi Struk Interaktif
   const [simSubtotal, setSimSubtotal] = useState<number>(100000);
-  const [simChannel, setSimChannel] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' | 'ONLINE_DELIVERY'>('DINE_IN');
+  const [simChannel, setSimChannel] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' | 'ONLINE_DELIVERY'>(
+    isLaundryMode ? 'TAKEAWAY' : 'DINE_IN'
+  );
   const [simSelectedPackaging, setSimSelectedPackaging] = useState<string[]>(['fee_plastic_s']);
   const [simApplyTax, setSimApplyTax] = useState<boolean>(true);
   const [simTaxRate, setSimTaxRate] = useState<number>(primaryTax.rate || 10);
@@ -471,7 +475,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
         >
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1">
-              <DollarSign className="w-3.5 h-3.5" />
+              <Percent className="w-3.5 h-3.5" />
               Service Charge
             </span>
             {(() => {
@@ -601,8 +605,8 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <UtensilsCrossed className="w-4 h-4" />
-          <span>2. Biaya Layanan &amp; Kurir ({serviceFees.length})</span>
+          {isLaundryMode ? <Shirt className="w-4 h-4" /> : <UtensilsCrossed className="w-4 h-4" />}
+          <span>2. {isLaundryMode ? 'Biaya Layanan & Kurir Laundry' : 'Biaya Layanan & Kurir'} ({serviceFees.length})</span>
         </button>
 
         <button
@@ -829,11 +833,13 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                  <UtensilsCrossed className="w-4 h-4 text-emerald-700" />
+                  {isLaundryMode ? <Shirt className="w-4 h-4 text-emerald-700" /> : <UtensilsCrossed className="w-4 h-4 text-emerald-700" />}
                   <span>Daftar Biaya Layanan &amp; Penanganan Operasional</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Biaya tambahan internal yang menjadi hak / pendapatan restoran (Service Charge, Ongkir Kurir Toko, dll).
+                  {isLaundryMode
+                    ? 'Biaya tambahan internal yang menjadi hak / pendapatan outlet laundry (Biaya Penanganan / Layanan, Ongkir Kurir Jemput, dll).'
+                    : 'Biaya tambahan internal yang menjadi hak / pendapatan restoran (Service Charge, Ongkir Kurir Toko, dll).'}
                 </p>
               </div>
 
@@ -1376,69 +1382,107 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 Simulasi Saluran Penjualan (Order Channel)
               </label>
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSimChannel('DINE_IN')}
-                  className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                    simChannel === 'DINE_IN'
-                      ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <UtensilsCrossed className="w-4 h-4 text-blue-900 shrink-0" />
-                  <div>
-                    <div>Makan di Tempat</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Dine In (Service Charge)</div>
-                  </div>
-                </button>
+                {isLaundryMode ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setSimChannel('TAKEAWAY')}
+                      className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                        simChannel === 'TAKEAWAY'
+                          ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Shirt className="w-4 h-4 text-blue-900 shrink-0" />
+                      <div>
+                        <div>Drop-off Toko</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Antrean Kasir / Walk-in</div>
+                      </div>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSimChannel('TAKEAWAY')}
-                  className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                    simChannel === 'TAKEAWAY'
-                      ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <ShoppingBag className="w-4 h-4 text-blue-900 shrink-0" />
-                  <div>
-                    <div>Bawa Pulang</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Takeaway (Kemasan)</div>
-                  </div>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => setSimChannel('DELIVERY')}
+                      className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                        simChannel === 'DELIVERY'
+                          ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Bike className="w-4 h-4 text-blue-900 shrink-0" />
+                      <div>
+                        <div>Kurir Antar-Jemput</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Ongkir Layanan Jemput</div>
+                      </div>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setSimChannel('DINE_IN')}
+                      className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                        simChannel === 'DINE_IN'
+                          ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <UtensilsCrossed className="w-4 h-4 text-blue-900 shrink-0" />
+                      <div>
+                        <div>Makan di Tempat</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Dine In (Service Charge)</div>
+                      </div>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSimChannel('DELIVERY')}
-                  className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                    simChannel === 'DELIVERY'
-                      ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Bike className="w-4 h-4 text-blue-900 shrink-0" />
-                  <div>
-                    <div>Kurir Toko</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Delivery Langsung</div>
-                  </div>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => setSimChannel('TAKEAWAY')}
+                      className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                        simChannel === 'TAKEAWAY'
+                          ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <ShoppingBag className="w-4 h-4 text-blue-900 shrink-0" />
+                      <div>
+                        <div>Bawa Pulang</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Takeaway (Kemasan)</div>
+                      </div>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSimChannel('ONLINE_DELIVERY')}
-                  className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                    simChannel === 'ONLINE_DELIVERY'
-                      ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Globe className="w-4 h-4 text-blue-900 shrink-0" />
-                  <div>
-                    <div>Mitra Online</div>
-                    <div className="text-[10px] text-slate-400 font-normal">GoFood / Grab / Shopee</div>
-                  </div>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => setSimChannel('DELIVERY')}
+                      className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                        simChannel === 'DELIVERY'
+                          ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Bike className="w-4 h-4 text-blue-900 shrink-0" />
+                      <div>
+                        <div>Kurir Toko</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Delivery Langsung</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSimChannel('ONLINE_DELIVERY')}
+                      className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                        simChannel === 'ONLINE_DELIVERY'
+                          ? 'bg-blue-50 border-blue-900 text-blue-950 ring-1 ring-blue-900'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Globe className="w-4 h-4 text-blue-900 shrink-0" />
+                      <div>
+                        <div>Mitra Online</div>
+                        <div className="text-[10px] text-slate-400 font-normal">GoFood / Grab / Shopee</div>
+                      </div>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
-  DollarSign,
   Receipt,
   CreditCard,
   Banknote,
@@ -439,7 +438,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
 
                   <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 space-y-0.5">
                     <span className="text-[10px] font-bold text-slate-300 uppercase block flex items-center gap-1">
-                      <DollarSign className="w-3 h-3 text-blue-300" /> Rata-Rata Nota
+                      <Banknote className="w-3 h-3 text-blue-300" /> Rata-Rata Nota
                     </span>
                     <strong className="text-xs sm:text-sm font-black text-white font-mono block truncate">
                       Rp {fs.averageOrderValue.toLocaleString('id-ID')}
@@ -471,7 +470,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
 
                   <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 space-y-0.5">
                     <span className="text-[10px] font-bold text-slate-300 uppercase block truncate">
-                      🏆 Menu Unggulan
+                      {isLaundryMode ? '🏆 Layanan Unggulan' : '🏆 Menu Unggulan'}
                     </span>
                     <strong className="text-xs sm:text-sm font-black text-white block truncate" title={data.insights.highMarginChampion || 'Belum Ada'}>
                       {data.insights.highMarginChampion || 'Stabil'}
@@ -494,7 +493,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                   Total Omset Bersih
                 </span>
                 <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
-                  <DollarSign className="w-5 h-5 stroke-[2.5] shrink-0" />
+                  <Banknote className="w-5 h-5 stroke-[2.5] shrink-0" />
                 </div>
               </div>
               <div className="mt-3">

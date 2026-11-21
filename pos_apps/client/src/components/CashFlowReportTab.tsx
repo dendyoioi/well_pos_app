@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
+  Banknote,
   Download,
   Clock,
   ArrowUpRight,
@@ -388,7 +388,7 @@ export const CashFlowReportTab: React.FC<CashFlowReportTabProps> = ({ activeOutl
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold shrink-0 ${
               (summary?.netCashFlow ?? 0) >= 0 ? 'bg-blue-50 text-blue-900' : 'bg-rose-50 text-rose-600'
             }`}>
-              <DollarSign className="w-4 h-4 shrink-0" />
+              <Banknote className="w-4 h-4 shrink-0" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">

@@ -16,6 +16,7 @@ import {
   Smartphone,
   Printer,
   UserCheck,
+  Shirt,
 } from 'lucide-react';
 import type { Outlet, SalesChannelConfig } from '../../types/outlet';
 import { normalizeSalesChannels } from '../../types/outlet';
@@ -107,8 +108,9 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   const activeOnlineChannel = onlineChannels.find((c) => c.code === orderChannel);
 
   const channelIcons: Record<string, React.ReactNode> = {
-    DINE_IN: <UtensilsCrossed className="w-3.5 h-3.5" />,
-    TAKEAWAY: <ShoppingBag className="w-3.5 h-3.5" />,
+    DINE_IN: isLaundryMode ? <Shirt className="w-3.5 h-3.5" /> : <UtensilsCrossed className="w-3.5 h-3.5" />,
+    DIRECT_STORE: <Shirt className="w-3.5 h-3.5" />,
+    TAKEAWAY: isLaundryMode ? <Shirt className="w-3.5 h-3.5" /> : <ShoppingBag className="w-3.5 h-3.5" />,
     DELIVERY: <Bike className="w-3.5 h-3.5" />,
     GOFOOD: <Bike className="w-3.5 h-3.5 text-rose-500" />,
     GRABFOOD: <Bike className="w-3.5 h-3.5 text-emerald-500" />,
@@ -178,7 +180,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
-              {channelIcons[ch.code] || <UtensilsCrossed className="w-3.5 h-3.5" />}
+              {channelIcons[ch.code] || (isLaundryMode ? <Shirt className="w-3.5 h-3.5" /> : <UtensilsCrossed className="w-3.5 h-3.5" />)}
               <span>{ch.name.split(' (')[0]}</span>
             </button>
           );
@@ -256,8 +258,8 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Open Tabs / Tagihan Meja Terbuka */}
-        {onOpenOpenTabs && (
+        {/* Open Tabs / Tagihan Meja Terbuka (F&B Only) */}
+        {onOpenOpenTabs && !isLaundryMode && (
           <Button
             variant={openTabsCount > 0 ? 'amber' : 'outline'}
             size="sm"
@@ -275,8 +277,8 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
           </Button>
         )}
 
-        {/* QR Orders from Tables Toggle */}
-        {onOpenQrOrders && (
+        {/* QR Orders from Tables Toggle (F&B Only) */}
+        {onOpenQrOrders && !isLaundryMode && (
           <Button
             variant={qrOrdersCount > 0 ? 'primary' : 'outline'}
             size="sm"

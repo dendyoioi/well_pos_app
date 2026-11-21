@@ -1252,7 +1252,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                     <span>Tahan Antrean</span>
                   </button>
 
-                  {(orderChannel === 'DINE_IN' || orderChannel === 'QR_MENU') && onSaveOpenTab && (
+                  {!isLaundryMode && (orderChannel === 'DINE_IN' || orderChannel === 'QR_MENU') && onSaveOpenTab && (
                     <button
                       type="button"
                       disabled={cart.length === 0 || !currentShift}
@@ -1467,27 +1467,29 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
               {/* 3. Antrean & Tagihan Meja */}
               <div className="space-y-1.5 pt-2 border-t border-slate-100">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Antrean &amp; Tagihan Meja
+                  {isLaundryMode ? 'Antrean Kasir' : 'Antrean & Tagihan Meja'}
                 </span>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuickMenuOpen(false);
-                    onOpenOpenTabs();
-                  }}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-between transition-colors border border-slate-200"
-                >
-                  <div className="flex items-center gap-2">
-                    <UtensilsCrossed className="w-4 h-4 text-blue-900" />
-                    <span>Tagihan Meja (Open Tabs)</span>
-                  </div>
-                  {openTabsCount > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-blue-900 text-white text-[10px] font-black">
-                      {openTabsCount}
-                    </span>
-                  )}
-                </button>
+                {!isLaundryMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickMenuOpen(false);
+                      onOpenOpenTabs();
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-between transition-colors border border-slate-200"
+                  >
+                    <div className="flex items-center gap-2">
+                      <UtensilsCrossed className="w-4 h-4 text-blue-900" />
+                      <span>Tagihan Meja (Open Tabs)</span>
+                    </div>
+                    {openTabsCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-blue-900 text-white text-[10px] font-black">
+                        {openTabsCount}
+                      </span>
+                    )}
+                  </button>
+                )}
 
                 <button
                   type="button"
