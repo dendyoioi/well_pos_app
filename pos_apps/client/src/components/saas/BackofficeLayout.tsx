@@ -33,6 +33,9 @@ import {
   ChefHat,
   Shirt,
   Archive,
+  Waves,
+  Clock,
+  Truck,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -280,6 +283,9 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
       }
       onItemClick?.();
     };
+
+    const isMobileDrawer = Boolean(onItemClick);
+    const isRail = !isMobileDrawer && isLaundryMode;
 
     // 1. ISOLASI TOTAL ROLE KITCHEN (DAPUR & KDS SAJA)
     if (user.role === 'KITCHEN') {
@@ -597,13 +603,14 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
       <div className="space-y-1">
         {/* Khusus Mode Laundry: Tombol Utama Aksi Cepat Terima Cucian */}
         {isLaundryMode && (
-          <div className="pb-2.5 mb-2 border-b border-slate-100">
+          <div className="pb-2.5 mb-2 border-b border-slate-100 flex justify-center lg:justify-start">
             <button
               onClick={() => handleSelectTab('pos')}
-              className="w-full py-2.5 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-11 h-11 lg:w-full lg:h-auto py-2.5 px-2.5 lg:px-3 rounded-2xl lg:rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              title="Terima Cucian (Drop-off)"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>+ Terima Cucian (Drop-off)</span>
+              <Plus className="w-5 h-5 lg:w-4 lg:h-4 stroke-[2.5] shrink-0" />
+              <span className="hidden lg:inline">+ Terima Cucian (Drop-off)</span>
             </button>
           </div>
         )}
@@ -611,25 +618,29 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         {/* Quick Launch Ringkasan Bisnis */}
         <button
           onClick={() => handleSelectTab('overview')}
-          className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
+          className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center justify-center lg:justify-start gap-2.5 transition-all cursor-pointer ${
             activeTab === 'overview'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-700 hover:bg-slate-100'
           }`}
+          title={isLaundryMode ? 'Ringkasan Bisnis Laundry' : 'Ringkasan Bisnis'}
         >
-          <LayoutDashboard className="w-4 h-4 shrink-0" />
-          <span>{isLaundryMode ? 'Ringkasan Bisnis Laundry' : 'Ringkasan Bisnis'}</span>
+          <LayoutDashboard className="w-5 h-5 lg:w-4 lg:h-4 shrink-0" />
+          <span className={isLaundryMode ? 'hidden lg:inline' : 'inline'}>
+            {isLaundryMode ? 'Ringkasan Bisnis Laundry' : 'Ringkasan Bisnis'}
+          </span>
         </button>
 
         {/* Menu Khusus Pemilik: Paket & Kuota Token */}
         {(user.role === 'ADMIN' || user.role === 'OWNER') && (
           <button
             onClick={() => handleSelectTab('billing_tokens')}
-            className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center justify-between transition-all cursor-pointer ${
+            className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center justify-center lg:justify-between transition-all cursor-pointer ${
               activeTab === 'billing_tokens'
                 ? 'bg-blue-900 text-white shadow-xs'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title="Paket & Kuota Token"
           >
             <span className="flex items-center gap-2.5">
               <span className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
@@ -637,9 +648,9 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               }`}>
                 <Zap className="w-3.5 h-3.5 fill-current" />
               </span>
-              <span>Paket &amp; Kuota</span>
+              <span className={isLaundryMode ? 'hidden lg:inline' : 'inline'}>Paket &amp; Kuota</span>
             </span>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 ${
+            <span className={`${isLaundryMode ? 'hidden lg:flex' : 'flex'} text-[10px] font-black px-2 py-0.5 rounded-full items-center gap-1 shrink-0 ${
               activeTab === 'billing_tokens'
                 ? 'bg-amber-500 text-white'
                 : 'bg-amber-100 text-amber-800 border border-amber-200'
@@ -655,36 +666,47 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           <div className="pt-1">
             <button
               onClick={() => toggleGroup('laundry_ops')}
-              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+              className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+                isRail ? 'justify-center lg:justify-between' : 'justify-between'
+              } transition-colors ${
                 activeParentGroup === 'laundry_ops'
                   ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                   : 'text-slate-700 hover:bg-slate-100'
               }`}
+              title="Operasional Laundry"
             >
               <span className="flex items-center gap-2">
-                <Shirt className={`w-4 h-4 shrink-0 transition-colors ${
+                <Shirt className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                   activeParentGroup === 'laundry_ops' ? 'text-blue-900' : 'text-slate-500'
                 }`} />
-                <span>Operasional Laundry</span>
+                <span className={isRail ? 'hidden lg:inline' : 'inline'}>Operasional Laundry</span>
               </span>
-              {openGroups.laundry_ops ? (
-                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'laundry_ops' ? 'text-blue-900' : 'text-slate-400'}`} />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-              )}
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+                {openGroups.laundry_ops ? (
+                  <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'laundry_ops' ? 'text-blue-900' : 'text-slate-400'}`} />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                )}
+              </span>
             </button>
             {openGroups.laundry_ops && (
-              <div className="pl-8 pr-2 py-1 space-y-1">
+              <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
                 <button
                   onClick={() => handleSelectTab('laundry_queue')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                    isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                  } ${
                     activeTab === 'laundry_queue'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                   }`}
+                  title="Antrean & Status Cucian"
                 >
-                  <span>Antrean &amp; Status Cucian</span>
-                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 shrink-0 lg:hidden" />
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Antrean &amp; Status Cucian</span>
+                  </span>
+                  <span className={`${isRail ? 'hidden lg:inline' : 'inline'} text-[10px] font-black px-1.5 py-0.2 rounded-full ${
                     activeTab === 'laundry_queue' ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-800'
                   }`}>
                     Live
@@ -692,14 +714,20 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 </button>
                 <button
                   onClick={() => handleSelectTab('laundry_production')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                    isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                  } ${
                     activeTab === 'laundry_production'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                   }`}
+                  title="Stasiun Produksi (Workshop)"
                 >
-                  <span>Stasiun Produksi (Workshop)</span>
-                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  <span className="flex items-center gap-2">
+                    <Waves className="w-4 h-4 shrink-0 lg:hidden" />
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Stasiun Produksi (Workshop)</span>
+                  </span>
+                  <span className={`${isRail ? 'hidden lg:inline' : 'inline'} text-[10px] font-black px-1.5 py-0.2 rounded-full ${
                     activeTab === 'laundry_production' ? 'bg-indigo-800 text-white' : 'bg-indigo-100 text-indigo-800'
                   }`}>
                     SOP
@@ -707,33 +735,51 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 </button>
                 <button
                   onClick={() => handleSelectTab('laundry_services')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                    isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                  } ${
                     activeTab === 'laundry_services'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                   }`}
+                  title="Layanan & Tarif Laundry"
                 >
-                  <span>Layanan &amp; Tarif Laundry</span>
+                  <span className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 shrink-0 lg:hidden" />
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Layanan &amp; Tarif Laundry</span>
+                  </span>
                 </button>
                 <button
                   onClick={() => handleSelectTab('laundry_racks')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                    isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                  } ${
                     activeTab === 'laundry_racks'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                   }`}
+                  title="Manajemen Rak & Simpan"
                 >
-                  <span>Manajemen Rak &amp; Simpan</span>
+                  <span className="flex items-center gap-2">
+                    <Archive className="w-4 h-4 shrink-0 lg:hidden" />
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Manajemen Rak &amp; Simpan</span>
+                  </span>
                 </button>
                 <button
                   onClick={() => handleSelectTab('laundry_transfers')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                    isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                  } ${
                     activeTab === 'laundry_transfers'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                   }`}
+                  title="Surat Jalan & Workshop"
                 >
-                  <span>Surat Jalan &amp; Workshop</span>
+                  <span className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 shrink-0 lg:hidden" />
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Surat Jalan &amp; Workshop</span>
+                  </span>
                 </button>
               </div>
             )}
@@ -889,85 +935,126 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('stok')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-colors ${
               activeParentGroup === 'stok'
                 ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title={isLaundryMode ? 'Bahan Cuci & Perlengkapan' : 'Bahan Baku & Stok'}
           >
             <span className="flex items-center gap-2">
-              <Boxes className={`w-4 h-4 shrink-0 transition-colors ${
+              <Boxes className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>{isLaundryMode ? 'Bahan Cuci & Perlengkapan' : 'Bahan Baku & Stok'}</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Bahan Cuci & Perlengkapan' : 'Bahan Baku & Stok'}</span>
             </span>
-            {openGroups.stok ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            )}
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+              {openGroups.stok ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </span>
           </button>
           {openGroups.stok && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
+            <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
               <button
                 onClick={() => handleSelectTab('inventory')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'inventory'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Stok Bahan Cuci & Parfum' : 'Stok Bahan Baku'}
               >
-                <span>{isLaundryMode ? 'Stok Bahan Cuci & Parfum' : 'Stok Bahan Baku'}</span>
+                <span className="flex items-center gap-2">
+                  <Package className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Stok Bahan Cuci & Parfum' : 'Stok Bahan Baku'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('warehouses')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'warehouses'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Gudang & Workshop Pasokan' : 'Kelola Gudang'}
               >
-                <span>{isLaundryMode ? 'Gudang & Workshop Pasokan' : 'Kelola Gudang'}</span>
+                <span className="flex items-center gap-2">
+                  <Warehouse className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Gudang & Workshop Pasokan' : 'Kelola Gudang'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('purchase_orders')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'purchase_orders'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Pengadaan Bahan (PO)' : 'Pengadaan (PO)'}
               >
-                <span>{isLaundryMode ? 'Pengadaan Bahan (PO)' : 'Pengadaan (PO)'}</span>
+                <span className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Pengadaan Bahan (PO)' : 'Pengadaan (PO)'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('transfers')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'transfers'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title="Transfer Antar Toko"
               >
-                <span>Transfer Antar Toko</span>
+                <span className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>Transfer Antar Toko</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('stock_movements')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'stock_movements'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Riwayat Pemakaian & Mutasi' : 'Riwayat Mutasi Stok'}
               >
-                <span>{isLaundryMode ? 'Riwayat Pemakaian & Mutasi' : 'Riwayat Mutasi Stok'}</span>
+                <span className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Riwayat Pemakaian & Mutasi' : 'Riwayat Mutasi Stok'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('suppliers')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'suppliers'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Distributor / Vendor Bahan' : 'Pemasok / Supplier'}
               >
-                <span>{isLaundryMode ? 'Distributor / Vendor Bahan' : 'Pemasok / Supplier'}</span>
+                <span className="flex items-center gap-2">
+                  <Users className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Distributor / Vendor Bahan' : 'Pemasok / Supplier'}</span>
+                </span>
               </button>
             </div>
           )}
@@ -977,14 +1064,17 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => handleSelectTab('orders')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-start' : 'justify-start'
+            } gap-2.5 transition-colors ${
               activeTab === 'orders' || activeTab === 'payment_items'
                 ? 'bg-blue-900 text-white shadow-xs'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title="Riwayat Transaksi"
           >
-            <Receipt className={`w-4 h-4 shrink-0 ${activeTab === 'orders' || activeTab === 'payment_items' ? 'text-white' : 'text-slate-500'}`} />
-            <span>Riwayat Transaksi</span>
+            <Receipt className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 ${activeTab === 'orders' || activeTab === 'payment_items' ? 'text-white' : 'text-slate-500'}`} />
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>Riwayat Transaksi</span>
           </button>
         </div>
 
@@ -992,55 +1082,78 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('laporan')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-colors ${
               activeParentGroup === 'laporan'
                 ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title="Laporan & Keuangan"
           >
             <span className="flex items-center gap-2">
-              <BarChart3 className={`w-4 h-4 shrink-0 transition-colors ${
+              <BarChart3 className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'laporan' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>Laporan &amp; Keuangan</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>Laporan &amp; Keuangan</span>
             </span>
-            {openGroups.laporan ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'laporan' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            )}
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+              {openGroups.laporan ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'laporan' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </span>
           </button>
           {openGroups.laporan && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
+            <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
               <button
                 onClick={() => handleSelectTab('reports')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'reports'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title="Laporan Penjualan & Finansial"
               >
-                <span>Laporan Penjualan &amp; Finansial</span>
+                <span className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>Laporan Penjualan &amp; Finansial</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('shifts')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'shifts'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title="Rekap Shift Kasir (X/Z)"
               >
-                <span>Rekap Shift Kasir (X/Z)</span>
+                <span className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>Rekap Shift Kasir (X/Z)</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('product_analytics')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'product_analytics'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Analisis Layanan & Tonase' : 'Analisis Menu & HPP'}
               >
-                <span>{isLaundryMode ? 'Analisis Layanan & Tonase' : 'Analisis Menu & HPP'}</span>
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Analisis Layanan & Tonase' : 'Analisis Menu & HPP'}</span>
+                </span>
               </button>
             </div>
           )}
@@ -1050,35 +1163,46 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('promosi')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-colors ${
               activeParentGroup === 'promosi'
                 ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title={isLaundryMode ? 'Promosi & Kupon' : 'Promosi & Diskon'}
           >
             <span className="flex items-center gap-2">
-              <Tag className={`w-4 h-4 shrink-0 transition-colors ${
+              <Tag className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>{isLaundryMode ? 'Promosi & Kupon' : 'Promosi & Diskon'}</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Promosi & Kupon' : 'Promosi & Diskon'}</span>
             </span>
-            {openGroups.promosi ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            )}
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+              {openGroups.promosi ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </span>
           </button>
           {openGroups.promosi && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
+            <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
               <button
                 onClick={() => handleSelectTab('promotions')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'promotions'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Diskon & Kupon Promosi' : 'Diskon & Voucher'}
               >
-                <span>{isLaundryMode ? 'Diskon & Kupon Promosi' : 'Diskon & Voucher'}</span>
+                <span className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Diskon & Kupon Promosi' : 'Diskon & Voucher'}</span>
+                </span>
               </button>
             </div>
           )}
@@ -1088,45 +1212,62 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('pelanggan')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-colors ${
               activeParentGroup === 'pelanggan'
                 ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title={isLaundryMode ? 'Pelanggan & Piutang' : 'Pelanggan & Kasbon'}
           >
             <span className="flex items-center gap-2">
-              <Users className={`w-4 h-4 shrink-0 transition-colors ${
+              <Users className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>{isLaundryMode ? 'Pelanggan & Piutang' : 'Pelanggan & Kasbon'}</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Pelanggan & Piutang' : 'Pelanggan & Kasbon'}</span>
             </span>
-            {openGroups.pelanggan ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            )}
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+              {openGroups.pelanggan ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </span>
           </button>
           {openGroups.pelanggan && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
+            <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
               <button
                 onClick={() => handleSelectTab('customers', 'directory')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'customers' && currentSubTab !== 'debts'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Direktori Pelanggan & Alamat' : 'Direktori Pelanggan'}
               >
-                <span>{isLaundryMode ? 'Direktori Pelanggan & Alamat' : 'Direktori Pelanggan'}</span>
+                <span className="flex items-center gap-2">
+                  <Users className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Direktori Pelanggan & Alamat' : 'Direktori Pelanggan'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('customers', 'debts')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'customers' && currentSubTab === 'debts'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Buku Piutang & Bayar Nanti' : 'Buku Kasbon & Piutang'}
               >
-                <span>{isLaundryMode ? 'Buku Piutang & Bayar Nanti' : 'Buku Kasbon & Piutang'}</span>
+                <span className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Buku Piutang & Bayar Nanti' : 'Buku Kasbon & Piutang'}</span>
+                </span>
               </button>
             </div>
           )}
@@ -1136,88 +1277,132 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('staf')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-colors ${
               activeParentGroup === 'staf'
                 ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title={isLaundryMode ? 'Manajemen Staf & Operator' : 'Manajemen Staf'}
           >
             <span className="flex items-center gap-2">
-              <Users className={`w-4 h-4 shrink-0 transition-colors ${
+              <Users className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>{isLaundryMode ? 'Manajemen Staf & Operator' : 'Manajemen Staf'}</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Manajemen Staf & Operator' : 'Manajemen Staf'}</span>
             </span>
-            {openGroups.staf ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            )}
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+              {openGroups.staf ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </span>
           </button>
           {openGroups.staf && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
+            <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
               <button
                 onClick={() => handleSelectTab('staff_users')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'staff_users' || activeTab === 'users'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Kelola Staf & Operator' : 'Kelola Staf'}
               >
-                <span>{isLaundryMode ? 'Kelola Staf & Operator' : 'Kelola Staf'}</span>
+                <span className="flex items-center gap-2">
+                  <Users className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Kelola Staf & Operator' : 'Kelola Staf'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('staff_roles')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'staff_roles'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title={isLaundryMode ? 'Akses & Peran Operator' : 'Akses & Peran'}
               >
-                <span>{isLaundryMode ? 'Akses & Peran Operator' : 'Akses & Peran'}</span>
+                <span className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Akses & Peran Operator' : 'Akses & Peran'}</span>
+                </span>
               </button>
             </div>
           )}
         </div>
 
-        {/* 9. Group: Pengaturan Resto & Outlet */}
+        {/* 9. Group: Pengaturan Toko */}
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('pengaturan')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+            className={`w-full text-left px-2.5 lg:px-3 py-2 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-colors ${
               activeParentGroup === 'pengaturan'
                 ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
+            title="Pengaturan Toko"
           >
             <span className="flex items-center gap-2">
-              <Settings className={`w-4 h-4 shrink-0 transition-colors ${
+              <Settings className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>{isLaundryMode ? 'Pengaturan Toko' : 'Pengaturan Resto'}</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>Pengaturan Toko</span>
             </span>
-            {openGroups.pengaturan ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            )}
+            <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+              {openGroups.pengaturan ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </span>
           </button>
           {openGroups.pengaturan && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
+            <div className={`${isRail ? 'pl-0 lg:pl-8 pr-0 lg:pr-2' : 'pl-8 pr-2'} py-1 space-y-1`}>
               <button
                 onClick={() => handleSelectTab('settings_receipt')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'settings_receipt'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title="Format Struk & Tag Pakaian"
               >
-                <span>{isLaundryMode ? 'Format Struk & Tag Pakaian' : 'Format Struk Kasir'}</span>
+                <span className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Format Struk & Tag Pakaian' : 'Format Struk Kasir'}</span>
+                </span>
+              </button>
+              <button
+                onClick={() => handleSelectTab('settings_payment')}
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
+                  activeTab === 'settings_payment'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                }`}
+                title="Metode Pembayaran & QRIS"
+              >
+                <span className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>Metode Pembayaran &amp; QRIS</span>
+                </span>
               </button>
               {!isLaundryMode && (
                 <button
                   onClick={() => handleSelectTab('settings_taxes')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
                     activeTab === 'settings_taxes'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
@@ -1226,20 +1411,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   <span>Pajak (PB1) &amp; Biaya Layanan</span>
                 </button>
               )}
-              <button
-                onClick={() => handleSelectTab('settings_payment')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'settings_payment'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Metode Pembayaran &amp; QRIS</span>
-              </button>
               {!isLaundryMode && (
                 <button
                   onClick={() => handleSelectTab('settings_channels')}
-                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
                     activeTab === 'settings_channels'
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
@@ -1250,23 +1425,35 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               )}
               <button
                 onClick={() => handleSelectTab('settings_loyalty')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'settings_loyalty'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title="Program Member & Poin"
               >
-                <span>{isLaundryMode ? 'Program Member & Poin' : 'Program Loyalitas & Poin'}</span>
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Program Member & Poin' : 'Program Loyalitas & Poin'}</span>
+                </span>
               </button>
               <button
                 onClick={() => handleSelectTab('outlets')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
                   activeTab === 'outlets'
                     ? 'bg-blue-900 text-white font-bold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
+                title="Daftar Toko & Workshop"
               >
-                <span>{isLaundryMode ? 'Daftar Toko & Workshop' : 'Profil & Outlet Toko'}</span>
+                <span className="flex items-center gap-2">
+                  <Store className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Daftar Toko & Workshop' : 'Profil & Outlet Toko'}</span>
+                </span>
               </button>
             </div>
           )}
@@ -1747,15 +1934,19 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           BODY LAYOUT: ACCORDION SIDEBAR + MAIN CONTENT + MOBILE DRAWER & BOTTOM BAR
       ========================================================================= */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Desktop Collapsible Accordion Sidebar */}
-        <aside className={`w-64 border-r shrink-0 hidden md:flex flex-col justify-between overflow-y-auto p-3 text-xs sticky top-16 h-[calc(100vh-4rem)] scrollbar-thin scrollbar-thumb-slate-200 ${
+        {/* Desktop Collapsible Accordion Sidebar (Icon-Rail on Tablet for Laundry Mode) */}
+        <aside className={`border-r shrink-0 hidden md:flex flex-col justify-between overflow-y-auto text-xs sticky top-16 h-[calc(100vh-4rem)] scrollbar-thin scrollbar-thumb-slate-200 transition-all ${
+          isLaundryMode ? 'w-20 lg:w-64 p-2 lg:p-3' : 'w-64 p-3'
+        } ${
           activeOutlet?.isWarehouse ? 'bg-slate-50/70 border-indigo-100' : 'bg-white border-slate-200'
         }`}>
           {renderNavContent()}
 
           {/* Bottom Card / Support Hotline — Khusus Owner & Supervisor */}
           {canViewGuide && (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 space-y-1 mt-4">
+            <div className={`p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 space-y-1 mt-4 ${
+              isLaundryMode ? 'hidden lg:block' : 'block'
+            }`}>
               <p className="font-bold text-slate-800">
                 {activeOutlet?.isWarehouse ? 'Mode Gudang Logistik' : 'Butuh Bantuan?'}
               </p>

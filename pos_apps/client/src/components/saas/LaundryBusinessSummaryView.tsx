@@ -355,7 +355,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
   return (
     <div className="space-y-5 pb-24 sm:pb-16 font-sans max-w-6xl mx-auto">
       {/* ── 1. TOP HEADER & OPERATIONAL GREETING RIBBON ────────────────── */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0 shadow-2xs">
             <Shirt className="w-6 h-6 stroke-[2.2]" />
@@ -463,9 +463,9 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
       )}
 
       {/* ── 2. PRIMARY BENTO ROW: HERO TONASE & RADAR MESIN WORKSHOP ──────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* 2.1 BENTO HERO CARD: TONASE & FINANCIAL (Takes 2 Columns on Desktop) */}
-        <div className="lg:col-span-2 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        {/* 2.1 BENTO HERO CARD: TONASE & FINANCIAL (1 Col on Tablet, 2 Cols on Laptop) */}
+        <div className="md:col-span-1 lg:col-span-2 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between">
           <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute left-1/2 -top-12 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -501,8 +501,8 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
             </div>
           </div>
 
-          {/* Micro Metrics: 2x2 on Mobile, 4x1 on Tablet/Desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-white/10 text-xs relative z-10">
+          {/* Micro Metrics: 2x2 on Mobile & Tablet, 4x1 on Laptop Desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-white/10 text-xs relative z-10">
             <div className="bg-white/5 p-3 rounded-2xl border border-white/5 backdrop-blur-xs">
               <div className="text-blue-300 text-[10px] font-bold uppercase tracking-wider">Omset Kasir</div>
               <div className="font-black text-sm sm:text-base text-white mt-0.5 truncate font-mono">
@@ -533,8 +533,8 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
           </div>
         </div>
 
-        {/* 2.2 BENTO RADAR MESIN WORKSHOP (Takes 1 Column on Desktop) */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        {/* 2.2 BENTO RADAR MESIN WORKSHOP (1 Col on Tablet & Laptop) */}
+        <div className="md:col-span-1 lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3.5">
               <div className="flex items-center gap-2">
@@ -681,9 +681,9 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
       </div>
 
       {/* ── 4. SECONDARY BENTO ROW: ANTREAN MENDESAK & RAK/BAHAN TILES ─────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* 4.1 ANTREAN CUCIAN MENDESAK & ATTENTION STREAM (Takes 2 Columns) */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        {/* 4.1 ANTREAN CUCIAN MENDESAK & ATTENTION STREAM (1 Col on Tablet, 2 Cols on Laptop) */}
+        <div className="md:col-span-1 lg:col-span-2 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -827,8 +827,8 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
           )}
         </div>
 
-        {/* 4.2 RAK SIMPAN & BAHAN CUCI TILES (Takes 1 Column) */}
-        <div className="space-y-4">
+        {/* 4.2 RAK SIMPAN & BAHAN CUCI TILES (1 Col on Tablet & Laptop) */}
+        <div className="md:col-span-1 lg:col-span-1 space-y-4">
           {/* Mini Peta Rak Simpan */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between mb-2">
