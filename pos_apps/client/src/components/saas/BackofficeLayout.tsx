@@ -32,6 +32,7 @@ import {
   BookOpen,
   ChefHat,
   Shirt,
+  Archive,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -594,6 +595,19 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
     return (
       /* MODE TOKO PENJUALAN (OPERASIONAL KASIR & KAFE LENGKAP) */
       <div className="space-y-1">
+        {/* Khusus Mode Laundry: Tombol Utama Aksi Cepat Terima Cucian */}
+        {isLaundryMode && (
+          <div className="pb-2.5 mb-2 border-b border-slate-100">
+            <button
+              onClick={() => handleSelectTab('pos')}
+              className="w-full py-2.5 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>+ Terima Cucian (Drop-off)</span>
+            </button>
+          </div>
+        )}
+
         {/* Quick Launch Ringkasan Bisnis */}
         <button
           onClick={() => handleSelectTab('overview')}
@@ -1949,6 +1963,68 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   <span className="text-[10px]">Menu</span>
                 </button>
               </>
+            ) : isLaundryMode ? (
+              /* Bottom Nav: Mode Laundry Mobile-First (Bento + SuperApp Navbar) */
+              <div className="flex items-center justify-between w-full max-w-sm mx-auto relative px-2">
+                {/* Tab 1: Beranda Bento Hub */}
+                <button
+                  type="button"
+                  onClick={() => onTabChange('overview')}
+                  className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] py-1 transition-colors active:scale-95 cursor-pointer ${
+                    activeTab === 'overview' ? 'text-blue-900 font-black' : 'text-slate-500 hover:text-slate-800 font-medium'
+                  }`}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="text-[10px]">Beranda</span>
+                </button>
+
+                {/* Tab 2: Workshop Stasiun Mesin */}
+                <button
+                  type="button"
+                  onClick={() => onTabChange('laundry_production')}
+                  className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] py-1 transition-colors active:scale-95 cursor-pointer ${
+                    activeTab === 'laundry_production' ? 'text-blue-900 font-black' : 'text-slate-500 hover:text-slate-800 font-medium'
+                  }`}
+                >
+                  <Shirt className="w-5 h-5" />
+                  <span className="text-[10px]">Workshop</span>
+                </button>
+
+                {/* Central Elevated Action: Terima Cucian (Drop-off) */}
+                <div className="relative -top-4 flex flex-col items-center px-1">
+                  <button
+                    type="button"
+                    onClick={() => onTabChange('pos')}
+                    className="w-12 h-12 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-95 transition-transform cursor-pointer border-2 border-white"
+                    title="Terima Cucian (Drop-off)"
+                  >
+                    <Plus className="w-6 h-6 stroke-[2.5]" />
+                  </button>
+                  <span className="text-[9px] font-black text-blue-900 mt-0.5">Drop-off</span>
+                </div>
+
+                {/* Tab 3: Rak Simpan */}
+                <button
+                  type="button"
+                  onClick={() => onTabChange('laundry_racks')}
+                  className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] py-1 transition-colors active:scale-95 cursor-pointer ${
+                    activeTab === 'laundry_racks' ? 'text-blue-900 font-black' : 'text-slate-500 hover:text-slate-800 font-medium'
+                  }`}
+                >
+                  <Archive className="w-5 h-5" />
+                  <span className="text-[10px]">Rak</span>
+                </button>
+
+                {/* Tab 4: Menu Lainnya (Drawer) */}
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerOpen(true)}
+                  className="flex flex-col items-center justify-center gap-0.5 min-w-[50px] py-1 text-slate-500 hover:text-slate-800 transition-colors active:scale-95 cursor-pointer"
+                >
+                  <Menu className="w-5 h-5" />
+                  <span className="text-[10px]">Menu</span>
+                </button>
+              </div>
             ) : (
               /* Bottom Nav: Mode Toko Penjualan */
               <>
