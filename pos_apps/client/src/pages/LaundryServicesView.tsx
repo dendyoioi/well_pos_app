@@ -9,6 +9,7 @@ import {
     Pencil,
     Power,
     ArrowUpDown,
+    ChevronDown,
     Scale,
     Package,
     Layers,
@@ -654,21 +655,24 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                                    className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
-                                >
-                                    <option value="ALL">Semua Status</option>
-                                    <option value="ACTIVE">Hanya Aktif</option>
-                                    <option value="INACTIVE">Hanya Nonaktif</option>
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                                        className="h-9 px-3 pr-10 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-900 appearance-none"
+                                    >
+                                        <option value="ALL">Semua Status</option>
+                                        <option value="ACTIVE">Hanya Aktif</option>
+                                        <option value="INACTIVE">Hanya Nonaktif</option>
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                                </div>
 
                                 <div className="relative flex items-center">
                                     <select
                                         value={sortBy}
                                         onChange={(e) => setSortBy(e.target.value as SortOption)}
-                                        className="h-9 pl-8 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-900"
+                                        className="h-9 pl-8 pr-10 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-900 appearance-none"
                                     >
                                         <option value="DEFAULT">Urutan Standar</option>
                                         <option value="PRICE_ASC">Tarif: Termurah</option>
@@ -677,6 +681,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                         <option value="DURATION_ASC">Durasi: Tercepat</option>
                                     </select>
                                     <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+                                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                                 </div>
                             </div>
                         </div>
@@ -1062,38 +1067,41 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                                 className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-slate-50 focus:bg-white"
                                             />
                                         ) : (
-                                            <select
-                                                value={formCategory}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setFormCategory(val);
-                                                    if (val === 'KILOAN') {
-                                                        setFormUnit('Kg');
-                                                        setFormHasMinOrder(true);
-                                                        setFormMinOrder('3');
-                                                    } else if (val === 'SEPATU_TAS') {
-                                                        setFormUnit('Pasang');
-                                                        setFormHasMinOrder(false);
-                                                        setFormMinOrder('1');
-                                                    } else if (val === 'KARPET_GORDEN') {
-                                                        setFormUnit('m²');
-                                                        setFormHasMinOrder(true);
-                                                        setFormMinOrder('2');
-                                                    } else {
-                                                        setFormUnit('Pcs');
-                                                        setFormHasMinOrder(false);
-                                                        setFormMinOrder('1');
-                                                    }
-                                                }}
-                                                className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-                                            >
-                                                <option value="KILOAN">🧺 Cuci Kiloan</option>
-                                                <option value="SATUAN">👔 Satuan / Dry Clean</option>
-                                                <option value="EXPRESS">⚡ Kilat / Express</option>
-                                                <option value="SEPATU_TAS">👟 Sepatu &amp; Tas</option>
-                                                <option value="KARPET_GORDEN">🏠 Karpet &amp; Gorden (m²)</option>
-                                                <option value="STROLLER">🍼 Stroller &amp; Perlengkapan Bayi</option>
-                                            </select>
+                                            <div className="relative">
+                                                <select
+                                                    value={formCategory}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setFormCategory(val);
+                                                        if (val === 'KILOAN') {
+                                                            setFormUnit('Kg');
+                                                            setFormHasMinOrder(true);
+                                                            setFormMinOrder('3');
+                                                        } else if (val === 'SEPATU_TAS') {
+                                                            setFormUnit('Pasang');
+                                                            setFormHasMinOrder(false);
+                                                            setFormMinOrder('1');
+                                                        } else if (val === 'KARPET_GORDEN') {
+                                                            setFormUnit('m²');
+                                                            setFormHasMinOrder(true);
+                                                            setFormMinOrder('2');
+                                                        } else {
+                                                            setFormUnit('Pcs');
+                                                            setFormHasMinOrder(false);
+                                                            setFormMinOrder('1');
+                                                        }
+                                                    }}
+                                                    className="w-full px-3 py-2 pr-10 text-xs font-bold rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none appearance-none"
+                                                >
+                                                    <option value="KILOAN">🧺 Cuci Kiloan</option>
+                                                    <option value="SATUAN">👔 Satuan / Dry Clean</option>
+                                                    <option value="EXPRESS">⚡ Kilat / Express</option>
+                                                    <option value="SEPATU_TAS">👟 Sepatu &amp; Tas</option>
+                                                    <option value="KARPET_GORDEN">🏠 Karpet &amp; Gorden (m²)</option>
+                                                    <option value="STROLLER">🍼 Stroller &amp; Perlengkapan Bayi</option>
+                                                </select>
+                                                <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                                            </div>
                                         )}
                                     </div>
                                 )}

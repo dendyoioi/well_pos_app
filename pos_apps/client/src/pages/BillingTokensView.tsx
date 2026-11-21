@@ -364,7 +364,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
             className="w-full sm:w-auto h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-95 cursor-pointer"
           >
             <Zap className="w-4 h-4 fill-white text-white" />
-            <span>+ Top-Up Kuota Token</span>
+            <span>Top-Up Kuota Token</span>
           </button>
         </div>
       </div>

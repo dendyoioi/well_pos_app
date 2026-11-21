@@ -703,7 +703,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto min-w-0">
           {/* Dropdown Filter Saluran Pesanan */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
+          <div className="relative flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
             <Filter className="w-4 h-4 text-blue-900 shrink-0" />
             <span className="text-xs font-bold text-slate-600 shrink-0">Saluran:</span>
             <select
@@ -713,7 +713,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 setSelectedChannel(val);
                 loadOrders(val);
               }}
-              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-1 min-w-0 flex-1 sm:flex-initial truncate"
+              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-6 min-w-0 flex-1 sm:flex-initial truncate appearance-none"
             >
               <option value="ALL">Semua Saluran</option>
               {channelOptions.map((ch) => (
@@ -722,10 +722,11 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 </option>
               ))}
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
           </div>
 
           {/* Filter Kasir: Smart Default untuk Kasir (Akun Saya) atau Pilihan Semua Kasir di Toko Ini */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
+          <div className="relative flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
             <UserCheck className="w-4 h-4 text-blue-900 shrink-0" />
             <span className="text-xs font-bold text-slate-600 shrink-0">Kasir:</span>
             <select
@@ -734,7 +735,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 setSelectedCashier(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-1 min-w-0 flex-1 truncate"
+              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-6 min-w-0 flex-1 truncate appearance-none"
             >
               <option value="ALL">👤 Semua Kasir di Toko Ini</option>
               {cashierOptions.map((name) => {
@@ -746,8 +747,9 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 );
               })}
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
             {isCashierRole && selectedCashier === currentUser?.name && (
-              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0">
+              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0 mr-4">
                 Akun Saya
               </span>
             )}

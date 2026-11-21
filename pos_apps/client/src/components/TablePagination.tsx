@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 
 export interface TablePaginationProps {
   currentPage: number;
@@ -64,20 +64,23 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
       <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 text-xs text-slate-600 font-semibold w-full sm:w-auto">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className="text-slate-500 font-medium text-[11px] sm:text-xs">Baris:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
-              onPageChange(1);
-            }}
-            className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-2 py-1 sm:px-2.5 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-900/20 cursor-pointer shadow-2xs hover:border-slate-300 transition-all"
-          >
-            {pageSizeOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                onPageSizeChange(Number(e.target.value));
+                onPageChange(1);
+              }}
+              className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-xl pl-2.5 pr-7 py-1 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-900/20 cursor-pointer shadow-2xs hover:border-slate-300 transition-all appearance-none"
+            >
+              {pageSizeOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
 
         <span className="text-slate-300 hidden sm:inline">|</span>

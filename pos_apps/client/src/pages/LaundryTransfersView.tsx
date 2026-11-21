@@ -12,6 +12,7 @@ import {
   Clock,
   PackageCheck,
   Send,
+  ChevronDown,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -515,20 +516,23 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Tujuan ({direction === 'TO_WORKSHOP' ? 'Workshop Pabrik' : 'Toko / Outlet'}) <span className="text-rose-500">*</span>
                     </label>
-                    <select
-                      value={targetOutletId}
-                      onChange={(e) => setTargetOutletId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-900"
-                    >
-                      {workshops
-                        .filter((w) => w.id !== activeOutlet?.id)
-                        .map((w) => (
-                          <option key={w.id} value={w.id}>
-                            {w.name} {w.isWorkshop ? '(Pusat Workshop)' : '(Outlet Toko)'}
-                          </option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={targetOutletId}
+                        onChange={(e) => setTargetOutletId(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 pr-10 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 appearance-none"
+                      >
+                        {workshops
+                          .filter((w) => w.id !== activeOutlet?.id)
+                          .map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.name} {w.isWorkshop ? '(Pusat Workshop)' : '(Outlet Toko)'}
+                            </option>
+                          ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                 </div>
 

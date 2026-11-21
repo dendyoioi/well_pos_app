@@ -37,6 +37,8 @@ import {
   Clock,
   Truck,
   Layers,
+  PanelLeftOpen,
+  PanelLeftClose,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -167,6 +169,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [tabletDrawerOpen, setTabletDrawerOpen] = useState(false);
 
   // Quick Drop-off Modal & Receipt Modal Khusus Laundry
   const [quickDropoffOpen, setQuickDropoffOpen] = useState(false);
@@ -740,7 +743,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
       /* MODE TOKO PENJUALAN (OPERASIONAL KASIR & KAFE LENGKAP) */
       <div className="space-y-1">
         {/* Khusus Mode Laundry: Tombol Utama Aksi Cepat Terima Cucian */}
-        {isLaundryMode && (
+        {isLaundryMode && !isMobileDrawer && (
           <div className="pb-2.5 mb-2 border-b border-slate-100 flex justify-center lg:justify-start">
             <button
               onClick={() => {
@@ -751,7 +754,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               title="Terima Cucian (Drop-off)"
             >
               <Plus className="w-5 h-5 lg:w-4 lg:h-4 stroke-[2.5] shrink-0" />
-              <span className="hidden lg:inline">+ Terima Cucian (Drop-off)</span>
+              <span className="hidden lg:inline">Terima Cucian (Drop-off)</span>
             </button>
           </div>
         )}
@@ -1826,7 +1829,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 else onTabChange('guide');
               }}
               title="Panduan & SOP Toko"
-              className="p-2 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-slate-100 transition-all flex items-center justify-center cursor-pointer shrink-0"
+              className="hidden sm:flex p-2 rounded-xl text-slate-500 hover:text-blue-900 hover:bg-slate-100 transition-all items-center justify-center cursor-pointer shrink-0"
             >
               <BookOpen className="w-4 h-4 text-blue-900" />
             </button>
@@ -2055,7 +2058,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           <button
             onClick={onLogout}
             title="Kunci Terminal"
-            className="p-1.5 sm:p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all cursor-pointer shrink-0"
+            className="hidden sm:flex p-1.5 sm:p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all cursor-pointer shrink-0"
           >
             <Lock className="w-4 h-4" />
           </button>
@@ -2064,7 +2067,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           <button
             onClick={onLogout}
             title="Keluar Akun"
-            className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 border border-slate-200 transition-all text-slate-600 cursor-pointer shrink-0"
+            className="hidden sm:flex p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 border border-slate-200 transition-all text-slate-600 cursor-pointer shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -2081,7 +2084,21 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         } ${
           activeOutlet?.isWarehouse ? 'bg-slate-50/70 border-indigo-100' : 'bg-white border-slate-200'
         }`}>
-          {renderNavContent()}
+          <div>
+            {/* Tablet Drawer Toggle Button (md: to lg:) */}
+            {isLaundryMode && (
+              <button
+                type="button"
+                onClick={() => setTabletDrawerOpen(true)}
+                className="hidden md:flex lg:hidden w-full py-2 mb-2 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 flex-col items-center justify-center gap-0.5 text-[9px] font-bold transition-all cursor-pointer border border-slate-200/80 active:scale-95"
+                title="Buka Menu Lengkap"
+              >
+                <PanelLeftOpen className="w-4 h-4 text-blue-900" />
+                <span>Menu</span>
+              </button>
+            )}
+            {renderNavContent()}
+          </div>
 
           {/* Bottom Card / Support Hotline — Khusus Owner & Supervisor */}
           {canViewGuide && (
@@ -2106,6 +2123,47 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             </div>
           )}
         </aside>
+
+        {/* Tablet Overlay Drawer (md: to lg:) */}
+        {tabletDrawerOpen && (
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 hidden md:block lg:hidden transition-opacity"
+            onClick={() => setTabletDrawerOpen(false)}
+          />
+        )}
+        <div
+          className={`fixed inset-y-0 left-0 w-64 bg-white z-50 hidden md:flex lg:hidden flex-col shadow-2xl border-r border-slate-200 transition-transform duration-300 ease-in-out ${
+            tabletDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          {/* Header Drawer Tablet */}
+          <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold text-xs">
+                <Store className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-blue-950 truncate">
+                  {activeOutlet?.name || 'WELL POS'}
+                </div>
+                <div className="text-[10px] text-slate-500 font-bold">
+                  {isLaundryMode ? 'Outlet Laundry' : 'Toko Penjualan'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTabletDrawerOpen(false)}
+              className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+              title="Tutup Menu"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 text-xs">
+            {renderNavContent(() => setTabletDrawerOpen(false))}
+          </div>
+        </div>
 
         {/* Mobile Off-Canvas Drawer Backdrop */}
         {mobileDrawerOpen && (
@@ -2222,7 +2280,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
         {/* Main Content Pane */}
         <div className={`flex-1 overflow-y-auto ${activeTab === 'pos' ? 'p-0 sm:p-4' : 'p-3 sm:p-8 pb-28 sm:pb-8'}`}>
-          <div className={activeTab === 'pos' ? 'max-w-[1600px] mx-auto' : 'max-w-6xl mx-auto'}>
+          <div className={['pos', 'laundry_queue', 'laundry_production'].includes(activeTab) ? 'max-w-[1600px] mx-auto' : 'max-w-6xl mx-auto'}>
             {children}
           </div>
         </div>
@@ -2425,16 +2483,18 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             )}
           </nav>
         )}
-        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) — Khusus Owner & Supervisor (Sembunyikan di tab POS agar tidak menutupi cart) */}
+        {/* Floating Contextual Guide Widget (SOP Bantuan Cepat) — Khusus Owner & Supervisor (Sembunyikan di tab POS agar tidak menutupi cart, dan sembunyikan di mobile agar tidak bertabrakan dengan mobile nav) */}
         {canViewGuide && activeTab !== 'pos' && (
-          <FloatingGuideWidget
-            activeTab={activeTab}
-            isLaundryMode={isLaundryMode}
-            onOpenGuide={(sec) => {
-              if (onOpenGuide) onOpenGuide(sec);
-              else onTabChange('guide');
-            }}
-          />
+          <div className="hidden md:block">
+            <FloatingGuideWidget
+              activeTab={activeTab}
+              isLaundryMode={isLaundryMode}
+              onOpenGuide={(sec) => {
+                if (onOpenGuide) onOpenGuide(sec);
+                else onTabChange('guide');
+              }}
+            />
+          </div>
         )}
 
         {/* Khusus Mode Laundry: Modal Drop-off Cepat & Struk Tag Thermal */}

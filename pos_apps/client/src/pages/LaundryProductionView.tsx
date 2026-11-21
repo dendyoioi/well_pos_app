@@ -629,7 +629,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
       {/* Toast Feedback */}
       {feedback && (
         <div
-          className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
+          className={`fixed bottom-24 md:bottom-6 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
             feedback.type === 'success'
               ? 'bg-emerald-950 text-emerald-100 border-emerald-700'
               : 'bg-rose-950 text-rose-100 border-rose-700'

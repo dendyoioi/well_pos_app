@@ -2935,7 +2935,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                                     title="Tambah Kuota Token Transaksi (Top-Up)"
                                   >
                                     <Coins className="w-3.5 h-3.5 text-amber-400" />
-                                    <span className="hidden xl:inline">+ Isi Kuota</span>
+                                    <span className="hidden xl:inline">Isi Kuota</span>
                                   </button>
                                   <div className="absolute bottom-full mb-1.5 right-0 hidden group-hover:flex items-center px-2 py-1 rounded bg-slate-950 text-[10px] font-bold text-white whitespace-nowrap shadow-2xl border border-slate-700 pointer-events-none z-30">
                                     Tambah / Top-Up Kuota Token
@@ -3507,7 +3507,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                 >
                   <Coins className="w-4 h-4 text-slate-950" />
-                  <span>+ Top-Up Kuota Merchant</span>
+                  <span>Top-Up Kuota Merchant</span>
                 </button>
               </div>
             </div>
@@ -4041,7 +4041,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>+ Tambah Staf Baru</span>
+                <span>Tambah Staf Baru</span>
               </button>
             </div>
 
@@ -4198,7 +4198,7 @@ export const SuperadminDashboardPage: React.FC<SuperadminDashboardPageProps> = (
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
                 >
                   <Tag className="w-4 h-4" />
-                  <span>+ Buat Promo Baru</span>
+                  <span>Buat Promo Baru</span>
                 </button>
               </div>
 

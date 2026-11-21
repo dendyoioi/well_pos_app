@@ -4,6 +4,7 @@ import {
   Search,
   Archive,
   ChevronRight,
+  ChevronDown,
   Plus,
   Phone,
   User,
@@ -49,6 +50,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   const [scannerOpen, setScannerOpen] = useState(false);
   const [racks, setRacks] = useState<LaundryRack[]>([]);
   const [services, setServices] = useState<LaundryService[]>([]);
+  const [mobileActiveStage, setMobileActiveStage] = useState<string>('RECEIVED');
 
   // State Modal Struk Thermal
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
@@ -492,20 +494,51 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
         </button>
       </div>
 
+      {/* Mobile Stage Selector Pill Tabs (< md) */}
+      <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+        {PIPELINE_COLUMNS.map((col) => {
+          const count = filteredOrders.filter((i) => i.status === col.key).length;
+          const isActive = mobileActiveStage === col.key;
+          return (
+            <button
+              key={col.key}
+              type="button"
+              onClick={() => setMobileActiveStage(col.key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-blue-900 text-white shadow-xs'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <span>{col.label.replace(/^\d+\.\s*/, '')}</span>
+              <span
+                className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Kanban Pipeline Board */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 text-xs font-semibold animate-pulse">
           Memuat antrean cucian aktif...
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5 items-start">
+        <div className="flex flex-col md:flex-row md:overflow-x-auto md:snap-x 2xl:grid 2xl:grid-cols-5 gap-3.5 items-start pb-3 2xl:pb-0 2xl:overflow-visible">
           {PIPELINE_COLUMNS.map((col) => {
             const colItems = filteredOrders.filter((i) => i.status === col.key);
 
             return (
               <div
                 key={col.key}
-                className="bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[440px]"
+                className={`bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[440px] md:min-w-[270px] xl:min-w-[250px] md:snap-start flex-1 ${
+                  mobileActiveStage === col.key ? 'flex' : 'hidden md:flex'
+                }`}
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-200">
@@ -799,17 +832,20 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Pilihan Paket Layanan <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    value={selectedServiceId}
-                    onChange={(e) => setSelectedServiceId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} — Rp {Number(s.price).toLocaleString('id-ID')} / {s.unit} ({s.durationHours} Jam)
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedServiceId}
+                      onChange={(e) => setSelectedServiceId(e.target.value)}
+                      className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none appearance-none"
+                    >
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} — Rp {Number(s.price).toLocaleString('id-ID')} / {s.unit} ({s.durationHours} Jam)
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
                 </div>
 
                 {/* 3. Timbangan & Jumlah Potong */}
@@ -928,15 +964,18 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           Metode Pembayaran
                         </label>
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value as any)}
-                          className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none"
-                        >
-                          <option value="CASH">Tunai (Cash)</option>
-                          <option value="QRIS">QRIS Statis / Dinamis</option>
-                          <option value="TRANSFER">Transfer Bank</option>
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value as any)}
+                            className="w-full px-3 py-1.5 pr-10 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none appearance-none"
+                          >
+                            <option value="CASH">Tunai (Cash)</option>
+                            <option value="QRIS">QRIS Statis / Dinamis</option>
+                            <option value="TRANSFER">Transfer Bank</option>
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -996,17 +1035,20 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Pilih Kode Rak / Hanger
               </label>
-              <select
-                value={chosenRackCode}
-                onChange={(e) => setChosenRackCode(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900"
-              >
-                {racks.map((r) => (
-                  <option key={r.id} value={r.code}>
-                    {r.code} ({r.name}) — Slot: {r.currentCount || 0}/{r.capacity}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={chosenRackCode}
+                  onChange={(e) => setChosenRackCode(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-200 bg-white font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900 appearance-none"
+                >
+                  {racks.map((r) => (
+                    <option key={r.id} value={r.code}>
+                      {r.code} ({r.name}) — Slot: {r.currentCount || 0}/{r.capacity}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -1067,14 +1109,17 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                     <label className="block text-[11px] font-bold text-rose-900 mb-1">
                       Metode Pelunasan Kasir
                     </label>
-                    <select
-                      value={handoverPayMethod}
-                      onChange={(e) => setHandoverPayMethod(e.target.value as any)}
-                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-rose-300 bg-white text-slate-800 font-semibold focus:outline-none"
-                    >
-                      <option value="CASH">Tunai (Cash)</option>
-                      <option value="QRIS">QRIS Statis / Dinamis</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={handoverPayMethod}
+                        onChange={(e) => setHandoverPayMethod(e.target.value as any)}
+                        className="w-full px-3 py-1.5 pr-10 text-xs rounded-xl border border-rose-300 bg-white text-slate-800 font-semibold focus:outline-none appearance-none"
+                      >
+                        <option value="CASH">Tunai (Cash)</option>
+                        <option value="QRIS">QRIS Statis / Dinamis</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1167,7 +1212,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       {/* Floating Feedback Toast WhatsApp Gateway */}
       {waToast && (
         <div
-          className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
+          className={`fixed bottom-24 md:bottom-6 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
             waToast.type === 'success'
               ? 'bg-emerald-950 text-emerald-100 border-emerald-700'
               : 'bg-rose-950 text-rose-100 border-rose-700'

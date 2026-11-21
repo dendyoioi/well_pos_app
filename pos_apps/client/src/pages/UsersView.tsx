@@ -995,7 +995,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             className="w-full sm:w-auto h-11 sm:h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 active:scale-[0.98]"
           >
             <UserPlus className="w-4 h-4 stroke-[2.5]" />
-            <span>+ Tambah Staf Baru</span>
+            <span>Tambah Staf Baru</span>
           </button>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1130,7 +1130,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                   <select
                     value={outletFilter}
                     onChange={(e) => setOutletFilter(e.target.value)}
-                    className="w-full sm:w-auto h-10 pl-3 pr-8 appearance-none bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
+                    className="w-full sm:w-auto h-10 pl-3 pr-10 appearance-none bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
                   >
                     <option value="ALL">Semua Toko (Semua)</option>
                     {outlets.map((o) => (
@@ -1139,7 +1139,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <ChevronDown className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
               )}
             </div>
@@ -1179,7 +1179,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                 title="Tambah Staf Baru"
               >
                 <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>+ Tambah</span>
+                <span>Tambah</span>
               </button>
             </div>
           </div>
@@ -1385,7 +1385,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                 className="inline-flex items-center gap-2 h-9 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer"
               >
                 <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>+ Tambah Staf Baru</span>
+                <span>Tambah Staf Baru</span>
               </button>
             </div>
           ) : (
@@ -1517,7 +1517,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           title="Tambah Staf Baru"
         >
           <UserPlus className="w-4 h-4 stroke-[2.5]" />
-          <span>+ Tambah Staf</span>
+          <span>Tambah Staf</span>
         </button>
       </div>
         </>

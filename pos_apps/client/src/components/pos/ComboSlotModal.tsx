@@ -308,7 +308,7 @@ export const ComboSlotModal: React.FC<ComboSlotModalProps> = ({
               className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span>+ Tambah ke Keranjang</span>
+              <span>Tambah ke Keranjang</span>
             </button>
           </div>
         </div>

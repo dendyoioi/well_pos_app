@@ -322,13 +322,13 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
                 setStatusFilter(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="w-full h-10 pl-3.5 pr-9 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all text-slate-700 cursor-pointer appearance-none"
+              className="w-full h-10 pl-3.5 pr-10 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900 transition-all text-slate-700 cursor-pointer appearance-none"
             >
               <option value="ALL">Semua Status Gudang</option>
               <option value="ACTIVE">Gudang Aktif Saja</option>
               <option value="INACTIVE">Gudang Nonaktif Saja</option>
             </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 

@@ -1165,7 +1165,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         <select
                           value={productCategoryFilter}
                           onChange={(e) => setProductCategoryFilter(e.target.value)}
-                          className="w-full sm:w-auto appearance-none pr-9 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 hover:bg-slate-100/60 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none cursor-pointer transition-all"
+                          className="w-full sm:w-auto appearance-none pr-10 pl-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 hover:bg-slate-100/60 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none cursor-pointer transition-all"
                         >
                           <option value="ALL">Semua Kategori ({products.length})</option>
                           {categoriesWithCounts.map((cat) => (
@@ -1174,7 +1174,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                     )}
                   </div>
@@ -1571,7 +1571,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <select
                       value={movementTypeFilter}
                       onChange={(e) => setMovementTypeFilter(e.target.value)}
-                      className="appearance-none py-2 pr-8 pl-3 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+                      className="appearance-none py-2 pr-10 pl-3 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
                     >
                       <option value="ALL">Semua Mutasi</option>
                       <option value="PURCHASE_IN">Stok Masuk (PO)</option>
@@ -1581,7 +1581,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       <option value="DAMAGE_OUT">Barang Rusak</option>
                       <option value="ADJUSTMENT">Stock Opname</option>
                     </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
               </div>

@@ -29,6 +29,8 @@ import {
   Wallet,
   Loader2,
   WifiOff,
+  ShoppingCart,
+  ChevronRight,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import type { LaundryService, LaundryQueueOrder, CustomerLaundryWallet } from '../types/laundry';
@@ -171,6 +173,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<LaundryQueueOrder | null>(null);
   const [feedbackToast, setFeedbackToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [mobileCartSheetOpen, setMobileCartSheetOpen] = useState(false);
 
   // Ambil daftar layanan dari API
   const fetchServices = async () => {
@@ -742,6 +745,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
         setCompletedOrder(newQueueOrder);
         setReceiptModalOpen(true);
+        setMobileCartSheetOpen(false);
 
         // Reset keranjang untuk transaksi berikutnya
         setCartItems([]);
@@ -770,263 +774,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     }
   };
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-68px)] bg-slate-100 font-sans text-slate-800">
-      {/* 1. Header Toolbar Terminal Kasir Laundry */}
-      <header className="bg-white border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs">
-            <Shirt className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-extrabold text-slate-900">
-                Kasir Laundry &amp; Cuci Kiloan
-              </h1>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-                SmartKasir Mode
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              {activeOutlet?.name || 'Toko Aktif'} • Kasir: <span className="font-semibold text-slate-700">{currentUser?.name}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Action Buttons Toolbar */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Tombol Transaksi Baru F1 */}
-          <button
-            type="button"
-            onClick={handleNewTransaction}
-            className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-            title="Mulai Transaksi Baru (F1)"
-          >
-            <FilePlus2 className="w-3.5 h-3.5" />
-            <span>+ Transaksi Baru (F1)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab('laundry_queue')}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Layers className="w-3.5 h-3.5 text-blue-700" />
-            <span>Antrean Live</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('laundry_racks')}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Archive className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Rak Simpan</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('laundry_transfers')}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Truck className="w-3.5 h-3.5 text-indigo-700" />
-            <span>Surat Jalan</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('settings_receipt')}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            title="Format Struk Thermal"
-          >
-            <Printer className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </header>
-
-      {/* Banner Non-intrusif Status Jaringan Offline */}
-      {!isOnline && (
-        <div className="bg-amber-50 border-b border-amber-300 px-4 py-2 flex items-center justify-between text-xs text-amber-900 shrink-0">
-          <div className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
-            <span className="font-extrabold">Mode Offline Terdeteksi:</span>
-            <span>Koneksi internet terputus. Pastikan internet terhubung kembali untuk sinkronisasi data operasional.</span>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Main Work Area: 2 Kolom (Katalog Layanan & Keranjang Kasir) */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Kolom Kiri: Katalog Layanan Laundry */}
-        <section className="flex-1 flex flex-col border-r border-slate-200 bg-white overflow-hidden">
-          {/* Search & Dynamic Category Tabs */}
-          <div className="p-3 border-b border-slate-200 space-y-2 bg-slate-50/70">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Cari layanan laundry (cth: Cuci Setrika, Bed Cover, Jas, Karpet, dll)..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Tab Kategori Dinamis */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-              {dynamicCategories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    activeCategory === cat
-                      ? 'bg-blue-900 text-white shadow-xs'
-                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                  }`}
-                >
-                  {getCategoryLabel(cat)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Grid Layanan */}
-          <div className="flex-1 p-3 overflow-y-auto">
-            {/* Customer-First Guardrail Banner */}
-            {!isCustomerFilled && (
-              <div className="mb-3.5 p-3 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300/80 shadow-xs flex items-center justify-between gap-3 animate-fadeIn">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center shrink-0">
-                    <Lock className="w-4 h-4 text-amber-900" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
-                        Input Pelanggan
-                      </span>
-                      <h4 className="text-xs font-black text-amber-950">
-                        Tentukan Nama Pelanggan Sebelum Memilih Layanan
-                      </h4>
-                    </div>
-                    <p className="text-[11px] text-amber-900/90 mt-0.5">
-                      Klik salah satu layanan di bawah atau tombol berikut untuk menentukan nama pelanggan.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setCustomerSearchModalOpen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                  >
-                    <Search className="w-3.5 h-3.5" />
-                    <span>Cari Pelanggan (F2)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuickAddModalOpen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Baru</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {loadingServices ? (
-              <div className="py-20 text-center text-slate-400 text-xs">
-                <span>Memuat katalog layanan laundry...</span>
-              </div>
-            ) : filteredServices.length === 0 ? (
-              <div className="py-20 text-center text-slate-400 text-xs space-y-2">
-                <Shirt className="w-8 h-8 mx-auto text-slate-300" />
-                <p>Tidak ada layanan yang sesuai.</p>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('laundry_services')}
-                  className="px-3 py-1 text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 cursor-pointer"
-                >
-                  Kelola Daftar Layanan
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                {filteredServices.map((srv) => {
-                  const isKg = srv.unit === 'KG';
-                  return (
-                    <button
-                      key={srv.id}
-                      type="button"
-                      onClick={() => handleSelectService(srv)}
-                      className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between group relative ${
-                        isCustomerFilled
-                          ? 'border-slate-200 bg-white hover:border-blue-900 hover:shadow-md cursor-pointer'
-                          : 'border-slate-200/80 bg-slate-50/70 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer'
-                      }`}
-                      title={!isCustomerFilled ? 'Silakan isi data pelanggan terlebih dahulu' : undefined}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span
-                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                              isKg
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            }`}
-                          >
-                            {srv.category}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {srv.durationHours} Jam
-                          </span>
-                        </div>
-
-                        <div className="flex items-start justify-between gap-1">
-                          <h3 className="font-extrabold text-xs text-slate-900 group-hover:text-blue-900 transition-colors line-clamp-1">
-                            {srv.name}
-                          </h3>
-                          {!isCustomerFilled && (
-                            <span className="shrink-0 text-[9px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
-                              <Lock className="w-2.5 h-2.5" />
-                              <span>Isi Customer</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {srv.description && (
-                          <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
-                            {srv.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-baseline justify-between">
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-medium">Tarif / {srv.unit}:</span>
-                          <div className="text-sm font-black text-slate-900">
-                            Rp {Number(srv.price).toLocaleString('id-ID')}
-                          </div>
-                        </div>
-
-                        {srv.minOrderQty && Number(srv.minOrderQty) > 1 && (
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                            Min: {Number(srv.minOrderQty)} {srv.unit}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Kolom Kanan: Kasir Nota & Pembayaran (1/3 Layar) */}
-        <section className="w-full lg:w-[420px] xl:w-[460px] bg-slate-50 border-l border-slate-200 flex flex-col overflow-hidden shrink-0">
+  const renderCartBody = () => (
+    <>
           {/* Header Status Pelanggan Terpilih */}
           <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1546,7 +1295,337 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               </button>
             </div>
           </div>
+    </>
+  );
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-68px)] lg:h-[calc(100vh-68px)] bg-slate-100 font-sans text-slate-800 pb-20 lg:pb-0">
+      {/* 1. Header Toolbar Terminal Kasir Laundry */}
+      <header className="bg-white border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs">
+            <Shirt className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-extrabold text-slate-900">
+                Kasir Laundry &amp; Cuci Kiloan
+              </h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+                SmartKasir Mode
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              {activeOutlet?.name || 'Toko Aktif'} • Kasir: <span className="font-semibold text-slate-700">{currentUser?.name}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons Toolbar */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Tombol Transaksi Baru F1 */}
+          <button
+            type="button"
+            onClick={handleNewTransaction}
+            className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+            title="Mulai Transaksi Baru (F1)"
+          >
+            <FilePlus2 className="w-3.5 h-3.5" />
+            <span>Transaksi Baru (F1)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab('laundry_queue')}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Layers className="w-3.5 h-3.5 text-blue-700" />
+            <span>Antrean Live</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('laundry_racks')}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Archive className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Rak Simpan</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('laundry_transfers')}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Truck className="w-3.5 h-3.5 text-indigo-700" />
+            <span>Surat Jalan</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('settings_receipt')}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="Format Struk Thermal"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Banner Non-intrusif Status Jaringan Offline */}
+      {!isOnline && (
+        <div className="bg-amber-50 border-b border-amber-300 px-4 py-2 flex items-center justify-between text-xs text-amber-900 shrink-0">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
+            <span className="font-extrabold">Mode Offline Terdeteksi:</span>
+            <span>Koneksi internet terputus. Pastikan internet terhubung kembali untuk sinkronisasi data operasional.</span>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Main Work Area: 2 Kolom (Katalog Layanan & Keranjang Kasir) */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Kolom Kiri: Katalog Layanan Laundry */}
+        <section className="flex-1 flex flex-col border-r border-slate-200 bg-white overflow-hidden">
+          {/* Search & Dynamic Category Tabs */}
+          <div className="p-3 border-b border-slate-200 space-y-2 bg-slate-50/70">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari layanan laundry (cth: Cuci Setrika, Bed Cover, Jas, Karpet, dll)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Tab Kategori Dinamis */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              {dynamicCategories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    activeCategory === cat
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+                  }`}
+                >
+                  {getCategoryLabel(cat)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid Layanan */}
+          <div className="flex-1 p-3 overflow-y-auto">
+            {/* Customer-First Guardrail Banner */}
+            {!isCustomerFilled && (
+              <div className="mb-3.5 p-3 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300/80 shadow-xs flex items-center justify-between gap-3 animate-fadeIn">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center shrink-0">
+                    <Lock className="w-4 h-4 text-amber-900" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                        Input Pelanggan
+                      </span>
+                      <h4 className="text-xs font-black text-amber-950">
+                        Tentukan Nama Pelanggan Sebelum Memilih Layanan
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-amber-900/90 mt-0.5">
+                      Klik salah satu layanan di bawah atau tombol berikut untuk menentukan nama pelanggan.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerSearchModalOpen(true)}
+                    className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Cari Pelanggan (F2)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickAddModalOpen(true)}
+                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Baru</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingServices ? (
+              <div className="py-20 text-center text-slate-400 text-xs">
+                <span>Memuat katalog layanan laundry...</span>
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <div className="py-20 text-center text-slate-400 text-xs space-y-2">
+                <Shirt className="w-8 h-8 mx-auto text-slate-300" />
+                <p>Tidak ada layanan yang sesuai.</p>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('laundry_services')}
+                  className="px-3 py-1 text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 cursor-pointer"
+                >
+                  Kelola Daftar Layanan
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                {filteredServices.map((srv) => {
+                  const isKg = srv.unit === 'KG';
+                  return (
+                    <button
+                      key={srv.id}
+                      type="button"
+                      onClick={() => handleSelectService(srv)}
+                      className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between group relative ${
+                        isCustomerFilled
+                          ? 'border-slate-200 bg-white hover:border-blue-900 hover:shadow-md cursor-pointer'
+                          : 'border-slate-200/80 bg-slate-50/70 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer'
+                      }`}
+                      title={!isCustomerFilled ? 'Silakan isi data pelanggan terlebih dahulu' : undefined}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span
+                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              isKg
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}
+                          >
+                            {srv.category}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {srv.durationHours} Jam
+                          </span>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className="font-extrabold text-xs text-slate-900 group-hover:text-blue-900 transition-colors line-clamp-1">
+                            {srv.name}
+                          </h3>
+                          {!isCustomerFilled && (
+                            <span className="shrink-0 text-[9px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>Isi Customer</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {srv.description && (
+                          <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
+                            {srv.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-baseline justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-medium">Tarif / {srv.unit}:</span>
+                          <div className="text-sm font-black text-slate-900">
+                            Rp {Number(srv.price).toLocaleString('id-ID')}
+                          </div>
+                        </div>
+
+                        {srv.minOrderQty && Number(srv.minOrderQty) > 1 && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            Min: {Number(srv.minOrderQty)} {srv.unit}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </section>
+
+        {/* Kolom Kanan: Kasir Nota & Pembayaran (1/3 Layar di Desktop) */}
+        <section className="hidden lg:flex w-[420px] xl:w-[460px] bg-slate-50 border-l border-slate-200 flex-col overflow-hidden shrink-0">
+          {renderCartBody()}
+        </section>
+      </div>
+
+      {/* Mobile Slide-Up Cart Bottom Sheet (< lg) */}
+      {mobileCartSheetOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fadeIn">
+          <div className="w-full bg-slate-50 rounded-t-3xl max-h-[88dvh] flex flex-col shadow-2xl border-t border-slate-200 overflow-hidden animate-slideUp">
+            {/* Header Sheet */}
+            <div className="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold">
+                  <ShoppingCart className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Nota Kasir Laundry</h3>
+                  <p className="text-[11px] text-slate-500">{cartItems.length} Layanan Terpilih</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileCartSheetOpen(false)}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Cart Body */}
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              {renderCartBody()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Sticky Bottom Cart Bar (< lg) */}
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-2xl flex items-center justify-between gap-3"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
+      >
+        <div
+          onClick={() => setMobileCartSheetOpen(true)}
+          className="flex-1 flex items-center gap-3 cursor-pointer min-w-0"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-black relative shrink-0 shadow-sm">
+            <ShoppingCart className="w-5 h-5" />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white">
+                {cartItems.length}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] text-slate-500 font-bold truncate">
+              {cartItems.length === 0 ? 'Keranjang Kosong' : `${cartTotals.totalKg > 0 ? `${cartTotals.totalKg} Kg • ` : ''}${cartTotals.totalPcs} Pcs`}
+            </div>
+            <div className="text-sm font-black text-blue-950 truncate">
+              Rp {cartTotals.grandTotal.toLocaleString('id-ID')}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileCartSheetOpen(true)}
+          className="px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black shrink-0 shadow-md shadow-blue-900/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+        >
+          <span>Lihat Nota</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {/* 3. Modal Konfigurasi Cucian (Timbangan / Helai / Parfum / Durasi) */}
@@ -1970,7 +2049,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 text-blue-800" />
-                  <span>+ Member Baru</span>
+                  <span>Member Baru</span>
                 </button>
               </div>
             </div>
@@ -2521,7 +2600,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* Floating Feedback Toast */}
       {feedbackToast && (
         <div
-          className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
+          className={`fixed bottom-24 lg:bottom-6 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
             feedbackToast.type === 'success'
               ? 'bg-emerald-950 text-emerald-100 border-emerald-700'
               : 'bg-rose-950 text-rose-100 border-rose-700'

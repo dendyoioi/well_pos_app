@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Archive, Plus, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Archive, Plus, Search, CheckCircle2, Clock, AlertCircle, ChevronDown } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
 import type { LaundryRack } from '../types/laundry';
@@ -422,16 +422,19 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Kategori Rak
                   </label>
-                  <select
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as any)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="KILOAN">Cucian Kiloan (Plastik / Bag)</option>
-                    <option value="SATUAN">Hanger Dry Clean & Satuan</option>
-                    <option value="EXPRESS">Express / Kilat</option>
-                    <option value="SEPATU_TAS">Sepatu, Tas & Helm</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={formCategory}
+                      onChange={(e) => setFormCategory(e.target.value as any)}
+                      className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none appearance-none"
+                    >
+                      <option value="KILOAN">Cucian Kiloan (Plastik / Bag)</option>
+                      <option value="SATUAN">Hanger Dry Clean & Satuan</option>
+                      <option value="EXPRESS">Express / Kilat</option>
+                      <option value="SEPATU_TAS">Sepatu, Tas & Helm</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
                 </div>
 
                 <div>

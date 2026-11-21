@@ -123,6 +123,10 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
 16. 🔄 **KEBIJAKAN ZERO REDUNDANT REFRESH BUTTON (ANTI-TOMBOL REFRESH MANDIRI)**:
     - **DILARANG KERAS** menambahkan tombol reload / muat ulang mandiri (`<RefreshCw />`, tombol "Muat Ulang", dsb) di header view, toolbar, samping search bar, atau card data.
     - **Alasan & Kebijakan Operasional**: Well POS adalah aplikasi modern yang secara otomatis memuat ulang data saat navigasi/tab berpindah, setelah aksi simpan/ubah/hapus berhasil, serta mendukung gestur native `<PullToRefresh />` pada perangkat mobile. Keberadaan tombol refresh terpisah merusak keseimbangan tata letak tombol aksi utama, mengurangi ruang layar mobile yang berharga, dan membingungkan kasir/owner.
+17. 🧼 **UI HYGIENE: ZERO DOUBLE-ICON, KONSISTENSI BRAND COLOR & CUSTOM SELECT CHEVRON**:
+    - **ZERO DOUBLE ICON + SIMBOL TEKS**: Jika tombol sudah memiliki ikon Lucide (mis. `<Plus />`, `<Trash2 />`, `<Check />`, `<Search />`), **DILARANG KERAS** menulis ulang simbol/karakter teks serupa di dalam label `<span>` (contoh terlarang: `<Plus /><span>+ Drop-off</span>` atau `<Plus /><span>+ Terima Cucian</span>`). Wajib tulis teks bersih: `<Plus /><span>Drop-off</span>` atau `<Plus /><span>Terima Cucian</span>`.
+    - **KONSISTENSI PALET WARNA BRAND (DEEP NAVY `blue-900`)**: **DILARANG** menggunakan warna biru cerah acak (`bg-blue-500`, `bg-blue-600`, `bg-sky-500`) untuk tombol aksi primer. Gunakan Deep Navy resmi Well POS (`bg-blue-900 hover:bg-blue-800 text-white`), atau jika berada di atas kartu gelap (`bg-blue-950`/`slate-900`), gunakan tombol kontras bersih `bg-white text-blue-950 hover:bg-blue-50` (atau `bg-emerald-600` khusus aksi konfirmasi sukses/bayar).
+    - **WAJIB CUSTOM SELECT CHEVRON (ANTI-CHEVRON MEPET)**: **DILARANG** merender elemen `<select>` dengan panah native browser yang menempel ke border kanan. Setiap `<select>` wajib dibungkus `<div className="relative">`, memakai kelas `appearance-none pr-10` (padding kanan lega), dan merender ikon `<ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />`.
 
 ---
 

@@ -483,7 +483,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 title="Buat Pesanan Susulan untuk Meja Ini (Khusus Belum Bayar)"
               >
                 <UtensilsCrossed className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>+ Susulan</span>
+                <span>Pesanan Susulan</span>
               </button>
             )}
 

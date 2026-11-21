@@ -471,8 +471,8 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
 
       {/* ── 2. PRIMARY BENTO ROW: HERO TONASE & RADAR MESIN WORKSHOP ──────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* 2.1 BENTO HERO CARD: TONASE & FINANCIAL (1 Col on Tablet, 2 Cols on Laptop) */}
-        <div className="md:col-span-1 lg:col-span-2 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between">
+        {/* 2.1 BENTO HERO CARD: TONASE & FINANCIAL (2 Cols on Tablet & Laptop) */}
+        <div className="md:col-span-2 lg:col-span-2 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between">
           <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute left-1/2 -top-12 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -502,10 +502,10 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'));
                 }}
-                className="mt-1 px-3.5 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+                className="mt-1 px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-blue-950 font-extrabold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>+ Drop-off</span>
+                <span>Drop-off</span>
               </button>
             </div>
           </div>
@@ -542,8 +542,8 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
           </div>
         </div>
 
-        {/* 2.2 BENTO RADAR MESIN WORKSHOP (1 Col on Tablet & Laptop) */}
-        <div className="md:col-span-1 lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        {/* 2.2 BENTO RADAR MESIN WORKSHOP (2 Cols on Tablet, 1 Col on Laptop) */}
+        <div className="md:col-span-2 lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3.5">
               <div className="flex items-center gap-2">
