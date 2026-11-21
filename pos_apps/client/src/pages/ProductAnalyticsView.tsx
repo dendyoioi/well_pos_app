@@ -14,7 +14,8 @@ import {
   Zap,
   Store,
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 import type { FinancialReportData } from '../types/report';
 import type { Outlet } from '../types/outlet';
 import { usePlan } from '../hooks/usePlan';
@@ -27,6 +28,10 @@ interface ProductAnalyticsViewProps {
 }
 
 export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ activeOutlet }) => {
+  const isLaundryMode = React.useMemo(() => {
+    const currentUser = authStorage.getUser();
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet]);
   const { isFree } = usePlan();
   const [data, setData] = useState<FinancialReportData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -106,7 +111,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
     if (!data) return;
 
     const summaryRows = [
-      ['LAPORAN ANALISIS MENU, HPP & PROFITABILITAS PRODUK'],
+      [`LAPORAN ANALISIS ${isLaundryMode ? 'LAYANAN LAUNDRY' : 'MENU'}, HPP & PROFITABILITAS PRODUK`],
       ['Toko / Outlet', activeOutlet && !activeOutlet.isWarehouse ? activeOutlet.name : 'Seluruh Toko'],
       ['Rentang Waktu', `${data.filter.startDate.slice(0, 10)} s/d ${data.filter.endDate.slice(0, 10)}`],
       ['Tanggal Cetak', new Date().toLocaleString('id-ID')],
@@ -117,8 +122,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
       ['Margin Laba Kotor Rata-rata', `${data.financialSummary.grossProfitMargin}%`],
       ['Total Faktur Penjualan', `${data.financialSummary.totalTransactions}`],
       [''],
-      ['TOP PRODUK TERLARIS (LEADERBOARD)'],
-      ['Peringkat', 'SKU', 'Nama Produk', 'Kategori', 'Qty Terjual', 'Omset Penjualan', 'Total HPP', 'Laba Bersih', 'Margin (%)'],
+      [isLaundryMode ? 'TOP LAYANAN TERLARIS (LEADERBOARD)' : 'TOP PRODUK TERLARIS (LEADERBOARD)'],
+      ['Peringkat', 'SKU', isLaundryMode ? 'Nama Layanan' : 'Nama Produk', 'Kategori', 'Qty Terjual', 'Omset Penjualan', 'Total HPP', 'Laba Bersih', 'Margin (%)'],
       ...data.topProducts.map((p, idx) => [
         idx + 1,
         p.sku,
@@ -131,8 +136,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
         `${p.profitMargin}%`,
       ]),
       [''],
-      ['TREN VARIAN & PORSI MENU (BAHAN POKOK & KEMASAN)'],
-      ['Peringkat', 'Nama Menu', 'Varian / Porsi', 'Qty Terjual', 'Omset', 'Kontribusi (%)'],
+      [isLaundryMode ? 'TREN VARIAN & PAKET LAYANAN' : 'TREN VARIAN & PORSI MENU (BAHAN POKOK & KEMASAN)'],
+      ['Peringkat', isLaundryMode ? 'Nama Layanan' : 'Nama Menu', isLaundryMode ? 'Varian / Paket' : 'Varian / Porsi', 'Qty Terjual', 'Omset', 'Kontribusi (%)'],
       ...(data.topVariants || []).map((v, idx) => [
         idx + 1,
         `"${v.productName}"`,
@@ -142,7 +147,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
         `${v.percentage}%`,
       ]),
       [''],
-      ['TREN TOPPING & MODIFIER (PILIHAN & BAHAN PELENGKAP)'],
+      [isLaundryMode ? 'TREN ADD-ON & PERAWATAN KHUSUS' : 'TREN TOPPING & MODIFIER (PILIHAN & BAHAN PELENGKAP)'],
       ['Peringkat', 'Grup Modifier', 'Nama Opsi / Topping', 'Qty Terpilih', 'Ekstra Omset', 'Kontribusi (%)'],
       ...(data.topModifiers || []).map((m, idx) => [
         idx + 1,
@@ -154,7 +159,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
       ]),
       [''],
       ['ANALISIS SLOW-MOVING & POTENSI DEAD STOCK'],
-      ['SKU', 'Nama Produk', 'Kategori', 'Sisa Stok', 'HPP Modal Beli', 'Harga Jual', 'Qty Terjual', 'Nilai Modal Mengendap'],
+      ['SKU', isLaundryMode ? 'Nama Layanan' : 'Nama Produk', 'Kategori', 'Sisa Stok', 'HPP Modal Beli', 'Harga Jual', 'Qty Terjual', 'Nilai Modal Mengendap'],
       ...(data.slowMovingProducts || []).map((p) => [
         p.sku,
         `"${p.name}"`,
@@ -172,7 +177,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Analisis_Menu_HPP_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `${isLaundryMode ? 'Analisis_Layanan_HPP' : 'Analisis_Menu_HPP'}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -196,7 +201,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                Analisis Menu, HPP &amp; Profitabilitas
+                {isLaundryMode ? 'Analisis Layanan, HPP & Profitabilitas Laundry' : 'Analisis Menu, HPP & Profitabilitas'}
               </h2>
               {activeOutlet && !activeOutlet.isWarehouse && (
                 <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-bold text-[10px]">
@@ -206,7 +211,9 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Evaluasi performa menu terlaris, modal bahan baku (*COGS/HPP*), kontribusi laba per produk, dan deteksi barang *slow-moving*.
+              {isLaundryMode
+                ? 'Evaluasi performa layanan laundry terlaris, biaya deterjen/parfum (HPP), kontribusi omset per layanan, dan deteksi layanan sepi peminat.'
+                : 'Evaluasi performa menu terlaris, modal bahan baku (*COGS/HPP*), kontribusi laba per produk, dan deteksi barang *slow-moving*.'}
             </p>
           </div>
         </div>
@@ -319,11 +326,15 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </div>
               
               <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                Buka Analisis HPP, Menu Terlaris &amp; Efisiensi Dapur
+                {isLaundryMode
+                  ? 'Buka Analisis HPP Layanan Laundry & Efisiensi Workshop'
+                  : 'Buka Analisis HPP, Menu Terlaris & Efisiensi Dapur'}
               </h3>
               
               <p className="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed">
-                Ketahui secara presisi resep menu mana yang memberikan keuntungan tertinggi, rasio food cost bahan baku, dan identifikasi bahan makanan yang berisiko kadaluarsa/mengendap.
+                {isLaundryMode
+                  ? 'Ketahui secara presisi paket layanan laundry mana yang memberikan keuntungan tertinggi, rasio biaya bahan kimia cuci, dan evaluasi layanan yang sepi peminat.'
+                  : 'Ketahui secara presisi resep menu mana yang memberikan keuntungan tertinggi, rasio food cost bahan baku, dan identifikasi bahan makanan yang berisiko kadaluarsa/mengendap.'}
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -342,7 +353,11 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
       ) : loading && !data ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
-          <span className="text-xs font-semibold">Menganalisis performa menu &amp; HPP produk...</span>
+          <span className="text-xs font-semibold">
+            {isLaundryMode
+              ? 'Menganalisis performa layanan & HPP laundry...'
+              : 'Menganalisis performa menu & HPP produk...'}
+          </span>
         </div>
       ) : fs ? (
         <>
@@ -406,11 +421,11 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </div>
             </div>
 
-            {/* Card 3: Efisiensi Margin Menu */}
+            {/* Card 3: Efisiensi Margin Menu / Layanan */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
-                  Rata-rata Margin Menu
+                  {isLaundryMode ? 'Rata-rata Margin Layanan' : 'Rata-rata Margin Menu'}
                 </span>
                 <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
                   <Percent className="w-5 h-5 stroke-[2.5] shrink-0" />
@@ -424,12 +439,12 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                   {fs.grossProfitMargin >= 50
                     ? 'Margin Sangat Sehat (>50%)'
                     : fs.grossProfitMargin >= 30
-                    ? 'Margin Standar F&B (30-50%)'
+                    ? (isLaundryMode ? 'Margin Standar Laundry (30-50%)' : 'Margin Standar F&B (30-50%)')
                     : 'Perlu Optimasi Harga (<30%)'}
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Menu Bintang Terlaris:</span>
+                <span>{isLaundryMode ? 'Layanan Terlaris:' : 'Menu Bintang Terlaris:'}</span>
                 <strong className="text-slate-800 truncate max-w-[120px]">
                   {data?.topProducts[0]?.name || '-'}
                 </strong>
@@ -470,15 +485,17 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 <Award className="w-5 h-5 text-amber-500 shrink-0" />
                 <div>
                   <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">
-                    Peringkat Menu Terlaris &amp; Kontribusi Laba (*Leaderboard*)
+                    {isLaundryMode ? 'Peringkat Layanan Laundry Terlaris & Kontribusi Laba' : 'Peringkat Menu Terlaris & Kontribusi Laba (*Leaderboard*)'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Diurutkan berdasarkan kuantitas produk yang paling banyak dipesan konsumen
+                    {isLaundryMode
+                      ? 'Diurutkan berdasarkan kuantitas cucian/layanan yang paling banyak dipesan pelanggan'
+                      : 'Diurutkan berdasarkan kuantitas produk yang paling banyak dipesan konsumen'}
                   </p>
                 </div>
               </div>
               <span className="text-xs text-slate-400 font-bold self-start sm:self-auto">
-                {data?.topProducts.length || 0} Menu Terpantau
+                {data?.topProducts.length || 0} {isLaundryMode ? 'Layanan Terpantau' : 'Menu Terpantau'}
               </span>
             </div>
 
@@ -488,7 +505,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <tr>
                     <th className="px-5 py-3 text-center w-12">Rank</th>
-                    <th className="px-5 py-3">Menu / Produk</th>
+                    <th className="px-5 py-3">{isLaundryMode ? 'Layanan Laundry' : 'Menu / Produk'}</th>
                     <th className="px-5 py-3">Kategori</th>
                     <th className="px-5 py-3 text-right">Qty Terjual</th>
                     <th className="px-5 py-3 text-right">Total Omset</th>
@@ -682,14 +699,14 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                 onPageChange={setTopPage}
                 onPageSizeChange={setTopPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
-                itemLabel="menu"
+                itemLabel={isLaundryMode ? "layanan" : "menu"}
               />
             )}
           </div>
 
-          {/* Section: Tren Varian & Porsi Menu serta Topping & Modifier (Kebutuhan Pengelolaan Stok General F&B) */}
+          {/* Section: Tren Varian & Porsi Menu / Paket Layanan serta Topping / Add-on */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Card 1: Tren Varian & Ukuran Porsi Menu */}
+            {/* Card 1: Tren Varian & Ukuran Porsi Menu / Paket Layanan */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
               <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-r from-violet-50/60 to-white">
                 <div className="flex items-center gap-2.5">
@@ -698,13 +715,15 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      Tren Varian &amp; Porsi Menu
+                      {isLaundryMode ? 'Tren Paket & Varian Layanan' : 'Tren Varian & Porsi Menu'}
                       <span className="text-[10px] font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full uppercase tracking-normal">
-                        Varian &amp; Porsi
+                        {isLaundryMode ? 'Paket Layanan' : 'Varian & Porsi'}
                       </span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      Peringkat varian &amp; ukuran porsi (Jumbo, Regular, Paket Combo) untuk acuan belanja porsi &amp; bahan pokok
+                      {isLaundryMode
+                        ? 'Peringkat varian paket layanan (Express vs Reguler, Kiloan vs Satuan) untuk acuan alokasi mesin & staf'
+                        : 'Peringkat varian & ukuran porsi (Jumbo, Regular, Paket Combo) untuk acuan belanja porsi & bahan pokok'}
                     </p>
                   </div>
                 </div>
@@ -713,7 +732,9 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               <div className="p-4 sm:p-5 flex-1 flex flex-col">
                 {(!data?.topVariants || data.topVariants.length === 0) ? (
                   <div className="p-8 text-center text-slate-400 text-xs my-auto">
-                    Belum ada data varian menu pada periode ini
+                    {isLaundryMode
+                      ? 'Belum ada data varian layanan pada periode ini'
+                      : 'Belum ada data varian menu pada periode ini'}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -734,13 +755,13 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                                 {v.fullName}
                               </span>
                               <span className="text-[10px] text-violet-600 font-semibold">
-                                Varian / Porsi: {v.variantName}
+                                {isLaundryMode ? 'Paket / Layanan:' : 'Varian / Porsi:'} {v.variantName}
                               </span>
                             </div>
                           </div>
                           <div className="text-right shrink-0 whitespace-nowrap">
                             <span className="text-xs font-black font-mono text-slate-900 block">
-                              {v.qtySold.toLocaleString('id-ID')} Pcs
+                              {v.qtySold.toLocaleString('id-ID')} {isLaundryMode ? 'Order' : 'Pcs'}
                             </span>
                             <span className="text-[10px] font-semibold text-slate-400 font-mono">
                               Rp {v.revenue.toLocaleString('id-ID')} ({v.percentage}%)
@@ -761,7 +782,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               </div>
             </div>
 
-            {/* Card 2: Tren Topping & Modifier Pilihan */}
+            {/* Card 2: Tren Topping & Modifier Pilihan / Add-on Laundry */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
               <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2 bg-gradient-to-r from-amber-50/60 to-white">
                 <div className="flex items-center gap-2.5">
@@ -770,13 +791,15 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      Tren Topping &amp; Modifier Pilihan
+                      {isLaundryMode ? 'Tren Add-on & Perawatan Khusus' : 'Tren Topping & Modifier Pilihan'}
                       <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-normal">
-                        Modifier &amp; Topping
+                        {isLaundryMode ? 'Add-on & Parfum' : 'Modifier & Topping'}
                       </span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      Peringkat opsi tambahan (Level Pedas/Suhu, Topping Makanan/Minuman, Pilihan Saus) untuk kontrol bahan pelengkap
+                      {isLaundryMode
+                        ? 'Peringkat opsi tambahan (Pewangi Premium, Anti Bakteri, Extra Softener, Vacuum Bag) untuk kontrol stok bahan'
+                        : 'Peringkat opsi tambahan (Level Pedas/Suhu, Topping Makanan/Minuman, Pilihan Saus) untuk kontrol bahan pelengkap'}
                     </p>
                   </div>
                 </div>
@@ -785,7 +808,9 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
               <div className="p-4 sm:p-5 flex-1 flex flex-col">
                 {(!data?.topModifiers || data.topModifiers.length === 0) ? (
                   <div className="p-8 text-center text-slate-400 text-xs my-auto">
-                    Belum ada data topping atau modifier pada periode ini
+                    {isLaundryMode
+                      ? 'Belum ada data add-on atau perawatan khusus pada periode ini'
+                      : 'Belum ada data topping atau modifier pada periode ini'}
                   </div>
                 ) : (
                   <div className="space-y-3">

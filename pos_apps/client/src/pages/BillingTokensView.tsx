@@ -89,7 +89,7 @@ export const BillingTokensView: React.FC<BillingTokensViewProps> = ({ user }) =>
         { tokens: 250, name: 'Starter 250', label: 'Starter 250', price: 25000, badge: 'Trial Ramah', isPopular: false, description: 'Cocok untuk bisnis baru mulai buka' },
         { tokens: 500, name: 'Basic 500', label: 'Basic 500', price: 37500, badge: 'Paling Fleksibel', isPopular: false, description: 'Ideal untuk operasional harian kafe kecil' },
         { tokens: 1500, name: 'Pro 1.500', label: 'Pro 1.500', price: 90000, badge: '⭐ Paling Diminati', isPopular: true, description: 'Pilihan favorit resto dengan perputaran order tinggi' },
-        { tokens: 5000, name: 'Enterprise 5.000', label: 'Enterprise 5.000', price: 225000, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-cabang dengan volume transaksi masif' },
+        { tokens: 5000, name: 'Enterprise 5.000', label: 'Enterprise 5.000', price: 225000, badge: 'Kapasitas Besar', isPopular: false, description: 'Untuk multi-outlet dengan volume transaksi masif' },
       ];
 
   // State Direct QRIS Pakasir untuk Top-Up

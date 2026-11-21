@@ -16,7 +16,8 @@ import {
   ChefHat,
   SlidersHorizontal,
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 import { TablePagination } from '../components/TablePagination';
 import { EmptyState, TableSkeleton } from '../components/ui';
 import type { StockMovement } from '../types/product';
@@ -32,6 +33,10 @@ const formatNumber = (val?: number | null) => {
 };
 
 export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOutlet }) => {
+  const isLaundryMode = React.useMemo(() => {
+    const currentUser = authStorage.getUser();
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,7 +253,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
     }
     if (t.includes('PRODUCTION') || t.includes('RECIPE')) {
       return {
-        label: 'Resep Dapur (BOM)',
+        label: isLaundryMode ? 'Pemakaian Cuci & Workshop' : 'Resep Dapur (BOM)',
         color: 'bg-purple-50 text-purple-800 border-purple-200',
         icon: <ChefHat className="w-3 h-3 shrink-0" />,
       };
@@ -338,7 +343,9 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               Riwayat &amp; Kartu Mutasi Stok
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Jejak riwayat transaksi keluar-masuk barang, pemotongan otomatis bahan baku resep dapur F&amp;B, penerimaan PO dari vendor, penyesuaian opname, dan retur penjualan kasir.
+              {isLaundryMode
+                ? 'Jejak riwayat transaksi keluar-masuk deterjen/parfum, pemakaian bahan cuci operasional workshop, penerimaan PO dari distributor, penyesuaian opname, dan retur penjualan kasir.'
+                : 'Jejak riwayat transaksi keluar-masuk barang, pemotongan otomatis bahan baku resep dapur F&B, penerimaan PO dari vendor, penyesuaian opname, dan retur penjualan kasir.'}
             </p>
           </div>
 
@@ -409,7 +416,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
             -{metrics.totalOutflow.toLocaleString('id-ID')}
           </p>
           <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-            Penjualan kasir &amp; resep dapur
+            {isLaundryMode ? 'Pemakaian cuci & kasir' : 'Penjualan kasir & resep dapur'}
           </p>
         </div>
 
@@ -464,7 +471,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
           }`}
         >
           <Package className="w-4 h-4 shrink-0" />
-          <span>Bahan Baku Mentah (Resep F&amp;B)</span>
+          <span>{isLaundryMode ? 'Bahan Cuci & Parfum (Operasional)' : 'Bahan Baku Mentah (Resep F&B)'}</span>
         </button>
 
         <button
@@ -477,7 +484,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
           }`}
         >
           <Boxes className="w-4 h-4 shrink-0" />
-          <span>Produk Jadi (Retail)</span>
+          <span>{isLaundryMode ? 'Produk Retail & Perlengkapan' : 'Produk Jadi (Retail)'}</span>
         </button>
       </div>
 
@@ -528,7 +535,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <option value="TRANSFER_OUT">Mutasi Keluar Toko</option>
               <option value="ADJUSTMENT">Stock Opname / Koreksi</option>
               <option value="DAMAGE_OUT">Barang Rusak / Kadaluarsa</option>
-              <option value="PRODUCTION_OUTPUT">Resep Dapur (BOM)</option>
+              <option value="PRODUCTION_OUTPUT">{isLaundryMode ? 'Pemakaian Cuci & Workshop' : 'Resep Dapur (BOM)'}</option>
               <option value="SALE_VOID">Retur / Batal Kasir</option>
             </select>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />

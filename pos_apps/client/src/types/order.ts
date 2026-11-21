@@ -13,7 +13,7 @@ export interface CartItem {
 
 export type PaymentMethodType = 'CASH' | 'QRIS' | 'DEBIT' | 'CREDIT' | 'TRANSFER' | 'SPLIT' | 'DEBT';
 
-export type OrderChannel = 'DINE_IN' | 'TAKEAWAY' | 'QR_MENU' | 'GOFOOD' | 'GRABFOOD' | 'SHOPEEFOOD' | 'DELIVERY';
+export type OrderChannel = 'DINE_IN' | 'TAKEAWAY' | 'QR_MENU' | 'GOFOOD' | 'GRABFOOD' | 'SHOPEEFOOD' | 'DELIVERY' | 'DIRECT_STORE';
 
 export const ORDER_CHANNEL_LABELS: Record<OrderChannel, { label: string; badge: string; color: string; bg: string }> = {
   DINE_IN: { label: 'Dine In', badge: 'Makan di Tempat', color: '#16a34a', bg: '#dcfce7' },
@@ -23,6 +23,7 @@ export const ORDER_CHANNEL_LABELS: Record<OrderChannel, { label: string; badge: 
   GRABFOOD: { label: 'GrabFood', badge: 'GrabFood Online', color: '#15803d', bg: '#bbf7d0' },
   SHOPEEFOOD: { label: 'ShopeeFood', badge: 'ShopeeFood Online', color: '#ea580c', bg: '#ffedd5' },
   DELIVERY: { label: 'Kurir / Delivery', badge: 'Antar Toko', color: '#2563eb', bg: '#dbeafe' },
+  DIRECT_STORE: { label: 'Drop-off Toko', badge: 'Drop-off Toko', color: '#0284c7', bg: '#e0f2fe' },
 };
 
 export interface PaymentPayload {

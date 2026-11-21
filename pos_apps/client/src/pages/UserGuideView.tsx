@@ -1110,7 +1110,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         number: 3,
         title: 'Filter Kasir Cerdas & Isolasi Batas Outlet',
         description:
-          'Saat kasir login, filter kasir secara otomatis mengunci ke namanya sendiri (Akun Saya). Dropdown kasir HANYA menampilkan staf berwewenang CASHIER di outlet aktif (bebas dari polusi akun Owner/Admin), dan kasir dilarang mengintip transaksi outlet cabang lain.',
+          'Saat kasir login, filter kasir secara otomatis mengunci ke namanya sendiri (Akun Saya). Dropdown kasir HANYA menampilkan staf berwewenang CASHIER di outlet aktif (bebas dari polusi akun Owner/Admin), dan kasir dilarang mengintip transaksi outlet lain.',
       },
       {
         number: 4,

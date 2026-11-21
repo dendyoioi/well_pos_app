@@ -16,7 +16,8 @@ import {
   Store,
   ChevronDown,
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 import type {
   StockTransfer,
   StockTransferStatus,
@@ -35,6 +36,10 @@ interface StockTransfersViewProps {
 
 export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOutlet }) => {
   const dialog = useDialog();
+  const isLaundryMode = useMemo(() => {
+    const currentUser = authStorage.getUser();
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet]);
 
   // Data states
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
@@ -743,7 +748,11 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                   type="text"
                   value={transferNotes}
                   onChange={(e) => setTransferNotes(e.target.value)}
-                  placeholder="Misal: Permintaan restock mingguan bahan espresso..."
+                  placeholder={
+                    isLaundryMode
+                      ? "Misal: Permintaan restock mingguan deterjen dan parfum..."
+                      : "Misal: Permintaan restock mingguan bahan espresso..."
+                  }
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-900/10 focus:border-blue-900"
                 />
               </div>

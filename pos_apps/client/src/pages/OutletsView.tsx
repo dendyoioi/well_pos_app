@@ -25,6 +25,7 @@ import { useDialog } from '../context/DialogContext';
 import { SupervisorFeesModal } from '../components/SupervisorFeesModal';
 import { WhatsAppInput } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
+import { checkIsLaundry } from '../utils/businessType';
 import type { Outlet, OutletFee } from '../types/outlet';
 
 interface OutletsViewProps {
@@ -55,6 +56,11 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const isLaundryMode = React.useMemo(() => {
+    const currentUser = authStorage.getUser();
+    return checkIsLaundry(outlets.find((o) => o.id === activeOutletId) || outlets[0], currentUser);
+  }, [outlets, activeOutletId]);
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -245,14 +251,16 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               <Store className="w-4 h-4 shrink-0" />
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-blue-950 tracking-tight">
-              Manajemen Outlet Toko
+              {isLaundryMode ? 'Manajemen Toko & Workshop' : 'Manajemen Outlet Toko'}
             </h2>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 shrink-0">
               Paket PRO
             </span>
           </div>
           <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
-            Kelola seluruh outlet toko kasir penjualan fisik &amp; meja makan Anda. Setiap outlet toko memiliki isolasi kasir POS, QR menu, dan pengaturan pasokan bahan baku.
+            {isLaundryMode
+              ? 'Kelola seluruh outlet toko kasir drop-off dan workshop pusat laundry Anda. Setiap toko memiliki isolasi kasir POS, antrean cucian, rak penyimpanan, dan armada pengiriman.'
+              : 'Kelola seluruh outlet toko kasir penjualan fisik & meja makan Anda. Setiap outlet toko memiliki isolasi kasir POS, QR menu, dan pengaturan pasokan bahan baku.'}
           </p>
         </div>
 
@@ -263,7 +271,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             className="w-full sm:w-auto h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Tambah Outlet Toko</span>
+            <span>{isLaundryMode ? 'Tambah Toko / Workshop' : 'Tambah Outlet Toko'}</span>
           </button>
         </div>
       </div>

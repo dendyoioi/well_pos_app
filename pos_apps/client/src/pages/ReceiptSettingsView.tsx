@@ -18,9 +18,11 @@ import {
   Loader2,
   Tag,
   Coffee,
+  Shirt,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 import { useDialog } from '../context/DialogContext';
 import { ThermalReceiptPreview } from '../components/ThermalReceiptPreview';
 import { CupLabelPreview } from '../components/CupLabelPreview';
@@ -38,6 +40,10 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 }) => {
   const dialog = useDialog();
   const printerHub = useThermalPrinterHub();
+  const isLaundryMode = React.useMemo(() => {
+    const currentUser = authStorage.getUser();
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet]);
   const [hardwareModalOpen, setHardwareModalOpen] = useState(false);
   const [testingBt, setTestingBt] = useState(false);
   const [kickingBt, setKickingBt] = useState(false);
@@ -535,7 +541,9 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   4. Nomor Antrean / Panggilan Pesanan (#01)
                 </label>
                 <p className="text-xs text-slate-500 font-medium">
-                  Cetak nomor panggilan berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan barista/pelayan memanggil pelanggan secara cepat tanpa perlu input nama/meja.
+                  {isLaundryMode
+                    ? 'Cetak nomor antrean berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan staf kasir memanggil pelanggan saat drop-off atau pengambilan cucian.'
+                    : 'Cetak nomor panggilan berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan barista/pelayan memanggil pelanggan secara cepat tanpa perlu input nama/meja.'}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -719,16 +727,26 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             )}
           </div>
 
-          {/* 8. Stiker Label Cup Minuman (Barista F&B Setup - Opt-in) */}
+          {/* 8. Stiker Label Cup / Tag Produksi Cucian (Slot 2) */}
           <div className="pt-4 border-t border-slate-100 space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                  <Coffee className="w-4 h-4 text-amber-600" />
-                  <span>8. Cetak Stiker Label Cup / Minuman (Barista F&amp;B)</span>
+                  {isLaundryMode ? (
+                    <Shirt className="w-4 h-4 text-blue-900" />
+                  ) : (
+                    <Coffee className="w-4 h-4 text-amber-600" />
+                  )}
+                  <span>
+                    {isLaundryMode
+                      ? '8. Cetak Tag Produksi / Keranjang Pakaian (Slot 2)'
+                      : '8. Cetak Stiker Label Cup / Minuman (Barista F&B)'}
+                  </span>
                 </label>
                 <p className="text-xs text-slate-500 font-medium">
-                  Aktifkan printer kedua khusus stiker label cup thermal (seperti Starbucks, Kopi Kenangan, Fore, Chatime). 1 item dengan kuantitas N akan otomatis dicetak menjadi N lembar stiker individu.
+                  {isLaundryMode
+                    ? 'Aktifkan printer kedua khusus Tag Produksi cucian thermal 58mm/80mm untuk ditempelkan pada keranjang pakaian atau hanger pelanggan.'
+                    : 'Aktifkan printer kedua khusus stiker label cup thermal (seperti Starbucks, Kopi Kenangan, Fore, Chatime). 1 item dengan kuantitas N akan otomatis dicetak menjadi N lembar stiker individu.'}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -785,7 +803,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 {/* Toggles opsi filter & cetak otomatis */}
                 <div className="space-y-2.5 pt-2 border-t border-amber-200/60">
                   <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                    <span>Saring Hanya Kategori Minuman (Beverages / Kopi / Teh / Boba)</span>
+                    <span>
+                      {isLaundryMode
+                        ? 'Saring Khusus Layanan Tertentu (Kiloan / Satuan / Bedcover)'
+                        : 'Saring Hanya Kategori Minuman (Beverages / Kopi / Teh / Boba)'}
+                    </span>
                     <input
                       type="checkbox"
                       checked={cupLabelOnlyBeverages}
@@ -795,7 +817,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   </label>
 
                   <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                    <span>Cetak Otomatis Stiker Cup saat Kasir Selesai Transaksi</span>
+                    <span>
+                      {isLaundryMode
+                        ? 'Cetak Otomatis Tag Produksi saat Kasir Selesai Transaksi'
+                        : 'Cetak Otomatis Stiker Cup saat Kasir Selesai Transaksi'}
+                    </span>
                     <input
                       type="checkbox"
                       checked={cupLabelAutoPrint}
@@ -805,7 +831,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   </label>
 
                   <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                    <span>Tampilkan Varian &amp; Modifiers (Gula, Es, Topping) di Stiker</span>
+                    <span>
+                      {isLaundryMode
+                        ? 'Tampilkan Varian Parfum & Catatan Sortir / QC di Tag'
+                        : 'Tampilkan Varian & Modifiers (Gula, Es, Topping) di Stiker'}
+                    </span>
                     <input
                       type="checkbox"
                       checked={cupLabelShowModifiers}
@@ -942,7 +972,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   }`}
                 >
                   <Tag className="w-3 h-3 text-amber-600" />
-                  <span>Stiker Cup</span>
+                  <span>{isLaundryMode ? 'Tag Produksi' : 'Stiker Cup'}</span>
                 </button>
               </div>
             )}
@@ -952,8 +982,8 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             <ThermalReceiptPreview
               paperSize={paperSize}
               onPaperSizeChange={setPaperSize}
-              brandName={(activeOutlet as any)?.tenant?.name || 'WELL POS CAFE'}
-              storeName={activeOutlet?.name || 'Outlet Kemang'}
+              brandName={(activeOutlet as any)?.tenant?.name || (isLaundryMode ? 'WELL POS LAUNDRY' : 'WELL POS CAFE')}
+              storeName={activeOutlet?.name || (isLaundryMode ? 'Outlet Laundry' : 'Outlet Kemang')}
               address={activeOutlet?.address || 'Jl. Kemang Raya No. 10, Jakarta Selatan'}
               phone={activeOutlet?.phone || '0812-3456-7890'}
               showQueueNumber={showQueueNumber}

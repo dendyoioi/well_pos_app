@@ -513,7 +513,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Tujuan ({direction === 'TO_WORKSHOP' ? 'Workshop Pabrik' : 'Toko Cabang'}) <span className="text-rose-500">*</span>
+                      Tujuan ({direction === 'TO_WORKSHOP' ? 'Workshop Pabrik' : 'Toko / Outlet'}) <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={targetOutletId}
@@ -751,7 +751,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
                 <h2 className="text-base font-black tracking-wide uppercase">
                   {selectedManifestForPrint.sourceOutlet?.name || 'WELL POS LAUNDRY'}
                 </h2>
-                <p className="text-[11px] text-slate-600">SURAT JALAN PENGIRIMAN CUCIAN ANTAR-CABANG</p>
+                <p className="text-[11px] text-slate-600">SURAT JALAN PENGIRIMAN CUCIAN ANTAR-OUTLET</p>
                 <p className="text-[10px] text-slate-400 mt-0.5">
                   No. Dokumen: <span className="font-mono font-bold text-slate-900">{selectedManifestForPrint.manifestNumber}</span>
                 </p>

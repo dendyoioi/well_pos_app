@@ -33,7 +33,8 @@ import { FullScreenBulkOpnameModal, type BulkOperationType } from '../components
 import { TablePagination } from '../components/TablePagination';
 import { EmptyState, TableSkeleton } from '../components/ui';
 import { formatRupiah } from '../utils/currency';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 import { useDialog } from '../context/DialogContext';
 
 interface InventoryViewProps {
@@ -48,6 +49,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   initialSubView = 'INVENTORY',
 }) => {
   const dialog = useDialog();
+  const isLaundryMode = React.useMemo(() => {
+    const currentUser = authStorage.getUser();
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet]);
   // Tab State: 'INGREDIENTS' (Bahan Baku Mentah F&B) | 'PRODUCTS' (Produk Jadi Retail)
   const [activeTab, setActiveTab] = useState<'INGREDIENTS' | 'PRODUCTS'>(initialTab);
 
@@ -402,7 +407,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             }`}
           >
             <Package className="w-4 h-4 shrink-0" />
-            <span>Bahan Baku Mentah (Resep F&amp;B)</span>
+            <span>{isLaundryMode ? 'Bahan Cuci & Parfum (Operasional)' : 'Bahan Baku Mentah (Resep F&B)'}</span>
             {ingredients.length > 0 && (
               <span
                 className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
@@ -428,7 +433,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             }`}
           >
             <Boxes className="w-4 h-4 shrink-0" />
-            <span>Produk Jadi (Retail)</span>
+            <span>{isLaundryMode ? 'Produk Retail & Perlengkapan' : 'Produk Jadi (Retail)'}</span>
             {products.length > 0 && (
               <span
                 className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
@@ -444,19 +449,31 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
 
         {/* Global Logistics Architecture Indicator */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200/80 text-[11px] font-semibold text-slate-600 shrink-0">
-          <Truck className="w-3.5 h-3.5 text-blue-900 shrink-0" />
-          <span>Alur Dapur F&amp;B:</span>
-          <span className="font-bold text-slate-800">Bahan Mentah</span>
-          <span>➔</span>
-          <span className="font-extrabold text-blue-900">Resep (BOM)</span>
-          <span>➔</span>
-          <span className="font-bold text-emerald-700">Auto Deduct Kasir</span>
-        </div>
+        {isLaundryMode ? (
+          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200/80 text-[11px] font-semibold text-slate-600 shrink-0">
+            <Truck className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+            <span>Alur Operasional Laundry:</span>
+            <span className="font-bold text-slate-800">Bahan Cuci</span>
+            <span>➔</span>
+            <span className="font-extrabold text-blue-900">Workshop Cuci/Setrika</span>
+            <span>➔</span>
+            <span className="font-bold text-emerald-700">Auto Deduct Kasir</span>
+          </div>
+        ) : (
+          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200/80 text-[11px] font-semibold text-slate-600 shrink-0">
+            <Truck className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+            <span>Alur Dapur F&amp;B:</span>
+            <span className="font-bold text-slate-800">Bahan Mentah</span>
+            <span>➔</span>
+            <span className="font-extrabold text-blue-900">Resep (BOM)</span>
+            <span>➔</span>
+            <span className="font-bold text-emerald-700">Auto Deduct Kasir</span>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: BAHAN BAKU MENTAH (RESEP F&B) */}
+      {/* TAB 1: BAHAN BAKU MENTAH / BAHAN CUCI OPERASIONAL */}
       {/* ========================================================================= */}
       {activeTab === 'INGREDIENTS' && (
         <div className="space-y-6">
@@ -465,10 +482,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             <div>
               <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-900 shrink-0" />
-                <span>Stok Bahan Baku Dapur &amp; Racikan</span>
+                <span>{isLaundryMode ? 'Stok Bahan Cuci & Parfum Laundry' : 'Stok Bahan Baku Dapur & Racikan'}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                Persediaan bahan mentah F&amp;B yang otomatis terpotong setiap kali kasir memproses pesanan menu resep.
+                {isLaundryMode
+                  ? 'Persediaan deterjen, parfum, softener, dan bahan operasional yang terpotong saat proses cuci & setrika.'
+                  : 'Persediaan bahan mentah F&B yang otomatis terpotong setiap kali kasir memproses pesanan menu resep.'}
               </p>
             </div>
 
@@ -481,7 +500,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   setBulkOpnameOpen(true);
                 }}
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-                title="Lembar kerja massal: Opname, Stok Masuk, Stok Keluar, & Transfer Bahan Baku"
+                title={isLaundryMode ? "Lembar kerja massal: Opname, Stok Masuk, Stok Keluar, & Transfer Bahan Cuci" : "Lembar kerja massal: Opname, Stok Masuk, Stok Keluar, & Transfer Bahan Baku"}
               >
                 <ClipboardCheck className="w-4 h-4 text-blue-900 shrink-0" />
                 <span>Lembar Kerja Massal</span>
@@ -492,7 +511,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
               >
                 <Plus className="w-4 h-4 shrink-0" />
-                <span>Tambah Bahan Baku Baru</span>
+                <span>{isLaundryMode ? 'Tambah Bahan Cuci Baru' : 'Tambah Bahan Baku Baru'}</span>
               </button>
             </div>
           </div>
@@ -507,14 +526,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-extrabold text-amber-950 text-sm">
-                      Peringatan Bahan Baku Mendekati Kadaluarsa
+                      {isLaundryMode ? 'Peringatan Bahan Cuci Mendekati Kadaluarsa' : 'Peringatan Bahan Baku Mendekati Kadaluarsa'}
                     </h4>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900">
                       {expiryAlerts.length} Batch
                     </span>
                   </div>
                   <p className="text-xs text-amber-800 mt-0.5">
-                    Terdapat batch bahan baku fisik dengan masa simpan kurang dari 30 hari atau telah kadaluarsa. Pastikan bahan segera digunakan (FIFO) atau dimusnahkan.
+                    {isLaundryMode
+                      ? 'Terdapat batch bahan cuci & parfum dengan masa simpan kurang dari 30 hari atau telah kadaluarsa. Pastikan bahan segera digunakan (FIFO) atau diganti.'
+                      : 'Terdapat batch bahan baku fisik dengan masa simpan kurang dari 30 hari atau telah kadaluarsa. Pastikan bahan segera digunakan (FIFO) atau dimusnahkan.'}
                   </p>
                 </div>
               </div>
@@ -546,7 +567,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
               </div>
               <p className="text-2xl font-black text-slate-900">{countAllIngredients}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-1">Item bahan mentah dapur terdaftar</p>
+              <p className="text-[11px] text-slate-500 font-medium mt-1">
+                {isLaundryMode ? 'Item bahan cuci & parfum terdaftar' : 'Item bahan mentah dapur terdaftar'}
+              </p>
             </div>
 
             <div
@@ -720,10 +743,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <tr>
                       <td colSpan={7} className="px-5 py-14 text-center text-slate-400">
                         <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                        <p className="text-sm font-bold text-slate-700">Belum ada bahan baku dapur terdaftar</p>
+                        <p className="text-sm font-bold text-slate-700">
+                          {isLaundryMode ? 'Belum ada bahan cuci & parfum terdaftar' : 'Belum ada bahan baku dapur terdaftar'}
+                        </p>
                         <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                           {ingredientSearch || ingredientStatusFilter !== 'ALL'
                             ? 'Coba sesuaikan kata kunci pencarian atau reset filter status stok.'
+                            : isLaundryMode
+                            ? 'Daftarkan bahan cuci operasional (seperti deterjen bubuk/cair, parfum, softener, plastik packing) agar dapat dilakukan Stok Masuk dan pencatatan pemakaian.'
                             : 'Daftarkan bahan baku mentah (seperti tahu, cabai, minyak, ayam, kemasan) agar dapat dilakukan Stok Masuk dan dihubungkan ke resep menu.'}
                         </p>
                         {ingredientSearch || ingredientStatusFilter !== 'ALL' ? (
@@ -946,7 +973,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                   <Boxes className="w-5 h-5 text-blue-900 shrink-0" />
-                  <span>Stok Barang Jadi (Retail &amp; Siap Jual)</span>
+                  <span>{isLaundryMode ? 'Stok Produk Retail & Perlengkapan' : 'Stok Barang Jadi (Retail & Siap Jual)'}</span>
                 </h2>
                 {activeOutlet?.isWarehouse ? (
                   <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-1 shrink-0">
@@ -961,7 +988,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500 font-medium">
-                Inventori barang siap jual (merchandise, biji kopi kemasan, minuman kemasan) yang stoknya dipotong otomatis per unit saat kasir memproses pesanan.
+                {isLaundryMode
+                  ? 'Inventori barang siap jual (hanger ekstra, deterjen eceran, parfum botol, plastik laundry) yang stoknya dipotong per unit saat transaksi kasir.'
+                  : 'Inventori barang siap jual (merchandise, biji kopi kemasan, minuman kemasan) yang stoknya dipotong otomatis per unit saat kasir memproses pesanan.'}
               </p>
             </div>
 
@@ -1310,7 +1339,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       </span>
                                       {isComposite && (
                                         <span className="text-[10px] font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
-                                          ✨ Olahan BOM
+                                          {isLaundryMode ? '✨ Olahan Servis' : '✨ Olahan BOM'}
                                         </span>
                                       )}
                                     </div>
@@ -1331,10 +1360,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                   <div className="flex flex-col items-center justify-center gap-0.5 whitespace-nowrap">
                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/90 font-extrabold text-[11px] shadow-2xs whitespace-nowrap">
                                       <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                      <span>Olahan Dapur (BOM)</span>
+                                      <span>{isLaundryMode ? 'Bahan Operasional' : 'Olahan Dapur (BOM)'}</span>
                                     </span>
                                     <span className="text-[10px] text-amber-700/80 font-semibold whitespace-nowrap">
-                                      Kalkulasi Resep
+                                      {isLaundryMode ? 'Kalkulasi Bahan' : 'Kalkulasi Resep'}
                                     </span>
                                   </div>
                                 ) : (
@@ -1402,13 +1431,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                       type="button"
                                       onClick={() => {
                                         setActiveTab('INGREDIENTS');
-                                        dialog.toast(`"${p.name}" adalah menu olahan dapur. Mutasi persediaan (kulakan/rusak/opname) dikelola melalui tab Bahan Baku.`, 'info');
+                                        dialog.toast(
+                                          isLaundryMode
+                                            ? `"${p.name}" menggunakan bahan operasional. Mutasi persediaan dikelola melalui tab Bahan Cuci.`
+                                            : `"${p.name}" adalah menu olahan dapur. Mutasi persediaan (kulakan/rusak/opname) dikelola melalui tab Bahan Baku.`,
+                                          'info'
+                                        );
                                       }}
                                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 text-amber-900 border border-amber-200/90 font-bold text-xs transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95 whitespace-nowrap"
-                                      title="Menu olahan dapur dihitung dari bahan baku. Klik untuk beralih ke tab Bahan Baku."
+                                      title={isLaundryMode ? "Layanan dihitung dari bahan cuci. Klik untuk beralih ke tab Bahan Cuci." : "Menu olahan dapur dihitung dari bahan baku. Klik untuk beralih ke tab Bahan Baku."}
                                     >
                                       <Boxes className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                      <span>Via Bahan Baku</span>
+                                      <span>{isLaundryMode ? 'Via Bahan Cuci' : 'Via Bahan Baku'}</span>
                                     </button>
                                   </div>
                                 ) : (
@@ -1575,7 +1609,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             <EmptyState
                               icon={<FileSpreadsheet className="w-7 h-7 text-blue-900" />}
                               title="Belum Ada Riwayat Mutasi Stok"
-                              description="Transaksi bahan baku masuk, penjualan di kasir, atau penyesuaian opname stok akan otomatis tercatat di sini."
+                              description={
+                                isLaundryMode
+                                  ? 'Transaksi bahan cuci masuk, pemakaian di workshop, atau penyesuaian opname stok akan otomatis tercatat di sini.'
+                                  : 'Transaksi bahan baku masuk, penjualan di kasir, atau penyesuaian opname stok akan otomatis tercatat di sini.'
+                              }
                             />
                           </td>
                         </tr>
@@ -1601,7 +1639,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               {/* Produk */}
                               <td className="py-3.5 px-4">
                                 <div className="font-extrabold text-slate-900 text-xs">
-                                  {m.product?.name || 'Item Terhapus / Bahan Mentah'}
+                                  {m.product?.name || (isLaundryMode ? 'Item Terhapus / Bahan Cuci' : 'Item Terhapus / Bahan Mentah')}
                                 </div>
                                 <div className="font-mono text-[11px] text-slate-400 font-semibold">{m.product?.sku || '-'}</div>
                               </td>
