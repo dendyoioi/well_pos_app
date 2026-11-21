@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Plus,
   Phone,
-  User,
   Printer,
   CheckCircle2,
   AlertCircle,
@@ -22,7 +21,7 @@ import {
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
-import type { LaundryQueueOrder, LaundryRack, LaundryService } from '../types/laundry';
+import type { LaundryQueueOrder, LaundryRack } from '../types/laundry';
 import { LAUNDRY_11_STAGES } from '../types/laundry';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
 import { LaundryStageTrackerModal } from '../components/laundry/LaundryStageTrackerModal';
@@ -49,26 +48,11 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   const [slaFilter, setSlaFilter] = useState<'ALL' | 'DUE_TODAY' | 'OVERDUE'>('ALL');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [racks, setRacks] = useState<LaundryRack[]>([]);
-  const [services, setServices] = useState<LaundryService[]>([]);
   const [mobileActiveStage, setMobileActiveStage] = useState<string>('RECEIVED');
 
   // State Modal Struk Thermal
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedOrderForReceipt, setSelectedOrderForReceipt] = useState<LaundryQueueOrder | null>(null);
-
-  // State Modal Terima Cucian Baru
-  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [weightKg, setWeightKg] = useState('3.0');
-  const [totalPieces, setTotalPieces] = useState('10');
-  const [perfumeVariant, setPerfumeVariant] = useState('Lavender');
-  const [paymentChoice, setPaymentChoice] = useState<'UNPAID' | 'PAID' | 'PARTIAL'>('UNPAID');
-  const [depositAmount, setDepositAmount] = useState('0');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
-  const [customerNotes, setCustomerNotes] = useState('');
-  const [savingOrder, setSavingOrder] = useState(false);
 
   // State Modal Penempatan Rak
   const [rackAssignModalOpen, setRackAssignModalOpen] = useState(false);
@@ -112,20 +96,11 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
     }
   };
 
-  const fetchRacksAndServices = async () => {
+  const fetchRacks = async () => {
     try {
-      const [rackRes, serviceRes] = await Promise.all([
-        api.getLaundryRacks(activeOutlet?.id),
-        api.getLaundryServices(),
-      ]);
+      const rackRes = await api.getLaundryRacks(activeOutlet?.id);
       if (rackRes.status === 'success' && Array.isArray(rackRes.data)) {
         setRacks(rackRes.data);
-      }
-      if (serviceRes.status === 'success' && Array.isArray(serviceRes.data)) {
-        setServices(serviceRes.data);
-        if (serviceRes.data.length > 0 && !selectedServiceId) {
-          setSelectedServiceId(serviceRes.data[0].id);
-        }
       }
     } catch {
       // Abaikan
@@ -134,7 +109,15 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
 
   useEffect(() => {
     fetchOrders();
-    fetchRacksAndServices();
+    fetchRacks();
+
+    const handleOrderCreated = () => {
+      fetchOrders();
+    };
+    window.addEventListener('wellpos:laundry_order_created', handleOrderCreated);
+    return () => {
+      window.removeEventListener('wellpos:laundry_order_created', handleOrderCreated);
+    };
   }, [activeOutlet?.id]);
 
   const handleAdvanceStatus = async (order: LaundryQueueOrder) => {
@@ -247,80 +230,6 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
     }
   };
 
-  const handleCreateOrderSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeOutlet?.id || !customerName.trim()) return;
-
-    const currentService = services.find((s) => s.id === selectedServiceId) || services[0];
-    const unitPrice = currentService ? Number(currentService.price) : 8000;
-    const qty = parseFloat(weightKg) || 1;
-
-    try {
-      setSavingOrder(true);
-      const payload = {
-        outletId: activeOutlet.id,
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim() || undefined,
-        items: [
-          {
-            serviceId: currentService?.id,
-            name: currentService?.name || 'Cuci Komplit Reguler',
-            category: currentService?.category || 'KILOAN',
-            quantity: qty,
-            unit: currentService?.unit || 'KG',
-            unitPrice,
-          },
-        ],
-        totalPieces: parseInt(totalPieces, 10) || 0,
-        perfumeVariant,
-        estimatedReadyHours: currentService?.durationHours || 48,
-        depositAmount: paymentChoice === 'PARTIAL' ? parseFloat(depositAmount) || 0 : paymentChoice === 'PAID' ? unitPrice * qty : 0,
-        paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
-        customerNotes: customerNotes.trim() || undefined,
-      };
-
-      const res = await api.createLaundryOrder(payload);
-      if (res.status === 'success') {
-        setShowNewOrderModal(false);
-        setCustomerName('');
-        setCustomerPhone('');
-        setCustomerNotes('');
-        setPaymentChoice('UNPAID');
-        await fetchOrders();
-
-        // Tawarkan langsung pratinjau struk thermal
-        if (res.data) {
-          const newOrderQueueItem: LaundryQueueOrder = {
-            id: res.data.laundryDetail?.id || res.data.id,
-            orderId: res.data.id,
-            invoiceNumber: res.data.invoiceNumber,
-            status: 'RECEIVED',
-            customerName: customerName.trim(),
-            customerPhone: customerPhone.trim() || null,
-            serviceName: currentService?.name || 'Cuci Komplit Reguler',
-            totalWeightKg: qty,
-            totalPieces: parseInt(totalPieces, 10) || 0,
-            grandTotal: unitPrice * qty,
-            paidAmount: paymentChoice === 'PAID' ? unitPrice * qty : paymentChoice === 'PARTIAL' ? parseFloat(depositAmount) || 0 : 0,
-            paymentStatus: res.data.paymentStatus,
-            perfumeVariant,
-            customerNotes: customerNotes.trim() || null,
-            estimatedReadyAt: res.data.laundryDetail?.estimatedReadyAt || null,
-            createdAt: new Date().toISOString(),
-          };
-          setSelectedOrderForReceipt(newOrderQueueItem);
-          setReceiptModalOpen(true);
-        }
-      } else {
-        alert(res.message || 'Gagal membuat pesanan');
-      }
-    } catch {
-      alert('Terjadi kesalahan saat menyimpan pesanan laundry');
-    } finally {
-      setSavingOrder(false);
-    }
-  };
-
   // Evaluasi Status SLA Pesanan
   const getSlaStatus = (order: LaundryQueueOrder): 'OVERDUE' | 'DUE_TODAY' | 'NORMAL' => {
     if (!order.estimatedReadyAt || order.status === 'COMPLETED') return 'NORMAL';
@@ -422,11 +331,12 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           </button>
 
           <button
-            onClick={() => setShowNewOrderModal(true)}
+            onClick={() => window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'))}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+            title="Input Cepat (Drop-off)"
           >
-            <Plus className="w-4 h-4" />
-            <span>Terima Cucian (Drop-off)</span>
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Input Cepat</span>
           </button>
         </div>
       </div>
@@ -765,256 +675,6 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           order={selectedOrderForReceipt}
           outlet={activeOutlet}
         />
-      )}
-
-      {/* Modal Terima Cucian Baru (POS Drop-off Timbangan) */}
-      {showNewOrderModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
-          <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Terima Cucian Baru (Drop-off)</h3>
-                  <p className="text-xs text-slate-500">Input timbangan kiloan, satuan, dan aroma parfum</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowNewOrderModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateOrderSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto overscroll-contain flex-1">
-                {/* 1. Data Pelanggan */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Nama Pelanggan <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        required
-                        placeholder="Contoh: Bpk. Bambang"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      No. WhatsApp / HP
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="tel"
-                        placeholder="0812xxxx"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Pilihan Layanan */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Pilihan Paket Layanan <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedServiceId}
-                      onChange={(e) => setSelectedServiceId(e.target.value)}
-                      className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none appearance-none"
-                    >
-                      {services.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} — Rp {Number(s.price).toLocaleString('id-ID')} / {s.unit} ({s.durationHours} Jam)
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
-
-                {/* 3. Timbangan & Jumlah Potong */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Berat Timbangan (Kg) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.1"
-                      required
-                      value={weightKg}
-                      onChange={(e) => setWeightKg(e.target.value)}
-                      className="w-full px-3 py-2 text-sm font-mono font-bold rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Jumlah Helai Pakaian
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={totalPieces}
-                      onChange={(e) => setTotalPieces(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* 4. Aroma Parfum */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Aroma Parfum Pilihan
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['Lavender', 'Akasia', 'Ocean Fresh', 'Snappy', 'Downy Black', 'Tanpa Parfum'].map((p) => (
-                      <button
-                        type="button"
-                        key={p}
-                        onClick={() => setPerfumeVariant(p)}
-                        className={`py-1.5 px-2 rounded-xl text-xs font-semibold transition-all border ${
-                          perfumeVariant === p
-                            ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 5. Pilihan Pembayaran */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Status &amp; Pembayaran Kasir
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentChoice('UNPAID')}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${
-                        paymentChoice === 'UNPAID'
-                          ? 'bg-rose-50 text-rose-900 border-rose-300 ring-1 ring-rose-300'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      Bayar Nanti (Ambil)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentChoice('PARTIAL')}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${
-                        paymentChoice === 'PARTIAL'
-                          ? 'bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-300'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      Uang Muka (DP)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentChoice('PAID')}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all ${
-                        paymentChoice === 'PAID'
-                          ? 'bg-emerald-50 text-emerald-900 border-emerald-300 ring-1 ring-emerald-300'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      Lunas di Awal
-                    </button>
-                  </div>
-
-                  {paymentChoice !== 'UNPAID' && (
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                      {paymentChoice === 'PARTIAL' && (
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            Nominal DP yang Diterima (Rp)
-                          </label>
-                          <input
-                            type="number"
-                            min="1000"
-                            placeholder="Contoh: 20000"
-                            value={depositAmount}
-                            onChange={(e) => setDepositAmount(e.target.value)}
-                            className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none"
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Metode Pembayaran
-                        </label>
-                        <div className="relative">
-                          <select
-                            value={paymentMethod}
-                            onChange={(e) => setPaymentMethod(e.target.value as any)}
-                            className="w-full px-3 py-1.5 pr-10 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none appearance-none"
-                          >
-                            <option value="CASH">Tunai (Cash)</option>
-                            <option value="QRIS">QRIS Statis / Dinamis</option>
-                            <option value="TRANSFER">Transfer Bank</option>
-                          </select>
-                          <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Catatan Khusus Pakaian
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Contoh: Noda minyak di kerah, luntur dipisah..."
-                    value={customerNotes}
-                    onChange={(e) => setCustomerNotes(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewOrderModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingOrder}
-                  className="px-5 py-2 text-sm font-semibold bg-blue-900 hover:bg-blue-800 text-white rounded-xl transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {savingOrder ? 'Mencatat...' : 'Buat Nota & Terima Cucian'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       {/* Modal Alokasi Rak Simpan saat cucian Siap Ambil */}

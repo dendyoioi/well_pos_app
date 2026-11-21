@@ -62,6 +62,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   const [loadingServices, setLoadingServices] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [serviceSearch, setServiceSearch] = useState<string>('');
 
   // Customer Management
   const [customerSearch, setCustomerSearch] = useState('');
@@ -72,6 +73,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   const [customerWallet, setCustomerWallet] = useState<CustomerLaundryWallet | null>(null);
   const [loadingWallet, setLoadingWallet] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const customerInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Order Details
   const [weightKg, setWeightKg] = useState<number>(3.0);
@@ -86,6 +88,18 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Helper Format Satuan Unit Ramah Pengguna
+  const formatServiceUnit = (unit?: string) => {
+    if (!unit) return '/Kg';
+    const u = unit.toUpperCase().trim();
+    if (u === 'PER_KG' || u === 'KG') return '/Kg';
+    if (u === 'PER_PCS' || u === 'PCS' || u === 'PIECE') return '/Pcs';
+    if (u === 'FLAT' || u === 'ITEM') return '/Item';
+    if (u === 'PACKAGE' || u === 'PAKET') return '/Paket';
+    if (u === 'METER' || u === 'M2') return '/m²';
+    return `/${unit}`;
+  };
 
   // Fetch Services & Initial Customers when modal opens
   useEffect(() => {
@@ -102,11 +116,14 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       if (!mounted) return;
       if (srvRes.status === 'success' && Array.isArray(srvRes.data)) {
         setServices(srvRes.data);
-        // Default to first active service
-        const firstKiloan = srvRes.data.find(
-          (s: LaundryService) => s.category === 'KILOAN' && s.isActive
+        // Default to first active non-ADDON service (prefer KILOAN)
+        const nonAddons = srvRes.data.filter(
+          (s: LaundryService) => s.category !== 'ADDON' && s.isActive !== false
         );
-        const def = firstKiloan || srvRes.data[0];
+        const firstKiloan = nonAddons.find(
+          (s: LaundryService) => s.category === 'KILOAN'
+        );
+        const def = firstKiloan || nonAddons[0] || srvRes.data[0];
         if (def) {
           setSelectedServiceId(def.id);
           if (def.minOrderQty) {
@@ -130,11 +147,31 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     return services.find((s) => s.id === selectedServiceId) || null;
   }, [services, selectedServiceId]);
 
-  // Categories Filter
+  // Categories & Search Filter (Kecualikan ADDON dari Layanan Utama & Sortir KILOAN Teratas)
   const filteredServices = useMemo(() => {
-    if (activeCategory === 'ALL') return services;
-    return services.filter((s) => s.category === activeCategory);
-  }, [services, activeCategory]);
+    // 1. Filter out ADDON category from primary service list
+    let list = services.filter((s) => s.category !== 'ADDON' && s.isActive !== false);
+
+    // 2. Filter by category tab
+    if (activeCategory !== 'ALL') {
+      list = list.filter((s) => s.category === activeCategory);
+    } else {
+      // Sort KILOAN to the top when tab 'Semua' is active
+      list = [...list].sort((a, b) => {
+        if (a.category === 'KILOAN' && b.category !== 'KILOAN') return -1;
+        if (a.category !== 'KILOAN' && b.category === 'KILOAN') return 1;
+        return 0;
+      });
+    }
+
+    // 3. Search query filter
+    if (serviceSearch.trim()) {
+      const q = serviceSearch.toLowerCase().trim();
+      list = list.filter((s) => s.name.toLowerCase().includes(q));
+    }
+
+    return list;
+  }, [services, activeCategory, serviceSearch]);
 
   // Filtered Customers Auto-complete
   const filteredCustomers = useMemo(() => {
@@ -219,7 +256,8 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      setErrorMsg('Nama pelanggan wajib diisi');
+      setErrorMsg('Nama pelanggan wajib diisi untuk menyimpan pesanan');
+      customerInputRef.current?.focus();
       return;
     }
     if (!currentService) {
@@ -357,7 +395,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
-                  Terima Cucian (Drop-off)
+                  Input Cepat Cucian
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900">
                   Cepat
@@ -427,6 +465,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
+                    ref={customerInputRef}
                     type="text"
                     value={customerSearch}
                     onChange={(e) => {
@@ -436,7 +475,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                     }}
                     onFocus={() => setShowCustomerDropdown(true)}
                     placeholder="Ketik nama atau cari pelanggan member..."
-                    className="w-full pl-9.5 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
                   />
                 </div>
 
@@ -539,6 +578,27 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               </div>
             </div>
 
+            {/* Search Bar Layanan (Cepat Temukan dari Katalog) */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                placeholder="Cari layanan (cuci komplit, bedcover, jas, express)..."
+                className="w-full pl-10 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+              />
+              {serviceSearch && (
+                <button
+                  type="button"
+                  onClick={() => setServiceSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200 transition-colors cursor-pointer text-xs font-black"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             {loadingServices ? (
               <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-900" />
@@ -582,7 +642,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                         <span className="font-black text-blue-950 font-mono">
                           Rp {Number(srv.price).toLocaleString('id-ID')}
                         </span>
-                        <span className="text-slate-400 text-[10px]">/{srv.unit}</span>
+                        <span className="text-slate-400 text-[10px] font-semibold">{formatServiceUnit(srv.unit)}</span>
                       </div>
                     </button>
                   );
@@ -860,6 +920,12 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           </div>
 
           <div className="flex items-center gap-2">
+            {!customerName.trim() && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Isi nama pelanggan untuk simpan</span>
+              </span>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -872,8 +938,9 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               type="submit"
               form="quick-dropoff-form"
               onClick={handleSubmitOrder}
-              disabled={submitting || !currentService || !customerName.trim()}
+              disabled={submitting || !currentService}
               className="py-2.5 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
+              title={!customerName.trim() ? 'Isi nama pelanggan untuk menyimpan' : 'Simpan transaksi dan cetak tag thermal'}
             >
               {submitting ? (
                 <>

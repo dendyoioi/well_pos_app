@@ -39,6 +39,9 @@ import {
   Layers,
   PanelLeftOpen,
   PanelLeftClose,
+  ClipboardList,
+  UserCog,
+  TicketPercent,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -599,7 +602,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   : 'text-slate-700 hover:bg-indigo-50/60'
               }`}
             >
-              <Users className="w-4 h-4 shrink-0" />
+              <UserCog className="w-4 h-4 shrink-0" />
               <span>Tim Staf Gudang</span>
             </button>
             <button
@@ -667,7 +670,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
-              <Receipt className="w-4 h-4 shrink-0" />
+              <ClipboardList className="w-4 h-4 shrink-0" />
               <span>Riwayat Transaksi Nota</span>
             </button>
             <button
@@ -742,27 +745,12 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
     return (
       /* MODE TOKO PENJUALAN (OPERASIONAL KASIR & KAFE LENGKAP) */
       <div className="space-y-1">
-        {/* Khusus Mode Laundry: Tombol Utama Aksi Cepat Terima Cucian */}
-        {isLaundryMode && !isMobileDrawer && (
-          <div className="pb-2.5 mb-2 border-b border-slate-100 flex justify-center lg:justify-start">
-            <button
-              onClick={() => {
-                setQuickDropoffOpen(true);
-                onItemClick?.();
-              }}
-              className="w-11 h-11 lg:w-full lg:h-auto py-2.5 px-2.5 lg:px-3 rounded-2xl lg:rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
-              title="Terima Cucian (Drop-off)"
-            >
-              <Plus className="w-5 h-5 lg:w-4 lg:h-4 stroke-[2.5] shrink-0" />
-              <span className="hidden lg:inline">Terima Cucian (Drop-off)</span>
-            </button>
-          </div>
-        )}
-
         {/* Quick Launch Ringkasan Bisnis */}
         <button
           onClick={() => handleSelectTab('overview')}
-          className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center justify-center lg:justify-start gap-2.5 transition-all cursor-pointer ${
+          className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center ${
+            isRail ? 'justify-center lg:justify-start' : 'justify-start'
+          } gap-2.5 transition-all cursor-pointer ${
             activeTab === 'overview'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-700 hover:bg-slate-100'
@@ -770,7 +758,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           title={isLaundryMode ? 'Ringkasan Bisnis Laundry' : 'Ringkasan Bisnis'}
         >
           <LayoutDashboard className="w-5 h-5 lg:w-4 lg:h-4 shrink-0" />
-          <span className={isLaundryMode ? 'hidden lg:inline' : 'inline'}>
+          <span className={isRail ? 'hidden lg:inline' : 'inline'}>
             {isLaundryMode ? 'Ringkasan Bisnis Laundry' : 'Ringkasan Bisnis'}
           </span>
         </button>
@@ -779,7 +767,9 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         {(user.role === 'ADMIN' || user.role === 'OWNER') && (
           <button
             onClick={() => handleSelectTab('billing_tokens')}
-            className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center justify-center lg:justify-between transition-all cursor-pointer ${
+            className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center ${
+              isRail ? 'justify-center lg:justify-between' : 'justify-between'
+            } transition-all cursor-pointer ${
               activeTab === 'billing_tokens'
                 ? 'bg-blue-900 text-white shadow-xs'
                 : 'text-slate-700 hover:bg-slate-100'
@@ -792,9 +782,9 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               }`}>
                 <Zap className="w-3.5 h-3.5 fill-current" />
               </span>
-              <span className={isLaundryMode ? 'hidden lg:inline' : 'inline'}>Paket &amp; Kuota</span>
+              <span className={isRail ? 'hidden lg:inline' : 'inline'}>Paket &amp; Kuota</span>
             </span>
-            <span className={`${isLaundryMode ? 'hidden lg:flex' : 'flex'} text-[10px] font-black px-2 py-0.5 rounded-full items-center gap-1 shrink-0 ${
+            <span className={`${isRail ? 'hidden lg:flex' : 'flex'} text-[10px] font-black px-2 py-0.5 rounded-full items-center gap-1 shrink-0 ${
               activeTab === 'billing_tokens'
                 ? 'bg-amber-500 text-white'
                 : 'bg-amber-100 text-amber-800 border border-amber-200'
@@ -1217,7 +1207,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             }`}
             title="Riwayat Transaksi"
           >
-            <Receipt className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 ${activeTab === 'orders' || activeTab === 'payment_items' ? 'text-white' : 'text-slate-500'}`} />
+            <ClipboardList className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 ${activeTab === 'orders' || activeTab === 'payment_items' ? 'text-white' : 'text-slate-500'}`} />
             <span className={isRail ? 'hidden lg:inline' : 'inline'}>Riwayat Transaksi</span>
           </button>
         </div>
@@ -1317,7 +1307,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             title={isLaundryMode ? 'Promosi & Kupon' : 'Promosi & Diskon'}
           >
             <span className="flex items-center gap-2">
-              <Tag className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
+              <TicketPercent className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-500'
               }`} />
               <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Promosi & Kupon' : 'Promosi & Diskon'}</span>
@@ -1344,7 +1334,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 title={isLaundryMode ? 'Diskon & Kupon Promosi' : 'Diskon & Voucher'}
               >
                 <span className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 shrink-0 lg:hidden" />
+                  <TicketPercent className="w-4 h-4 shrink-0 lg:hidden" />
                   <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Diskon & Kupon Promosi' : 'Diskon & Voucher'}</span>
                 </span>
               </button>
@@ -1431,7 +1421,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             title={isLaundryMode ? 'Manajemen Staf & Operator' : 'Manajemen Staf'}
           >
             <span className="flex items-center gap-2">
-              <Users className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
+              <UserCog className={`w-5 h-5 lg:w-4 lg:h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-500'
               }`} />
               <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Manajemen Staf & Operator' : 'Manajemen Staf'}</span>
@@ -1458,7 +1448,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 title={isLaundryMode ? 'Kelola Staf & Operator' : 'Kelola Staf'}
               >
                 <span className="flex items-center gap-2">
-                  <Users className="w-4 h-4 shrink-0 lg:hidden" />
+                  <UserCog className="w-4 h-4 shrink-0 lg:hidden" />
                   <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Kelola Staf & Operator' : 'Kelola Staf'}</span>
                 </span>
               </button>
@@ -1813,10 +1803,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             <button
               onClick={() => onTabChange('pos')}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95"
-              title="Buka Mesin Kasir"
+              title={isLaundryMode ? 'Buka Kasir Laundry (POS)' : 'Buka Mesin Kasir'}
             >
               <CreditCard className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Buka Kasir POS</span>
+              <span className="hidden sm:inline">{isLaundryMode ? 'Kasir Laundry' : 'Buka Kasir POS'}</span>
             </button>
           ) : null}
 
@@ -2027,22 +2017,6 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             )}
           </div>
 
-          {/* Plan & Token Quota Badge */}
-          {(user.role === 'ADMIN' || user.role === 'OWNER') && (
-            <button
-              onClick={() => onTabChange('billing_tokens')}
-              title="Kelola Paket & Kuota Token Transaksi"
-              className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border transition-all cursor-pointer ${
-                activeTab === 'billing_tokens'
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                  : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
-              }`}
-            >
-              <Zap className={`w-3.5 h-3.5 ${activeTab === 'billing_tokens' ? 'fill-white text-white' : 'fill-amber-500 text-amber-600'}`} />
-              <span>Paket &amp; Kuota</span>
-            </button>
-          )}
-
           {/* Profile & Avatar */}
           <div className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-200">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-900 text-white flex items-center justify-center text-xs font-black shrink-0">
@@ -2053,15 +2027,6 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <p className="text-[10px] text-slate-400 font-semibold">{user.role}</p>
             </div>
           </div>
-
-          {/* Lock Screen */}
-          <button
-            onClick={onLogout}
-            title="Kunci Terminal"
-            className="hidden sm:flex p-1.5 sm:p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all cursor-pointer shrink-0"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
 
           {/* Logout */}
           <button
@@ -2225,8 +2190,8 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               >
                 {isLaundryMode ? (
                   <>
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
-                    <span>Terima Cucian (Drop-off)</span>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Kasir Laundry (POS)</span>
                   </>
                 ) : (
                   <>
@@ -2395,11 +2360,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     type="button"
                     onClick={() => setQuickDropoffOpen(true)}
                     className="w-12 h-12 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-95 transition-transform cursor-pointer border-2 border-white"
-                    title="Terima Cucian (Drop-off)"
+                    title="Input Cepat (Drop-off)"
                   >
                     <Plus className="w-6 h-6 stroke-[2.5]" />
                   </button>
-                  <span className="text-[9px] font-black text-blue-900 mt-0.5">Drop-off</span>
+                  <span className="text-[9px] font-black text-blue-900 mt-0.5">Input Cepat</span>
                 </div>
 
                 {/* Tab 3: Rak Simpan */}
@@ -2456,7 +2421,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     activeTab === 'orders' ? 'text-blue-900 font-black' : 'text-slate-500 hover:text-slate-800 font-medium'
                   }`}
                 >
-                  <Receipt className="w-5 h-5" />
+                  <ClipboardList className="w-5 h-5" />
                   <span className="text-[10px]">Pesanan</span>
                 </button>
 

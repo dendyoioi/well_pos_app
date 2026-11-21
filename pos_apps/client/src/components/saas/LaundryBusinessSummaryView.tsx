@@ -10,9 +10,9 @@ import {
   Loader2,
   Calendar,
   Shirt,
-  Sparkles,
   Archive,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Outlet } from '../../types/outlet';
@@ -494,19 +494,10 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
               )}
             </div>
 
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-              <span className="px-3 py-1 rounded-full bg-white/10 text-xs font-black border border-white/15 text-blue-100 shadow-2xs">
+            <div className="flex flex-col items-end shrink-0">
+              <span className="px-3.5 py-1.5 rounded-full bg-white/10 text-xs font-black border border-white/15 text-blue-100 shadow-2xs">
                 {summaryMetrics.orderCount} Nota Masuk
               </span>
-              <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'));
-                }}
-                className="mt-1 px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-blue-950 font-extrabold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Drop-off</span>
-              </button>
             </div>
           </div>
 
@@ -552,13 +543,6 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
                   Radar Workshop Mesin
                 </h3>
               </div>
-              <button
-                onClick={() => onNavigateTab?.('laundry_production')}
-                className="text-xs font-extrabold text-blue-900 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
-              >
-                <span>SOP</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
             </div>
 
             <div className="space-y-2">
@@ -632,7 +616,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
 
       {/* ── 3. QUICK 4-TILE ACTION RIBBON ─────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Drop-off Timbang */}
+        {/* 1. Input Cepat */}
         <button
           onClick={() => {
             window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'));
@@ -643,12 +627,26 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
             <Plus className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Drop-off</span>
-            <span className="text-[10px] text-slate-500 font-medium">Timbang &amp; Nota</span>
+            <span className="text-xs font-black text-slate-900 block leading-tight">Input Cepat</span>
+            <span className="text-[10px] text-slate-500 font-medium truncate block">Timbang &amp; Nota</span>
           </div>
         </button>
 
-        {/* Mesin Cuci/Dry */}
+        {/* 2. Antrean Cucian */}
+        <button
+          onClick={() => onNavigateTab?.('laundry_queue')}
+          className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-black text-slate-900 block leading-tight">Antrean Cucian</span>
+            <span className="text-[10px] text-slate-500 font-medium truncate block">Status &amp; SLA ({pipelineStatus.antrian})</span>
+          </div>
+        </button>
+
+        {/* 3. Workshop */}
         <button
           onClick={() => onNavigateTab?.('laundry_production')}
           className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
@@ -657,26 +655,12 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
             <Waves className="w-6 h-6" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Mesin</span>
-            <span className="text-[10px] text-slate-500 font-medium">Cuci &amp; Kering ({pipelineStatus.dicuci})</span>
+            <span className="text-xs font-black text-slate-900 block leading-tight">Workshop</span>
+            <span className="text-[10px] text-slate-500 font-medium truncate block">Cuci, Kering &amp; Setrika ({pipelineStatus.dicuci})</span>
           </div>
         </button>
 
-        {/* Setrika & Finishing */}
-        <button
-          onClick={() => onNavigateTab?.('laundry_production')}
-          className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 border border-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Setrika</span>
-            <span className="text-[10px] text-slate-500 font-medium">QC &amp; Packing</span>
-          </div>
-        </button>
-
-        {/* Rak Simpan */}
+        {/* 4. Rak Simpan */}
         <button
           onClick={() => onNavigateTab?.('laundry_racks')}
           className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
@@ -686,7 +670,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
           </div>
           <div className="min-w-0">
             <span className="text-xs font-black text-slate-900 block leading-tight">Rak Simpan</span>
-            <span className="text-[10px] text-slate-500 font-medium">Serah Ambil ({pipelineStatus.siapDiambil})</span>
+            <span className="text-[10px] text-slate-500 font-medium truncate block">Serah Ambil ({pipelineStatus.siapDiambil})</span>
           </div>
         </button>
       </div>
