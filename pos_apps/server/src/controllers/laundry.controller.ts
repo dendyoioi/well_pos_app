@@ -281,14 +281,14 @@ export const getLaundryRacks = async (req: Request, res: Response) => {
     // Auto-seed rak penyimpanan default jika belum ada
     if (racks.length === 0 && outletId && typeof outletId === 'string') {
       const sampleRacks = [
-        { code: 'RAK-A1', name: 'Rak Kiloan A1', type: 'SHELF', capacity: 10 },
-        { code: 'RAK-A2', name: 'Rak Kiloan A2', type: 'SHELF', capacity: 10 },
-        { code: 'RAK-A3', name: 'Rak Kiloan A3', type: 'SHELF', capacity: 10 },
-        { code: 'RAK-B1', name: 'Rak Bed Cover B1', type: 'SHELF', capacity: 6 },
-        { code: 'RAK-B2', name: 'Rak Bed Cover B2', type: 'SHELF', capacity: 6 },
-        { code: 'HGR-01', name: 'Gantungan Hanger Jas 01', type: 'HANGER', capacity: 15 },
-        { code: 'HGR-02', name: 'Gantungan Hanger Gaun 02', type: 'HANGER', capacity: 15 },
-        { code: 'SPT-01', name: 'Rak Khusus Sepatu / Tas', type: 'BIN', capacity: 8 },
+        { code: 'RAK-A1', name: 'Rak Kiloan A1', category: 'KILOAN', capacity: 10 },
+        { code: 'RAK-A2', name: 'Rak Kiloan A2', category: 'KILOAN', capacity: 10 },
+        { code: 'RAK-A3', name: 'Rak Kiloan A3', category: 'KILOAN', capacity: 10 },
+        { code: 'RAK-B1', name: 'Rak Bed Cover B1', category: 'SATUAN', capacity: 6 },
+        { code: 'RAK-B2', name: 'Rak Bed Cover B2', category: 'SATUAN', capacity: 6 },
+        { code: 'HGR-01', name: 'Gantungan Hanger Jas 01', category: 'SATUAN', capacity: 15 },
+        { code: 'HGR-02', name: 'Gantungan Hanger Gaun 02', category: 'SATUAN', capacity: 15 },
+        { code: 'SPT-01', name: 'Rak Khusus Sepatu / Tas', category: 'SEPATU_TAS', capacity: 8 },
       ];
 
       for (const item of sampleRacks) {
@@ -535,6 +535,7 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
 
     const parseResult = createLaundryOrderSchema.safeParse(req.body);
     if (!parseResult.success) {
+      console.log('CREATE LAUNDRY ORDER VALIDATION ERRORS:', parseResult.error.flatten().fieldErrors);
       return res.status(400).json({
         status: 'error',
         message: 'Validasi form pesanan laundry gagal',

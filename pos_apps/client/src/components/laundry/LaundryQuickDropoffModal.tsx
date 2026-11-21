@@ -259,19 +259,19 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             serviceId: currentService.id,
             name: currentService.name,
             category: currentService.category,
-            quantity: billedQty,
-            unit: currentService.unit,
-            unitPrice: currentService.price,
+            quantity: Number(billedQty),
+            unit: currentService.unit || 'Kg',
+            unitPrice: Number(currentService.price),
             addons: [],
             notes: isUnderMinimum
               ? `${compiledNotes ? `${compiledNotes}; ` : ''}(Timbangan fisik: ${weightKg.toFixed(1)} Kg, min order ${minOrderQty} Kg)`
               : compiledNotes || undefined,
           },
         ],
-        totalPieces: totalPieces,
-        perfumeVariant: perfumeVariant,
-        estimatedReadyHours: currentService.durationHours || 24,
-        depositAmount: paymentChoice === 'PAID' ? subtotal : paymentChoice === 'PARTIAL' ? depositAmount : 0,
+        totalPieces: Math.max(1, Math.round(Number(totalPieces || 1))),
+        perfumeVariant: perfumeVariant || 'Lavender',
+        estimatedReadyHours: Math.max(1, Math.round(Number(currentService.durationHours || 24))),
+        depositAmount: paymentChoice === 'PAID' ? Number(subtotal) : paymentChoice === 'PARTIAL' ? Number(depositAmount) : 0,
         discountAmount: 0,
         paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
         customerNotes: compiledNotes || undefined,
@@ -871,6 +871,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             <button
               type="submit"
               form="quick-dropoff-form"
+              onClick={handleSubmitOrder}
               disabled={submitting || !currentService || !customerName.trim()}
               className="py-2.5 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
             >
