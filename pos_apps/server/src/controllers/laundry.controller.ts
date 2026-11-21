@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Prisma } from '@prisma/client';
@@ -67,7 +69,7 @@ const createLaundryOrderSchema = z.object({
   estimatedReadyHours: z.number().int().default(48),
   depositAmount: z.number().min(0).default(0),
   discountAmount: z.number().min(0).default(0),
-  paymentMethod: z.enum(['CASH', 'QRIS', 'TRANSFER', 'UNPAID']).default('UNPAID'),
+  paymentMethod: z.enum(['CASH', 'QRIS', 'TRANSFER', 'UNPAID', 'CUSTOMER_DEPOSIT', 'LAUNDRY_QUOTA']).default('UNPAID'),
   customerNotes: z.string().optional(),
 });
 
@@ -477,6 +479,15 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
   }
 };
 
+class BusinessValidationError extends Error {
+  statusCode: number;
+  constructor(message: string) {
+    super(message);
+    this.name = 'BusinessValidationError';
+    this.statusCode = 400;
+  }
+}
+
 export const createLaundryOrder = async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.tenantId;
@@ -513,6 +524,16 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       paymentMethod,
       customerNotes,
     } = parseResult.data;
+
+    // Validasi prasyarat pembayaran deposit / kuota: pelanggan terdaftar wajib dipilih
+    if ((paymentMethod === 'CUSTOMER_DEPOSIT' || paymentMethod === 'LAUNDRY_QUOTA') && !customerId) {
+      return res.status(400).json({
+        status: 'error',
+        message: paymentMethod === 'CUSTOMER_DEPOSIT'
+          ? 'Pelanggan wajib dipilih untuk pembayaran menggunakan saldo deposit'
+          : 'Pelanggan wajib dipilih untuk pembayaran menggunakan kuota kiloan',
+      });
+    }
 
     // 1. Dapatkan atau daftarkan Customer jika belum ada, serta update alamat jika disediakan
     let effectiveCustomerId = customerId;
@@ -704,12 +725,80 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
 
       // Catat transaksi pembayaran jika ada pembayaran di awal
       if (paidAmount > 0 && paymentMethod !== 'UNPAID') {
-        const method =
-          paymentMethod === 'QRIS'
-            ? PaymentMethod.QRIS
-            : paymentMethod === 'TRANSFER'
-            ? PaymentMethod.BANK_TRANSFER
-            : PaymentMethod.CASH;
+        let method: PaymentMethod = PaymentMethod.CASH;
+        if (paymentMethod === 'QRIS') {
+          method = PaymentMethod.QRIS;
+        } else if (paymentMethod === 'TRANSFER') {
+          method = PaymentMethod.BANK_TRANSFER;
+        } else if (paymentMethod === 'CUSTOMER_DEPOSIT') {
+          method = PaymentMethod.CUSTOMER_DEPOSIT;
+          if (!effectiveCustomerId) {
+            throw new BusinessValidationError('Pelanggan wajib dipilih untuk pembayaran menggunakan saldo deposit');
+          }
+          const wallet = await tx.customerLaundryWallet.findUnique({
+            where: { tenantId_customerId: { tenantId, customerId: effectiveCustomerId } },
+          });
+          if (!wallet || Number(wallet.balanceAmount) < paidAmount) {
+            throw new BusinessValidationError(`Saldo deposit pelanggan tidak mencukupi (Sisa: Rp ${Number(wallet?.balanceAmount || 0).toLocaleString('id-ID')}, Butuh: Rp ${paidAmount.toLocaleString('id-ID')})`);
+          }
+          const balanceBefore = Number(wallet.balanceAmount);
+          const balanceAfter = balanceBefore - paidAmount;
+          await tx.customerLaundryWallet.update({
+            where: { id: wallet.id },
+            data: { balanceAmount: balanceAfter },
+          });
+          await tx.customerLaundryWalletLedger.create({
+            data: {
+              walletId: wallet.id,
+              tenantId,
+              outletId,
+              orderId: order.id,
+              shiftId: activeShift?.id || null,
+              cashierId: userId,
+              ledgerType: 'USE_BALANCE',
+              deltaAmount: -paidAmount,
+              balanceBefore,
+              balanceAfter,
+              notes: `Pemakaian saldo deposit untuk nota ${order.invoiceNumber}`,
+            },
+          });
+        } else if (paymentMethod === 'LAUNDRY_QUOTA') {
+          method = PaymentMethod.LAUNDRY_QUOTA;
+          if (!effectiveCustomerId) {
+            throw new BusinessValidationError('Pelanggan wajib dipilih untuk pembayaran menggunakan kuota kiloan');
+          }
+          const wallet = await tx.customerLaundryWallet.findUnique({
+            where: { tenantId_customerId: { tenantId, customerId: effectiveCustomerId } },
+          });
+          const neededKg = totalWeightKg > 0 ? totalWeightKg : 1;
+          if (!wallet || Number(wallet.quotaKg) < neededKg) {
+            throw new BusinessValidationError(`Kuota kiloan pelanggan tidak mencukupi (Sisa: ${Number(wallet?.quotaKg || 0)} Kg, Butuh: ${neededKg} Kg)`);
+          }
+          if (wallet.quotaExpiresAt && new Date(wallet.quotaExpiresAt) < new Date()) {
+            throw new BusinessValidationError('Masa berlaku kuota kiloan pelanggan telah kedaluwarsa');
+          }
+          const kgBefore = Number(wallet.quotaKg);
+          const kgAfter = kgBefore - neededKg;
+          await tx.customerLaundryWallet.update({
+            where: { id: wallet.id },
+            data: { quotaKg: kgAfter },
+          });
+          await tx.customerLaundryWalletLedger.create({
+            data: {
+              walletId: wallet.id,
+              tenantId,
+              outletId,
+              orderId: order.id,
+              shiftId: activeShift?.id || null,
+              cashierId: userId,
+              ledgerType: 'USE_QUOTA_KG',
+              deltaKg: -neededKg,
+              kgBefore,
+              kgAfter,
+              notes: `Pemakaian kuota kiloan untuk nota ${order.invoiceNumber} (${neededKg} Kg)`,
+            },
+          });
+        }
 
         await tx.paymentTransaction.create({
           data: {
@@ -735,6 +824,17 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error createLaundryOrder:', error);
+    if (
+      error.statusCode === 400 ||
+      error.name === 'BusinessValidationError' ||
+      (error.message &&
+        (error.message.includes('Saldo deposit') ||
+          error.message.includes('Kuota kiloan') ||
+          error.message.includes('kedaluwarsa') ||
+          error.message.includes('Pelanggan wajib dipilih')))
+    ) {
+      return res.status(400).json({ status: 'error', message: error.message });
+    }
     return res.status(500).json({ status: 'error', message: 'Gagal membuat pesanan laundry' });
   }
 };
@@ -1880,7 +1980,7 @@ export const saveLaundrySortingData = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
-    const { garmentCounts, defects, defectNotes, operatorName, advanceToNext } = req.body;
+    const { garmentCounts, defects, defectNotes, conditionPhotos, operatorName, advanceToNext } = req.body;
 
     const detail = await prisma.laundryOrderDetail.findFirst({
       where: {
@@ -1917,6 +2017,7 @@ export const saveLaundrySortingData = async (req: Request, res: Response) => {
         garmentCounts: garmentCounts ?? detail.garmentCounts,
         defects: defects ?? detail.defects,
         defectNotes: defectNotes ?? detail.defectNotes,
+        conditionPhotos: conditionPhotos ?? detail.conditionPhotos,
         totalPieces: totalPieces > 0 ? totalPieces : detail.totalPieces,
         isSorted: true,
         sortedAt: now,
@@ -2037,6 +2138,7 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
         garmentCounts: order.laundryDetail.garmentCounts,
         defects: order.laundryDetail.defects,
         defectNotes: order.laundryDetail.defectNotes,
+        conditionPhotos: order.laundryDetail.conditionPhotos || [],
         items: order.items.map((oi) => ({
           name: oi.productName || 'Layanan Laundry',
           quantity: oi.quantity,
@@ -2054,5 +2156,323 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error getPublicLaundryTracking:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mengambil data pelacakan cucian' });
+  }
+};
+
+// ==========================================
+// 11. BUKTI FOTO KONDISI PAKAIAN ANTI-KOMPLAIN
+// ==========================================
+
+export const uploadLaundryConditionPhoto = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak ditemukan' });
+    }
+
+    const { image, caption, stage } = req.body;
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Data foto (Base64 Data URL) wajib disertakan' });
+    }
+
+    // Ekstrak MIME & Base64 data
+    const matches = image.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ status: 'error', message: 'Format Data URL gambar tidak valid' });
+    }
+
+    const rawSubtype = matches[1].toLowerCase();
+    const ALLOWED_MIME_EXTS: Record<string, string> = {
+      jpeg: 'jpg',
+      jpg: 'jpg',
+      png: 'png',
+      webp: 'webp',
+    };
+
+    if (!ALLOWED_MIME_EXTS[rawSubtype]) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Format gambar tidak didukung. Hanya file JPG, JPEG, PNG, dan WebP yang diizinkan.',
+      });
+    }
+
+    const ext = ALLOWED_MIME_EXTS[rawSubtype];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Validasi batas ukuran file (maksimal 2 MB = 2 * 1024 * 1024 byte)
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    if (buffer.length > MAX_FILE_SIZE) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Ukuran foto melebihi batas maksimal (Maksimal 2 MB, ukuran file: ${(buffer.length / (1024 * 1024)).toFixed(2)} MB)`,
+      });
+    }
+
+    // Buat direktori static uploads/laundry/<tenantId>
+    const tenantUploadDir = path.join(__dirname, '../../uploads/laundry', tenantId);
+    if (!fs.existsSync(tenantUploadDir)) {
+      fs.mkdirSync(tenantUploadDir, { recursive: true });
+    }
+
+    const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
+    const filePath = path.join(tenantUploadDir, filename);
+    await fs.promises.writeFile(filePath, buffer);
+
+    const relativeUrl = `/uploads/laundry/${tenantId}/${filename}`;
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Foto kondisi pakaian berhasil diunggah',
+      data: {
+        url: relativeUrl,
+        caption: caption || '',
+        stage: stage || 'SORTING',
+        uploadedBy: (req.user as any)?.name || 'Kasir',
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error uploadLaundryConditionPhoto:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengunggah foto kondisi pakaian' });
+  }
+};
+
+// ==========================================
+// 12. CUSTOMER LAUNDRY WALLET & KILO QUOTA
+// ==========================================
+
+export const getCustomerLaundryWallet = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { customerId } = req.params;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak ditemukan' });
+    }
+
+    const wallet = await prisma.customerLaundryWallet.findUnique({
+      where: {
+        tenantId_customerId: {
+          tenantId,
+          customerId,
+        },
+      },
+      include: {
+        ledgers: {
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+          include: {
+            cashier: { select: { id: true, name: true } },
+            outlet: { select: { id: true, name: true } },
+            order: { select: { id: true, invoiceNumber: true } },
+          },
+        },
+      },
+    });
+
+    if (!wallet) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          balanceAmount: 0,
+          quotaKg: 0,
+          quotaExpiresAt: null,
+          ledgers: [],
+        },
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        id: wallet.id,
+        balanceAmount: Number(wallet.balanceAmount),
+        quotaKg: Number(wallet.quotaKg),
+        quotaExpiresAt: wallet.quotaExpiresAt,
+        ledgers: wallet.ledgers.map((l) => ({
+          id: l.id,
+          ledgerType: l.ledgerType,
+          deltaAmount: Number(l.deltaAmount),
+          balanceBefore: Number(l.balanceBefore),
+          balanceAfter: Number(l.balanceAfter),
+          deltaKg: Number(l.deltaKg),
+          kgBefore: Number(l.kgBefore),
+          kgAfter: Number(l.kgAfter),
+          paymentMethod: l.paymentMethod,
+          notes: l.notes,
+          createdAt: l.createdAt,
+          cashierName: l.cashier?.name,
+          outletName: l.outlet?.name,
+          invoiceNumber: l.order?.invoiceNumber,
+        })),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getCustomerLaundryWallet:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil data saldo/kuota pelanggan' });
+  }
+};
+
+export const topupCustomerLaundryWallet = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const { customerId } = req.params;
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi kasir tidak ditemukan' });
+    }
+
+    const {
+      type, // 'BALANCE' | 'QUOTA_KG'
+      amount, // nominal saldo jika type BALANCE
+      kg, // kuota kg jika type QUOTA_KG
+      pricePaid, // uang yang dibayar pelanggan
+      paymentMethod = 'CASH', // 'CASH' | 'QRIS' | 'BANK_TRANSFER' | 'TRANSFER'
+      shiftId,
+      outletId,
+      notes,
+      quotaExpiresAt,
+    } = req.body;
+
+    if (!type || !['BALANCE', 'QUOTA_KG'].includes(type)) {
+      return res.status(400).json({ status: 'error', message: 'Tipe top-up harus BALANCE atau QUOTA_KG' });
+    }
+
+    if (type === 'BALANCE' && (!amount || Number(amount) <= 0)) {
+      return res.status(400).json({ status: 'error', message: 'Nominal top-up saldo harus lebih besar dari 0' });
+    }
+
+    if (type === 'QUOTA_KG' && (!kg || Number(kg) <= 0)) {
+      return res.status(400).json({ status: 'error', message: 'Jumlah kuota kg harus lebih besar dari 0' });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, tenantId },
+    });
+    if (!customer) {
+      return res.status(404).json({ status: 'error', message: 'Pelanggan tidak ditemukan' });
+    }
+
+    const effectiveOutletId = outletId || (req.user as any)?.outletId;
+    if (!effectiveOutletId) {
+      return res.status(400).json({ status: 'error', message: 'Outlet aktif wajib disertakan' });
+    }
+
+    const paidNominal = type === 'BALANCE' ? Number(amount) : Number(pricePaid || 0);
+
+    // Cari shift kasir aktif jika ada
+    const activeShift = shiftId
+      ? await prisma.shift.findFirst({ where: { id: shiftId, tenantId, status: ShiftStatus.OPEN } })
+      : await prisma.shift.findFirst({
+          where: {
+            tenantId,
+            outletId: effectiveOutletId,
+            status: ShiftStatus.OPEN,
+            userId,
+          },
+        });
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Upsert wallet
+      let wallet = await tx.customerLaundryWallet.findUnique({
+        where: { tenantId_customerId: { tenantId, customerId } },
+      });
+
+      if (!wallet) {
+        wallet = await tx.customerLaundryWallet.create({
+          data: {
+            tenantId,
+            customerId,
+            balanceAmount: 0,
+            quotaKg: 0,
+          },
+        });
+      }
+
+      const balanceBefore = Number(wallet.balanceAmount);
+      const kgBefore = Number(wallet.quotaKg);
+
+      let deltaAmount = 0;
+      let balanceAfter = balanceBefore;
+      let deltaKg = 0;
+      let kgAfter = kgBefore;
+      let ledgerType = 'TOPUP_BALANCE';
+
+      if (type === 'BALANCE') {
+        deltaAmount = Number(amount);
+        balanceAfter = balanceBefore + deltaAmount;
+        ledgerType = 'TOPUP_BALANCE';
+      } else {
+        deltaKg = Number(kg);
+        kgAfter = kgBefore + deltaKg;
+        ledgerType = 'TOPUP_QUOTA_KG';
+      }
+
+      // Update wallet
+      const updatedWallet = await tx.customerLaundryWallet.update({
+        where: { id: wallet.id },
+        data: {
+          balanceAmount: balanceAfter,
+          quotaKg: kgAfter,
+          ...(quotaExpiresAt ? { quotaExpiresAt: new Date(quotaExpiresAt) } : {}),
+        },
+      });
+
+      // 2. Buat ledger immutable
+      const ledger = await tx.customerLaundryWalletLedger.create({
+        data: {
+          walletId: wallet.id,
+          tenantId,
+          outletId: effectiveOutletId,
+          shiftId: activeShift?.id || null,
+          cashierId: userId,
+          ledgerType,
+          deltaAmount,
+          balanceBefore,
+          balanceAfter,
+          deltaKg,
+          kgBefore,
+          kgAfter,
+          paymentMethod,
+          notes: notes || `Top-up ${type === 'BALANCE' ? `saldo Rp ${deltaAmount.toLocaleString('id-ID')}` : `kuota ${deltaKg} Kg`}`,
+        },
+      });
+
+      // 3. Jika bayar tunai (CASH) dan ada shift aktif, catat CashMovement agar kas fisik laci seimbang
+      if (paymentMethod === 'CASH' && paidNominal > 0 && activeShift) {
+        await tx.cashMovement.create({
+          data: {
+            tenantId,
+            outletId: effectiveOutletId,
+            shiftId: activeShift.id,
+            userId,
+            type: 'CASH_IN',
+            category: 'WALLET_TOPUP',
+            amount: paidNominal,
+            notes: `Top-up ${type === 'BALANCE' ? 'saldo' : 'kuota'} laundry: ${customer.name}`,
+          },
+        });
+
+        await tx.shift.update({
+          where: { id: activeShift.id },
+          data: {
+            expectedEnding: {
+              increment: paidNominal,
+            },
+          },
+        });
+      }
+
+      return { wallet: updatedWallet, ledger };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Top-up ${type === 'BALANCE' ? 'saldo deposit' : 'kuota kiloan'} berhasil diproses!`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error topupCustomerLaundryWallet:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal memproses top-up saldo laundry' });
   }
 };

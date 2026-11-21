@@ -98,7 +98,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
-  const [activeDetailTab, setActiveDetailTab] = useState<'orders' | 'points'>('orders');
+  const [activeDetailTab, setActiveDetailTab] = useState<'orders' | 'points' | 'laundry_wallet'>('orders');
   const [pointLedgers, setPointLedgers] = useState<CustomerPointLedger[]>([]);
   const [loadingPoints, setLoadingPoints] = useState<boolean>(false);
   const [isAdjustingPoints, setIsAdjustingPoints] = useState<boolean>(false);
@@ -1209,12 +1209,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                 )}
               </div>
 
-              {/* Tab Switcher: Riwayat Belanja vs Riwayat Mutasi Poin */}
-              <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 w-fit border border-slate-200/60">
+              {/* Tab Switcher: Riwayat Belanja vs Riwayat Mutasi Poin vs Saldo & Kuota Laundry */}
+              <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 w-fit border border-slate-200/60 overflow-x-auto max-w-full">
                 <button
                   type="button"
                   onClick={() => setActiveDetailTab('orders')}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                     activeDetailTab === 'orders'
                       ? 'bg-blue-900 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -1226,7 +1226,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                 <button
                   type="button"
                   onClick={() => setActiveDetailTab('points')}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                     activeDetailTab === 'points'
                       ? 'bg-blue-900 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -1234,6 +1234,25 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                 >
                   <History className="w-3.5 h-3.5" />
                   <span>Buku Besar Mutasi Poin ({pointLedgers.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('laundry_wallet')}
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeDetailTab === 'laundry_wallet'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <Wallet className="w-3.5 h-3.5 text-blue-700" />
+                  <span>
+                    Saldo &amp; Kuota Laundry
+                    {selectedCustomer.laundryWallet && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-400 text-slate-950 font-black">
+                        Rp {Math.floor(Number(selectedCustomer.laundryWallet.balanceAmount || 0)).toLocaleString('id-ID')}
+                      </span>
+                    )}
+                  </span>
                 </button>
               </div>
 
@@ -1366,6 +1385,156 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                       </table>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Tab Content 3: Saldo & Kuota Laundry Pelanggan */}
+              {activeDetailTab === 'laundry_wallet' && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  {/* Kartu Ringkasan Saldo & Kuota */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 text-white shadow-xs">
+                      <div className="flex items-center justify-between text-xs text-blue-200 mb-1">
+                        <span className="flex items-center gap-1.5 font-bold">
+                          <Wallet className="w-4 h-4 text-amber-300" />
+                          <span>Saldo Deposit Laundry</span>
+                        </span>
+                        <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>
+                      </div>
+                      <div className="text-2xl font-black font-mono mt-1">
+                        Rp {Number(selectedCustomer.laundryWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                      </div>
+                      <p className="text-[10.5px] text-blue-200 mt-1">
+                        Dapat digunakan untuk pembayaran pesanan laundry di kasir
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-900 to-indigo-950 text-white shadow-xs">
+                      <div className="flex items-center justify-between text-xs text-purple-200 mb-1">
+                        <span className="flex items-center gap-1.5 font-bold">
+                          <Sparkles className="w-4 h-4 text-amber-300" />
+                          <span>Kuota Kiloan Laundry</span>
+                        </span>
+                        {selectedCustomer.laundryWallet?.quotaExpiresAt ? (
+                          <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">
+                            s/d {new Date(selectedCustomer.laundryWallet.quotaExpiresAt).toLocaleDateString('id-ID')}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Tanpa Batas</span>
+                        )}
+                      </div>
+                      <div className="text-2xl font-black font-mono mt-1">
+                        {Number(selectedCustomer.laundryWallet?.quotaKg || 0)} Kg
+                      </div>
+                      <p className="text-[10.5px] text-purple-200 mt-1">
+                        Dipotong otomatis sesuai berat timbangan cucian kiloan
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Riwayat Mutasi Dompet */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-black text-slate-800 flex items-center justify-between">
+                      <span>Buku Besar Mutasi Dompet Laundry</span>
+                      <span className="text-[10px] font-normal text-slate-500">
+                        Total {selectedCustomer.laundryWallet?.ledgers?.length || 0} catatan
+                      </span>
+                    </h4>
+
+                    {!selectedCustomer.laundryWallet?.ledgers || selectedCustomer.laundryWallet.ledgers.length === 0 ? (
+                      <EmptyState
+                        compact
+                        icon={<Wallet className="w-5 h-5 text-blue-900" />}
+                        title="Belum Ada Riwayat Mutasi"
+                        description="Pelanggan ini belum pernah melakukan top-up deposit atau pemakaian kuota laundry."
+                      />
+                    ) : (
+                      <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[11px]">
+                            <tr>
+                              <th className="py-2.5 px-3">Waktu</th>
+                              <th className="py-2.5 px-3">Aksi</th>
+                              <th className="py-2.5 px-3 text-right">Mutasi Saldo</th>
+                              <th className="py-2.5 px-3 text-right">Mutasi Kuota</th>
+                              <th className="py-2.5 px-3">Keterangan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {selectedCustomer.laundryWallet.ledgers.map((l: any) => {
+                              const isAmountPos = (Number(l.deltaAmount) || 0) > 0;
+                              const isAmountNeg = (Number(l.deltaAmount) || 0) < 0;
+                              const isKgPos = (Number(l.deltaKg) || 0) > 0;
+                              const isKgNeg = (Number(l.deltaKg) || 0) < 0;
+                              return (
+                                <tr key={l.id} className="hover:bg-slate-50/50">
+                                  <td className="py-2.5 px-3 font-mono text-slate-500 whitespace-nowrap">
+                                    {new Date(l.createdAt).toLocaleString('id-ID', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        l.ledgerType === 'TOPUP_BALANCE'
+                                          ? 'bg-emerald-50 text-emerald-700'
+                                          : l.ledgerType === 'TOPUP_QUOTA_KG'
+                                          ? 'bg-purple-50 text-purple-700'
+                                          : l.ledgerType === 'USE_BALANCE'
+                                          ? 'bg-blue-50 text-blue-700'
+                                          : l.ledgerType === 'USE_QUOTA_KG'
+                                          ? 'bg-indigo-50 text-indigo-700'
+                                          : 'bg-slate-100 text-slate-700'
+                                      }`}
+                                    >
+                                      {l.ledgerType === 'TOPUP_BALANCE'
+                                        ? 'Top-up Saldo'
+                                        : l.ledgerType === 'TOPUP_QUOTA_KG'
+                                        ? 'Top-up Kuota'
+                                        : l.ledgerType === 'USE_BALANCE'
+                                        ? 'Pakai Saldo'
+                                        : l.ledgerType === 'USE_QUOTA_KG'
+                                        ? 'Pakai Kuota'
+                                        : l.ledgerType}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-mono font-bold">
+                                    {isAmountPos ? (
+                                      <span className="text-emerald-600">+Rp {Number(l.deltaAmount).toLocaleString('id-ID')}</span>
+                                    ) : isAmountNeg ? (
+                                      <span className="text-rose-600">-Rp {Math.abs(Number(l.deltaAmount)).toLocaleString('id-ID')}</span>
+                                    ) : (
+                                      <span className="text-slate-400">-</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-mono font-bold">
+                                    {isKgPos ? (
+                                      <span className="text-purple-600">+{Number(l.deltaKg)} Kg</span>
+                                    ) : isKgNeg ? (
+                                      <span className="text-rose-600">{Number(l.deltaKg)} Kg</span>
+                                    ) : (
+                                      <span className="text-slate-400">-</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600">
+                                    {l.order?.invoiceNumber ? (
+                                      <span className="font-mono font-bold text-blue-900 block">
+                                        {l.order.invoiceNumber}
+                                      </span>
+                                    ) : null}
+                                    <span>{l.notes || '-'}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

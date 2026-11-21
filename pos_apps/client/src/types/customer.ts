@@ -1,3 +1,5 @@
+import type { CustomerLaundryWallet } from './laundry';
+
 export type CustomerTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 
 export type PointTxType =
@@ -53,6 +55,7 @@ export interface Customer {
   updatedAt: string;
   orders?: CustomerOrderSummary[];
   pointLedgers?: CustomerPointLedger[];
+  laundryWallet?: CustomerLaundryWallet | null;
   firstOutlet?: { id?: string; name: string } | null;
   firstOrderAt?: string | null;
 }

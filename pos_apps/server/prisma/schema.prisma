@@ -97,6 +97,8 @@ model Tenant {
   laundryOrderDetails   LaundryOrderDetail[]
   laundryTransferManifests LaundryTransferManifest[]
   laundryStageLogs      LaundryStageLog[]
+  customerLaundryWallets CustomerLaundryWallet[]
+  customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
 
   @@map("tenants")
 }
@@ -238,6 +240,7 @@ model User {
   paymentTransactions PaymentTransaction[]
   attendances         Attendance[]
   laundryStageLogs    LaundryStageLog[]
+  customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -287,6 +290,7 @@ model Outlet {
   laundryOrderDetails LaundryOrderDetail[]
   sourceLaundryManifests LaundryTransferManifest[] @relation("ManifestSourceOutlet")
   targetLaundryManifests LaundryTransferManifest[] @relation("ManifestTargetOutlet")
+  customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -316,6 +320,7 @@ model Shift {
   cashMovements CashMovement[]
   customerDebtPayments CustomerDebtPayment[]
   paymentTransactions PaymentTransaction[]
+  customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
 
   @@index([tenantId, outletId, status])
   @@map("shifts")
@@ -368,6 +373,7 @@ model Customer {
   pointLedgers    CustomerPointLedger[]
   promotionUsages PromotionUsage[]
   debts           CustomerDebt[]
+  laundryWallet   CustomerLaundryWallet?
 
   @@unique([tenantId, code])
   @@unique([tenantId, phone])
@@ -837,6 +843,7 @@ model Order {
   laundryDetail   LaundryOrderDetail?
   laundryTransferItems LaundryTransferItem[]
   laundryStageLogs     LaundryStageLog[]
+  customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -1103,6 +1110,8 @@ enum PaymentMethod {
   EWALLET
   VOUCHER
   CUSTOMER_DEBT
+  CUSTOMER_DEPOSIT
+  LAUNDRY_QUOTA
 }
 
 enum PaymentTxStatus {
@@ -1561,6 +1570,7 @@ model LaundryOrderDetail {
   garmentCounts    Json?     @map("garment_counts")
   defects          Json?
   defectNotes      String?   @map("defect_notes")
+  conditionPhotos  Json?     @map("condition_photos")
   isSorted         Boolean   @default(false) @map("is_sorted")
   sortedAt         DateTime? @map("sorted_at")
   sortedBy         String?   @map("sorted_by")
@@ -1576,6 +1586,7 @@ model LaundryOrderDetail {
   @@index([tenantId, currentStage])
   @@index([tenantId, rackCode])
   @@index([tenantId, transferStatus])
+  @@index([tenantId, outletId, estimatedReadyAt], map: "idx_laundry_details_tenant_outlet_sla")
   @@map("laundry_order_details")
 }
 
@@ -1649,4 +1660,56 @@ model LaundryStageLog {
   @@index([tenantId, operatorId, stage])
   @@index([tenantId, stage, completedAt])
   @@map("laundry_stage_logs")
+}
+
+model CustomerLaundryWallet {
+  id             String    @id @default(uuid())
+  tenantId       String    @map("tenant_id")
+  customerId     String    @unique @map("customer_id")
+  balanceAmount  Decimal   @default(0) @map("balance_amount") @db.Decimal(15, 2)
+  quotaKg        Decimal   @default(0) @map("quota_kg") @db.Decimal(12, 3)
+  quotaExpiresAt DateTime? @map("quota_expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer Customer                      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  ledgers  CustomerLaundryWalletLedger[]
+
+  @@unique([tenantId, customerId])
+  @@index([tenantId, customerId])
+  @@map("customer_laundry_wallets")
+}
+
+model CustomerLaundryWalletLedger {
+  id            String    @id @default(uuid())
+  walletId      String    @map("wallet_id")
+  tenantId      String    @map("tenant_id")
+  outletId      String    @map("outlet_id")
+  orderId       String?   @map("order_id")
+  shiftId       String?   @map("shift_id")
+  cashierId     String?   @map("cashier_id")
+  ledgerType    String    @map("ledger_type") // TOPUP_BALANCE, USE_BALANCE, TOPUP_QUOTA_KG, USE_QUOTA_KG, EXPIRE, ADJUSTMENT, REFUND
+  deltaAmount   Decimal   @default(0) @map("delta_amount") @db.Decimal(15, 2)
+  balanceBefore Decimal   @default(0) @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter  Decimal   @default(0) @map("balance_after") @db.Decimal(15, 2)
+  deltaKg       Decimal   @default(0) @map("delta_kg") @db.Decimal(12, 3)
+  kgBefore      Decimal   @default(0) @map("kg_before") @db.Decimal(12, 3)
+  kgAfter       Decimal   @default(0) @map("kg_after") @db.Decimal(12, 3)
+  paymentMethod String?   @map("payment_method")
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  wallet  CustomerLaundryWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenant  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet  Outlet                @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  order   Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  shift   Shift?                @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  cashier User?                 @relation(fields: [cashierId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, walletId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, shiftId])
+  @@index([tenantId, createdAt])
+  @@map("customer_laundry_wallet_ledgers")
 }

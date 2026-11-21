@@ -2747,17 +2747,50 @@ export const api = {
   // ----------------------------------------------------
   // SORTIR PAKAIAN & QUALITY CONTROL (QC)
   // ----------------------------------------------------
+  uploadLaundryConditionPhoto: async (data: {
+    image: string;
+    caption?: string;
+    stage?: string;
+  }): Promise<any> => {
+    const res = await fetch('/api/laundry/upload-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   saveLaundrySortingData: async (
     id: string,
     data: {
       garmentCounts: { type: string; qty: number }[];
       defects?: string[];
       defectNotes?: string;
+      conditionPhotos?: { url: string; caption?: string; stage?: string; uploadedBy?: string; uploadedAt?: string }[];
       operatorName?: string;
       advanceToNext?: boolean;
     }
   ): Promise<any> => {
     const res = await fetch(`/api/laundry/orders/${id}/sort`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // DOMPET LAUNDRY PELANGGAN (DEPOSIT SALDO & KUOTA KILOAN)
+  // ----------------------------------------------------
+  getCustomerLaundryWallet: async (customerId: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/customers/${customerId}/wallet`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  topupCustomerLaundryWallet: async (customerId: string, data: any): Promise<any> => {
+    const res = await fetch(`/api/laundry/customers/${customerId}/wallet/topup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify(data),

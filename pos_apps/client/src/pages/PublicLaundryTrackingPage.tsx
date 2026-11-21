@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Check,
   Search,
+  Camera,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -328,6 +329,52 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Bukti Foto Kondisi Pakaian Anti-Komplain */}
+            {Array.isArray(data.conditionPhotos) && data.conditionPhotos.length > 0 && (
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-blue-900" />
+                    <span>Bukti Foto Kondisi Pakaian (Anti-Komplain)</span>
+                  </h3>
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    {data.conditionPhotos.length} Foto
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Foto dokumentasi kondisi fisik pakaian yang diambil staf saat penyortiran awal
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                  {data.conditionPhotos.map((photo: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex flex-col shadow-2xs group"
+                    >
+                      <a
+                        href={photo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative aspect-square w-full bg-slate-200 overflow-hidden block"
+                        title="Klik untuk memperbesar foto"
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.caption || `Kondisi pakaian ${idx + 1}`}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      </a>
+                      {photo.caption && (
+                        <div className="p-2 bg-white border-t border-slate-100 text-[10px] font-medium text-slate-700 truncate">
+                          {photo.caption}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

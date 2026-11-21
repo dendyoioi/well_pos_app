@@ -234,6 +234,18 @@ export const getCustomerById = async (req: Request, res: Response) => {
               outlet: { select: { name: true } },
             },
           },
+          laundryWallet: {
+            include: {
+              ledgers: {
+                orderBy: { createdAt: 'desc' },
+                take: 25,
+                include: {
+                  cashier: { select: { id: true, name: true } },
+                  outlet: { select: { id: true, name: true } },
+                },
+              },
+            },
+          },
         },
       }),
       prisma.order.aggregate({

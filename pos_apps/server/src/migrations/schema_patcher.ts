@@ -456,6 +456,61 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "payment_transactions_tenant_outlet_idx" ON "payment_transactions"("tenant_id", "outlet_id");
     `,
   },
+  {
+    id: '20261121_02_laundry_condition_photos_and_sla_index',
+    description: 'Menambahkan kolom condition_photos (JSONB) pada laundry_order_details untuk foto dokumentasi anti-komplain sortir awal dan indeks komposit tenant_id, outlet_id, estimated_ready_at untuk filter instan SLA',
+    sql: `
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "condition_photos" JSONB;
+      CREATE INDEX IF NOT EXISTS "idx_laundry_details_tenant_outlet_sla" ON "laundry_order_details"("tenant_id", "outlet_id", "estimated_ready_at");
+    `,
+  },
+  {
+    id: '20261121_03_laundry_customer_wallet_and_quota',
+    description: 'Menambahkan enum PaymentMethod CUSTOMER_DEPOSIT & LAUNDRY_QUOTA, tabel customer_laundry_wallets dan customer_laundry_wallet_ledgers untuk paket saldo deposit dan kuota kiloan pelanggan',
+    sql: `
+      ALTER TYPE "PaymentMethod" ADD VALUE IF NOT EXISTS 'CUSTOMER_DEPOSIT';
+      ALTER TYPE "PaymentMethod" ADD VALUE IF NOT EXISTS 'LAUNDRY_QUOTA';
+
+      CREATE TABLE IF NOT EXISTS "customer_laundry_wallets" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "customer_id" TEXT NOT NULL UNIQUE REFERENCES "customers"("id") ON DELETE CASCADE,
+        "balance_amount" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "quota_kg" DECIMAL(12, 3) NOT NULL DEFAULT 0,
+        "quota_expires_at" TIMESTAMP(3),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "customer_laundry_wallets_tenant_customer_idx" ON "customer_laundry_wallets"("tenant_id", "customer_id");
+      CREATE INDEX IF NOT EXISTS "customer_laundry_wallets_tenant_id_idx" ON "customer_laundry_wallets"("tenant_id");
+
+      CREATE TABLE IF NOT EXISTS "customer_laundry_wallet_ledgers" (
+        "id" TEXT PRIMARY KEY,
+        "wallet_id" TEXT NOT NULL REFERENCES "customer_laundry_wallets"("id") ON DELETE CASCADE,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "order_id" TEXT REFERENCES "orders"("id") ON DELETE SET NULL,
+        "shift_id" TEXT REFERENCES "shifts"("id") ON DELETE SET NULL,
+        "cashier_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "ledger_type" VARCHAR(50) NOT NULL,
+        "delta_amount" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "balance_before" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "balance_after" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "delta_kg" DECIMAL(12, 3) NOT NULL DEFAULT 0,
+        "kg_before" DECIMAL(12, 3) NOT NULL DEFAULT 0,
+        "kg_after" DECIMAL(12, 3) NOT NULL DEFAULT 0,
+        "payment_method" VARCHAR(50),
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "customer_laundry_wallet_ledgers_tenant_wallet_idx" ON "customer_laundry_wallet_ledgers"("tenant_id", "wallet_id");
+      CREATE INDEX IF NOT EXISTS "customer_laundry_wallet_ledgers_tenant_order_idx" ON "customer_laundry_wallet_ledgers"("tenant_id", "order_id");
+      CREATE INDEX IF NOT EXISTS "customer_laundry_wallet_ledgers_tenant_shift_idx" ON "customer_laundry_wallet_ledgers"("tenant_id", "shift_id");
+      CREATE INDEX IF NOT EXISTS "customer_laundry_wallet_ledgers_tenant_created_idx" ON "customer_laundry_wallet_ledgers"("tenant_id", "created_at");
+    `,
+  },
 ];
 
 /**

@@ -97,6 +97,26 @@ export class EscPosBuilder {
     return this;
   }
 
+  /** GS ( k : Cetak QR Code ESC/POS standar */
+  qrCode(data: string, size: number = 6): this {
+    const bytes = new TextEncoder().encode(data);
+    const len = bytes.length + 3;
+    const pL = len % 256;
+    const pH = Math.floor(len / 256);
+
+    // 1. Set model (Model 2)
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+    // 2. Set module size (1-16)
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, Math.min(16, Math.max(1, size)));
+    // 3. Set error correction level (48=L, 49=M, 50=Q, 51=H)
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31);
+    // 4. Store data
+    this.buffer.push(0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30, ...bytes);
+    // 5. Print QR Code
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30);
+    return this;
+  }
+
   /** GS V : Potong kertas (Cut paper) jika printer mendukung cutter */
   cut(): this {
     this.feed(3);
@@ -484,6 +504,87 @@ export function buildXZReportEscPos(
   builder.feed(1);
   builder.line('Well POS - Pure Financial Slip');
   builder.feed(4);
+  builder.cut();
+
+  return builder.toUint8Array();
+}
+
+/**
+ * Helper untuk mencetak "Tag Produksi / Tanda Keranjang" thermal ringkas tanpa harga/tagihan
+ */
+export function buildLaundryProductionTagEscPos(order: any, options: EscPosOptions = {}): Uint8Array {
+  const paperSize = options.paperSize || '58mm';
+  const builder = new EscPosBuilder(paperSize);
+
+  // 1. Header Tag
+  builder.align('center');
+  builder.bold(true).line('*** TAG KERANJANG PRODUKSI ***');
+  builder.bold(false).line(order.outlet?.name || 'WELL POS LAUNDRY');
+  builder.divider('=');
+
+  // 2. Invoice Besar & QR Code
+  builder.bold(true).size('double').line(order.invoiceNumber || 'NO-INVOICE');
+  builder.bold(false).size('normal');
+  builder.feed(1);
+  if (order.invoiceNumber) {
+    builder.qrCode(order.invoiceNumber, paperSize === '58mm' ? 5 : 7);
+    builder.feed(1);
+  }
+
+  // 3. Info Operasional
+  builder.align('left');
+  builder.divider('-');
+  builder.twoColumns('Pelanggan:', order.customerName || order.customer?.name || 'Umum');
+  if (order.serviceName) {
+    builder.twoColumns('Layanan:', order.serviceName);
+  }
+  const weightStr = order.totalWeightKg ? `${order.totalWeightKg} Kg` : '-';
+  const piecesStr = `${order.totalPieces || 0} Pcs`;
+  builder.twoColumns('Berat / Pcs:', `${weightStr} / ${piecesStr}`);
+  builder.twoColumns('Parfum:', order.perfumeVariant || 'Reguler');
+
+  if (order.rackCode) {
+    builder.twoColumns('Lokasi Rak:', order.rackCode);
+  }
+
+  // 4. SLA Target
+  builder.divider('-');
+  const deadlineStr = order.estimatedReadyAt
+    ? new Date(order.estimatedReadyAt).toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Sesuai Jadwal';
+  builder.bold(true).twoColumns('DEADLINE SLA:', deadlineStr);
+  builder.bold(false);
+
+  // 5. Kendala QC / Catatan
+  if (
+    (Array.isArray(order.defects) && order.defects.length > 0) ||
+    order.defectNotes ||
+    order.customerNotes
+  ) {
+    builder.divider('-');
+    builder.bold(true).line('CATATAN SORTIR / QC:');
+    builder.bold(false);
+    if (Array.isArray(order.defects) && order.defects.length > 0) {
+      builder.line(`Kendala: ${order.defects.join(', ')}`);
+    }
+    if (order.defectNotes) {
+      builder.line(`QC: ${order.defectNotes}`);
+    }
+    if (order.customerNotes) {
+      builder.line(`Catatan: ${order.customerNotes}`);
+    }
+  }
+
+  // 6. Footer Tag
+  builder.divider('=');
+  builder.align('center');
+  builder.line('* Tempel pada keranjang cucian *');
+  builder.feed(3);
   builder.cut();
 
   return builder.toUint8Array();

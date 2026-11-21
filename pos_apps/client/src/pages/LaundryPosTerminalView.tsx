@@ -26,9 +26,11 @@ import {
   Lock,
   UserPlus,
   Check,
+  Wallet,
+  Loader2,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
-import type { LaundryService, LaundryQueueOrder } from '../types/laundry';
+import type { LaundryService, LaundryQueueOrder, CustomerLaundryWallet } from '../types/laundry';
 import { api, customerApi } from '../services/api';
 import { WhatsAppInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
@@ -130,8 +132,20 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   // Pembayaran
   const [paymentChoice, setPaymentChoice] = useState<'PAID' | 'PARTIAL' | 'UNPAID'>('PAID');
   const [depositAmount, setDepositAmount] = useState('0');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER' | 'CUSTOMER_DEPOSIT' | 'LAUNDRY_QUOTA'>('CASH');
   const [cashReceived, setCashReceived] = useState<string>('');
+
+  // Dompet Laundry Pelanggan (Deposit & Kuota)
+  const [customerWallet, setCustomerWallet] = useState<CustomerLaundryWallet | null>(null);
+  const [loadingWallet, setLoadingWallet] = useState(false);
+  const [topupModalOpen, setTopupModalOpen] = useState(false);
+  const [topupType, setTopupType] = useState<'BALANCE' | 'QUOTA_KG'>('BALANCE');
+  const [topupAmount, setTopupAmount] = useState('100000');
+  const [topupKg, setTopupKg] = useState('10');
+  const [topupPricePaid, setTopupPricePaid] = useState('70000');
+  const [topupPaymentMethod, setTopupPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [topupValidityDays, setTopupValidityDays] = useState<'30' | '60' | '90' | 'UNLIMITED'>('30');
+  const [processingTopup, setProcessingTopup] = useState(false);
 
   // Diskon / Kupon Promo
   const [showDiscountInput, setShowDiscountInput] = useState(false);
@@ -211,8 +225,31 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setCustomerName('');
     setCustomerPhone('');
     setSelectedCustomerId(null);
+    setCustomerWallet(null);
     setPendingService(null);
+    if (paymentMethod === 'CUSTOMER_DEPOSIT' || paymentMethod === 'LAUNDRY_QUOTA') {
+      setPaymentMethod('CASH');
+    }
   };
+
+  // Muat Saldo Deposit & Kuota Kiloan jika pelanggan terpilih
+  useEffect(() => {
+    if (selectedCustomerId) {
+      setLoadingWallet(true);
+      api.getCustomerLaundryWallet(selectedCustomerId)
+        .then((res) => {
+          if (res.status === 'success' && res.data) {
+            setCustomerWallet(res.data);
+          } else {
+            setCustomerWallet(null);
+          }
+        })
+        .catch(() => setCustomerWallet(null))
+        .finally(() => setLoadingWallet(false));
+    } else {
+      setCustomerWallet(null);
+    }
+  }, [selectedCustomerId]);
 
   // Handler Pendaftaran Pelanggan Baru Cepat
   const handleQuickCreateCustomer = async (e: React.FormEvent) => {
@@ -256,6 +293,55 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       alert(err.message || 'Terjadi kesalahan saat mendaftarkan pelanggan');
     } finally {
       setSavingNewCustomer(false);
+    }
+  };
+
+  // Handler Proses Top-up Saldo Deposit atau Kuota Kiloan
+  const handleProcessTopup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomerId || !activeOutlet) {
+      alert('Pelanggan dan outlet aktif wajib tersedia');
+      return;
+    }
+    setProcessingTopup(true);
+    try {
+      let expiresAt: string | undefined = undefined;
+      if (topupType === 'QUOTA_KG' && topupValidityDays !== 'UNLIMITED') {
+        const d = new Date();
+        d.setDate(d.getDate() + Number(topupValidityDays));
+        expiresAt = d.toISOString();
+      }
+
+      const res = await api.topupCustomerLaundryWallet(selectedCustomerId, {
+        type: topupType,
+        amount: topupType === 'BALANCE' ? Number(topupAmount) : undefined,
+        kg: topupType === 'QUOTA_KG' ? Number(topupKg) : undefined,
+        pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupAmount),
+        paymentMethod: topupPaymentMethod,
+        outletId: activeOutlet.id,
+        quotaExpiresAt: expiresAt,
+        notes: `Top-up kasir ${activeOutlet.name}`,
+      });
+
+      if (res.status === 'success') {
+        // Refresh wallet
+        const walletRes = await api.getCustomerLaundryWallet(selectedCustomerId);
+        if (walletRes.status === 'success' && walletRes.data) {
+          setCustomerWallet(walletRes.data);
+        }
+        setTopupModalOpen(false);
+        setFeedbackToast({
+          message: res.message || '🎉 Top-up berhasil dicatat!',
+          type: 'success',
+        });
+        setTimeout(() => setFeedbackToast(null), 3500);
+      } else {
+        alert(res.message || 'Gagal memproses top-up');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi gangguan saat memproses top-up');
+    } finally {
+      setProcessingTopup(false);
     }
   };
 
@@ -942,6 +1028,33 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                       : 'Tanpa No. WhatsApp'
                     : 'Klik layanan untuk input nama'}
                 </div>
+                {selectedCustomerId && (
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    {loadingWallet ? (
+                      <span className="text-[9.5px] text-slate-400 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin text-blue-900" />
+                        <span>Memuat dompet...</span>
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
+                          Saldo: Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200">
+                          Kuota: {Number(customerWallet?.quotaKg || 0)} Kg
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTopupModalOpen(true)}
+                          className="text-[9.5px] font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors"
+                          title="Top-up saldo atau kuota pelanggan"
+                        >
+                          + Top-up
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1128,35 +1241,158 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
             {/* Metode Bayar (jika ada uang diterima) */}
             {paymentChoice !== 'UNPAID' && (
-              <div className="flex items-center gap-1.5">
-                {[
-                  { key: 'CASH', label: 'Tunai', isCash: true },
-                  { key: 'QRIS', label: 'QRIS', icon: QrCode },
-                  { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
-                ].map((m) => {
-                  const Icon = (m as any).icon;
-                  return (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  {[
+                    { key: 'CASH', label: 'Tunai', isCash: true },
+                    { key: 'QRIS', label: 'QRIS', icon: QrCode },
+                    { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
+                  ].map((m) => {
+                    const Icon = (m as any).icon;
+                    return (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => setPaymentMethod(m.key as any)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                          paymentMethod === m.key
+                            ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m.isCash ? (
+                          <span className="font-black text-[11px] leading-none px-1.5 py-0.5 rounded bg-blue-800 text-white">
+                            Rp
+                          </span>
+                        ) : (
+                          Icon && <Icon className="w-3.5 h-3.5" />
+                        )}
+                        <span>{m.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Opsi Pembayaran via Saldo Deposit atau Kuota Kiloan Pelanggan */}
+                {selectedCustomerId && customerWallet && (
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    {/* Tombol Saldo Deposit */}
                     <button
-                      key={m.key}
                       type="button"
-                      onClick={() => setPaymentMethod(m.key as any)}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                        paymentMethod === m.key
-                          ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                      disabled={Number(customerWallet.balanceAmount) <= 0}
+                      onClick={() => setPaymentMethod('CUSTOMER_DEPOSIT')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
+                        paymentMethod === 'CUSTOMER_DEPOSIT'
+                          ? 'bg-blue-950 border-blue-950 text-white shadow-xs'
+                          : Number(customerWallet.balanceAmount) > 0
+                          ? 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'
+                          : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
                       }`}
+                      title={
+                        Number(customerWallet.balanceAmount) <= 0
+                          ? 'Saldo deposit kosong'
+                          : `Gunakan Saldo (Tersedia: Rp ${Number(customerWallet.balanceAmount).toLocaleString('id-ID')})`
+                      }
                     >
-                      {m.isCash ? (
-                        <span className="font-black text-[11px] leading-none px-1.5 py-0.5 rounded bg-blue-800 text-white">
-                          Rp
-                        </span>
-                      ) : (
-                        Icon && <Icon className="w-3.5 h-3.5" />
-                      )}
-                      <span>{m.label}</span>
+                      <span className="flex items-center gap-1 truncate">
+                        <Wallet className="w-3.5 h-3.5 shrink-0" />
+                        <span>Saldo Deposit</span>
+                      </span>
+                      <span className="font-extrabold text-[10px] shrink-0">
+                        Rp {Math.floor(Number(customerWallet.balanceAmount)).toLocaleString('id-ID')}
+                      </span>
                     </button>
-                  );
-                })}
+
+                    {/* Tombol Kuota Kiloan */}
+                    <button
+                      type="button"
+                      disabled={Number(customerWallet.quotaKg) <= 0}
+                      onClick={() => setPaymentMethod('LAUNDRY_QUOTA')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
+                        paymentMethod === 'LAUNDRY_QUOTA'
+                          ? 'bg-purple-950 border-purple-950 text-white shadow-xs'
+                          : Number(customerWallet.quotaKg) > 0
+                          ? 'bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100'
+                          : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                      }`}
+                      title={
+                        Number(customerWallet.quotaKg) <= 0
+                          ? 'Kuota kiloan kosong'
+                          : `Gunakan Kuota (Tersedia: ${Number(customerWallet.quotaKg)} Kg)`
+                      }
+                    >
+                      <span className="flex items-center gap-1 truncate">
+                        <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                        <span>Kuota Kiloan</span>
+                      </span>
+                      <span className="font-extrabold text-[10px] shrink-0">
+                        {Number(customerWallet.quotaKg)} Kg
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Info Pemakaian Saldo Deposit Pelanggan */}
+            {paymentChoice !== 'UNPAID' && paymentMethod === 'CUSTOMER_DEPOSIT' && (
+              <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-xs space-y-1 animate-fadeIn">
+                <div className="flex items-center justify-between font-bold text-blue-950">
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-blue-700" />
+                    <span>Saldo Deposit Pelanggan</span>
+                  </span>
+                  <span>Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-blue-800">
+                  <span>Dipotong untuk transaksi ini:</span>
+                  <span className="font-black text-rose-600">- Rp {targetPayAmount.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-blue-200 font-extrabold text-blue-950">
+                  <span>Sisa Saldo Deposit Nanti:</span>
+                  <span className={Number(customerWallet?.balanceAmount || 0) < targetPayAmount ? 'text-rose-600' : 'text-emerald-700'}>
+                    Rp {Math.max(0, Number(customerWallet?.balanceAmount || 0) - targetPayAmount).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                {Number(customerWallet?.balanceAmount || 0) < targetPayAmount && (
+                  <p className="text-[10px] font-bold text-rose-600 pt-0.5">
+                    ⚠️ Saldo tidak cukup. Silakan top-up terlebih dahulu atau pilih metode lain.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Info Pemakaian Kuota Kiloan Pelanggan */}
+            {paymentChoice !== 'UNPAID' && paymentMethod === 'LAUNDRY_QUOTA' && (
+              <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-xs space-y-1 animate-fadeIn">
+                <div className="flex items-center justify-between font-bold text-purple-950">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-700" />
+                    <span>Kuota Kiloan Pelanggan</span>
+                  </span>
+                  <span>{Number(customerWallet?.quotaKg || 0)} Kg</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-purple-800">
+                  <span>Dipotong untuk cucian ini:</span>
+                  <span className="font-black text-purple-950">
+                    - {cartTotals.totalKg > 0 ? cartTotals.totalKg : 1} Kg
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-purple-200 font-extrabold text-purple-950">
+                  <span>Sisa Kuota Nanti:</span>
+                  <span className={Number(customerWallet?.quotaKg || 0) < (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1) ? 'text-rose-600' : 'text-emerald-700'}>
+                    {Math.max(
+                      0,
+                      Number(customerWallet?.quotaKg || 0) - (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1)
+                    )}{' '}
+                    Kg
+                  </span>
+                </div>
+                {Number(customerWallet?.quotaKg || 0) < (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1) && (
+                  <p className="text-[10px] font-bold text-rose-600 pt-0.5">
+                    ⚠️ Kuota kiloan tidak mencukupi bobot cucian.
+                  </p>
+                )}
               </div>
             )}
 
@@ -1944,6 +2180,301 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   <span>{savingNewCustomer ? 'Menyimpan...' : 'Simpan & Pilih Pelanggan'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Modal Top-up Saldo & Kuota Laundry Pelanggan */}
+      {topupModalOpen && selectedCustomerId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden animate-slideUp sm:animate-zoomIn">
+            {/* Modal Header */}
+            <div className="p-4 sm:px-6 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white">
+                    Top-up Saldo &amp; Kuota Laundry
+                  </h3>
+                  <p className="text-[11px] text-blue-200">
+                    Pelanggan: <span className="font-bold text-white">{customerName}</span> {customerPhone && `(+62${customerPhone})`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTopupModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleProcessTopup} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs">
+                {/* Status Saldo & Kuota Saat Ini */}
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Saldo Deposit Aktif</span>
+                    <span className="text-sm font-black text-slate-900">
+                      Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Kuota Kiloan Aktif</span>
+                    <span className="text-sm font-black text-purple-900">
+                      {Number(customerWallet?.quotaKg || 0)} Kg
+                    </span>
+                    {customerWallet?.quotaExpiresAt && (
+                      <span className="text-[9.5px] text-slate-400 block">
+                        Kedaluwarsa: {new Date(customerWallet.quotaExpiresAt).toLocaleDateString('id-ID')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pilih Tipe Top-up */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Jenis Pengisian
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTopupType('BALANCE')}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        topupType === 'BALANCE'
+                          ? 'border-blue-900 bg-blue-50/80 ring-2 ring-blue-900/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-blue-950 text-xs mb-0.5">
+                        <Wallet className="w-4 h-4 text-blue-700" />
+                        <span>Deposit Saldo</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Saldo rupiah fleksibel untuk seluruh layanan laundry
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTopupType('QUOTA_KG')}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        topupType === 'QUOTA_KG'
+                          ? 'border-purple-900 bg-purple-50/80 ring-2 ring-purple-900/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-purple-950 text-xs mb-0.5">
+                        <Sparkles className="w-4 h-4 text-purple-700" />
+                        <span>Paket Kuota (Kg)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Paket kuota kiloan hemat dengan masa berlaku
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form Input Sesuai Jenis */}
+                {topupType === 'BALANCE' ? (
+                  <div className="space-y-2.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Nominal Top-up Saldo (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1000}
+                      step={1000}
+                      value={topupAmount}
+                      onChange={(e) => setTopupAmount(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs"
+                    />
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[50000, 100000, 200000, 500000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setTopupAmount(String(amt))}
+                          className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${
+                            topupAmount === String(amt)
+                              ? 'bg-blue-900 text-white border-blue-900'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          Rp {(amt / 1000).toLocaleString('id-ID')}rb
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Pilihan Paket Kuota Kiloan
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { kg: 5, price: 35000, label: '5 Kg - Rp 35rb' },
+                          { kg: 10, price: 70000, label: '10 Kg - Rp 70rb' },
+                          { kg: 20, price: 130000, label: '20 Kg - Rp 130rb' },
+                          { kg: 50, price: 300000, label: '50 Kg - Rp 300rb' },
+                        ].map((pkg) => (
+                          <button
+                            key={pkg.kg}
+                            type="button"
+                            onClick={() => {
+                              setTopupKg(String(pkg.kg));
+                              setTopupPricePaid(String(pkg.price));
+                            }}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                              topupKg === String(pkg.kg) && topupPricePaid === String(pkg.price)
+                                ? 'bg-purple-900 text-white border-purple-900'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="font-black text-sm">{pkg.kg} Kg</div>
+                            <div className="text-[10.5px] opacity-90">Rp {pkg.price.toLocaleString('id-ID')}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Jumlah Kuota (Kg)
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          step={0.5}
+                          value={topupKg}
+                          onChange={(e) => setTopupKg(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-900 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Harga Dibayar Pelanggan (Rp)
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min={0}
+                          step={1000}
+                          value={topupPricePaid}
+                          onChange={(e) => setTopupPricePaid(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-900 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Masa Berlaku Kuota
+                      </label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { val: '30', label: '30 Hari' },
+                          { val: '60', label: '60 Hari' },
+                          { val: '90', label: '90 Hari' },
+                          { val: 'UNLIMITED', label: 'Selamanya' },
+                        ].map((opt) => (
+                          <button
+                            key={opt.val}
+                            type="button"
+                            onClick={() => setTopupValidityDays(opt.val as any)}
+                            className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${
+                              topupValidityDays === opt.val
+                                ? 'bg-purple-900 text-white border-purple-900'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Metode Pembayaran Top-up */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Metode Pembayaran Top-up
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { key: 'CASH', label: 'Tunai', isCash: true },
+                      { key: 'QRIS', label: 'QRIS', icon: QrCode },
+                      { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
+                    ].map((m) => {
+                      const Icon = (m as any).icon;
+                      return (
+                        <button
+                          key={m.key}
+                          type="button"
+                          onClick={() => setTopupPaymentMethod(m.key as any)}
+                          className={`py-2 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            topupPaymentMethod === m.key
+                              ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {m.isCash ? (
+                            <span className="font-black text-[10px] leading-none px-1 py-0.5 rounded bg-blue-800 text-white">
+                              Rp
+                            </span>
+                          ) : (
+                            Icon && <Icon className="w-3.5 h-3.5" />
+                          )}
+                          <span>{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {topupPaymentMethod === 'CASH' && (
+                    <p className="text-[10px] text-emerald-700 font-bold mt-1.5">
+                      💵 Uang tunai otomatis masuk ke laci kasir shift berjalan dan menambah posisi kas drawer.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+                <div className="text-xs">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Total Tagihan Top-up</span>
+                  <span className="font-black text-slate-900 text-sm">
+                    Rp {(topupType === 'BALANCE' ? Number(topupAmount) || 0 : Number(topupPricePaid) || 0).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTopupModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 font-bold cursor-pointer transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={processingTopup}
+                    className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <span>{processingTopup ? 'Memproses...' : 'Konfirmasi Top-up'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </form>
           </div>

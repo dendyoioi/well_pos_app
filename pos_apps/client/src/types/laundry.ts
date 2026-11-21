@@ -144,6 +144,13 @@ export interface LaundryQueueOrder {
   garmentCounts?: Array<{ type: string; qty: number }>;
   defects?: string[];
   defectNotes?: string | null;
+  conditionPhotos?: Array<{
+    url: string;
+    caption?: string;
+    stage?: string;
+    uploadedBy?: string;
+    uploadedAt?: string;
+  }>;
   sortedAt?: string | null;
   sortedBy?: string | null;
   estimatedReadyAt?: string | null;
@@ -260,4 +267,35 @@ export interface LaundryOperatorKpi {
   totalPackingOrders: number;
   totalDurationMinutes: number;
   stagesCount: Record<string, number>;
+}
+
+export interface CustomerLaundryWalletLedger {
+  id: string;
+  walletId: string;
+  tenantId: string;
+  outletId: string;
+  orderId?: string | null;
+  shiftId?: string | null;
+  cashierId?: string | null;
+  ledgerType: string;
+  deltaAmount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  deltaKg: number;
+  kgBefore: number;
+  kgAfter: number;
+  paymentMethod?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  cashierName?: string;
+  outletName?: string;
+  invoiceNumber?: string;
+}
+
+export interface CustomerLaundryWallet {
+  id?: string;
+  balanceAmount: number;
+  quotaKg: number;
+  quotaExpiresAt?: string | null;
+  ledgers?: CustomerLaundryWalletLedger[];
 }

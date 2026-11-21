@@ -18,6 +18,8 @@ backups/
 pos_apps/server/backups/
 pos_apps/scratch/
 scratch/
+pos_apps/server/uploads/*
+!pos_apps/server/uploads/.gitkeep
 
 # Non-App Assets & Local Documentation/Memory (Not Pushed to Git/Server)
 Payment Integration/

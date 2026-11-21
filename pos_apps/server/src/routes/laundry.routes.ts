@@ -25,6 +25,9 @@ import {
   resetLaundryStageSettings,
   saveLaundrySortingData,
   getPublicLaundryTracking,
+  uploadLaundryConditionPhoto,
+  getCustomerLaundryWallet,
+  topupCustomerLaundryWallet,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -56,8 +59,13 @@ router.post('/orders', createLaundryOrder);
 router.patch('/orders/:id/status', updateLaundryStatus);
 router.post('/orders/:id/send-whatsapp', sendLaundryWhatsApp);
 
-// --- Modul Sortir Pakaian & QC Kendala Fisik ---
+// --- Modul Sortir Pakaian & Bukti Foto Kondisi Anti-Komplain ---
+router.post('/upload-photo', uploadLaundryConditionPhoto);
 router.post('/orders/:id/sort', saveLaundrySortingData);
+
+// --- Dompet Laundry Pelanggan (Deposit Saldo & Kuota Kiloan) ---
+router.get('/customers/:customerId/wallet', getCustomerLaundryWallet);
+router.post('/customers/:customerId/wallet/topup', topupCustomerLaundryWallet);
 
 // --- Sistem Tahapan Produksi & Audit Trail Operator ---
 router.post('/orders/:id/advance-stage', advanceLaundryStage);

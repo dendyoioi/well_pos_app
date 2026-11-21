@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Filter,
   Plus,
@@ -12,8 +12,13 @@ import {
   Scale,
   Sparkles,
   Layers,
+  Camera,
+  Upload,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { compressImage } from '../utils/imageCompressor';
 import type { LaundryQueueOrder } from '../types/laundry';
 
 interface LaundrySortingModalProps {
@@ -62,9 +67,16 @@ export const LaundrySortingModal: React.FC<LaundrySortingModalProps> = ({
   const [defects, setDefects] = useState<string[]>([]);
   const [defectNotes, setDefectNotes] = useState('');
   const [operatorName, setOperatorName] = useState('');
+  const [conditionPhotos, setConditionPhotos] = useState<
+    Array<{ url: string; caption?: string; stage?: string; uploadedBy?: string; uploadedAt?: string }>
+  >([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showSlipPreview, setShowSlipPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setFeedback({ message, type });
@@ -90,6 +102,7 @@ export const LaundrySortingModal: React.FC<LaundrySortingModalProps> = ({
       setDefects(Array.isArray(order.defects) ? order.defects : []);
       setDefectNotes(order.defectNotes || '');
       setOperatorName(order.sortedBy || '');
+      setConditionPhotos(Array.isArray(order.conditionPhotos) ? order.conditionPhotos : []);
       setShowSlipPreview(false);
     }
   }, [order, isOpen]);
@@ -112,6 +125,61 @@ export const LaundrySortingModal: React.FC<LaundrySortingModalProps> = ({
     );
   };
 
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (conditionPhotos.length >= 4) {
+      showToast('Maksimal 4 foto dokumentasi kondisi per nota', 'error');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Format berkas harus berupa gambar (JPG, PNG, WebP)', 'error');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      // Kompresi hening di background (Pantangan #11: tanpa menampilkan jargon teknis ke kasir)
+      const compressed = await compressImage(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.8,
+        mimeType: 'image/webp',
+      });
+
+      const res = await api.uploadLaundryConditionPhoto({
+        image: compressed.dataUrl,
+        caption: 'Kondisi sortir awal',
+        stage: 'SORTING',
+      });
+
+      if (res.status === 'success' && res.data?.url) {
+        setConditionPhotos((prev) => [...prev, res.data]);
+        showToast('Foto kondisi berhasil ditambahkan');
+      } else {
+        showToast(res.message || 'Gagal mengunggah foto', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Gagal memproses foto', 'error');
+    } finally {
+      setUploadingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setConditionPhotos((prev) => prev.filter((_, idx) => idx !== index));
+    showToast('Foto kondisi dihapus');
+  };
+
+  const handleUpdatePhotoCaption = (index: number, caption: string) => {
+    setConditionPhotos((prev) =>
+      prev.map((photo, idx) => (idx === index ? { ...photo, caption } : photo))
+    );
+  };
+
   const handleSave = async (advanceToNext: boolean = false) => {
     try {
       setSaving(true);
@@ -123,6 +191,7 @@ export const LaundrySortingModal: React.FC<LaundrySortingModalProps> = ({
         garmentCounts: garmentCountsArray,
         defects,
         defectNotes: defectNotes.trim(),
+        conditionPhotos,
         operatorName: operatorName.trim() || 'Kasir / Operator',
         advanceToNext,
       });
@@ -348,6 +417,106 @@ export const LaundrySortingModal: React.FC<LaundrySortingModalProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* SECTION 3: BUKTI FOTO KONDISI PAKAIAN ANTI-KOMPLAIN */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            {/* Hidden File Inputs */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handlePhotoFileChange}
+              className="hidden"
+            />
+            <input
+              type="file"
+              ref={cameraInputRef}
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoFileChange}
+              className="hidden"
+            />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-blue-900" />
+                  <span>Bukti Foto Kondisi Pakaian (Anti-Komplain)</span>
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Dokumentasikan kondisi cacat/noda awal. Tampil otomatis di halaman QR tracking pelanggan
+                </p>
+              </div>
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                {conditionPhotos.length} / 4 Foto
+              </span>
+            </div>
+
+            {/* Tombol Ambil / Unggah Foto */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={conditionPhotos.length >= 4 || uploadingPhoto}
+                className="flex-1 py-2 px-3 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-900 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-900" />
+                ) : (
+                  <Camera className="w-4 h-4 text-blue-900" />
+                )}
+                <span>Ambil Foto Kamera</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={conditionPhotos.length >= 4 || uploadingPhoto}
+                className="flex-1 py-2 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Upload className="w-4 h-4 text-slate-500" />
+                <span>Pilih dari Galeri</span>
+              </button>
+            </div>
+
+            {/* Galeri Thumbnail Foto */}
+            {conditionPhotos.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {conditionPhotos.map((photo, idx) => (
+                  <div
+                    key={idx}
+                    className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex flex-col shadow-2xs"
+                  >
+                    <div className="relative aspect-square w-full bg-slate-200 overflow-hidden">
+                      <img
+                        src={photo.url}
+                        alt={photo.caption || `Kondisi ${idx + 1}`}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(idx)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-rose-600/90 text-white flex items-center justify-center hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
+                        title="Hapus foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="p-1.5 bg-white border-t border-slate-100">
+                      <input
+                        type="text"
+                        value={photo.caption || ''}
+                        onChange={(e) => handleUpdatePhotoCaption(idx, e.target.value)}
+                        placeholder="Ket: Noda kerah..."
+                        className="w-full text-[10px] font-medium text-slate-700 bg-transparent px-1 py-0.5 border-b border-transparent focus:border-blue-900 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* PRATINJAU SLIP SORTIR MANUAL (THERMAL 58MM / 80MM) */}
