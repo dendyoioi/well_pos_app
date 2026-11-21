@@ -50,7 +50,11 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   const isPaid = order.paymentStatus === 'PAID' || remainingAmount === 0;
 
   const handlePrintCustomerReceipt = async () => {
+    const tabChanged = activeTab !== 'RECEIPT';
     setActiveTab('RECEIPT');
+    if (tabChanged) {
+      await new Promise((r) => setTimeout(r, 80));
+    }
     setPrintStatusMsg('Memproses pencetakan nota...');
     try {
       const res = await printerHub.printReceipt(
@@ -74,7 +78,11 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   };
 
   const handlePrintProductionTag = async () => {
+    const tabChanged = activeTab !== 'PRODUCTION_TAG';
     setActiveTab('PRODUCTION_TAG');
+    if (tabChanged) {
+      await new Promise((r) => setTimeout(r, 80));
+    }
     setPrintStatusMsg('Memproses pencetakan tag...');
     try {
       const res = await printerHub.printLaundryProductionTag(
@@ -99,10 +107,14 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
 
   const handlePrintRawBt = (type: 'RECEIPT' | 'PRODUCTION_TAG') => {
     try {
+      const printableOrder = {
+        ...order,
+        outlet: outlet || (order as any).outlet,
+      };
       const rawBytes =
         type === 'PRODUCTION_TAG'
-          ? buildLaundryProductionTagEscPos(order, { paperSize })
-          : buildReceiptEscPos(order, { paperSize });
+          ? buildLaundryProductionTagEscPos(printableOrder, { paperSize })
+          : buildReceiptEscPos(printableOrder, { paperSize });
       printerHub.printViaRawBt(rawBytes);
     } catch {
       window.print();
@@ -600,7 +612,7 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
         <button
           type="button"
           onClick={() => handlePrintRawBt(activeTab)}
-          className="hidden sm:flex px-2.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-colors items-center gap-1 cursor-pointer"
+          className="flex px-2.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-colors items-center gap-1 cursor-pointer"
           title="Kirim cetak via aplikasi RawBT Print Bridge (Android)"
         >
           <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
