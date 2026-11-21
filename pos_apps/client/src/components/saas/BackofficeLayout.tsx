@@ -1804,7 +1804,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 </div>
                 <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${activeOutlet?.isWarehouse ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
-                  <span>{activeOutlet?.isWarehouse ? 'Pusat Logistik Gudang' : 'Toko Penjualan'}</span>
+                  <span>{activeOutlet?.isWarehouse ? 'Pusat Logistik Gudang' : isLaundryMode ? 'Outlet Laundry' : 'Toko Penjualan'}</span>
                 </div>
               </div>
             </div>
@@ -1818,7 +1818,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             </button>
           </div>
 
-          {/* Quick Primary Action: ⚡ Buka Terminal Kasir */}
+          {/* Quick Primary Action: ⚡ Buka Terminal Kasir / Terima Cucian */}
           {activeOutlet && !activeOutlet.isWarehouse && (
             <div className="p-3 bg-blue-50/60 border-b border-blue-100 shrink-0">
               <button
@@ -1833,8 +1833,17 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 text-white'
                 }`}
               >
-                <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                <span>Buka Terminal Kasir (POS)</span>
+                {isLaundryMode ? (
+                  <>
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <span>Terima Cucian (Drop-off)</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                    <span>Buka Terminal Kasir (POS)</span>
+                  </>
+                )}
               </button>
             </div>
           )}
