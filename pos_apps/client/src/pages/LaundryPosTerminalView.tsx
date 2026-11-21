@@ -28,12 +28,14 @@ import {
   Check,
   Wallet,
   Loader2,
+  WifiOff,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import type { LaundryService, LaundryQueueOrder, CustomerLaundryWallet } from '../types/laundry';
 import { api, customerApi } from '../services/api';
 import { WhatsAppInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
+import { generateIdempotencyKey } from '../utils/offlineQueue';
 
 interface LaundryPosTerminalViewProps {
   activeOutlet: Outlet | null;
@@ -94,6 +96,18 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [loadingServices, setLoadingServices] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Pelanggan & CRM
   const [customerName, setCustomerName] = useState('');
@@ -684,7 +698,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         customerNotes: fullNotes || undefined,
       };
 
-      const res = await api.createLaundryOrder(payload);
+      const clientUuid = generateIdempotencyKey();
+      const res = await api.createLaundryOrder(
+        { ...payload, clientRequestId: clientUuid },
+        { idempotencyKey: clientUuid }
+      );
 
       if (res.status === 'success' && res.data) {
         const orderData = res.data;
@@ -822,6 +840,17 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           </button>
         </div>
       </header>
+
+      {/* Banner Non-intrusif Status Jaringan Offline */}
+      {!isOnline && (
+        <div className="bg-amber-50 border-b border-amber-300 px-4 py-2 flex items-center justify-between text-xs text-amber-900 shrink-0">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
+            <span className="font-extrabold">Mode Offline Terdeteksi:</span>
+            <span>Koneksi internet terputus. Pastikan internet terhubung kembali untuk sinkronisasi data operasional.</span>
+          </div>
+        </div>
+      )}
 
       {/* 2. Main Work Area: 2 Kolom (Katalog Layanan & Keranjang Kasir) */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

@@ -1,8 +1,24 @@
 import React, { useState, useRef } from 'react';
-import { Printer, Smartphone, Monitor, Share2, X, Archive, Clock, Send, CheckCircle2, Tag } from 'lucide-react';
+import {
+  Printer,
+  Smartphone,
+  Monitor,
+  Share2,
+  X,
+  Archive,
+  Clock,
+  Send,
+  CheckCircle2,
+  Tag,
+  Bluetooth,
+  ExternalLink,
+} from 'lucide-react';
 import type { LaundryQueueOrder } from '../../types/laundry';
 import type { Outlet } from '../../types/outlet';
 import { api } from '../../services/api';
+import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
+import { printElementViaThermalIframe } from '../../utils/thermalPrinter';
+import { buildLaundryProductionTagEscPos, buildReceiptEscPos } from '../../utils/escpos';
 
 interface LaundryReceiptModalProps {
   isOpen: boolean;
@@ -23,7 +39,9 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   const [activeTab, setActiveTab] = useState<'RECEIPT' | 'PRODUCTION_TAG'>(initialTab);
   const [sendingGateway, setSendingGateway] = useState(false);
   const [gatewayMessage, setGatewayMessage] = useState<string | null>(null);
+  const [printStatusMsg, setPrintStatusMsg] = useState<string | null>(null);
   const receiptPrintRef = useRef<HTMLDivElement>(null);
+  const printerHub = useThermalPrinterHub();
 
   if (!isOpen || !order) return null;
 
@@ -31,18 +49,64 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   const remainingAmount = Math.max(0, order.grandTotal - (order.paidAmount || 0));
   const isPaid = order.paymentStatus === 'PAID' || remainingAmount === 0;
 
-  const handlePrintCustomerReceipt = () => {
+  const handlePrintCustomerReceipt = async () => {
     setActiveTab('RECEIPT');
-    setTimeout(() => {
-      window.print();
-    }, 80);
+    setPrintStatusMsg('Memproses pencetakan nota...');
+    try {
+      const res = await printerHub.printReceipt(
+        {
+          ...order,
+          outlet: outlet || (order as any).outlet,
+        },
+        { paperSize }
+      );
+      if (res.mode === 'bluetooth' || res.mode === 'usb') {
+        setPrintStatusMsg(`✓ Berhasil dikirim ke printer ${res.mode.toUpperCase()}`);
+      } else {
+        setPrintStatusMsg('✓ Dialog cetak terbuka');
+      }
+      setTimeout(() => setPrintStatusMsg(null), 3000);
+    } catch {
+      printElementViaThermalIframe('thermal-receipt-content', { paperWidth: paperSize });
+      setPrintStatusMsg('Fallback ke cetak sistem');
+      setTimeout(() => setPrintStatusMsg(null), 3000);
+    }
   };
 
-  const handlePrintProductionTag = () => {
+  const handlePrintProductionTag = async () => {
     setActiveTab('PRODUCTION_TAG');
-    setTimeout(() => {
+    setPrintStatusMsg('Memproses pencetakan tag...');
+    try {
+      const res = await printerHub.printLaundryProductionTag(
+        {
+          ...order,
+          outlet: outlet || (order as any).outlet,
+        },
+        { paperSize }
+      );
+      if (res.mode === 'bluetooth' || res.mode === 'usb') {
+        setPrintStatusMsg(`✓ Tag berhasil dikirim ke printer ${res.mode.toUpperCase()}`);
+      } else {
+        setPrintStatusMsg('✓ Dialog cetak terbuka');
+      }
+      setTimeout(() => setPrintStatusMsg(null), 3000);
+    } catch {
+      printElementViaThermalIframe('production-tag-printable', { paperWidth: paperSize });
+      setPrintStatusMsg('Fallback ke cetak sistem');
+      setTimeout(() => setPrintStatusMsg(null), 3000);
+    }
+  };
+
+  const handlePrintRawBt = (type: 'RECEIPT' | 'PRODUCTION_TAG') => {
+    try {
+      const rawBytes =
+        type === 'PRODUCTION_TAG'
+          ? buildLaundryProductionTagEscPos(order, { paperSize })
+          : buildReceiptEscPos(order, { paperSize });
+      printerHub.printViaRawBt(rawBytes);
+    } catch {
       window.print();
-    }, 80);
+    }
   };
 
   const handleShareWhatsApp = () => {
@@ -117,9 +181,22 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
               {activeTab === 'PRODUCTION_TAG' ? <Tag className="w-5 h-5" /> : <Printer className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">
-                {activeTab === 'PRODUCTION_TAG' ? 'Tag Keranjang Produksi' : 'Cetak Struk & Tanda Terima'}
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-slate-900 text-sm">
+                  {activeTab === 'PRODUCTION_TAG' ? 'Tag Keranjang Produksi' : 'Cetak Struk & Tanda Terima'}
+                </h3>
+                {printerHub.isConnected ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    <Bluetooth className="w-2.5 h-2.5 text-emerald-600" />
+                    <span>{printerHub.deviceName || 'Thermal'}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+                    <Printer className="w-2.5 h-2.5 text-slate-400" />
+                    <span>Cetak Sistem</span>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500">Nota {order.invoiceNumber} — {order.customerName}</p>
             </div>
           </div>
@@ -190,6 +267,7 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 bg-slate-100/60 flex justify-center items-start">
           <div
             ref={receiptPrintRef}
+            id={activeTab === 'PRODUCTION_TAG' ? 'production-tag-printable' : 'thermal-receipt-content'}
             className={`bg-[#fffdfa] border border-slate-300/80 p-5 shadow-lg text-slate-900 font-mono text-xs leading-snug space-y-3 transition-all rounded-sm print:m-0 print:border-none print:shadow-none ${
               is58mm ? 'w-64 max-w-full text-[10px]' : 'w-80 max-w-full text-[11px]'
             }`}
@@ -514,6 +592,20 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
       ) : <div />}
 
       <div className="flex items-center justify-end gap-2 flex-wrap">
+        {printStatusMsg && (
+          <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 animate-fadeIn">
+            {printStatusMsg}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => handlePrintRawBt(activeTab)}
+          className="hidden sm:flex px-2.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-xl transition-colors items-center gap-1 cursor-pointer"
+          title="Kirim cetak via aplikasi RawBT Print Bridge (Android)"
+        >
+          <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+          <span>RawBT</span>
+        </button>
         <button
           type="button"
           onClick={onClose}

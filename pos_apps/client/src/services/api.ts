@@ -780,13 +780,29 @@ export const api = {
   // ----------------------------------------------------
   // TRANSAKSI PENJUALAN KASIR (CHECKOUT & ORDERS)
   // ----------------------------------------------------
-  checkoutOrder: async (payload: CheckoutPayload): Promise<{ status: string; data?: Order; message?: string }> => {
+  checkoutOrder: async (
+    payload: CheckoutPayload,
+    options?: { idempotencyKey?: string }
+  ): Promise<{ status: string; data?: Order; message?: string }> => {
+    const key =
+      options?.idempotencyKey ||
+      (payload as any).clientRequestId ||
+      (payload as any).offlineReferenceId ||
+      (payload as any).idempotencyKey;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...authHeader(),
+    };
+
+    if (key) {
+      headers['X-Idempotency-Key'] = key;
+      headers['Idempotency-Key'] = key;
+    }
+
     const res = await fetch('/api/orders/checkout', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeader(),
-      },
+      headers,
       body: JSON.stringify(payload),
     });
     return res.json();
@@ -2595,10 +2611,29 @@ export const api = {
     return res.json();
   },
 
-  createLaundryOrder: async (data: any): Promise<any> => {
+  createLaundryOrder: async (
+    data: any,
+    options?: { idempotencyKey?: string }
+  ): Promise<any> => {
+    const key =
+      options?.idempotencyKey ||
+      data?.clientRequestId ||
+      data?.offlineReferenceId ||
+      data?.idempotencyKey;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...authHeader(),
+    };
+
+    if (key) {
+      headers['X-Idempotency-Key'] = key;
+      headers['Idempotency-Key'] = key;
+    }
+
     const res = await fetch('/api/laundry/orders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers,
       body: JSON.stringify(data),
     });
     return res.json();

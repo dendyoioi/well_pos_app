@@ -511,6 +511,20 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "customer_laundry_wallet_ledgers_tenant_created_idx" ON "customer_laundry_wallet_ledgers"("tenant_id", "created_at");
     `,
   },
+  {
+    id: '20261121_04_query_performance_and_idempotency_indexes',
+    description: 'Menambahkan index performa query orders cashier, laundry order details created_at & status untuk optimasi GCP e2-micro',
+    sql: `
+      -- 1. Index untuk riwayat order berdasarkan kasir dan waktu (optimasi audit shift & filter kasir)
+      CREATE INDEX IF NOT EXISTS "orders_tenant_cashier_created_idx" ON "orders"("tenant_id", "cashier_id", "created_at" DESC);
+
+      -- 2. Index untuk antrean laundry order details berdasarkan outlet dan waktu (optimasi getLaundryOrders)
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_outlet_created_idx" ON "laundry_order_details"("tenant_id", "outlet_id", "created_at" DESC);
+
+      -- 3. Index untuk antrean laundry order details berdasarkan status dan waktu (optimasi filter status kanban)
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_status_created_idx" ON "laundry_order_details"("tenant_id", "status", "created_at" DESC);
+    `,
+  },
 ];
 
 /**

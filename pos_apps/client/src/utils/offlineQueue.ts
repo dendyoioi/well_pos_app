@@ -6,6 +6,7 @@
 
 export interface OfflineOrderEntry {
   offlineId: string;
+  clientRequestId?: string;
   createdAt: string;
   outletId?: string;
   shiftId?: string;
@@ -17,6 +18,20 @@ export interface OfflineOrderEntry {
   lastError?: string;
   syncedAt?: string;
 }
+
+/**
+ * Pembangkit ID Idempotensi Kanonikal UUID v4
+ */
+export const generateIdempotencyKey = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 const DB_NAME = 'well_pos_offline_db';
 const DB_VERSION = 1;

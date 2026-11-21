@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Prisma } from '@prisma/client';
 import { whatsAppService, LaundryNotificationData } from '../services/whatsapp.service';
+import { idempotencyService } from '../services/idempotency.service';
 
 // ==========================================
 // 1. SCHEMAS
@@ -429,18 +430,40 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
       where.status = status;
     }
 
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+    const skip = (page - 1) * limit;
+
     const details = await prisma.laundryOrderDetail.findMany({
       where,
       include: {
         order: {
           include: {
-            items: true,
-            customer: true,
+            items: {
+              select: {
+                id: true,
+                productName: true,
+                quantity: true,
+                unitPrice: true,
+                subtotal: true,
+                notes: true,
+              },
+            },
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+                address: true,
+              },
+            },
             cashier: { select: { id: true, name: true } },
           },
         },
       },
       orderBy: [{ createdAt: 'desc' }],
+      take: limit,
+      skip,
     });
 
     const formattedQueue = details.map((detail) => ({
@@ -494,6 +517,20 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!tenantId || !userId) {
       return res.status(401).json({ status: 'error', message: 'Konteks autentikasi kasir tidak ditemukan' });
+    }
+
+    // ====================================================
+    // IDEMPOTENSI ORDER LAUNDRY & OFFLINE RETRY
+    // ====================================================
+    const idempotencyKey = idempotencyService.getIdempotencyKey(req);
+    if (idempotencyKey) {
+      const cached = await idempotencyService.getExistingIdempotentResponse(tenantId, 'LAUNDRY_CHECKOUT', idempotencyKey);
+      if (cached) {
+        return res.status(cached.statusCode).json({
+          ...cached.responseBody,
+          _idempotentReplay: true,
+        });
+      }
     }
 
     const parseResult = createLaundryOrderSchema.safeParse(req.body);
@@ -817,11 +854,17 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       return { ...order, laundryDetail };
     });
 
-    return res.status(201).json({
+    const responsePayload = {
       status: 'success',
       message: 'Nota penerimaan laundry berhasil dibuat',
       data: createdOrder,
-    });
+    };
+
+    if (idempotencyKey) {
+      await idempotencyService.saveIdempotentResponse(tenantId, 'LAUNDRY_CHECKOUT', idempotencyKey, 201, responsePayload);
+    }
+
+    return res.status(201).json(responsePayload);
   } catch (error: any) {
     console.error('Error createLaundryOrder:', error);
     if (
@@ -1822,11 +1865,17 @@ export const getProductionKpiReport = async (req: Request, res: Response) => {
       where.completedAt = {};
       if (startDate) where.completedAt.gte = new Date(startDate as string);
       if (endDate) where.completedAt.lte = new Date(endDate as string);
+    } else {
+      // Default batas aman 30 hari untuk mencegah OOM pada server GCP e2-micro 1GB RAM
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      where.completedAt = { gte: thirtyDaysAgo };
     }
 
     const logs = await prisma.laundryStageLog.findMany({
       where,
       orderBy: { completedAt: 'desc' },
+      take: 2000,
     });
 
     // Agregasi KPI per operator

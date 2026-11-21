@@ -49,6 +49,7 @@ import {
   markOfflineOrderSuccess,
   markOfflineOrderFailed,
   clearSyncedOfflineOrders,
+  generateIdempotencyKey,
 } from '../utils/offlineQueue';
 import { getEffectiveItemPricing, getCartItemSubtotal } from '../utils/pricing';
 
@@ -876,7 +877,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       for (const offlineOrder of pendingOrders) {
         try {
           await markOfflineOrderSyncing(offlineOrder.offlineId);
-          const res = await api.checkoutOrder(offlineOrder.payload);
+          const idempotencyKey = offlineOrder.clientRequestId || offlineOrder.offlineId;
+          const res = await api.checkoutOrder(offlineOrder.payload, { idempotencyKey });
           if (res.status === 'success' && res.data) {
             await markOfflineOrderSuccess(offlineOrder.offlineId, res.data);
             successCount++;
@@ -1732,7 +1734,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       }
 
       const completeOfflineOrder = async () => {
-        const offlineRefId = `OFFLINE-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const clientUuid = generateIdempotencyKey();
+        const offlineRefId = `OFFLINE-${Date.now()}-${clientUuid.substring(0, 8)}`;
         const now = new Date();
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -1813,6 +1816,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
         await saveOfflineOrder({
           offlineId: offlineRefId,
+          clientRequestId: clientUuid,
           createdAt: now.toISOString(),
           outletId: activeOutlet?.id,
           shiftId: currentShift?.id,
@@ -1820,6 +1824,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           payload: {
             ...checkoutPayload,
             offlineReferenceId: offlineRefId,
+            clientRequestId: clientUuid,
           },
           tempOrder: tempOrderData,
           status: 'PENDING',
@@ -1844,7 +1849,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       }
 
       try {
-        const res = await api.checkoutOrder(checkoutPayload);
+        const clientUuid = generateIdempotencyKey();
+        const res = await api.checkoutOrder(
+          { ...checkoutPayload, clientRequestId: clientUuid },
+          { idempotencyKey: clientUuid }
+        );
 
         if (res.status === 'success' && res.data) {
           soundService.playCashierSuccess();

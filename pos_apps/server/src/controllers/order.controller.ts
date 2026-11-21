@@ -11,6 +11,7 @@ import { loyaltyService, LoyaltyService } from '../services/loyalty.service';
 import { promotionService } from '../services/promotion.service';
 import { qrMenuService } from '../services/qr_menu.service';
 import { whatsAppService } from '../services/whatsapp.service';
+import { idempotencyService } from '../services/idempotency.service';
 import { toWibDateStr } from '../utils/date.utils';
 
 // Skema validasi item keranjang belanja
@@ -212,15 +213,24 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     }
 
     // ====================================================
-    // IDEMPOTENSI TRANSAKSI OFFLINE PWA (ANTI-DUPLIKASI)
+    // IDEMPOTENSI TRANSAKSI OFFLINE PWA & RETRY (ANTI-DUPLIKASI)
     // ====================================================
-    if (offlineReferenceId && offlineReferenceId.trim()) {
-      const cleanRef = offlineReferenceId.trim();
+    const idempotencyKey = idempotencyService.getIdempotencyKey(req);
+    if (idempotencyKey) {
+      const cached = await idempotencyService.getExistingIdempotentResponse(tenantId, 'CHECKOUT', idempotencyKey);
+      if (cached) {
+        return res.status(cached.statusCode).json({
+          ...cached.responseBody,
+          _idempotentReplay: true,
+        });
+      }
+
+      // Backward-compatibility: cek penanda OFFLINE_REF di kolom notes
       const existingOfflineOrder = await prisma.order.findFirst({
         where: {
           tenantId,
           outletId: targetOutletId,
-          notes: { contains: `[OFFLINE_REF:${cleanRef}]` },
+          notes: { contains: `[OFFLINE_REF:${idempotencyKey}]` },
         },
         include: {
           items: true,
@@ -230,11 +240,13 @@ export const checkoutOrder = async (req: Request, res: Response) => {
         },
       });
       if (existingOfflineOrder) {
-        return res.status(200).json({
+        const replayData = {
           status: 'success',
           message: 'Transaksi offline sudah berhasil disinkronkan sebelumnya',
           data: existingOfflineOrder,
-        });
+        };
+        await idempotencyService.saveIdempotentResponse(tenantId, 'CHECKOUT', idempotencyKey, 200, replayData);
+        return res.status(200).json(replayData);
       }
     }
 
@@ -951,14 +963,20 @@ export const checkoutOrder = async (req: Request, res: Response) => {
     }
 
     const graceQuota = (req as any).graceQuota;
-    return res.status(201).json({
+    const responsePayload = {
       status: 'success',
       message: 'Transaksi berhasil diselesaikan',
       data: {
         ...result,
         graceQuota: graceQuota || { inGrace: false },
       },
-    });
+    };
+
+    if (idempotencyKey) {
+      await idempotencyService.saveIdempotentResponse(tenantId, 'CHECKOUT', idempotencyKey, 201, responsePayload);
+    }
+
+    return res.status(201).json(responsePayload);
   } catch (error: any) {
     console.error('Error saat memproses checkout order:', error);
     return res.status(500).json({

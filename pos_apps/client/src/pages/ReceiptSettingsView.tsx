@@ -831,12 +831,12 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     <div>
                       <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
                         <Tag className="w-3.5 h-3.5 text-amber-700" />
-                        <span>Koneksi Printer Stiker Label (Slot 2)</span>
+                        <span>Koneksi Printer Slot 2 (Stiker Label Cup / Dapur / Tag Produksi)</span>
                       </span>
                       <p className="text-[11px] text-amber-900/80">
                         {printerHub.isLabelConnected
-                          ? `● Terhubung: ${printerHub.labelPrinter.deviceName || 'Printer Label Cup'} (${printerHub.labelPrinter.connectionType.toUpperCase()})`
-                          : 'Belum ada printer label cup yang terpasang.'}
+                          ? `● Terhubung: ${printerHub.labelPrinter.deviceName || 'Printer Slot 2'} (${printerHub.labelPrinter.connectionType.toUpperCase()})`
+                          : 'Belum ada printer slot 2 yang terpasang.'}
                       </p>
                     </div>
                     {printerHub.isLabelConnected && (

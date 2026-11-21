@@ -151,6 +151,31 @@ export function useThermalPrinterHub() {
     []
   );
 
+  const printLaundryProductionTag = useCallback(
+    async (order: any, options: EscPosOptions = {}) => {
+      setIsPrinting(true);
+      setPrintError(null);
+      setPrintSuccess(false);
+      try {
+        const res = await thermalPrinterHub.printLaundryProductionTag(order, options);
+        setPrintSuccess(true);
+        setTimeout(() => setPrintSuccess(false), 3000);
+        return res;
+      } catch (err: any) {
+        setPrintError(err.message || 'Gagal mencetak tag keranjang laundry');
+        setTimeout(() => setPrintError(null), 4000);
+        throw err;
+      } finally {
+        setIsPrinting(false);
+      }
+    },
+    []
+  );
+
+  const printViaRawBt = useCallback((rawBytes: Uint8Array) => {
+    thermalPrinterHub.printViaRawBt(rawBytes);
+  }, []);
+
   const testPrint = useCallback(async (paperSize?: '58mm' | '80mm') => {
     setIsPrinting(true);
     setPrintError(null);
@@ -261,6 +286,8 @@ export function useThermalPrinterHub() {
     setDrawerKick,
     printReceipt,
     printXZReport,
+    printLaundryProductionTag,
+    printViaRawBt,
     testPrint,
     kickCashDrawer,
 

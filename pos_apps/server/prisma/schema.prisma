@@ -847,6 +847,7 @@ model Order {
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
+  @@index([tenantId, userId, createdAt])
   @@index([tenantId, orderStatus, paymentStatus])
   @@map("orders")
 }
@@ -1583,6 +1584,8 @@ model LaundryOrderDetail {
   stageLogs LaundryStageLog[]
 
   @@index([tenantId, outletId, status])
+  @@index([tenantId, outletId, createdAt])
+  @@index([tenantId, status, createdAt])
   @@index([tenantId, currentStage])
   @@index([tenantId, rackCode])
   @@index([tenantId, transferStatus])

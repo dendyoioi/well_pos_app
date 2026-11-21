@@ -6,7 +6,7 @@
  *   2. Secondary: Cup Label Sticker Printer (TSPL / ESC/POS Label 40x30mm, 50x30mm) for F&B Coffee Shops
  */
 
-import { buildReceiptEscPos, buildTestPrintEscPos, buildXZReportEscPos } from '../utils/escpos';
+import { buildReceiptEscPos, buildTestPrintEscPos, buildXZReportEscPos, buildLaundryProductionTagEscPos } from '../utils/escpos';
 import type { EscPosOptions } from '../utils/escpos';
 import { printElementViaThermalIframe } from '../utils/thermalPrinter';
 import {
@@ -1030,6 +1030,65 @@ class ThermalPrinterHubService {
       title: `${type}-Report Kasir`,
     });
     return { success: true, mode: 'system' };
+  }
+
+  /**
+   * Cetak Tag Produksi Keranjang Laundry (Direct ESC/POS atau Iframe Fallback)
+   */
+  async printLaundryProductionTag(
+    order: any,
+    options: EscPosOptions = {}
+  ): Promise<{ success: boolean; mode: 'bluetooth' | 'usb' | 'system'; error?: string }> {
+    const paperSize = options.paperSize || this.state.paperSize;
+    let isHardwareConnected = this.state.status === 'connected';
+
+    if (!isHardwareConnected && (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')) {
+      isHardwareConnected = await this.tryAutoReconnect();
+    }
+
+    if (isHardwareConnected && (this.state.connectionType === 'bluetooth' || this.state.connectionType === 'usb')) {
+      try {
+        const rawBytes = buildLaundryProductionTagEscPos(order, {
+          ...options,
+          paperSize,
+        });
+
+        await this.printRaw(rawBytes);
+        return { success: true, mode: this.state.connectionType };
+      } catch (err: any) {
+        console.warn('Hardware production tag print failed, falling back to iframe print:', err);
+        printElementViaThermalIframe('production-tag-printable', {
+          paperWidth: paperSize,
+          title: 'Tag Keranjang Laundry',
+        });
+        return { success: true, mode: 'system', error: err.message };
+      }
+    }
+
+    printElementViaThermalIframe('production-tag-printable', {
+      paperWidth: paperSize,
+      title: 'Tag Keranjang Laundry',
+    });
+    return { success: true, mode: 'system' };
+  }
+
+  /**
+   * Mengirim payload ESC/POS mentah via Android RawBT Print Bridge intent
+   * (Solusi fallback cepat bagi smartphone Android entry-level saat koneksi Bluetooth Web API terputus)
+   */
+  printViaRawBt(rawBytes: Uint8Array): void {
+    try {
+      let binary = '';
+      for (let i = 0; i < rawBytes.length; i++) {
+        binary += String.fromCharCode(rawBytes[i]);
+      }
+      const base64 = btoa(binary);
+      const rawBtUrl = `rawbt:data:application/octet-stream;base64,${base64}`;
+      window.location.href = rawBtUrl;
+    } catch (err) {
+      console.warn('Gagal memicu RawBT print bridge:', err);
+      window.print();
+    }
   }
 
   /**

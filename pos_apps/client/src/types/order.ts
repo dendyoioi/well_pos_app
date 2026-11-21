@@ -65,6 +65,7 @@ export interface CheckoutPayload {
   dueDate?: string;
   debtNotes?: string;
   offlineReferenceId?: string;
+  clientRequestId?: string;
 }
 
 export interface OrderItem {
