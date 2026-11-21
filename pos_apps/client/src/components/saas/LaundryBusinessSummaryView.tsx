@@ -157,6 +157,13 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
 
   useEffect(() => {
     loadData();
+    const handleOrderCreated = () => {
+      loadData();
+    };
+    window.addEventListener('wellpos:laundry_order_created', handleOrderCreated);
+    return () => {
+      window.removeEventListener('wellpos:laundry_order_created', handleOrderCreated);
+    };
   }, [loadData]);
 
   // Filter pesanan dalam rentang tanggal terpilih
@@ -492,7 +499,9 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
                 {summaryMetrics.orderCount} Nota Masuk
               </span>
               <button
-                onClick={onOpenPos}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'));
+                }}
                 className="mt-1 px-3.5 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -625,7 +634,9 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Drop-off Timbang */}
         <button
-          onClick={onOpenPos}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'));
+          }}
           className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
         >
           <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-900 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">

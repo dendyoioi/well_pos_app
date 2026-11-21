@@ -39,11 +39,14 @@ import {
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
+import type { LaundryQueueOrder } from '../../types/laundry';
 import { api, type PlatformNotification } from '../../services/api';
 import { FloatingGuideWidget } from '../ui/FloatingGuideWidget';
 import { PwaInstallButton } from '../PwaInstallBanner';
 import { WellPosLogo } from '../ui/WellPosLogo';
 import { checkIsLaundry } from '../../utils/businessType';
+import { LaundryQuickDropoffModal } from '../laundry/LaundryQuickDropoffModal';
+import { LaundryReceiptModal } from '../laundry/LaundryReceiptModal';
 
 export const TAB_TO_GROUP_MAP: Record<string, string> = {
   // Operasional Laundry & Dry Clean
@@ -163,6 +166,23 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Quick Drop-off Modal & Receipt Modal Khusus Laundry
+  const [quickDropoffOpen, setQuickDropoffOpen] = useState(false);
+  const [receiptModalOrder, setReceiptModalOrder] = useState<LaundryQueueOrder | null>(null);
+
+  // Global listener untuk memicu Quick Drop-off dari Beranda Bento / Tile lainnya
+  useEffect(() => {
+    const handleOpenQuickDropoff = () => {
+      if (isLaundryMode) {
+        setQuickDropoffOpen(true);
+      }
+    };
+    window.addEventListener('wellpos:open_quick_dropoff', handleOpenQuickDropoff);
+    return () => {
+      window.removeEventListener('wellpos:open_quick_dropoff', handleOpenQuickDropoff);
+    };
+  }, [isLaundryMode]);
 
   // Notifikasi Terpusat dari Superadmin
   const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
@@ -605,7 +625,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         {isLaundryMode && (
           <div className="pb-2.5 mb-2 border-b border-slate-100 flex justify-center lg:justify-start">
             <button
-              onClick={() => handleSelectTab('pos')}
+              onClick={() => {
+                setQuickDropoffOpen(true);
+                onItemClick?.();
+              }}
               className="w-11 h-11 lg:w-full lg:h-auto py-2.5 px-2.5 lg:px-3 rounded-2xl lg:rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
               title="Terima Cucian (Drop-off)"
             >
@@ -2190,11 +2213,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   <span className="text-[10px]">Workshop</span>
                 </button>
 
-                {/* Central Elevated Action: Terima Cucian (Drop-off) */}
+                {/* Central Elevated Action: Terima Cucian (Drop-off Cepat) */}
                 <div className="relative -top-4 flex flex-col items-center px-1">
                   <button
                     type="button"
-                    onClick={() => onTabChange('pos')}
+                    onClick={() => setQuickDropoffOpen(true)}
                     className="w-12 h-12 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-95 transition-transform cursor-pointer border-2 border-white"
                     title="Terima Cucian (Drop-off)"
                   >
@@ -2293,6 +2316,34 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               else onTabChange('guide');
             }}
           />
+        )}
+
+        {/* Khusus Mode Laundry: Modal Drop-off Cepat & Struk Tag Thermal */}
+        {isLaundryMode && (
+          <>
+            <LaundryQuickDropoffModal
+              isOpen={quickDropoffOpen}
+              onClose={() => setQuickDropoffOpen(false)}
+              activeOutlet={activeOutlet}
+              currentUser={user}
+              onOrderCreated={(newOrder) => {
+                setQuickDropoffOpen(false);
+                setReceiptModalOrder(newOrder);
+              }}
+              onOpenFullPos={() => {
+                setQuickDropoffOpen(false);
+                onTabChange('pos');
+              }}
+            />
+
+            <LaundryReceiptModal
+              isOpen={Boolean(receiptModalOrder)}
+              onClose={() => setReceiptModalOrder(null)}
+              order={receiptModalOrder}
+              outlet={activeOutlet}
+              initialTab="RECEIPT"
+            />
+          </>
         )}
       </div>
     </div>
