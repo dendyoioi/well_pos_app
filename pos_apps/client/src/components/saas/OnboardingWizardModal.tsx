@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { checkIsLaundry } from '../../utils/businessType';
 import {
   Store,
   Printer,
@@ -40,6 +41,10 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry({ id: outletId, name: businessName }, currentUser);
+  }, [outletId, businessName, currentUser]);
 
   // Step 2: Profil Toko & Hotline (Kosong secara default, diisi oleh merchant)
   const [address, setAddress] = useState('');
@@ -370,7 +375,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
                       {receiptSize === '80mm' && <CheckCircle className="w-4 h-4 text-blue-900" />}
                     </div>
                     <p className="text-[10.5px] text-slate-500 mt-1 leading-snug">
-                      Standar meja kasir USB/LAN. Layout struk lebih lebar.
+                      {isLaundryMode ? 'Standar kasir toko USB/LAN. Layout struk lebih lebar.' : 'Standar meja kasir USB/LAN. Layout struk lebih lebar.'}
                     </p>
                   </button>
                 </div>
@@ -471,7 +476,9 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
                 </div>
 
                 <p className="text-[11px] text-blue-900/80 leading-snug">
-                  Wewenang Kasir: Melayani transaksi penjualan meja kasir, membuka shift &amp; laci uang, serta cetak struk.
+                  {isLaundryMode
+                    ? 'Wewenang Kasir: Melayani transaksi penerimaan di kasir toko, membuka shift & laci uang, serta cetak struk.'
+                    : 'Wewenang Kasir: Melayani transaksi penjualan meja kasir, membuka shift & laci uang, serta cetak struk.'}
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

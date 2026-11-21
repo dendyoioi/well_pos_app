@@ -44,6 +44,7 @@ import { PwaInstallButton } from '../PwaInstallBanner';
 import { ThermalPrinterModal } from './ThermalPrinterModal';
 import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 import { getEffectiveItemPricing, getCartItemSubtotal } from '../../utils/pricing';
+import { checkIsLaundry } from '../../utils/businessType';
 
 export interface PosMobileViewProps {
   activeOutlet: Outlet | null | undefined;
@@ -204,6 +205,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
 
   const printerHub = useThermalPrinterHub();
+  const isLaundryMode = checkIsLaundry(activeOutlet, currentUser);
 
   // Deteksi khusus apakah sedang berjalan sebagai PWA Standalone di iPhone / Handheld
   const isPwaStandalone = useMemo(() => {
@@ -1613,6 +1615,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
         isOpen={printerModalOpen}
         onClose={() => setPrinterModalOpen(false)}
         defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
+        isLaundryMode={isLaundryMode}
       />
     </div>
   );

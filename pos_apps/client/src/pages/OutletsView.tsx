@@ -744,7 +744,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Kopi Nusantara - Kemang"
+                    placeholder={isLaundryMode ? "Contoh: Well Laundry - Kemang" : "Contoh: Kopi Nusantara - Kemang"}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all"

@@ -575,7 +575,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-base font-black text-blue-950">Informasi Dasar</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Identitas utama dan akun login petugas resto Anda.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Identitas utama dan akun login {isLaundryMode ? 'petugas toko/laundry' : 'petugas resto'} Anda.</p>
             </div>
 
             {/* Nama Staf */}
@@ -722,7 +722,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Masukkan email staf (contoh: kasir@resto.com)"
+                  placeholder={`Masukkan email staf (contoh: ${isLaundryMode ? 'kasir@laundry.com' : 'kasir@resto.com'})`}
                   className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
                   required
                 />
@@ -823,7 +823,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-base font-black text-blue-950">Pengaturan Lanjutan</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Penugasan toko resto dan status operasional staf.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Penugasan {isLaundryMode ? 'toko/outlet' : 'toko resto'} dan status operasional staf.</p>
             </div>
 
             {/* Penugasan Outlet Toko */}

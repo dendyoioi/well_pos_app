@@ -21,8 +21,18 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { TablePagination } from '../components/TablePagination';
 import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
 import { useDialog } from '../context/DialogContext';
+import { checkIsLaundry } from '../utils/businessType';
 
-export const SuppliersView: React.FC = () => {
+interface SuppliersViewProps {
+  activeOutlet?: any;
+  currentUser?: any;
+}
+
+export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, currentUser }) => {
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet, currentUser]);
+
   const dialog = useDialog();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,10 +231,12 @@ export const SuppliersView: React.FC = () => {
         <div>
           <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
             <Truck className="w-5 h-5 text-blue-900" />
-            <span>Pemasok &amp; Vendor Bahan Baku</span>
+            <span>{isLaundryMode ? 'Pemasok & Vendor Bahan Cuci' : 'Pemasok & Vendor Bahan Baku'}</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Kelola data mitra vendor penyuplai bahan mentah (kopi, susu, sirup, kemasan) serta syarat pembayaran tagihan PO.
+            {isLaundryMode
+              ? 'Kelola data distributor & vendor penyuplai bahan cuci, deterjen, parfum laundry, plastik packing, dan perlengkapan workshop.'
+              : 'Kelola data mitra vendor penyuplai bahan mentah (kopi, susu, sirup, kemasan) serta syarat pembayaran tagihan PO.'}
           </p>
         </div>
 
@@ -503,7 +515,7 @@ export const SuppliersView: React.FC = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Contoh: PT Sumber Biji Kopi Nusantara"
+                    placeholder={isLaundryMode ? 'Contoh: CV Berkah Kimia Laundry Nusantara' : 'Contoh: PT Sumber Biji Kopi Nusantara'}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-blue-900 outline-hidden"
                     required
                   />

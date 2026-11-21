@@ -20,6 +20,7 @@ import { api } from '../services/api';
 import type { Outlet } from '../types/outlet';
 import { TablePagination } from '../components/TablePagination';
 import { computePresetDateRange } from '../utils/date';
+import { checkIsLaundry } from '../utils/businessType';
 
 export interface ShiftsAuditViewProps {
   activeOutlet?: Outlet | null;
@@ -43,6 +44,10 @@ const getShiftOutletName = (s: any) =>
   s.outletName || (typeof s.outlet === 'string' ? s.outlet : s.outlet?.name) || '-';
 
 export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, currentUser }) => {
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet, currentUser]);
+
   const [shifts, setShifts] = useState<any[]>([]);
   const [summary, setSummary] = useState<ShiftDiscrepancySummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -962,11 +967,13 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                 <div className="flex items-center justify-between mb-2.5">
                   <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900" />
-                    <span>Rekap Item Terjual ({selectedShift.soldItemsSummary?.length || 0} Menu)</span>
+                    <span>
+                      {isLaundryMode ? 'Rekap Layanan Terjual' : 'Rekap Item Terjual'} ({selectedShift.soldItemsSummary?.length || 0} {isLaundryMode ? 'Layanan' : 'Menu'})
+                    </span>
                   </h4>
                   {selectedShift.soldItemsSummary && selectedShift.soldItemsSummary.length > 0 && (
                     <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 font-mono">
-                      Total: {selectedShift.soldItemsSummary.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0)} Porsi/Item
+                      Total: {selectedShift.soldItemsSummary.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0)} {isLaundryMode ? 'Layanan/Item' : 'Porsi/Item'}
                     </span>
                   )}
                 </div>
@@ -975,7 +982,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase sticky top-0">
                       <tr>
-                        <th className="px-3.5 py-2">Nama Menu / Produk</th>
+                        <th className="px-3.5 py-2">{isLaundryMode ? 'Nama Layanan / Paket' : 'Nama Menu / Produk'}</th>
                         <th className="px-3.5 py-2 text-center">Jumlah Terjual</th>
                         <th className="px-3.5 py-2 text-right">Total Penjualan</th>
                       </tr>

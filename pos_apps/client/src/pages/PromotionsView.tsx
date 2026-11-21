@@ -27,9 +27,31 @@ import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
+import { checkIsLaundry } from '../utils/businessType';
 
-export const PromotionsView: React.FC = () => {
+export interface PromotionsViewProps {
+  activeOutlet?: any;
+  currentUser?: any;
+  isLaundryMode?: boolean;
+}
+
+export const PromotionsView: React.FC<PromotionsViewProps> = ({
+  activeOutlet,
+  currentUser,
+  isLaundryMode: propIsLaundryMode,
+}) => {
   const dialog = useDialog();
+  const isLaundryMode = useMemo(() => {
+    if (propIsLaundryMode !== undefined) return propIsLaundryMode;
+    try {
+      const stored = localStorage.getItem('pos_active_outlet');
+      const parsed = stored ? JSON.parse(stored) : null;
+      return checkIsLaundry(activeOutlet || parsed, currentUser);
+    } catch {
+      return checkIsLaundry(activeOutlet, currentUser);
+    }
+  }, [propIsLaundryMode, activeOutlet, currentUser]);
+
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +59,13 @@ export const PromotionsView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [activeTab, setActiveTab] = useState<'ORDER' | 'ITEM'>('ORDER');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Auto-switch to ORDER tab if in laundry mode
+  useEffect(() => {
+    if (isLaundryMode && activeTab === 'ITEM') {
+      setActiveTab('ORDER');
+    }
+  }, [isLaundryMode, activeTab]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -165,7 +194,7 @@ export const PromotionsView: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     setEditingPromotion(null);
-    const isItemTab = activeTab === 'ITEM';
+    const isItemTab = !isLaundryMode && activeTab === 'ITEM';
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const defaultCode = isItemTab ? `PROMO-ITEM-${randomSuffix}` : `DISKON-${randomSuffix}`;
 
@@ -538,28 +567,30 @@ export const PromotionsView: React.FC = () => {
           </span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('ITEM');
-            setSearchQuery('');
-          }}
-          className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'ITEM'
-              ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-          }`}
-        >
-          <ShoppingBag className="w-3.5 h-3.5" />
-          <span>Diskon Produk / Item</span>
-          <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              activeTab === 'ITEM' ? 'bg-blue-800 text-white' : 'bg-slate-200 text-slate-600'
+        {!isLaundryMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('ITEM');
+              setSearchQuery('');
+            }}
+            className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'ITEM'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            {promotions.filter((p) => p.scope === 'ITEM').length}
-          </span>
-        </button>
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Diskon Produk / Item</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'ITEM' ? 'bg-blue-800 text-white' : 'bg-slate-200 text-slate-600'
+              }`}
+            >
+              {promotions.filter((p) => p.scope === 'ITEM').length}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* 3 Summary Cards */}
@@ -1061,7 +1092,7 @@ export const PromotionsView: React.FC = () => {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder={
                         formData.scope === 'ITEM'
-                          ? 'Contoh: Promo Kopi Pagi Hemat 15%'
+                          ? (isLaundryMode ? 'Contoh: Promo Cuci Kiloan Hemat 15%' : 'Contoh: Promo Kopi Pagi Hemat 15%')
                           : 'Contoh: Diskon Pelanggan Baru 10%'
                       }
                       className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-blue-900 outline-hidden"

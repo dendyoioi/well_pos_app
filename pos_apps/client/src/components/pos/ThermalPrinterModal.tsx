@@ -12,7 +12,6 @@ import {
   Sliders,
   Check,
   Tag,
-  Coffee,
 } from 'lucide-react';
 import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 
@@ -20,12 +19,14 @@ export interface ThermalPrinterModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultPaperSize?: '58mm' | '80mm';
+  isLaundryMode?: boolean;
 }
 
 export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
   isOpen,
   onClose,
   defaultPaperSize,
+  isLaundryMode = false,
 }) => {
   const hub = useThermalPrinterHub();
   const [activeTab, setActiveTab] = useState<'receipt' | 'cupLabel' | 'preferences'>('receipt');
@@ -122,7 +123,9 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
     if (ok) {
       setStatusMessage({
         type: 'success',
-        text: `Printer Label Stiker "${hub.labelPrinter.deviceName || 'Label Cup'}" berhasil terhubung!`,
+        text: isLaundryMode
+          ? `Printer Tag Produksi "${hub.labelPrinter.deviceName || 'Tag Laundry'}" berhasil terhubung!`
+          : `Printer Label Stiker "${hub.labelPrinter.deviceName || 'Label Cup'}" berhasil terhubung!`,
       });
     }
   };
@@ -133,7 +136,9 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
     if (ok) {
       setStatusMessage({
         type: 'success',
-        text: `Printer Label USB "${hub.labelPrinter.deviceName || 'Label Cup'}" berhasil terhubung!`,
+        text: isLaundryMode
+          ? `Printer Tag USB "${hub.labelPrinter.deviceName || 'Tag Laundry'}" berhasil terhubung!`
+          : `Printer Label USB "${hub.labelPrinter.deviceName || 'Label Cup'}" berhasil terhubung!`,
       });
     }
   };
@@ -142,7 +147,9 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
     hub.disconnectLabel();
     setStatusMessage({
       type: 'success',
-      text: 'Koneksi printer stiker label cup telah diputuskan.',
+      text: isLaundryMode
+        ? 'Koneksi printer tag produksi / label keranjang telah diputuskan.'
+        : 'Koneksi printer stiker label cup telah diputuskan.',
     });
   };
 
@@ -153,7 +160,9 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
       await hub.testPrintLabel(hub.labelPrinter.paperSize === '50x30mm' ? '50x30mm' : '40x30mm');
       setStatusMessage({
         type: 'success',
-        text: `Stiker cup barista uji coba (${hub.labelPrinter.paperSize}) berhasil dicetak!`,
+        text: isLaundryMode
+          ? `Tag produksi laundry uji coba (${hub.labelPrinter.paperSize}) berhasil dicetak!`
+          : `Stiker cup barista uji coba (${hub.labelPrinter.paperSize}) berhasil dicetak!`,
       });
     } catch (err: any) {
       setStatusMessage({
@@ -179,7 +188,9 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                 Pusat Hardware Printer &amp; Laci Kasir
               </h3>
               <p className="text-[11px] text-blue-200/90 font-medium truncate">
-                Dual-Printer Hub: Struk Belanja ESC/POS &amp; Stiker Cup Barista TSPL
+                {isLaundryMode
+                  ? 'Dual-Printer Hub: Struk Belanja ESC/POS & Tag Produksi Cucian TSPL'
+                  : 'Dual-Printer Hub: Struk Belanja ESC/POS & Stiker Cup Barista TSPL'}
               </p>
             </div>
           </div>
@@ -217,7 +228,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
             }`}
           >
             <Tag className="w-3.5 h-3.5 text-amber-600" />
-            <span>2. Printer Stiker Cup</span>
+            <span>{isLaundryMode ? '2. Printer Tag Produksi' : '2. Printer Stiker Cup'}</span>
           </button>
           <button
             type="button"
@@ -408,7 +419,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
                           {hub.isLabelConnected
-                            ? hub.labelPrinter.deviceName || 'Printer Label Cup Terhubung'
+                            ? hub.labelPrinter.deviceName || (isLaundryMode ? 'Printer Tag Produksi Terhubung' : 'Printer Label Cup Terhubung')
                             : hub.isLabelConnecting
                             ? 'Menghubungkan Printer Label...'
                             : 'Belum Ada Printer Label Terhubung'}
@@ -431,7 +442,9 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
                         {hub.isLabelConnected
-                          ? `Format TSPL/ESC-POS siap mencetak stiker (${hub.labelPrinter.paperSize}).`
+                          ? `Format TSPL/ESC-POS siap mencetak ${isLaundryMode ? 'tag produksi' : 'stiker'} (${hub.labelPrinter.paperSize}).`
+                          : isLaundryMode
+                          ? 'Hubungkan printer tag produksi / label keranjang cucian (Xprinter, Panda, HPRT, Iware).'
                           : 'Hubungkan printer khusus stiker label cup (Xprinter, Panda, HPRT, Iware).'}
                       </p>
                     </div>
@@ -466,7 +479,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                       className="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-amber-600/20 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
                     >
                       <Bluetooth className="w-4 h-4 text-amber-200" />
-                      <span>Pindai &amp; Hubungkan Printer Stiker Bluetooth</span>
+                      <span>{isLaundryMode ? 'Pindai & Hubungkan Printer Tag Bluetooth' : 'Pindai & Hubungkan Printer Stiker Bluetooth'}</span>
                     </button>
 
                     <button
@@ -476,7 +489,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                       className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-slate-900/20 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
                     >
                       <Usb className="w-4 h-4 text-amber-400" />
-                      <span>Hubungkan Printer Stiker Kabel USB</span>
+                      <span>{isLaundryMode ? 'Hubungkan Printer Tag Kabel USB' : 'Hubungkan Printer Stiker Kabel USB'}</span>
                     </button>
                   </div>
                 )}
@@ -486,8 +499,8 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
               {hub.isLabelConnected && (
                 <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3">
                   <h4 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <Coffee className="w-4 h-4 text-amber-600" />
-                    <span>Uji Coba Cetak Stiker Cup Barista</span>
+                    <Tag className="w-4 h-4 text-amber-600" />
+                    <span>{isLaundryMode ? 'Uji Coba Cetak Tag Produksi Laundry' : 'Uji Coba Cetak Stiker Cup Barista'}</span>
                   </h4>
 
                   <button
@@ -497,7 +510,13 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                     className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
                   >
                     <Tag className="w-4 h-4 text-amber-100" />
-                    <span>{testingLabel ? 'Mencetak Stiker...' : `Cetak Stiker Uji Coba (${hub.labelPrinter.paperSize})`}</span>
+                    <span>
+                      {testingLabel
+                        ? isLaundryMode ? 'Mencetak Tag...' : 'Mencetak Stiker...'
+                        : isLaundryMode
+                        ? `Cetak Tag Uji Coba (${hub.labelPrinter.paperSize})`
+                        : `Cetak Stiker Uji Coba (${hub.labelPrinter.paperSize})`}
+                    </span>
                   </button>
                 </div>
               )}
@@ -513,10 +532,15 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                 </p>
                 <ul className="list-disc pl-4 space-y-1">
                   <li><strong>Printer A:</strong> Struk belanja kasir thermal 58mm/80mm (ESC/POS)</li>
-                  <li><strong>Printer B:</strong> Stiker label tempel cup minuman (TSPL gap sensor)</li>
+                  <li>
+                    <strong>Printer B:</strong>{' '}
+                    {isLaundryMode
+                      ? 'Tag produksi & label keranjang cucian (TSPL gap sensor)'
+                      : 'Stiker label tempel cup minuman (TSPL gap sensor)'}
+                  </li>
                 </ul>
                 <p className="text-slate-400 text-[10px]">
-                  * Pastikan fitur stiker cup telah diaktifkan di menu <strong>Format Struk</strong> Backoffice.
+                  * Pastikan fitur {isLaundryMode ? 'tag produksi' : 'stiker cup'} telah diaktifkan di menu <strong>Format Struk</strong> Backoffice.
                 </p>
               </div>
             </div>
@@ -569,14 +593,14 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
                 </div>
               </div>
 
-              {/* Ukuran Kertas Stiker Label Cup */}
+              {/* Ukuran Kertas Stiker Label Cup / Tag Produksi */}
               <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2">
                 <label className="text-xs font-extrabold text-slate-900 block">
-                  Ukuran Stiker Label Cup (Printer B)
+                  {isLaundryMode ? 'Ukuran Tag Label Produksi (Printer B)' : 'Ukuran Stiker Label Cup (Printer B)'}
                 </label>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   {[
-                    { size: '40x30mm' as const, label: '40 × 30 mm (Standar Cafe)' },
+                    { size: '40x30mm' as const, label: isLaundryMode ? '40 × 30 mm (Standar Tag)' : '40 × 30 mm (Standar Cafe)' },
                     { size: '50x30mm' as const, label: '50 × 30 mm (Lebar)' },
                     { size: '40x20mm' as const, label: '40 × 20 mm (Kecil)' },
                     { size: '50x40mm' as const, label: '50 × 40 mm (Ekstra Luas)' },

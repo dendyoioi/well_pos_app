@@ -36,6 +36,7 @@ import {
   Waves,
   Clock,
   Truck,
+  Layers,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -307,8 +308,79 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
     const isMobileDrawer = Boolean(onItemClick);
     const isRail = !isMobileDrawer && isLaundryMode;
 
-    // 1. ISOLASI TOTAL ROLE KITCHEN (DAPUR & KDS SAJA)
+    // 1. ISOLASI TOTAL ROLE KITCHEN (DAPUR F&B ATAU WORKSHOP LAUNDRY)
     if (user.role === 'KITCHEN') {
+      if (isLaundryMode) {
+        return (
+          <div className="space-y-3">
+            {/* Banner Status Mode Workshop Laundry */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200/80 shadow-xs space-y-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Shirt className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-blue-700">
+                    Workshop Produksi
+                  </div>
+                  <div className="text-xs font-black text-slate-900 truncate">
+                    {activeOutlet?.name || 'Workshop Laundry'}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10.5px] text-blue-900/80 leading-snug">
+                Antarmuka terisolasi operator workshop: stasiun cuci, dryer, setrika uap, dan alokasi rak.
+              </p>
+            </div>
+
+            {/* Navigasi Khusus Workshop Laundry */}
+            <div className="space-y-1">
+              <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Operasional Workshop
+              </div>
+              <button
+                onClick={() => handleSelectTab('laundry_production')}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                  activeTab === 'laundry_production'
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-blue-50/60'
+                }`}
+              >
+                <Shirt className="w-4 h-4 shrink-0" />
+                <span>Stasiun Cuci &amp; Setrika</span>
+              </button>
+              <button
+                onClick={() => handleSelectTab('laundry_queue')}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                  activeTab === 'laundry_queue'
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-blue-50/60'
+                }`}
+              >
+                <Layers className="w-4 h-4 shrink-0" />
+                <span>Antrean Cucian Masuk</span>
+              </button>
+              <button
+                onClick={() => handleSelectTab('laundry_racks')}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                  activeTab === 'laundry_racks'
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-blue-50/60'
+                }`}
+              >
+                <Archive className="w-4 h-4 shrink-0" />
+                <span>Rak Simpan &amp; Serah Ambil</span>
+              </button>
+            </div>
+
+            {/* Akses Cepat PWA di Workshop */}
+            <div className="pt-3 mt-3 border-t border-slate-200">
+              <PwaInstallButton className="w-full justify-center" />
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="space-y-3">
           {/* Banner Status Mode Dapur */}
@@ -463,34 +535,53 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             </button>
           </div>
 
-          {/* 3. Resep Formula & Master Bahan */}
-          <div className="space-y-1 pt-1">
-            <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-              Formula &amp; Standar
+          {/* 3. Resep Formula & Master Bahan / Logistik Laundry */}
+          {isLaundryMode ? (
+            <div className="space-y-1 pt-1">
+              <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Logistik Laundry
+              </div>
+              <button
+                onClick={() => handleSelectTab('laundry_transfers')}
+                className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
+                  activeTab === 'laundry_transfers'
+                    ? 'bg-indigo-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-indigo-50/60'
+                }`}
+              >
+                <Truck className="w-4 h-4 shrink-0" />
+                <span>Transfer Cucian Workshop</span>
+              </button>
             </div>
-            <button
-              onClick={() => handleSelectTab('recipes')}
-              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
-                activeTab === 'recipes'
-                  ? 'bg-indigo-900 text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-indigo-50/60'
-              }`}
-            >
-              <UtensilsCrossed className="w-4 h-4 shrink-0" />
-              <span>Formula Resep &amp; BOM</span>
-            </button>
-            <button
-              onClick={() => handleSelectTab('products')}
-              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
-                activeTab === 'products'
-                  ? 'bg-indigo-900 text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-indigo-50/60'
-              }`}
-            >
-              <Package className="w-4 h-4 shrink-0" />
-              <span>Katalog Bahan &amp; Produk</span>
-            </button>
-          </div>
+          ) : (
+            <div className="space-y-1 pt-1">
+              <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Formula &amp; Standar
+              </div>
+              <button
+                onClick={() => handleSelectTab('recipes')}
+                className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
+                  activeTab === 'recipes'
+                    ? 'bg-indigo-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-indigo-50/60'
+                }`}
+              >
+                <UtensilsCrossed className="w-4 h-4 shrink-0" />
+                <span>Formula Resep &amp; BOM</span>
+              </button>
+              <button
+                onClick={() => handleSelectTab('products')}
+                className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center gap-2.5 transition-all ${
+                  activeTab === 'products'
+                    ? 'bg-indigo-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-indigo-50/60'
+                }`}
+              >
+                <Package className="w-4 h-4 shrink-0" />
+                <span>Katalog Bahan &amp; Produk</span>
+              </button>
+            </div>
+          )}
 
           {/* 4. Tim Staf & Kelola Toko */}
           <div className="space-y-1 pt-1">
@@ -598,17 +689,44 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <Users className="w-4 h-4 shrink-0" />
               <span>Pelanggan &amp; Kasbon</span>
             </button>
-            <button
-              onClick={() => handleSelectTab('qr_orders')}
-              className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
-                activeTab === 'qr_orders'
-                  ? 'bg-blue-900 text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <QrCode className="w-4 h-4 shrink-0" />
-              <span>Pesanan Mandiri QR</span>
-            </button>
+            {isLaundryMode ? (
+              <>
+                <button
+                  onClick={() => handleSelectTab('laundry_queue')}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'laundry_queue'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Layers className="w-4 h-4 shrink-0" />
+                  <span>Antrean Cucian Masuk</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('laundry_racks')}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'laundry_racks'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Archive className="w-4 h-4 shrink-0" />
+                  <span>Rak Simpan &amp; Ambil</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleSelectTab('qr_orders')}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                  activeTab === 'qr_orders'
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <QrCode className="w-4 h-4 shrink-0" />
+                <span>Pesanan Mandiri QR</span>
+              </button>
+            )}
           </div>
 
           <div className="pt-3 mt-3 border-t border-slate-200">
@@ -2311,6 +2429,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         {canViewGuide && activeTab !== 'pos' && (
           <FloatingGuideWidget
             activeTab={activeTab}
+            isLaundryMode={isLaundryMode}
             onOpenGuide={(sec) => {
               if (onOpenGuide) onOpenGuide(sec);
               else onTabChange('guide');

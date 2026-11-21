@@ -543,12 +543,51 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
   };
 
   const badge = getRoleBadge(user.role);
-  const allowedTabs = ROLE_TABS[user.role] || ['pos'];
 
   // Deteksi Vertikal Mode Laundry
   const isLaundryMode = React.useMemo(() => {
     return checkIsLaundry(activeOutlet, user);
   }, [activeOutlet, user]);
+
+  const allowedTabs = React.useMemo(() => {
+    const baseTabs = ROLE_TABS[user.role] || ['pos'];
+    if (!isLaundryMode) return baseTabs;
+
+    const fnbOnlyTabs: TabKey[] = [
+      'products',
+      'categories',
+      'modifiers',
+      'recipes',
+      'qr_tables',
+      'qr_settings',
+      'qr_orders',
+      'qr_guest_menu',
+      'settings_taxes',
+    ];
+
+    if (user.role === 'KITCHEN') {
+      return ['laundry_production', 'laundry_queue', 'laundry_racks', 'overview'];
+    }
+    if (user.role === 'WAREHOUSE') {
+      return ['inventory', 'stock_movements', 'purchase_orders', 'transfers', 'suppliers', 'warehouses', 'laundry_transfers', 'overview'];
+    }
+    if (user.role === 'CASHIER') {
+      return ['pos', 'laundry_queue', 'laundry_production', 'laundry_racks', 'laundry_services', 'orders', 'customers', 'shifts', 'payment_items', 'laundry_transfers'];
+    }
+
+    const filtered = baseTabs.filter((tab) => !fnbOnlyTabs.includes(tab));
+    const laundryTabs: TabKey[] = [
+      'laundry_queue',
+      'laundry_production',
+      'laundry_services',
+      'laundry_racks',
+      'laundry_transfers',
+    ];
+    laundryTabs.forEach((lt) => {
+      if (!filtered.includes(lt)) filtered.push(lt);
+    });
+    return filtered;
+  }, [user.role, isLaundryMode]);
 
   // Hanya Admin & Supervisor yang berhak berpindah toko (Multi-Outlet Switcher)
   const canSwitchOutlet = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
@@ -744,7 +783,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'transfers' ? (
           <StockTransfersView activeOutlet={activeOutlet} />
         ) : activeTab === 'suppliers' ? (
-          <SuppliersView />
+          <SuppliersView activeOutlet={activeOutlet} currentUser={user} />
         ) : activeTab === 'orders' ? (
           <OrdersView
             activeOutlet={activeOutlet}
@@ -765,7 +804,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'product_analytics' ? (
           <ProductAnalyticsView activeOutlet={activeOutlet} />
         ) : activeTab === 'promotions' ? (
-          <PromotionsView />
+          <PromotionsView activeOutlet={activeOutlet} currentUser={user} isLaundryMode={isLaundryMode} />
         ) : activeTab === 'staff_users' || activeTab === 'users' ? (
           <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
         ) : activeTab === 'staff_roles' ? (
@@ -817,6 +856,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               setActiveTab(tab as TabKey);
             }}
             currentUserRole={user.role}
+            activeOutlet={activeOutlet}
+            currentUser={user}
+            isLaundryMode={isLaundryMode}
           />
         ) : activeTab === 'laundry_services' ? (
           <LaundryServicesView activeOutlet={activeOutlet} />
@@ -1957,83 +1999,148 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                     </div>
 
                     <div
-                      onClick={() => setActiveTab('products')}
+                      onClick={() => setActiveTab(isLaundryMode ? 'laundry_services' : 'products')}
                       className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
                     >
                       <div>
                         <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
                           3
                         </div>
-                        <h4 className="font-bold text-blue-950 text-base">Katalog Produk (Read-Only)</h4>
+                        <h4 className="font-bold text-blue-950 text-base">
+                          {isLaundryMode ? 'Katalog Layanan & Tarif (Read-Only)' : 'Katalog Produk (Read-Only)'}
+                        </h4>
                         <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Lihat daftar SKU, kategori, dan barcode produk tanpa risiko mengubah harga jual atau HPP produk.
+                          {isLaundryMode
+                            ? 'Lihat daftar layanan kiloan, satuan, dry clean, dan ketentuan durasi tanpa risiko mengubah tarif.'
+                            : 'Lihat daftar SKU, kategori, dan barcode produk tanpa risiko mengubah harga jual atau HPP produk.'}
                         </p>
                       </div>
                       <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>Lihat Katalog</span>
+                        <span>{isLaundryMode ? 'Lihat Layanan' : 'Lihat Katalog'}</span>
                         <ArrowRight className="w-4 h-4" />
                       </div>
                     </div>
                   </>
                 ) : user.role === 'KITCHEN' ? (
-                  <>
-                    <div
-                      onClick={() => setActiveTab('qr_orders')}
-                      className="p-6 rounded-2xl bg-white border-2 border-amber-600 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-3 font-bold">
-                          1
+                  isLaundryMode ? (
+                    <>
+                      <div
+                        onClick={() => setActiveTab('laundry_production')}
+                        className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                      >
+                        <div>
+                          <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
+                            1
+                          </div>
+                          <h4 className="font-bold text-blue-950 text-base">Stasiun Workshop Cuci &amp; Setrika</h4>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                            Pantau stasiun cuci, dryer, setrika uap, dan QC packing pakaian pelanggan secara real-time.
+                          </p>
                         </div>
-                        <h4 className="font-bold text-amber-950 text-base">Pesanan Masak Live (KDS)</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Pantau tiket pesanan masuk per meja secara real-time, ubah status ke Sedang Dimasak, dan tandai saat hidangan Siap Saji.
-                        </p>
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
+                          <span>Buka Workshop</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-extrabold flex items-center justify-between">
-                        <span>Buka Antrean Dapur</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
 
-                    <div
-                      onClick={() => setActiveTab('recipes')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          2
+                      <div
+                        onClick={() => setActiveTab('laundry_queue')}
+                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                      >
+                        <div>
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                            2
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-base">Antrean Cucian Masuk</h4>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                            Pantau tiket cucian masuk dari kasir drop-off yang siap diproses mesin atau sortir noda khusus.
+                          </p>
                         </div>
-                        <h4 className="font-bold text-slate-900 text-base">Formula Resep &amp; BOM</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Periksa standar takaran gramatur bahan baku, komposisi saus, dan SOP konsistensi rasa setiap menu minuman/makanan.
-                        </p>
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                          <span>Buka Antrean Cucian</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
-                        <span>Lihat Resep &amp; BOM</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
 
-                    <div
-                      onClick={() => setActiveTab('qr_orders')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          3
+                      <div
+                        onClick={() => setActiveTab('laundry_racks')}
+                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                      >
+                        <div>
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                            3
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-base">Rak Simpan &amp; Serah Ambil</h4>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                            Alokasikan cucian bersih ke rak A-01 s/d B-04 dan siap diambil oleh pelanggan.
+                          </p>
                         </div>
-                        <h4 className="font-bold text-slate-900 text-base">Koordinasi Pramusaji</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Tandai pesanan Selesai saat hidangan telah diantar ke meja tamu pelanggan untuk memperbarui status kasir otomatis.
-                        </p>
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                          <span>Buka Rak Simpan</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
-                        <span>Monitor Antrean</span>
-                        <ArrowRight className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      <div
+                        onClick={() => setActiveTab('qr_orders')}
+                        className="p-6 rounded-2xl bg-white border-2 border-amber-600 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                      >
+                        <div>
+                          <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-3 font-bold">
+                            1
+                          </div>
+                          <h4 className="font-bold text-amber-950 text-base">Pesanan Masak Live (KDS)</h4>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                            Pantau tiket pesanan masuk per meja secara real-time, ubah status ke Sedang Dimasak, dan tandai saat hidangan Siap Saji.
+                          </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-extrabold flex items-center justify-between">
+                          <span>Buka Antrean Dapur</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
                       </div>
-                    </div>
-                  </>
+
+                      <div
+                        onClick={() => setActiveTab('recipes')}
+                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                      >
+                        <div>
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                            2
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-base">Formula Resep &amp; BOM</h4>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                            Periksa standar takaran gramatur bahan baku, komposisi saus, dan SOP konsistensi rasa setiap menu minuman/makanan.
+                          </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
+                          <span>Lihat Resep &amp; BOM</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => setActiveTab('qr_orders')}
+                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                      >
+                        <div>
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                            3
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-base">Koordinasi Pramusaji</h4>
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                            Tandai pesanan Selesai saat hidangan telah diantar ke meja tamu pelanggan untuk memperbarui status kasir otomatis.
+                          </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
+                          <span>Monitor Antrean</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </>
+                  )
                 ) : (
                   <>
                     <div
@@ -2145,6 +2252,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               initialSection={guideSection}
               onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
               currentUserRole={user.role}
+              activeOutlet={activeOutlet}
+              currentUser={user}
+              isLaundryMode={isLaundryMode}
             />
           </div>
         ) : activeTab === 'laundry_services' ? (
@@ -2185,6 +2295,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           isOpen={bluetoothModalOpen}
           onClose={() => setBluetoothModalOpen(false)}
           defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
+          isLaundryMode={isLaundryMode}
         />
       </main>
     </div>

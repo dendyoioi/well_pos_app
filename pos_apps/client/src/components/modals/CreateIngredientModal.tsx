@@ -8,6 +8,7 @@ interface CreateIngredientModalProps {
   onClose: () => void;
   outletId?: string;
   onSuccess: () => void;
+  isLaundryMode?: boolean;
 }
 
 export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
@@ -15,10 +16,11 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
   onClose,
   outletId,
   onSuccess,
+  isLaundryMode = false,
 }) => {
   const [name, setName] = useState('');
   const [itemCode, setItemCode] = useState('');
-  const [canonicalUom, setCanonicalUom] = useState('GRAM');
+  const [canonicalUom, setCanonicalUom] = useState(isLaundryMode ? 'ML' : 'GRAM');
   const [averageCost, setAverageCost] = useState<number>(0);
   const [initialStock, setInitialStock] = useState<number>(0);
   const [reorderPoint, setReorderPoint] = useState<number>(100);
@@ -30,7 +32,7 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setErrorMsg('Nama bahan baku wajib diisi');
+      setErrorMsg(isLaundryMode ? 'Nama bahan cuci wajib diisi' : 'Nama bahan baku wajib diisi');
       return;
     }
 
@@ -76,8 +78,14 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
               <Package className="w-5 h-5 shrink-0" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-extrabold text-slate-900 truncate">Tambah Bahan Baku Baru</h2>
-              <p className="text-xs text-slate-500 font-medium truncate">Daftarkan bahan mentah racikan resep &amp; stok dapur</p>
+              <h2 className="text-base font-extrabold text-slate-900 truncate">
+                {isLaundryMode ? 'Tambah Bahan Cuci / Perlengkapan' : 'Tambah Bahan Baku Baru'}
+              </h2>
+              <p className="text-xs text-slate-500 font-medium truncate">
+                {isLaundryMode
+                  ? 'Daftarkan deterjen, softener, parfum, atau perlengkapan workshop'
+                  : 'Daftarkan bahan mentah racikan resep & stok dapur'}
+              </p>
             </div>
           </div>
           <button
@@ -101,14 +109,18 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Bahan Baku <span className="text-rose-500">*</span>
+              {isLaundryMode ? 'Nama Bahan Cuci / Perlengkapan' : 'Nama Bahan Baku'} <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Bubuk Cokelat Dark Premium, Sirup Hazelnut..."
+              placeholder={
+                isLaundryMode
+                  ? 'Contoh: Deterjen Cair Matic, Parfum Lavender, Plastik Packing 35x50...'
+                  : 'Contoh: Bubuk Cokelat Dark Premium, Sirup Hazelnut...'
+              }
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
             />
           </div>
@@ -137,9 +149,9 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
                   onChange={(e) => setCanonicalUom(e.target.value)}
                   className="w-full h-11 sm:h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all appearance-none cursor-pointer"
                 >
-                  <option value="GRAM">GRAM (Berat Bubuk, Biji, Daging)</option>
-                  <option value="ML">ML (Cairan, Susu, Sirup, Saus)</option>
-                  <option value="PCS">PCS (Cup, Sedotan, Telur, Roti)</option>
+                  <option value="GRAM">{isLaundryMode ? 'GRAM / KG (Deterjen Bubuk, Soda Ash)' : 'GRAM (Berat Bubuk, Biji, Daging)'}</option>
+                  <option value="ML">{isLaundryMode ? 'ML / LITER (Deterjen Cair, Parfum, Softener)' : 'ML (Cairan, Susu, Sirup, Saus)'}</option>
+                  <option value="PCS">{isLaundryMode ? 'PCS (Hanger, Plastik Jinjing, Tag Label)' : 'PCS (Cup, Sedotan, Telur, Roti)'}</option>
                   <option value="KG">KG (Kilogram)</option>
                   <option value="LITER">LITER</option>
                 </select>
@@ -159,7 +171,9 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
                 placeholder="0"
                 className="w-full"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Biaya modal satuan untuk resep</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {isLaundryMode ? 'Estimasi biaya modal per takaran pemakaian cucian' : 'Biaya modal satuan untuk resep'}
+              </p>
             </div>
 
             <div>
@@ -186,7 +200,7 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
               min="0"
               value={initialStock}
               onChange={(e) => setInitialStock(Number(e.target.value))}
-              placeholder="0 jika belum ada fisik di gudang/dapur"
+              placeholder={isLaundryMode ? '0 jika belum ada fisik di workshop/gudang' : '0 jika belum ada fisik di gudang/dapur'}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
             />
             <p className="text-[11px] text-slate-400 mt-1">Stok fisik yang sudah tersedia saat ini</p>

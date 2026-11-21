@@ -148,7 +148,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
       ]),
       [''],
       [isLaundryMode ? 'TREN ADD-ON & PERAWATAN KHUSUS' : 'TREN TOPPING & MODIFIER (PILIHAN & BAHAN PELENGKAP)'],
-      ['Peringkat', 'Grup Modifier', 'Nama Opsi / Topping', 'Qty Terpilih', 'Ekstra Omset', 'Kontribusi (%)'],
+      ['Peringkat', isLaundryMode ? 'Kategori Add-on' : 'Grup Modifier', isLaundryMode ? 'Nama Treatment / Add-on' : 'Nama Opsi / Topping', 'Qty Terpilih', 'Ekstra Omset', 'Kontribusi (%)'],
       ...(data.topModifiers || []).map((m, idx) => [
         idx + 1,
         `"${m.groupName}"`,

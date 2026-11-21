@@ -17,7 +17,99 @@ import {
 interface FloatingGuideWidgetProps {
   activeTab: string;
   onOpenGuide: (sectionId?: string) => void;
+  isLaundryMode?: boolean;
 }
+
+const LAUNDRY_TAB_CONTEXT_MAP: Record<
+  string,
+  { sectionId: string; title: string; subtitle: string }
+> = {
+  laundry_queue: {
+    sectionId: 'laundry_sorting_photos',
+    title: 'Panduan Antrean Cucian Masuk',
+    subtitle: 'Alur penerimaan order, label keranjang, dan prioritas layanan.',
+  },
+  laundry_production: {
+    sectionId: 'laundry_11step_production',
+    title: 'Panduan Workshop Produksi',
+    subtitle: '11 tahap proses: Cuci, Pengeringan, Setrika Uap, hingga QC.',
+  },
+  laundry_services: {
+    sectionId: 'laundry_pos_3step',
+    title: 'Panduan Tarif & Layanan Laundry',
+    subtitle: 'Kelola paket Kiloan, Satuan, Dry Clean, dan Add-on treatment.',
+  },
+  laundry_racks: {
+    sectionId: 'laundry_racks_handover',
+    title: 'Panduan Manajemen Rak Simpan',
+    subtitle: 'Penempatan baju selesai di slot rak dan serah terima ke pelanggan.',
+  },
+  laundry_transfers: {
+    sectionId: 'laundry_11step_production',
+    title: 'Panduan Transfer Workshop',
+    subtitle: 'Alur kirim-terima cucian antar outlet drop-point dan pusat workshop.',
+  },
+  pos: {
+    sectionId: 'laundry_pos_3step',
+    title: 'Panduan Kasir Drop-off Laundry',
+    subtitle: 'Penerimaan cepat 3 langkah, foto noda/kondisi, & bayar di muka/nanti.',
+  },
+  inventory: {
+    sectionId: 'inventory',
+    title: 'Panduan Stok Bahan Cuci',
+    subtitle: 'Manajemen deterjen, parfum, softener, hanger, & plastik packing.',
+  },
+  orders: {
+    sectionId: 'sales_history_item_recap',
+    title: 'Panduan Riwayat Nota Laundry',
+    subtitle: 'Lacak status cucian, filter pelunasan kasir, dan ekspor CSV/PDF.',
+  },
+  reports: {
+    sectionId: 'reports',
+    title: 'Panduan Laporan & Arus Kas Laundry',
+    subtitle: 'Analisis omset kiloan/satuan, beban bahan cuci, dan piutang.',
+  },
+  settings_receipt: {
+    sectionId: 'bluetooth_printer',
+    title: 'Panduan Struk & Tag Produksi',
+    subtitle: 'Koneksi printer thermal struk kasir & printer tag label cucian.',
+  },
+  shifts: {
+    sectionId: 'shifts',
+    title: 'Panduan Shift Kasir Laundry',
+    subtitle: 'Modal awal laci kasir, rekap piutang cucian, dan tutup kasir Z.',
+  },
+  customers: {
+    sectionId: 'laundry_wallet_quota',
+    title: 'Panduan Pelanggan & Dompet Kuota',
+    subtitle: 'Manajemen member, deposit saldo cuci kiloan, & notifikasi WhatsApp.',
+  },
+  promotions: {
+    sectionId: 'promotions',
+    title: 'Panduan Voucher & Diskon Laundry',
+    subtitle: 'Pengaturan promo hemat kiloan dan diskon pelanggan setia.',
+  },
+  staff_users: {
+    sectionId: 'staff_attendance',
+    title: 'Panduan Staf & Operator Laundry',
+    subtitle: 'Absensi staf kasir & kru workshop cuci, serta rekap jam kerja.',
+  },
+  staff_roles: {
+    sectionId: 'granular_rbac_roles',
+    title: 'Panduan Hak Akses Operator Laundry',
+    subtitle: 'Hak akses Kasir Toko, Operator Produksi, dan Supervisor.',
+  },
+  outlets: {
+    sectionId: 'onboarding',
+    title: 'Panduan Kelola Outlet Laundry',
+    subtitle: 'Setup outlet toko drop-point dan workshop cuci terpusat.',
+  },
+  overview: {
+    sectionId: 'onboarding',
+    title: 'Panduan Ringkasan Usaha Laundry',
+    subtitle: 'Pemantauan tonase kiloan hari ini, performa mesin, & slot rak.',
+  },
+};
 
 const TAB_CONTEXT_MAP: Record<
   string,
@@ -173,6 +265,7 @@ const TAB_CONTEXT_MAP: Record<
 export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
   activeTab,
   onOpenGuide,
+  isLaundryMode = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -195,7 +288,7 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
   // Jika sedang di halaman guide, widget melayang tidak perlu tampil (dipanggil SETELAH seluruh hook)
   if (activeTab === 'guide') return null;
 
-  const currentContext = TAB_CONTEXT_MAP[activeTab];
+  const currentContext = (isLaundryMode ? LAUNDRY_TAB_CONTEXT_MAP[activeTab] : null) || TAB_CONTEXT_MAP[activeTab];
 
   return (
     <div
@@ -260,97 +353,192 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
             {/* Topik Populer / Fitur Terbaru Enhancement */}
             <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
-                Pintasan Fitur Baru &amp; Hardware:
+                {isLaundryMode ? 'Pintasan SOP Workshop & Kasir:' : 'Pintasan Fitur Baru & Hardware:'}
               </span>
               <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('barcode_shelf_labels');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Tag className="w-3.5 h-3.5 text-blue-800 shrink-0" />
-                  <span className="truncate">Label Barcode Rak</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('customer_debt_cashflow');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                  <span className="truncate">Kasbon &amp; CRM</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('staff_attendance');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Clock className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
-                  <span className="truncate">Absensi Staf</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('granular_rbac_roles');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                  <span className="truncate">Hak Akses RBAC</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('bluetooth_printer');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5 text-blue-800 shrink-0" />
-                  <span className="truncate">Printer Bluetooth</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('whatsapp_receipt');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                  <span className="truncate">Resi WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('pwa_install');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Smartphone className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
-                  <span className="truncate">App Kasir PWA</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    onOpenGuide('open_tab_rules');
-                  }}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Utensils className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                  <span className="truncate">Pesanan Susulan</span>
-                </button>
+                {isLaundryMode ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('laundry_pos_3step');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                      <span className="truncate">Kasir 3-Langkah</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('laundry_sorting_photos');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Tag className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                      <span className="truncate">Sortir &amp; Foto Noda</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('laundry_11step_production');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span className="truncate">11 Tahap Produksi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('laundry_racks_handover');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span className="truncate">Rak &amp; Handover</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('laundry_wallet_quota');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                      <span className="truncate">Deposit &amp; Kuota</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('laundry_tracking_wa');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span className="truncate">Tracking &amp; WA</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('bluetooth_printer');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                      <span className="truncate">Tag &amp; Struk Kasir</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('pwa_install');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span className="truncate">App Kasir PWA</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('barcode_shelf_labels');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Tag className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                      <span className="truncate">Label Barcode Rak</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('customer_debt_cashflow');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span className="truncate">Kasbon &amp; CRM</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('staff_attendance');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span className="truncate">Absensi Staf</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('granular_rbac_roles');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                      <span className="truncate">Hak Akses RBAC</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('bluetooth_printer');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                      <span className="truncate">Printer Bluetooth</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('whatsapp_receipt');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span className="truncate">Resi WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('pwa_install');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:text-indigo-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span className="truncate">App Kasir PWA</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenGuide('open_tab_rules');
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 hover:text-amber-950 border border-slate-200/80 text-left font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Utensils className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                      <span className="truncate">Pesanan Susulan</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

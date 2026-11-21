@@ -25,6 +25,7 @@ import { Button, Badge } from '../ui';
 import { PwaInstallButton } from '../PwaInstallBanner';
 import { ThermalPrinterModal } from './ThermalPrinterModal';
 import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
+import { checkIsLaundry } from '../../utils/businessType';
 
 export interface PosHeaderProps {
   activeOutlet?: Outlet | null;
@@ -77,6 +78,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
   const [printerModalOpen, setPrinterModalOpen] = useState(false);
   const printerHub = useThermalPrinterHub();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isLaundryMode = checkIsLaundry(activeOutlet, currentUser);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -440,6 +442,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         isOpen={printerModalOpen}
         onClose={() => setPrinterModalOpen(false)}
         defaultPaperSize={activeOutlet?.receiptConfig?.paperSize || '58mm'}
+        isLaundryMode={isLaundryMode}
       />
     </div>
   );

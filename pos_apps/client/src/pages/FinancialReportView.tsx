@@ -29,12 +29,17 @@ import { TablePagination } from '../components/TablePagination';
 import { SalesProfitTrendChart } from '../components/SalesProfitTrendChart';
 import { TableSkeleton } from '../components/ui';
 import { CashFlowReportTab } from '../components/CashFlowReportTab';
+import { checkIsLaundry } from '../utils/businessType';
 
 interface FinancialReportViewProps {
   activeOutlet?: Outlet | null;
 }
 
 export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ activeOutlet }) => {
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet);
+  }, [activeOutlet]);
+
   const { isFree } = usePlan();
   const [activeReportSubTab, setActiveReportSubTab] = useState<'pnl' | 'cashflow'>(() => {
     if (typeof window !== 'undefined') {
@@ -138,7 +143,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       [''],
       ['RINGKASAN FINANSIAL UTAMA'],
       ['Total Omset Bersih (Net Revenue)', `Rp ${data.financialSummary.totalNetRevenue}`],
-      ['Total Modal Barang Terjual (COGS / HPP)', `Rp ${data.financialSummary.totalCOGS}`],
+      [isLaundryMode ? 'Total Modal Bahan Cuci (COGS)' : 'Total Modal Barang Terjual (COGS / HPP)', `Rp ${data.financialSummary.totalCOGS}`],
       ['Laba Kotor Penjualan (Gross Profit)', `Rp ${data.financialSummary.grossProfit}`],
       ['Margin Laba Kotor (Gross Margin %)', `${data.financialSummary.grossProfitMargin}%`],
       ['Total Faktur Penjualan', `${data.financialSummary.totalTransactions}`],
@@ -149,8 +154,8 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       ['Arus Kas Tunai (Cash)', `Rp ${data.cashFlow.cash.amount} (${data.cashFlow.cash.percentage}%)`],
       ['Arus Kas Non-Tunai (Digital & Cashless)', `Rp ${data.cashFlow.nonCash?.amount ?? data.cashFlow.qris.amount} (${data.cashFlow.nonCash?.percentage ?? data.cashFlow.qris.percentage}%)`],
       [''],
-      ['RINCIAN TREN PENJUALAN & HPP HARIAN'],
-      ['Tanggal', 'Jumlah Faktur', 'Total Omset Bersih', 'Total HPP', 'Laba Kotor', 'Tunai (Cash)', 'Non-Tunai (QRIS)'],
+      [isLaundryMode ? 'RINCIAN TREN PENDAPATAN & BIAYA BAHAN CUCI HARIAN' : 'RINCIAN TREN PENJUALAN & HPP HARIAN'],
+      ['Tanggal', 'Jumlah Faktur', 'Total Omset Bersih', isLaundryMode ? 'Bahan Cuci' : 'Total HPP', 'Laba Kotor', 'Tunai (Cash)', 'Non-Tunai (QRIS)'],
       ...(data.dailyTrends || []).map((d) => [
         d.date,
         d.ordersCount,
@@ -512,7 +517,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
-                  Total Modal / HPP (COGS)
+                  {isLaundryMode ? 'Biaya Bahan Cuci & Operasional' : 'Total Modal / HPP (COGS)'}
                 </span>
                 <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
                   <Boxes className="w-5 h-5 stroke-[2.5] shrink-0" />
@@ -523,11 +528,13 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                   Rp {fs.totalCOGS.toLocaleString('id-ID')}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                  Beban modal pokok produk terjual
+                  {isLaundryMode
+                    ? 'Beban pemakaian deterjen, parfum, softener, & bahan workshop'
+                    : 'Beban modal pokok produk terjual'}
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Rasio Beban HPP:</span>
+                <span>{isLaundryMode ? 'Rasio Beban Bahan Cuci:' : 'Rasio Beban HPP:'}</span>
                 <strong className="text-amber-800 font-bold font-mono">
                   {fs.totalNetRevenue > 0
                     ? ((fs.totalCOGS / fs.totalNetRevenue) * 100).toFixed(1)
@@ -893,25 +900,29 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">
-                    Kontribusi Omset per Kanal Penjualan &amp; Mitra Online
+                    {isLaundryMode ? 'Kontribusi Omset per Saluran Layanan' : 'Kontribusi Omset per Kanal Penjualan & Mitra Online'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Evaluasi saluran penjualan (Dine In vs Takeaway vs GoFood vs GrabFood vs ShopeeFood vs Kurir)
+                    {isLaundryMode
+                      ? 'Evaluasi saluran penerimaan (Drop-off Toko vs Antar-Jemput Kurir)'
+                      : 'Evaluasi saluran penjualan (Dine In vs Takeaway vs GoFood vs GrabFood vs ShopeeFood vs Kurir)'}
                   </p>
                 </div>
               </div>
               <span className="text-xs text-slate-400 font-bold self-start sm:self-auto">
-                {data?.channelSales?.length || 0} Kanal Teridentifikasi
+                {((data?.channelSales || []).filter((ch) => !isLaundryMode || !['DINE_IN', 'TAKEAWAY', 'GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'].includes(ch.channel) || ch.amount > 0)).length} Kanal Teridentifikasi
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(data?.channelSales || []).length === 0 ? (
+              {((data?.channelSales || []).filter((ch) => !isLaundryMode || !['DINE_IN', 'TAKEAWAY', 'GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'].includes(ch.channel) || ch.amount > 0)).length === 0 ? (
                 <div className="col-span-full py-8 text-center text-slate-400 text-xs font-medium">
                   Belum ada data transaksi kanal pada periode ini
                 </div>
               ) : (
-                data?.channelSales?.map((ch) => (
+                (data?.channelSales || [])
+                  .filter((ch) => !isLaundryMode || !['DINE_IN', 'TAKEAWAY', 'GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'].includes(ch.channel) || ch.amount > 0)
+                  .map((ch) => (
                   <div
                     key={ch.channel}
                     className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2.5"

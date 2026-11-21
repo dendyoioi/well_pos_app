@@ -253,7 +253,12 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
     setTestingLabel(true);
     try {
       await printerHub.testPrintLabel(cupLabelPaperSize === '50x30mm' ? '50x30mm' : '40x30mm');
-      dialog.toast('Stiker uji coba barista berhasil dikirim ke printer label!', 'success');
+      dialog.toast(
+        isLaundryMode
+          ? 'Tag produksi uji coba berhasil dikirim ke printer label!'
+          : 'Stiker uji coba barista berhasil dikirim ke printer label!',
+        'success'
+      );
     } catch (err: any) {
       dialog.toast(err.message || 'Gagal mengirim stiker uji coba label', 'error');
     } finally {
@@ -368,7 +373,9 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   <Monitor className="w-4 h-4 text-slate-500" />
                 </div>
                 <p className="text-[11px] text-slate-500 mt-2 font-medium">
-                  Ukuran standar lebar. Ideal untuk printer desktop thermal kasir restoran (USB / LAN / Wi-Fi).
+                  {isLaundryMode
+                    ? 'Ukuran standar lebar. Ideal untuk printer desktop thermal kasir toko (USB / LAN / Wi-Fi).'
+                    : 'Ukuran standar lebar. Ideal untuk printer desktop thermal kasir restoran (USB / LAN / Wi-Fi).'}
                 </p>
                 <span className={`text-[10px] font-black mt-3 inline-block px-2 py-0.5 rounded-md w-fit ${
                   paperSize === '80mm'
@@ -768,7 +775,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 {/* Pilihan Ukuran Stiker */}
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-2">
-                    Ukuran Stiker Label Cup (Lebar × Tinggi)
+                    {isLaundryMode ? 'Ukuran Tag Label Produksi (Lebar × Tinggi)' : 'Ukuran Stiker Label Cup (Lebar × Tinggi)'}
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
@@ -861,7 +868,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     <div>
                       <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
                         <Tag className="w-3.5 h-3.5 text-amber-700" />
-                        <span>Koneksi Printer Slot 2 (Stiker Label Cup / Dapur / Tag Produksi)</span>
+                        <span>
+                          {isLaundryMode
+                            ? 'Printer Slot 2 (Tag Produksi / Label Keranjang)'
+                            : 'Koneksi Printer Slot 2 (Stiker Label Cup / Dapur / Tag Produksi)'}
+                        </span>
                       </span>
                       <p className="text-[11px] text-amber-900/80">
                         {printerHub.isLabelConnected
@@ -1040,6 +1051,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
         isOpen={hardwareModalOpen}
         onClose={() => setHardwareModalOpen(false)}
         defaultPaperSize={paperSize}
+        isLaundryMode={isLaundryMode}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import {
   ArrowUp,
 } from 'lucide-react';
 import type { UserRole } from '../types/auth';
+import { checkIsLaundry } from '../utils/businessType';
 
 export interface GuideSection {
   id: string;
@@ -35,6 +36,225 @@ export interface GuideSection {
   tips?: string;
   warning?: string;
 }
+
+export const LAUNDRY_GUIDE_SECTIONS: GuideSection[] = [
+  {
+    id: 'laundry_pos_3step',
+    title: '2. Kasir 3-Langkah: Drop-off & Penerimaan Cepat',
+    category: 'CASHIER',
+    categoryLabel: 'Kasir & Penerimaan Cucian',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER', 'SUPERVISOR'],
+    shortDesc: 'Alur cepat melayani pelanggan di kasir laundry: timbang kiloan atau hitung satuan, pilih layanan, dan cetak struk/nota digital.',
+    actionTab: 'pos',
+    actionLabel: 'Buka Kasir Drop-off',
+    steps: [
+      {
+        number: 1,
+        title: 'Timbang Kiloan atau Hitung Satuan',
+        description: 'Timbang pakaian kotor di atas timbangan digital untuk layanan kiloan (Kg) atau hitung jumlah helai untuk layanan satuan/dry clean/bedcover.',
+        highlight: 'Berat Kg dan pcs satuan otomatis dikalkulasi ke nominal tarif kasir.',
+      },
+      {
+        number: 2,
+        title: 'Pilih Paket Layanan & Add-on Treatment',
+        description: 'Tentukan kecepatan layanan (Reguler, Kilat 1 Hari, atau Express 4-6 Jam). Tambahkan add-on jika dibutuhkan seperti Parfum Premium, Ekstra Softener, atau Anti-Bakteri.',
+        highlight: 'Add-on treatment tercatat detail per nota sebagai panduan operator cuci.',
+      },
+      {
+        number: 3,
+        title: 'Penerbitan Nota & Pilihan Pembayaran',
+        description: 'Pilih Bayar di Muka (Tunai/QRIS) atau Bayar Nanti saat pakaian diambil (Pay on Pickup). Kirim struk digital otomatis via WhatsApp ke nomor pelanggan.',
+        highlight: 'Nomor nota dan estimasi waktu selesai tercetak jelas di struk kasir.',
+      },
+    ],
+    tips: 'Gunakan modal Cepat Drop-off di halaman Beranda untuk melayani pelanggan buru-buru dalam waktu kurang dari 30 detik.',
+  },
+  {
+    id: 'laundry_sorting_photos',
+    title: '3. Sortir Pakaian & Foto Bukti Kondisi Awal',
+    category: 'CASHIER',
+    categoryLabel: 'Pemeriksaan & Mutu',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER', 'KITCHEN', 'SUPERVISOR'],
+    shortDesc: 'Pemeriksaan teliti saku, noda berat, kelunturan, serta dokumentasi foto bukti pakaian cacat/robek sebelum masuk mesin cuci.',
+    actionTab: 'laundry_queue',
+    actionLabel: 'Buka Antrean Cucian',
+    steps: [
+      {
+        number: 1,
+        title: 'Pemeriksaan Saku & Benda Asing',
+        description: 'Periksa seluruh saku celana dan baju. Amankan uang koin/kertas, pulpen, peniti, atau tisu agar tidak merusak mesin cuci atau mengotori pakaian lain.',
+        highlight: 'Barang berharga yang ditemukan wajib difoto dan dicatat pada nota kasir.',
+      },
+      {
+        number: 2,
+        title: 'Identifikasi Kerusakan Awal & Noda Membandel',
+        description: 'Periksa apakah ada kancing lepas, jahitan robek, luntur, atau noda membandel (oli, getah, darah, karat) sebelum proses pencucian dimulai.',
+        highlight: 'Pemberitahuan awal mencegah kesalahpahaman klaim ganti rugi pelanggan.',
+      },
+      {
+        number: 3,
+        title: 'Dokumentasi Foto Bukti Kondisi Pakaian',
+        description: 'Ambil foto kondisi pakaian yang bernoda atau rusak menggunakan fitur kamera di antarmuka kasir/antrean laundry sebelum cucian dimasukkan ke workshop.',
+        highlight: 'Foto tersimpan permanen di cloud dan dapat diakses melalui link tracking pelanggan.',
+      },
+    ],
+    tips: 'Selalu infokan kemungkinan noda tidak hilang 100% pada pakaian yang nodanya sudah mengendap lama sebelum menerima order.',
+  },
+  {
+    id: 'laundry_11step_production',
+    title: '4. 11 Tahap Alur Workshop & Stasiun Produksi',
+    category: 'SUPERVISOR',
+    categoryLabel: 'Workshop & Stasiun Cuci',
+    targetRoles: ['OWNER', 'ADMIN', 'KITCHEN', 'SUPERVISOR', 'WAREHOUSE'],
+    shortDesc: 'Standar operasional tahapan pengerjaan cucian: Pemilahan, Pre-wash Spotting, Cuci Washer, Dryer, Setrika Uap Boiler, hingga QC Packing.',
+    actionTab: 'laundry_production',
+    actionLabel: 'Buka Workshop Produksi',
+    steps: [
+      {
+        number: 1,
+        title: 'Pemilahan Warna & Jenis Kain',
+        description: 'Kelompokkan pakaian putih, warna terang, dan gelap. Pisahkan bahan halus (sutra/wol) untuk proses Dry Clean khusus.',
+        highlight: 'Mencegah insiden baju luntur antar cucian pelanggan.',
+      },
+      {
+        number: 2,
+        title: 'Pre-Wash & Spotting Noda Kerah',
+        description: 'Sikat lembut kerah kemeja dan area noda membandel menggunakan formula chemical spotting khusus sebelum dimasukkan ke drum cuci.',
+        highlight: 'Memaksimalkan hasil cuci bersih tanpa merusak serat kain.',
+      },
+      {
+        number: 3,
+        title: 'Pencucian Mesin (Washer Cycle) & Pembilasan',
+        description: 'Masukkan pakaian sesuai kapasitas beban mesin. Gunakan dosis deterjen dan softener laundry cair sesuai takaran standar.',
+        highlight: 'Catat ID mesin yang digunakan pada kartu pengerjaan workshop.',
+      },
+      {
+        number: 4,
+        title: 'Pengeringan Mesin (Dryer Cycle)',
+        description: 'Pindahkan ke mesin pengering. Atur suhu hangat untuk bahan katun dan suhu rendah untuk bahan sintetis/kaos sablon.',
+        highlight: 'Pastikan cucian kering 100% untuk menghindari bau apek saat dipacking.',
+      },
+      {
+        number: 5,
+        title: 'Setrika Uap Boiler Bertekanan',
+        description: 'Gunakan setrika uap boiler untuk melicinkan pakaian tanpa meninggalkan bekas mengkilap atau risiko kain terbakar.',
+        highlight: 'Lipat rapi sesuai standar ukuran plastik jinjing toko.',
+      },
+      {
+        number: 6,
+        title: 'Quality Control (QC) & Packing Kedap Debu',
+        description: 'Cek ulang kelengkapan jumlah helai, semprot parfum laundry grade-A, masukkan ke plastik kemasan tebal, dan tempel label segel barcode.',
+        highlight: 'Pakaian higienis, rapi, dan siap disimpan di rak ambil.',
+      },
+    ],
+    tips: 'Operator workshop dapat memperbarui progres cucian secara live dari layar ponsel tanpa mengganggu antrean kasir.',
+  },
+  {
+    id: 'laundry_racks_handover',
+    title: '5. Manajemen Slot Rak & Handover Serah Terima',
+    category: 'CASHIER',
+    categoryLabel: 'Penyimpanan & Serah Ambil',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER', 'SUPERVISOR'],
+    shortDesc: 'Penempatan paket cucian di slot rak berkode alfabet/nomor, notifikasi otomatis siap ambil, dan validasi pelunasan nota.',
+    actionTab: 'laundry_racks',
+    actionLabel: 'Buka Manajemen Rak',
+    steps: [
+      {
+        number: 1,
+        title: 'Penempatan di Slot Rak Tersedia',
+        description: 'Setelah lolos QC, tempatkan bungkusan pakaian ke slot rak yang kosong (contoh: Rak A-02, B-05) dan input kode slot di antarmuka sistem.',
+        highlight: 'Memudahkan kasir menemukan paket cucian dalam hitungan detik saat pelanggan datang.',
+      },
+      {
+        number: 2,
+        title: 'Notifikasi Otomatis Cucian Selesai',
+        description: 'Sistem langsung mengirimkan notifikasi WhatsApp otomatis ke nomor pelanggan bahwa cucian telah rapi di rak dan siap diambil.',
+        highlight: 'Pelanggan mendapatkan notifikasi tanpa kasir perlu mengetik chat manual satu per satu.',
+      },
+      {
+        number: 3,
+        title: 'Pemeriksaan Pelunasan Tagihan Kasir',
+        description: 'Saat pelanggan tiba di toko, periksa status pembayaran. Jika berstatus Belum Bayar, proses pembayaran tunai/QRIS terlebih dahulu.',
+        highlight: 'Mencegah kebocoran pendapatan atau pakaian diambil tanpa pelunasan.',
+      },
+      {
+        number: 4,
+        title: 'Handover & Tandai Selesai Diambil',
+        description: 'Serahkan cucian ke pelanggan, cocokkan nomor nota fisik/digital, dan tekan tombol "Selesai & Diambil Pelanggan" di sistem kasir.',
+        highlight: 'Slot rak otomatis kosong kembali dan siap diisi cucian baru.',
+      },
+    ],
+    tips: 'Manfaatkan fitur pencarian cepat nomor nota di menu Rak untuk mempercepat serah terima di jam sibuk sore hari.',
+  },
+  {
+    id: 'laundry_wallet_quota',
+    title: '6. Deposit Saldo & Kuota Kiloan (CRM Member)',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Pelanggan & CRM',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER', 'SUPERVISOR'],
+    shortDesc: 'Program paket cuci langganan hemat (deposit saldo/kuota Kg) untuk mengikat loyalitas pelanggan dan mengamankan arus kas di muka.',
+    actionTab: 'customers',
+    actionLabel: 'Buka Database Pelanggan',
+    steps: [
+      {
+        number: 1,
+        title: 'Pendaftaran Member & Nomor WhatsApp',
+        description: 'Catat identitas nama dan nomor WhatsApp pelanggan pada database CRM toko saat transaksi pertama kali.',
+        highlight: 'Sistem menggunakan nomor WhatsApp sebagai identitas unik saldo kuota.',
+      },
+      {
+        number: 2,
+        title: 'Pembelian Paket Kuota Hemat',
+        description: 'Tawarkan paket hemat di muka (misal: Paket Cuci Kiloan 50 Kg seharga Rp 350.000 dengan masa aktif 3 bulan).',
+        highlight: 'Toko menerima kas di muka (cash-in upfront) untuk operasional.',
+      },
+      {
+        number: 3,
+        title: 'Potong Saldo Kuota Otomatis Saat Drop-off',
+        description: 'Setiap pelanggan mencuci, kasir cukup menimbang berat cucian dan memilih opsi "Potong Kuota Member" pada metode pembayaran.',
+        highlight: 'Saldo kuota Kg otomatis berkurang secara presisi sesuai berat timbangan.',
+      },
+      {
+        number: 4,
+        title: 'Laporan Sisa Kuota Transparan',
+        description: 'Sisa saldo kuota Kg tercetak otomatis pada struk dan dicantumkan pada pesan WhatsApp notifikasi nota cucian.',
+        highlight: 'Member selalu mengetahui sisa kuota dan terdorong melakukan top-up berkala.',
+      },
+    ],
+    tips: 'Berikan bonus kuota 2 Kg gratis untuk setiap top-up paket 50 Kg guna mendorong pelanggan memilih paket besar.',
+  },
+  {
+    id: 'laundry_tracking_wa',
+    title: '7. Tracking Status QR & Notifikasi WhatsApp',
+    category: 'OWNER_ADMIN',
+    categoryLabel: 'Otomasi Digital & WhatsApp',
+    targetRoles: ['OWNER', 'ADMIN', 'CASHIER', 'SUPERVISOR'],
+    shortDesc: 'Transparansi status pengerjaan cucian pelanggan via portal tracking web live dan pesan otomatis WhatsApp resmi toko.',
+    actionTab: 'settings_receipt',
+    actionLabel: 'Konfigurasi WhatsApp & Resi',
+    steps: [
+      {
+        number: 1,
+        title: 'Pencetakan QR Tracking pada Struk',
+        description: 'Setiap struk kasir thermal mencetak QR Code unik yang dapat di-scan oleh kamera smartphone pelanggan.',
+        highlight: 'Pelanggan langsung diarahkan ke halaman live status tanpa perlu install aplikasi.',
+      },
+      {
+        number: 2,
+        title: 'Pelanggan Memantau Progres Cuci Live',
+        description: 'Pelanggan dapat memantau tahapan pengerjaan secara real-time: Diterima -> Dicuci -> Dikeringkan -> Disetrika -> Di Rak Siap Ambil.',
+        highlight: 'Mengurangi beban chat kasir menanyakan status pakaian.',
+      },
+      {
+        number: 3,
+        title: 'Pesan Otomatis WhatsApp Saat Siap Ambil',
+        description: 'Saat operator memasukkan pakaian ke rak simpan, server otomatis mengirimkan notifikasi WhatsApp ramah beserta rincian nota.',
+        highlight: 'Mempercepat perputaran pakaian di rak dan mempercepat pelunasan piutang kasir.',
+      },
+    ],
+    tips: 'Pastikan koneksi gateway WhatsApp di menu Pengaturan Struk selalu aktif agar pesan notifikasi terkirim tepat waktu.',
+  },
+];
 
 export const GUIDE_SECTIONS: GuideSection[] = [
   {
@@ -1389,13 +1609,52 @@ interface UserGuideViewProps {
   initialSection?: string;
   onNavigateTab: (tab: any) => void;
   currentUserRole?: string;
+  activeOutlet?: any;
+  currentUser?: any;
+  isLaundryMode?: boolean;
 }
 
 export const UserGuideView: React.FC<UserGuideViewProps> = ({
   initialSection,
   onNavigateTab,
   currentUserRole = 'OWNER',
+  activeOutlet,
+  currentUser,
+  isLaundryMode: propIsLaundryMode,
 }) => {
+  const isLaundryMode = useMemo(() => {
+    if (propIsLaundryMode !== undefined) return propIsLaundryMode;
+    try {
+      const stored = localStorage.getItem('pos_active_outlet');
+      const parsed = stored ? JSON.parse(stored) : null;
+      return checkIsLaundry(activeOutlet || parsed, currentUser);
+    } catch {
+      return checkIsLaundry(activeOutlet, currentUser);
+    }
+  }, [propIsLaundryMode, activeOutlet, currentUser]);
+
+  const activeGuideSections = useMemo(() => {
+    if (!isLaundryMode) return GUIDE_SECTIONS;
+    // Eliminasi seluruh bab F&B
+    const FNB_SECTION_IDS = new Set([
+      'products',
+      'taxes',
+      'channels',
+      'qr_menu',
+      'open_tab_rules',
+      'composite_combo_slots',
+      'cup_label_printer',
+    ]);
+    const filteredBase = GUIDE_SECTIONS.filter(
+      (s) => !FNB_SECTION_IDS.has(s.id) && s.category !== 'QR_MENU'
+    );
+    return [
+      filteredBase[0], // onboarding
+      ...LAUNDRY_GUIDE_SECTIONS,
+      ...filteredBase.slice(1),
+    ];
+  }, [isLaundryMode]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeSectionId, setActiveSectionId] = useState<string>(initialSection || 'onboarding');
@@ -1406,7 +1665,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
   // Filter sections berdasarkan query pencarian dan kategori
   const filteredSections = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return GUIDE_SECTIONS.filter((sec) => {
+    return activeGuideSections.filter((sec) => {
       const matchCategory =
         selectedCategory === 'ALL' ||
         sec.category === selectedCategory ||
@@ -1429,13 +1688,13 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
 
       return inTitle || inDesc || inCategory || inTips || inWarning || inSteps;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [activeGuideSections, searchQuery, selectedCategory]);
 
   // Auto-scroll ke section terpilih saat initialSection berubah
   useEffect(() => {
     if (initialSection) {
       setActiveSectionId(initialSection);
-      const targetSec = GUIDE_SECTIONS.find((s) => s.id === initialSection);
+      const targetSec = activeGuideSections.find((s) => s.id === initialSection);
       const isCurrentlyVisible = filteredSections.some((s) => s.id === initialSection);
 
       if (!isCurrentlyVisible && targetSec) {
@@ -1484,7 +1743,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
 
   const scrollToSection = (id: string) => {
     setActiveSectionId(id);
-    const targetSec = GUIDE_SECTIONS.find((s) => s.id === id);
+    const targetSec = activeGuideSections.find((s) => s.id === id);
     const isCurrentlyVisible = filteredSections.some((s) => s.id === id);
 
     // Jika section yang dituju sedang tersembunyi karena filter kategori/pencarian,
@@ -1551,7 +1810,9 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
           </h1>
 
           <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed">
-            Panduan visual lengkap langkah demi langkah untuk setiap peran kerja (Owner, Kasir, Supervisor, &amp; Gudang). Dilengkapi tangkapan layar antarmuka nyata dan tombol pintas aksi langsung ke menu konfigurasi.
+            {isLaundryMode
+              ? 'Panduan visual lengkap langkah demi langkah untuk setiap peran kerja laundry (Owner, Kasir Laundry, Operator Produksi, & Gudang). Dilengkapi instruksi operasional nyata dan tombol pintas aksi langsung ke menu konfigurasi.'
+              : 'Panduan visual lengkap langkah demi langkah untuk setiap peran kerja (Owner, Kasir, Supervisor, & Gudang). Dilengkapi tangkapan layar antarmuka nyata dan tombol pintas aksi langsung ke menu konfigurasi.'}
           </p>
 
           {/* Search Box Input */}
@@ -1562,7 +1823,11 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari panduan (misal: 'PB1', 'tutup shift', 'void', 'gudang', 'struk', 'qr meja')..."
+                placeholder={
+                  isLaundryMode
+                    ? "Cari panduan (misal: 'kiloan', 'sortir noda', 'workshop cuci', 'rak', 'whatsapp')..."
+                    : "Cari panduan (misal: 'PB1', 'tutup shift', 'void', 'gudang', 'struk', 'qr meja')..."
+                }
                 className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-slate-900 placeholder:text-blue-200/60 focus:placeholder:text-slate-400 text-xs sm:text-sm font-semibold border border-white/20 focus:border-blue-500 transition-all outline-hidden shadow-inner"
               />
               {searchQuery && (
@@ -1594,7 +1859,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Semua ({GUIDE_SECTIONS.length})
+              Semua ({activeGuideSections.length})
             </button>
             <button
               type="button"
@@ -1640,17 +1905,19 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
             >
               <span>📦 Gudang &amp; Logistik</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('QR_MENU')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
-                selectedCategory === 'QR_MENU'
-                  ? 'bg-blue-950 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              <span>📱 Menu QR Meja</span>
-            </button>
+            {!isLaundryMode && (
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('QR_MENU')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                  selectedCategory === 'QR_MENU'
+                    ? 'bg-blue-950 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <span>📱 Menu QR Meja</span>
+              </button>
+            )}
           </div>
 
           {/* Sisi Kanan: Tombol Cepat Ke Atas */}
@@ -1705,7 +1972,7 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({
               onClick={() => setSelectedCategory('ALL')}
               className="px-2.5 py-1 rounded-lg font-bold shrink-0 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 transition-colors cursor-pointer ml-1"
             >
-              Tampilkan Semua ({GUIDE_SECTIONS.length} Bab)
+              Tampilkan Semua ({activeGuideSections.length} Bab)
             </button>
           )}
         </div>

@@ -16,6 +16,7 @@ import {
   UserCheck,
   BookOpen,
   TrendingUp,
+  Shirt,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Order } from '../types/order';
@@ -23,6 +24,7 @@ import type { Outlet } from '../types/outlet';
 import type { User as AuthUser } from '../types/auth';
 import { TablePagination } from '../components/TablePagination';
 import { generatePaymentItemsRecapPdf } from '../utils/paymentItemsRecapPdf';
+import { checkIsLaundry } from '../utils/businessType';
 
 export interface PaymentItemsAuditViewProps {
   activeOutlet?: Outlet | null;
@@ -107,6 +109,10 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCostAndProfit, setShowCostAndProfit] = useState(false);
+
+  const isLaundryMode = useMemo(() => {
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet, currentUser]);
 
   const isPrivileged = currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN';
 
@@ -614,22 +620,22 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
     // Kop Dokumen Resmi di Bagian Atas CSV (Excel Friendly)
     const headerBanner = [
-      ['"REKAPITULASI PENJUALAN ITEM MENU PER METODE PEMBAYARAN"'],
+      [`"REKAPITULASI PENJUALAN ${isLaundryMode ? 'LAYANAN LAUNDRY' : 'ITEM MENU'} PER METODE PEMBAYARAN"`],
       [`"Toko / Outlet: ${outletLabel.replace(/"/g, '""')}"`, `"Metode Pembayaran: ${methodLabel.replace(/"/g, '""')}"`],
       [`"Kasir Operasional: ${cashierLabel.replace(/"/g, '""')}"`, `"Periode Tanggal: ${rangeLabel.replace(/"/g, '""')}"`],
       [`"Waktu Ekspor: ${nowStr}"`],
-      [`"Ringkasan: ${currentItemsList.length} Item Menu Unik | ${totalQty % 1 === 0 ? totalQty : totalQty.toFixed(1)} Porsi / Pcs Terjual | Total Omset: Rp ${Math.round(currentMethodTotalRevenue).toLocaleString('id-ID')}"`],
+      [`"Ringkasan: ${currentItemsList.length} ${isLaundryMode ? 'Layanan Unik' : 'Item Menu Unik'} | ${totalQty % 1 === 0 ? totalQty : totalQty.toFixed(1)} ${isLaundryMode ? 'Qty (Kg/Pcs)' : 'Porsi / Pcs'} Terjual | Total Omset: Rp ${Math.round(currentMethodTotalRevenue).toLocaleString('id-ID')}"`],
       ['""'], // Baris kosong pemisah
     ];
 
     const headers = [
       'No',
-      'Nama Menu / Produk',
+      isLaundryMode ? 'Nama Layanan / Paket' : 'Nama Menu / Produk',
       'Varian',
-      'Modifier / Topping',
+      isLaundryMode ? 'Add-on / Treatment' : 'Modifier / Topping',
       'Catatan Khusus',
       'Kategori',
-      'Jumlah Terjual (Porsi/Pcs)',
+      isLaundryMode ? 'Jumlah Terjual (Kg/Pcs)' : 'Jumlah Terjual (Porsi/Pcs)',
       'Total Omset Penjualan (Rp)',
       'Kontribusi Omset (%)',
       ...(includeHpp ? ['Total HPP (Rp)', 'Laba Kotor (Rp)', 'Margin (%)'] : []),
@@ -1067,11 +1073,17 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
           <div className="p-8 text-center text-xs text-slate-500">Memuat rincian item penjualan...</div>
         ) : currentItemsList.length === 0 ? (
           <div className="p-8 text-center">
-            <UtensilsCrossed className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-xs font-bold text-slate-600">Tidak Ada Item Terjual</p>
+            {isLaundryMode ? (
+              <Shirt className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            ) : (
+              <UtensilsCrossed className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            )}
+            <p className="text-xs font-bold text-slate-600">
+              {isLaundryMode ? 'Tidak Ada Layanan Terjual' : 'Tidak Ada Item Terjual'}
+            </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {searchTerm
-                ? `Tidak ditemukan menu yang cocok dengan kata kunci "${searchTerm}"`
+                ? `Tidak ditemukan ${isLaundryMode ? 'layanan' : 'menu'} yang cocok dengan kata kunci "${searchTerm}"`
                 : `Belum ada transaksi penjualan lunas dengan metode ${
                     itemAggregationByMethod[activeMethodKey]?.label || activeMethodKey
                   } pada periode ini.`}
@@ -1084,9 +1096,13 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                 <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3 px-4 w-12 text-center whitespace-nowrap">No</th>
-                    <th className="py-3 px-4 min-w-[180px] whitespace-nowrap">Nama Menu / Produk</th>
+                    <th className="py-3 px-4 min-w-[180px] whitespace-nowrap">
+                      {isLaundryMode ? 'Nama Layanan / Paket' : 'Nama Menu / Produk'}
+                    </th>
                     <th className="py-3 px-4 min-w-[120px] whitespace-nowrap">Kategori</th>
-                    <th className="py-3 px-4 min-w-[110px] whitespace-nowrap text-center">Jumlah Terjual</th>
+                    <th className="py-3 px-4 min-w-[110px] whitespace-nowrap text-center">
+                      {isLaundryMode ? 'Jumlah Terjual (Kg/Pcs)' : 'Jumlah Terjual'}
+                    </th>
                     <th className="py-3 px-4 min-w-[140px] whitespace-nowrap text-right">Total Omset</th>
                     <th className="py-3 px-4 min-w-[100px] whitespace-nowrap text-right">Kontribusi</th>
                     {showCostAndProfit && isPrivileged && (

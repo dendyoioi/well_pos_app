@@ -24,6 +24,7 @@ interface OrderDetailModalProps {
   onAppendOrder?: (order: Order) => void;
   onVoidOrder?: (order: Order) => void;
   onVoidItem?: (order: Order, item: any) => void;
+  isLaundryMode?: boolean;
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -34,11 +35,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onAppendOrder,
   onVoidOrder,
   onVoidItem,
+  isLaundryMode = false,
 }) => {
   const [copied, setCopied] = React.useState(false);
 
   if (!isOpen || !order) return null;
 
+  const isOrderLaundry = isLaundryMode || (order as any).serviceType === 'LAUNDRY' || Boolean((order as any).laundryType) || Boolean((order as any).perfumeVariant);
   const isVoided = order.orderStatus === 'VOIDED';
   const isDineIn = order.channel === 'DINE_IN';
   const isSusulan =
@@ -173,24 +176,40 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Saluran Penjualan
+                {isOrderLaundry ? 'Saluran Layanan' : 'Saluran Penjualan'}
               </div>
               <span
                 className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-black"
-                style={{ color: channelInfo.color, backgroundColor: channelInfo.bg }}
+                style={{
+                  color: isOrderLaundry ? '#1e3a8a' : channelInfo.color,
+                  backgroundColor: isOrderLaundry ? '#dbeafe' : channelInfo.bg,
+                }}
               >
-                {channelInfo.label}
+                {isOrderLaundry
+                  ? (order.channel === 'DELIVERY' ? 'Antar-Jemput' : 'Drop-off Toko')
+                  : channelInfo.label}
               </span>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Meja / Antrean
+            {!isOrderLaundry ? (
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Meja / Antrean
+                </div>
+                <div className="font-black text-slate-900">
+                  {order.tableNumber ? `Meja ${order.tableNumber}` : order.queueNumber ? `Antrean #${order.queueNumber}` : '-'}
+                </div>
               </div>
-              <div className="font-black text-slate-900">
-                {order.tableNumber ? `Meja ${order.tableNumber}` : order.queueNumber ? `Antrean #${order.queueNumber}` : '-'}
+            ) : (
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Jenis Layanan
+                </div>
+                <div className="font-black text-blue-950 truncate">
+                  {(order as any).laundryType || 'Laundry & Kiloan'}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
@@ -348,7 +367,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
                 {isUnpaid && (
                   <div className="text-[11px] font-semibold text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200 mt-1">
-                    Pesanan ini belum diselesaikan pembayarannya (Meja Aktif / Open Bill).
+                    {isOrderLaundry
+                      ? 'Pesanan ini belum diselesaikan pembayarannya (Nota Laundry Belum Lunas / Bayar Nanti).'
+                      : 'Pesanan ini belum diselesaikan pembayarannya (Meja Aktif / Open Bill).'}
                   </div>
                 )}
 
@@ -410,7 +431,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
               {Number(order.taxAmount || 0) > 0 && (
                 <div className="flex justify-between text-slate-600">
-                  <span>Pajak (PB1):</span>
+                  <span>{isOrderLaundry ? 'Pajak (PPN):' : 'Pajak (PB1):'}</span>
                   <span>+Rp {Number(order.taxAmount).toLocaleString('id-ID')}</span>
                 </div>
               )}
@@ -450,8 +471,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <span>Lihat Struk</span>
             </button>
 
-            {/* Order Susulan (HANYA jika DINE IN & TIDAK VOIDED & BELUM BAYAR / UNPAID) */}
-            {onAppendOrder && isDineIn && !isVoided && order.paymentStatus === 'UNPAID' && (
+            {/* Order Susulan (HANYA jika DINE IN & BUKAN LAUNDRY & TIDAK VOIDED & BELUM BAYAR / UNPAID) */}
+            {onAppendOrder && !isOrderLaundry && isDineIn && !isVoided && order.paymentStatus === 'UNPAID' && (
               <button
                 type="button"
                 onClick={() => {

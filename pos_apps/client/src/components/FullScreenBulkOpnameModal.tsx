@@ -39,6 +39,7 @@ export interface FullScreenBulkStockModalProps {
   categories?: Category[];
   ingredients: RecipeInventoryItem[];
   outlets?: Outlet[];
+  isLaundryMode?: boolean;
 }
 
 export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> = ({
@@ -52,6 +53,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
   categories: propCategories = [],
   ingredients,
   outlets: propOutlets,
+  isLaundryMode = false,
 }) => {
   // Mode Operasi: Opname, Stok Masuk, Stok Keluar, Transfer
   const [operation, setOperation] = useState<BulkOperationType>(initialOperation);
@@ -1328,7 +1330,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                             </span>
                             {row.isComposite && (
                               <span className="text-[9px] text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded font-black border border-amber-200">
-                                ✨ Olahan F&B (BOM)
+                                {isLaundryMode ? '✨ Paket Layanan' : '✨ Olahan F&B (BOM)'}
                               </span>
                             )}
                           </div>
@@ -1355,7 +1357,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                           {/* Stok Sistem */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
                             {row.isComposite ? (
-                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                              <span className="text-[11px] font-bold text-amber-600">{isLaundryMode ? '∞ (Layanan)' : '∞ (Resep)'}</span>
                             ) : (
                               <span className="text-xs font-black text-slate-700">
                                 {row.systemStock.toLocaleString('id-ID')}
@@ -1436,7 +1438,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                           {/* Stok Saat Ini */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
                             {row.isComposite ? (
-                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                              <span className="text-[11px] font-bold text-amber-600">{isLaundryMode ? '∞ (Layanan)' : '∞ (Resep)'}</span>
                             ) : (
                               <span className="text-xs font-black text-slate-700">
                                 {row.systemStock.toLocaleString('id-ID')}
@@ -1524,7 +1526,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                           {/* Stok Saat Ini */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
                             {row.isComposite ? (
-                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                              <span className="text-[11px] font-bold text-amber-600">{isLaundryMode ? '∞ (Layanan)' : '∞ (Resep)'}</span>
                             ) : (
                               <span className="text-xs font-black text-slate-700">
                                 {row.systemStock.toLocaleString('id-ID')}
@@ -1627,7 +1629,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                           {/* Stok di Asal */}
                           <td className="py-3 px-4 text-center bg-slate-100/40">
                             {row.isComposite ? (
-                              <span className="text-[11px] font-bold text-amber-600">∞ (Resep)</span>
+                              <span className="text-[11px] font-bold text-amber-600">{isLaundryMode ? '∞ (Layanan)' : '∞ (Resep)'}</span>
                             ) : (
                               <span className="text-xs font-black text-slate-700">
                                 {row.systemStock.toLocaleString('id-ID')}
@@ -1754,7 +1756,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         </span>
                         {row.isComposite && (
                           <span className="text-[10px] bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded font-extrabold border border-amber-200">
-                            ✨ Olahan F&B (BOM)
+                            {isLaundryMode ? '✨ Paket Layanan' : '✨ Olahan F&B (BOM)'}
                           </span>
                         )}
                       </div>
@@ -1766,7 +1768,7 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                         {row.isComposite ? (
                           <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] inline-flex items-center gap-1 border border-amber-200">
                             <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
-                            <span>Virtual BOM</span>
+                            <span>{isLaundryMode ? 'Layanan Terpadu' : 'Virtual BOM'}</span>
                           </span>
                         ) : !row.isOpnameModified ? (
                           <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px] inline-flex items-center gap-1">
@@ -1794,9 +1796,13 @@ export const FullScreenBulkStockModal: React.FC<FullScreenBulkStockModalProps> =
                       <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/90 text-xs text-amber-900 flex items-start gap-2.5">
                         <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                          <p className="font-extrabold text-amber-950">Menu Olahan Dapur (Virtual BOM)</p>
+                          <p className="font-extrabold text-amber-950">
+                            {isLaundryMode ? 'Layanan Cuci / Workshop (Virtual BOM)' : 'Menu Olahan Dapur (Virtual BOM)'}
+                          </p>
                           <p className="text-[11px] text-amber-800 leading-relaxed">
-                            Ketersediaan menu ini mengikuti stok bahan baku dapur. Untuk opname, belanja stok masuk, atau barang rusak, silakan beralih ke tab <strong>Bahan Baku</strong>.
+                            {isLaundryMode
+                              ? 'Ketersediaan layanan ini mengikuti stok bahan cuci workshop. Untuk opname, belanja stok bahan masuk, atau bahan habis, silakan beralih ke tab Bahan Cuci & Perlengkapan.'
+                              : 'Ketersediaan menu ini mengikuti stok bahan baku dapur. Untuk opname, belanja stok masuk, atau barang rusak, silakan beralih ke tab Bahan Baku.'}
                           </p>
                         </div>
                       </div>

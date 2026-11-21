@@ -39,6 +39,7 @@ import { exportOrdersToCsv } from '../utils/salesExportCsv';
 import { EmptyState, TableSkeleton } from '../components/ui';
 import { PaymentItemsAuditView } from './PaymentItemsAuditView';
 import { api, authStorage } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 
 import type { User as AuthUser } from '../types/auth';
 
@@ -78,6 +79,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 }) => {
   const currentUser = useMemo(() => propUser || authStorage.getUser(), [propUser]);
   const isCashierRole = currentUser?.role === 'CASHIER';
+
+  // Deteksi Vertikal Mode Laundry
+  const isLaundryMode = useMemo(() => {
+    return checkIsLaundry(activeOutlet, currentUser);
+  }, [activeOutlet, currentUser]);
 
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'payment_items'>(
     initialSubTab || 'invoices'
@@ -133,8 +139,20 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   // Ambil hanya saluran penjualan yang aktif sesuai pengaturan outlet / kanal penjualan & mitra
   const channelOptions = useMemo(() => {
     const all = normalizeSalesChannels(activeOutlet?.channelsConfig);
-    return all.filter((c) => c.isActive);
-  }, [activeOutlet?.channelsConfig]);
+    const active = all.filter((c) => c.isActive);
+    if (isLaundryMode) {
+      const fnbKanal = ['DINE_IN', 'TAKEAWAY', 'GOFOOD', 'GRABFOOD', 'SHOPEEFOOD'];
+      const filtered = active.filter((c) => !fnbKanal.includes(c.code));
+      if (filtered.length === 0) {
+        return [
+          { code: 'DIRECT_STORE' as any, name: 'Drop-off Toko', isActive: true, isCustom: false, isOnlinePartner: false },
+          { code: 'DELIVERY' as any, name: 'Antar-Jemput Kurir', isActive: true, isCustom: false, isOnlinePartner: false },
+        ];
+      }
+      return filtered;
+    }
+    return active;
+  }, [activeOutlet?.channelsConfig, isLaundryMode]);
 
   // Jika saluran yang sedang dipilih tidak lagi aktif (misal dinonaktifkan di pengaturan), reset ke 'ALL'
   useEffect(() => {
@@ -1100,9 +1118,10 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {paginatedOrders.map((order) => {
-                    const chKey = (order.channel || 'DINE_IN') as OrderChannel;
+                    const isOrderLaundry = isLaundryMode || (order as any).serviceType === 'LAUNDRY' || Boolean((order as any).laundryType) || Boolean((order as any).perfumeVariant);
+                    const chKey = (order.channel || (isOrderLaundry ? 'DIRECT_STORE' : 'DINE_IN')) as OrderChannel;
                     const chInfo = ORDER_CHANNEL_LABELS[chKey] || {
-                      label: order.channel || 'Dine In',
+                      label: isOrderLaundry ? (order.channel === 'DELIVERY' ? 'Antar-Jemput' : 'Drop-off Toko') : (order.channel || 'Dine In'),
                       color: '#1e3a8a',
                       bg: '#dbeafe',
                     };
@@ -1205,8 +1224,8 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                               </span>
                             ) : (
                               <>
-                                {/* Tombol + Susulan: HANYA DINE_IN & BELUM BAYAR (UNPAID) */}
-                                {onAppendOrder && order.channel === 'DINE_IN' && order.paymentStatus === 'UNPAID' && (
+                                {/* Tombol + Susulan: HANYA DINE_IN & BUKAN LAUNDRY & BELUM BAYAR (UNPAID) */}
+                                {onAppendOrder && !isLaundryMode && order.channel === 'DINE_IN' && order.paymentStatus === 'UNPAID' && (
                                   <button
                                     type="button"
                                     onClick={() => onAppendOrder(order)}
@@ -1243,9 +1262,10 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
             {/* Mobile Card List View (Visible on Smartphone 6.8") */}
             <div className="block md:hidden divide-y divide-slate-100">
               {paginatedOrders.map((order) => {
-                const chKey = (order.channel || 'DINE_IN') as OrderChannel;
+                const isOrderLaundry = isLaundryMode || (order as any).serviceType === 'LAUNDRY' || Boolean((order as any).laundryType) || Boolean((order as any).perfumeVariant);
+                const chKey = (order.channel || (isOrderLaundry ? 'DIRECT_STORE' : 'DINE_IN')) as OrderChannel;
                 const chInfo = ORDER_CHANNEL_LABELS[chKey] || {
-                  label: order.channel || 'Dine In',
+                  label: isOrderLaundry ? (order.channel === 'DELIVERY' ? 'Antar-Jemput' : 'Drop-off Toko') : (order.channel || 'Dine In'),
                   color: '#1e3a8a',
                   bg: '#dbeafe',
                 };
@@ -1348,8 +1368,8 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                         </span>
                       ) : (
                         <>
-                          {/* Tombol + Susulan: HANYA DINE_IN & BELUM BAYAR (UNPAID) */}
-                          {onAppendOrder && order.channel === 'DINE_IN' && order.paymentStatus === 'UNPAID' && (
+                          {/* Tombol + Susulan: HANYA DINE_IN & BUKAN LAUNDRY & BELUM BAYAR (UNPAID) */}
+                          {onAppendOrder && !isLaundryMode && order.channel === 'DINE_IN' && order.paymentStatus === 'UNPAID' && (
                             <button
                               type="button"
                               onClick={() => onAppendOrder(order)}
@@ -1440,6 +1460,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
           setOrderForDetail(null);
         }}
         order={orderForDetail}
+        isLaundryMode={isLaundryMode}
         onViewReceipt={(ord) => {
           setDetailModalOpen(false);
           handleViewReceipt(ord);

@@ -1741,6 +1741,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         categories={categories}
         ingredients={ingredients}
         outlets={allOutlets}
+        isLaundryMode={isLaundryMode}
       />
 
       {/* ========================================================================= */}
@@ -1768,6 +1769,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         isOpen={createIngredientModalOpen}
         onClose={() => setCreateIngredientModalOpen(false)}
         outletId={activeOutlet?.id}
+        isLaundryMode={isLaundryMode}
         onSuccess={() => {
           fetchIngredients();
           fetchInventory();
