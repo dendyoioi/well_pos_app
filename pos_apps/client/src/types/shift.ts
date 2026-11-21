@@ -44,6 +44,7 @@ export interface Shift {
     name: string;
     address?: string | null;
     phone?: string | null;
+    industries?: string[];
   };
   cashier?: {
     name: string;
@@ -92,7 +93,13 @@ export interface XReportData {
   paymentSummary: {
     cashSales: number;
     qrisSales: number;
+    otherNonCashSales?: number;
+    nonCashSales?: number;
     netRevenue: number;
+  };
+  receivablesSummary?: {
+    unpaidCount: number;
+    totalReceivables: number;
   };
   transactionSummary: {
     totalOrders: number;
@@ -134,8 +141,14 @@ export interface ZReportData {
   cashMovements?: any[];
   nonCashSummary: {
     totalQrisSales: number;
+    totalOtherNonCashSales?: number;
+    totalNonCashSales?: number;
     totalRevenue: number;
     avgOrderValue?: number;
+  };
+  receivablesSummary?: {
+    unpaidCount: number;
+    totalReceivables: number;
   };
   /** Breakdown omset per kanal penjualan (DINE_IN, TAKEAWAY, DELIVERY, dll) */
   channelBreakdown?: Array<{

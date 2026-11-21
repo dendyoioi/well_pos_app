@@ -1,36 +1,23 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
-  Sparkles,
-  AlertCircle,
   PackagePlus,
-  Check,
+  AlertCircle,
+  FileText,
   Image as ImageIcon,
-  Upload,
-  Plus,
-  Minus,
-  Trash2,
-  Sliders,
-  Search,
-  ChevronDown,
-  CheckCircle2,
-  Infinity as InfinityIcon,
-  Package,
-  Loader2,
   Boxes,
-  Tag,
-  ChevronUp,
-  Store,
   Utensils,
-  TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import type { Product, Category } from '../types/product';
 import type { ModifierGroup } from '../types/modifier';
 import { api } from '../services/api';
-import { CurrencyInput } from './ui/CurrencyInput';
 import { Button } from './ui/Button';
 import { useDialog } from '../context/DialogContext';
-import { compressImage } from '../utils/imageCompressor';
+import { ProductBasicInfoTab } from './product/ProductBasicInfoTab';
+import { ProductPhotoUploadTab } from './product/ProductPhotoUploadTab';
+import { ProductBundlingTab, type BundleItem, type PriceTier } from './product/ProductBundlingTab';
+import { ProductFnbSettingsTab } from './product/ProductFnbSettingsTab';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -39,40 +26,14 @@ interface ProductModalProps {
   productToEdit?: Product | null;
   categories: Category[];
   outletId?: string;
+  isLaundryMode?: boolean;
 }
 
-// Default daftar satuan unit yang umum di F&B dan Retail
 const DEFAULT_UNITS = [
-  'Pcs',
-  'Cup',
-  'Botol',
-  'Porsi',
-  'Box',
-  'Kg',
-  'Gram',
-  'Liter',
-  'Sachet',
-  'Paket',
-  'Mangkok',
-  'Piring',
-  'Gelas',
-  'Bungkus',
-  'Loyang',
-  'Potong',
-  'Set',
+  'Pcs', 'Cup', 'Botol', 'Porsi', 'Box', 'Kg', 'Gram', 'Liter', 'Sachet', 'Paket', 'Mangkok', 'Piring', 'Gelas', 'Bungkus', 'Loyang', 'Potong', 'Set',
 ];
 
-// Preset foto makanan & minuman populer F&B
-const PRESET_IMAGES = [
-  { label: '☕ Kopi', url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&auto=format&fit=crop&q=80' },
-  { label: '🧋 Boba Tea', url: 'https://images.unsplash.com/photo-1558857563-b37cf0088195?w=400&auto=format&fit=crop&q=80' },
-  { label: '🥤 Es Teh', url: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&auto=format&fit=crop&q=80' },
-  { label: '🍗 Ayam', url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&auto=format&fit=crop&q=80' },
-  { label: '🍜 Mie/Bakso', url: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&auto=format&fit=crop&q=80' },
-  { label: '🍔 Burger', url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&auto=format&fit=crop&q=80' },
-  { label: '🍟 Kentang', url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&auto=format&fit=crop&q=80' },
-  { label: '🍰 Pastry', url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&auto=format&fit=crop&q=80' },
-];
+type ModalTab = 'info' | 'photo' | 'bundling' | 'fnb';
 
 export const ProductModal: React.FC<ProductModalProps> = ({
   isOpen,
@@ -81,10 +42,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   productToEdit,
   categories,
   outletId,
+  isLaundryMode = false,
 }) => {
   const dialog = useDialog();
   const isEdit = !!productToEdit;
 
+  const [activeTab, setActiveTab] = useState<ModalTab>('info');
+
+  // Form Fields
   const [name, setName] = useState('');
   const [barcode, setBarcode] = useState('');
   const [sku, setSku] = useState('');
@@ -99,105 +64,30 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [imageUrl, setImageUrl] = useState('');
   const [isCompressingImage, setIsCompressingImage] = useState(false);
 
-  // EPIC-29: Mode Produk (F&B / Ritel Standar / Paket Komposit Bundling)
+  // Mode: F&B vs Standard Retail vs Composite Bundle
   const [productMode, setProductMode] = useState<'STANDARD' | 'FNB' | 'COMPOSITE'>('FNB');
 
-  // EPIC-29: Komponen Paket Komposit (Bundle Items)
-  const [bundleItems, setBundleItems] = useState<
-    Array<{
-      childProductId: string;
-      childVariantId?: string | null;
-      childProductName: string;
-      childUnit: string;
-      childAverageCost: number;
-      childBasePrice: number;
-      quantity: number;
-      slotName?: string;
-      priceAdjustment?: number;
-      isDefault?: boolean;
-    }>
-  >([]);
+  // Bundling (EPIC-29)
+  const [bundleItems, setBundleItems] = useState<BundleItem[]>([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [selectedChildId, setSelectedChildId] = useState('');
-  const [selectedChildQty, setSelectedChildQty] = useState<number>(1);
-  const [childSearch, setChildSearch] = useState('');
-  const [childFilterType, setChildFilterType] = useState<'ALL' | 'RETAIL' | 'FNB'>('ALL');
-  const [isChildDropdownOpen, setIsChildDropdownOpen] = useState(false);
-  const childDropdownRef = useRef<HTMLDivElement>(null);
 
-  // EPIC-29: Filter daftar komponen anak berdasarkan pencarian & filter tipe
-  const filteredAvailableProducts = useMemo(() => {
-    return availableProducts.filter((p) => {
-      // 1. Filter tipe: Ritel Fisik vs Resep F&B
-      if (childFilterType === 'RETAIL' && (p.hasRecipe || p.productType === 'COMPOSITE')) return false;
-      if (childFilterType === 'FNB' && !p.hasRecipe) return false;
-
-      // 2. Filter teks pencarian (nama, sku, atau kategori)
-      if (!childSearch.trim()) return true;
-      const q = childSearch.toLowerCase().trim();
-      const matchName = p.name.toLowerCase().includes(q);
-      const matchSku = p.sku ? p.sku.toLowerCase().includes(q) : false;
-      const matchCat = p.category?.name ? p.category.name.toLowerCase().includes(q) : false;
-      return matchName || matchSku || matchCat;
-    });
-  }, [availableProducts, childFilterType, childSearch]);
-
-  // EPIC-29: Struktur Harga Grosir Bertingkat (Price Tiers)
+  // Price Tiers (EPIC-29)
   const [showPriceTiers, setShowPriceTiers] = useState(false);
-  const [priceTiers, setPriceTiers] = useState<
-    Array<{
-      minQuantity: number;
-      tierPrice: number;
-    }>
-  >([]);
-  const [newTierMinQty, setNewTierMinQty] = useState<number | string>(3);
-  const [newTierPrice, setNewTierPrice] = useState<number>(0);
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
 
-  // Unit Search & Add State
+  // Unit & Category list state
   const [unitList, setUnitList] = useState<string[]>(DEFAULT_UNITS);
-  const [unitSearch, setUnitSearch] = useState('');
-  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
-  const unitDropdownRef = useRef<HTMLDivElement>(null);
+  const [categoryList, setCategoryList] = useState<Category[]>(categories);
+  const [showQuickCategory, setShowQuickCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
-  // Category Search State
-  const [categorySearch, setCategorySearch] = useState('');
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const categoryDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Relational Modifiers state
+  // Modifiers
   const [availableModifierGroups, setAvailableModifierGroups] = useState<ModifierGroup[]>([]);
   const [selectedModifierGroupIds, setSelectedModifierGroupIds] = useState<string[]>([]);
   const [loadingModifiers, setLoadingModifiers] = useState(false);
 
-  // Quick Category Add
-  const [showQuickCategory, setShowQuickCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [categoryList, setCategoryList] = useState<Category[]>(categories);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Handle click outside to close unit & category dropdowns
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
-        setIsUnitDropdownOpen(false);
-      }
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
-        setIsCategoryDropdownOpen(false);
-      }
-      if (childDropdownRef.current && !childDropdownRef.current.contains(event.target as Node)) {
-        setIsChildDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   useEffect(() => {
     setCategoryList(categories);
@@ -205,6 +95,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    setActiveTab('info');
+    setError(null);
 
     // Load centralized modifier groups
     const loadModifiers = async () => {
@@ -222,10 +114,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     };
     loadModifiers();
 
-    // EPIC-29: Ambil daftar produk aktif untuk komponen penyusun paket komposit
+    // Ambil daftar produk aktif untuk komponen penyusun paket komposit
     api.getProducts({ isActive: 'true', outletId }).then((res) => {
       if (res.status === 'success' && Array.isArray(res.data)) {
-        // Anti-Circular: Jangan izinkan produk membundel dirinya sendiri atau membundel paket bundle lain
         const candidates = res.data.filter(
           (p) =>
             p.id !== productToEdit?.id &&
@@ -247,7 +138,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setMinStockAlert(productToEdit.minStockAlert);
       setImageUrl(productToEdit.imageUrl || '');
 
-      // Parse description and check for hasStock metadata / productType
       let loadedHasStock = true;
       let initialMode: 'STANDARD' | 'FNB' | 'COMPOSITE' = 'FNB';
 
@@ -284,40 +174,37 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setProductMode(initialMode);
       setEditPhysicalStock(productToEdit.stock >= 99999 ? 0 : (productToEdit.stock || 0));
 
-      // Ensure unit is in unitList
       if (productToEdit.unit && !DEFAULT_UNITS.includes(productToEdit.unit)) {
         setUnitList((prev) => (prev.includes(productToEdit.unit) ? prev : [...prev, productToEdit.unit]));
       }
 
-      // Initialize selected modifier IDs from relational product.modifiers
       const linkedIds = productToEdit.modifiers?.map((m) => m.id) || [];
       setSelectedModifierGroupIds(linkedIds);
 
-      // EPIC-29: Ambil item bundle jika produk bertipe komposit
-      api.getBundleItems(productToEdit.id)
-        .then((bRes) => {
-          if (bRes.status === 'success' && bRes.data?.bundleItems) {
-            if (bRes.data.bundleItems.length > 0) {
-              setProductMode('COMPOSITE');
-            }
-            setBundleItems(
-              bRes.data.bundleItems.map((bi) => ({
-                childProductId: bi.childProductId,
-                childVariantId: bi.childVariantId || null,
-                childProductName: bi.childProductName,
-                childUnit: bi.childUnit,
-                childAverageCost: bi.childAverageCost || 0,
-                childBasePrice: bi.childBasePrice || 0,
-                quantity: bi.quantity,
-                slotName: bi.slotName || '',
-                priceAdjustment: bi.priceAdjustment || 0,
-                isDefault: Boolean(bi.isDefault),
-              }))
-            );
+      // Ambil item bundle
+      api.getBundleItems(productToEdit.id).then((bRes) => {
+        if (bRes.status === 'success' && bRes.data?.bundleItems) {
+          if (bRes.data.bundleItems.length > 0) {
+            setProductMode('COMPOSITE');
           }
-        });
+          setBundleItems(
+            bRes.data.bundleItems.map((bi) => ({
+              childProductId: bi.childProductId,
+              childVariantId: bi.childVariantId || null,
+              childProductName: bi.childProductName,
+              childUnit: bi.childUnit,
+              childAverageCost: bi.childAverageCost || 0,
+              childBasePrice: bi.childBasePrice || 0,
+              quantity: bi.quantity,
+              slotName: bi.slotName || '',
+              priceAdjustment: bi.priceAdjustment || 0,
+              isDefault: Boolean(bi.isDefault),
+            }))
+          );
+        }
+      });
 
-      // EPIC-29: Ambil struktur harga grosir (price tiers)
+      // Ambil price tiers
       api.getPriceTiers(productToEdit.id).then((tRes) => {
         if (tRes.status === 'success' && tRes.data?.priceTiers) {
           setPriceTiers(
@@ -332,7 +219,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         }
       });
     } else {
-      // Reset form
       setName('');
       setBarcode('');
       setSku('');
@@ -340,7 +226,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCostPrice(0);
       setBasePrice(0);
       setUnit('Pcs');
-      setProductMode('FNB');
+      setProductMode(isLaundryMode ? 'STANDARD' : 'FNB');
       setBundleItems([]);
       setPriceTiers([]);
       setShowPriceTiers(false);
@@ -350,69 +236,21 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setImageUrl('');
       setSelectedModifierGroupIds([]);
     }
-    setError(null);
-    setShowQuickCategory(false);
-    setNewCategoryName('');
-    setIsUnitDropdownOpen(false);
-    setUnitSearch('');
-    setIsCategoryDropdownOpen(false);
-    setCategorySearch('');
-  }, [productToEdit, isOpen]);
+  }, [productToEdit, isOpen, categories, outletId, isLaundryMode]);
 
   if (!isOpen) return null;
 
-  // Generator Barcode acak untuk memudahkan pengujian kasir
   const generateRandomBarcode = () => {
     const randomEan = '899' + Math.floor(1000000000 + Math.random() * 9000000000);
     setBarcode(randomEan);
   };
 
-  // Generator SKU otomatis berdasarkan nama atau kategori
   const generateAutoSku = () => {
     const cat = categoryList.find((c) => c.id === categoryId)?.name.substring(0, 3).toUpperCase() || 'ITM';
     const rand = Math.floor(100 + Math.random() * 900);
     setSku(`${cat}-${rand}`);
   };
 
-  // Handle local image file upload dengan kompresi otomatis di browser
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError('Format berkas harus berupa gambar (JPG, PNG, WebP).');
-      return;
-    }
-
-    // Mengizinkan file kamera resolusi tinggi hingga 15MB karena akan diproses otomatis
-    if (file.size > 15 * 1024 * 1024) {
-      setError('Ukuran file foto maksimal 15MB');
-      return;
-    }
-
-    setIsCompressingImage(true);
-    setError(null);
-
-    try {
-      const result = await compressImage(file, {
-        maxWidth: 400,
-        maxHeight: 400,
-        quality: 0.75,
-        mimeType: 'image/webp',
-      });
-      setImageUrl(result.dataUrl);
-      dialog.toast('Foto produk berhasil diunggah', 'success');
-    } catch (err: any) {
-      setError(err?.message || 'Gagal memproses foto produk');
-    } finally {
-      setIsCompressingImage(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // Handle Quick Category Create
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
     try {
@@ -422,8 +260,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         setCategoryId(res.data.id);
         setNewCategoryName('');
         setShowQuickCategory(false);
-        setIsCategoryDropdownOpen(false);
-        setCategorySearch('');
         dialog.toast(`Kategori "${res.data.name}" berhasil ditambahkan`, 'success');
       } else {
         dialog.alert({
@@ -441,7 +277,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
   };
 
-  // Handle Create Category directly from Search bar
   const handleCreateCategoryFromSearch = async (catName: string) => {
     const trimmed = catName.trim();
     if (!trimmed) return;
@@ -450,26 +285,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       if (res.status === 'success' && res.data) {
         setCategoryList((prev) => [...prev, res.data!]);
         setCategoryId(res.data.id);
-        setIsCategoryDropdownOpen(false);
-        setCategorySearch('');
-        dialog.toast(`Kategori "${res.data.name}" berhasil ditambahkan`, 'success');
-      } else {
-        dialog.alert({
-          title: 'Gagal Menambah Kategori',
-          message: res.message || 'Gagal menambahkan kategori.',
-          variant: 'danger',
-        });
+        dialog.toast(`Kategori "${res.data.name}" berhasil dibuat`, 'success');
       }
     } catch {
-      dialog.alert({
-        title: 'Kesalahan Sistem',
-        message: 'Terjadi kesalahan saat menambah kategori.',
-        variant: 'danger',
-      });
+      // Ignored
     }
   };
 
-  // Handle Add Custom Unit
   const handleAddCustomUnit = (newUnitStr: string) => {
     const trimmed = newUnitStr.trim();
     if (!trimmed) return;
@@ -477,144 +299,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setUnitList((prev) => [...prev, trimmed]);
     }
     setUnit(trimmed);
-    setUnitSearch('');
-    setIsUnitDropdownOpen(false);
   };
 
-  // Toggle pemilihan grup modifier terpusat untuk produk ini
   const toggleModifierGroup = (groupId: string) => {
     setSelectedModifierGroupIds((prev) =>
       prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
     );
-  };
-
-  // EPIC-29: Tambah komponen produk ke dalam paket komposit
-  const handleAddBundleItem = (productToAdd?: Product) => {
-    const targetId = productToAdd ? productToAdd.id : selectedChildId;
-    if (!targetId) return;
-    const prod = productToAdd || availableProducts.find((p) => p.id === targetId);
-    if (!prod) return;
-
-    if (bundleItems.some((bi) => bi.childProductId === targetId)) {
-      dialog.alert({
-        title: 'Komponen Sudah Ada',
-        message: `Produk "${prod.name}" sudah terdaftar di dalam paket ini. Anda dapat langsung mengatur rasio kuantitasnya pada tabel di bawah.`,
-        variant: 'warning',
-      });
-      return;
-    }
-
-    setBundleItems((prev) => [
-      ...prev,
-      {
-        childProductId: prod.id,
-        childVariantId: prod.variants?.[0]?.id || null,
-        childProductName: prod.name,
-        childUnit: prod.unit || 'Pcs',
-        childAverageCost: prod.costPrice || 0,
-        childBasePrice: prod.price || prod.basePrice || 0,
-        quantity: Math.max(1, Number(selectedChildQty) || 1),
-      },
-    ]);
-    setSelectedChildId('');
-    setSelectedChildQty(1);
-    setIsChildDropdownOpen(false);
-    setChildSearch('');
-  };
-
-  // EPIC-29: Ubah rasio kuantitas komponen paket langsung dari baris tabel
-  const handleUpdateBundleItemQty = (childId: string, delta: number) => {
-    setBundleItems((prev) =>
-      prev.map((bi) => {
-        if (bi.childProductId === childId) {
-          const nextQty = Math.max(1, bi.quantity + delta);
-          return { ...bi, quantity: nextQty };
-        }
-        return bi;
-      })
-    );
-  };
-
-  // EPIC-29: Hapus komponen dari paket komposit
-  const handleRemoveBundleItem = (childId: string) => {
-    setBundleItems((prev) => prev.filter((bi) => bi.childProductId !== childId));
-  };
-
-  // EPIC-29: Update Slot Pilihan Dinamis (Combo Slot)
-  const handleUpdateBundleItemSlot = (childId: string, slotName: string) => {
-    setBundleItems((prev) =>
-      prev.map((bi) => (bi.childProductId === childId ? { ...bi, slotName } : bi))
-    );
-  };
-
-  const handleUpdateBundleItemPriceAdjustment = (childId: string, priceAdjustment: number) => {
-    setBundleItems((prev) =>
-      prev.map((bi) => (bi.childProductId === childId ? { ...bi, priceAdjustment } : bi))
-    );
-  };
-
-  const handleUpdateBundleItemDefault = (childId: string, isDefault: boolean) => {
-    setBundleItems((prev) => {
-      const currentSlot = prev.find((p) => p.childProductId === childId)?.slotName;
-      return prev.map((bi) => {
-        if (bi.childProductId === childId) {
-          return { ...bi, isDefault };
-        }
-        // Jika dalam slot yang sama dan diset true, reset item lain di slot yang sama agar single default
-        if (isDefault && currentSlot && bi.slotName === currentSlot) {
-          return { ...bi, isDefault: false };
-        }
-        return bi;
-      });
-    });
-  };
-
-  // EPIC-29: Hitung total estimasi HPP komposit dari seluruh komponen
-  const estimatedBundleHpp = bundleItems.reduce(
-    (acc, bi) => acc + bi.childAverageCost * bi.quantity,
-    0
-  );
-
-  // EPIC-29: Tambah tingkat harga grosir bertingkat
-  const handleAddPriceTier = () => {
-    const minQty = Number(newTierMinQty);
-    if (!minQty || minQty < 2) {
-      dialog.alert({
-        title: 'Minimal Beli Tidak Valid',
-        message: 'Minimal pembelian untuk harga grosir harus minimal 2 unit (pembelian 1 unit menggunakan Harga Jual Reguler).',
-        variant: 'warning',
-      });
-      return;
-    }
-    if (newTierPrice <= 0) {
-      dialog.alert({
-        title: 'Harga Grosir Tidak Valid',
-        message: 'Harga grosir harus lebih besar dari Rp 0.',
-        variant: 'warning',
-      });
-      return;
-    }
-    if (priceTiers.some((pt) => pt.minQuantity === minQty)) {
-      dialog.alert({
-        title: 'Tier Sudah Terdaftar',
-        message: `Tingkat harga grosir untuk minimal ${minQty} unit sudah ada.`,
-        variant: 'warning',
-      });
-      return;
-    }
-
-    setPriceTiers((prev) =>
-      [...prev, { minQuantity: minQty, tierPrice: newTierPrice }].sort(
-        (a, b) => a.minQuantity - b.minQuantity
-      )
-    );
-    setNewTierMinQty(minQty + 2);
-    setNewTierPrice(0);
-  };
-
-  // EPIC-29: Hapus tingkat harga grosir
-  const handleRemovePriceTier = (minQty: number) => {
-    setPriceTiers((prev) => prev.filter((pt) => pt.minQuantity !== minQty));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -631,7 +321,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     setLoading(true);
 
-    // Encode metadata hasStock ke deskripsi untuk kompatibilitas filter F&B
     let finalDescription = description.trim();
     if (!isStandard) {
       finalDescription = JSON.stringify({
@@ -691,7 +380,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         targetProductId = res.data.id;
       }
 
-      // Sinkronisasi komponen paket komposit jika dipilih
       if (targetProductId) {
         await api.updateBundleItems(
           targetProductId,
@@ -707,7 +395,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             : []
         );
 
-        // Sinkronisasi tingkat harga grosir bertingkat
         await api.updatePriceTiers(
           targetProductId,
           priceTiers.map((pt) => ({
@@ -716,8 +403,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           }))
         );
 
-        // Sinkronisasi relasi modifier terpusat
-        if (selectedModifierGroupIds.length > 0) {
+        if (selectedModifierGroupIds.length > 0 && !isLaundryMode) {
           await api.linkProductModifiers(targetProductId, selectedModifierGroupIds);
         }
       }
@@ -734,1353 +420,219 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
       <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
-        {/* Header Modal */}
+        {/* Modal Header */}
         <div className="px-5 py-4 sm:px-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-sm shrink-0">
               <PackagePlus className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-extrabold text-blue-950 text-base sm:text-lg truncate">
-                {isEdit ? 'Edit Data Produk' : 'Tambah Produk Baru'}
+              <h3 className="font-black text-slate-900 text-base leading-tight truncate">
+                {isEdit ? 'Ubah Informasi Produk' : 'Tambah Produk Baru'}
               </h3>
               <p className="text-xs text-slate-500 truncate">
-                {isEdit
-                  ? 'Perbarui informasi katalog, foto, harga, dan kustomisasi rasa/topping'
-                  : 'Input data katalog, foto produk, dan kustomisasi makanan/minuman'}
+                {isEdit ? `ID: ${productToEdit?.sku || '-'}` : 'Lengkapi data katalog produk toko'}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0 ml-2"
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Isi */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-6 flex-1 text-slate-800">
-            {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-medium">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+        {/* Tab Navigation */}
+        <div className="px-5 sm:px-6 pt-2 border-b border-slate-200 bg-white shrink-0 flex items-center gap-2 overflow-x-auto text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setActiveTab('info')}
+            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeTab === 'info'
+                ? 'border-blue-900 text-blue-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Info Dasar & Harga</span>
+          </button>
 
-          {/* Section 1: Foto Produk */}
-          <div className="bg-slate-50/70 border border-slate-200 p-4 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-blue-900" />
-                <span>Foto Produk</span>
-              </label>
-              <span className="text-[11px] text-slate-400">Pilih template foto atau upload mandiri</span>
-            </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('photo')}
+            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeTab === 'photo'
+                ? 'border-blue-900 text-blue-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>Foto Produk</span>
+            {imageUrl && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+          </button>
 
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              {/* Preview Box */}
-              <div className="relative w-28 h-28 rounded-2xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner group">
-                {imageUrl ? (
-                  <>
-                    <img
-                      src={imageUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                      onError={() => setImageUrl('')}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl('')}
-                      className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1"
-                    >
-                      <Trash2 className="w-4 h-4 text-rose-300" /> Hapus
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center p-2 text-slate-400">
-                    <ImageIcon className="w-8 h-8 mx-auto mb-1 opacity-40" />
-                    <span className="text-[10px] leading-tight block">Belum ada foto</span>
-                  </div>
-                )}
-              </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('bundling')}
+            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeTab === 'bundling'
+                ? 'border-blue-900 text-blue-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Boxes className="w-4 h-4" />
+            <span>Varian & Bundling</span>
+            {(bundleItems.length > 0 || priceTiers.length > 0) && (
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+            )}
+          </button>
 
-              {/* Upload & Presets */}
-              <div className="flex-1 space-y-2.5 w-full">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Tempel URL gambar (https://...)"
-                    className="flex-1 bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3 py-2 text-xs outline-none"
-                  />
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    disabled={isCompressingImage}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm whitespace-nowrap disabled:opacity-50"
-                  >
-                    {isCompressingImage ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 text-blue-900 animate-spin" />
-                        <span>Memproses...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-3.5 h-3.5 text-blue-900" />
-                        <span>Upload File</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Preset Chips */}
-                <div>
-                  <div className="text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
-                    Foto Cepat (Klik untuk memilih):
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_IMAGES.map((preset, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setImageUrl(preset.url)}
-                        className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${
-                          imageUrl === preset.url
-                            ? 'bg-blue-900 text-white border-blue-900 font-bold shadow-sm'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Informasi Utama */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Nama Produk */}
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Nama Produk *
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="misal: Kopi Susu Aren Spesial"
-                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none"
-              />
-            </div>
-
-            {/* Kategori dengan shortcut Tambah Cepat dan Pencarian */}
-            <div className="relative" ref={categoryDropdownRef}>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700">
-                  Kategori *
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickCategory(!showQuickCategory)}
-                  className="text-[11px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
-                >
-                  <Plus className="w-3 h-3" /> Kategori Baru
-                </button>
-              </div>
-
-              {showQuickCategory ? (
-                <div className="flex items-center gap-1.5 mb-2 p-2 bg-blue-50/60 border border-blue-200 rounded-xl">
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Nama kategori baru..."
-                    className="flex-1 bg-white border border-blue-300 text-xs px-2.5 py-1.5 rounded-lg outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCreateCategory}
-                    className="px-2.5 py-1.5 bg-blue-900 text-white text-xs font-bold rounded-lg shadow-sm cursor-pointer"
-                  >
-                    Simpan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickCategory(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : null}
-
-              {/* Custom Searchable Category Dropdown Button */}
-              <button
-                type="button"
-                id="product-category-btn"
-                onClick={() => {
-                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
-                  setIsUnitDropdownOpen(false);
-                }}
-                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none flex items-center justify-between text-left cursor-pointer shadow-xs"
-              >
-                <span className="truncate font-medium text-slate-800">
-                  {categoryList.find((c) => c.id === categoryId)?.name || '-- Pilih Kategori --'}
+          {/* Tab Khusus F&B — Disembunyikan total jika dalam mode Laundry */}
+          {!isLaundryMode && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('fnb')}
+              className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === 'fnb'
+                  ? 'border-blue-900 text-blue-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Utensils className="w-4 h-4" />
+              <span>Resep & Topping (F&B)</span>
+              {selectedModifierGroupIds.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-900 text-[10px]">
+                  {selectedModifierGroupIds.length}
                 </span>
-                <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-              </button>
-
-              {/* Popover Pencarian Kategori */}
-              {isCategoryDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 space-y-1.5 animate-fadeIn">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={categorySearch}
-                      onChange={(e) => setCategorySearch(e.target.value)}
-                      placeholder="Ketik untuk mencari kategori..."
-                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-900 focus:bg-white"
-                    />
-                  </div>
-
-                  <div className="max-h-44 overflow-y-auto space-y-0.5">
-                    {categoryList
-                      .filter((c) => c.name.toLowerCase().includes(categorySearch.toLowerCase()))
-                      .map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setCategoryId(c.id);
-                            setIsCategoryDropdownOpen(false);
-                            setCategorySearch('');
-                          }}
-                          className={`w-full px-3 py-2 text-xs rounded-xl flex items-center justify-between text-left transition-colors cursor-pointer ${
-                            c.id === categoryId
-                              ? 'bg-blue-900 text-white font-bold shadow-xs'
-                              : 'text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          <span>{c.name}</span>
-                          {c.id === categoryId && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      ))}
-
-                    {categoryList.filter((c) =>
-                      c.name.toLowerCase().includes(categorySearch.toLowerCase())
-                    ).length === 0 && (
-                      <div className="p-3 text-center text-xs text-slate-400">
-                        Kategori "{categorySearch}" tidak ditemukan
-                      </div>
-                    )}
-                  </div>
-
-                  {categorySearch.trim() &&
-                    !categoryList.some(
-                      (c) => c.name.toLowerCase() === categorySearch.trim().toLowerCase()
-                    ) && (
-                      <div className="pt-1.5 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => handleCreateCategoryFromSearch(categorySearch)}
-                          className="w-full px-3 py-2 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Buat kategori "{categorySearch.trim()}"</span>
-                        </button>
-                      </div>
-                    )}
-                </div>
               )}
-            </div>
+            </button>
+          )}
+        </div>
 
-            {/* Satuan Unit dengan Pencarian dan Tambah Mandiri */}
-            <div className="relative" ref={unitDropdownRef}>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700">
-                  Satuan Unit *
-                </label>
-                <span className="text-[10px] text-slate-400">Bisa cari & tambah</span>
+        {/* Modal Form Body */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-4 flex-1">
+            {error && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
+            )}
 
-              {/* Custom Searchable Unit Dropdown Button */}
-              <button
-                type="button"
-                id="product-unit-btn"
-                onClick={() => {
-                  setIsUnitDropdownOpen(!isUnitDropdownOpen);
-                  setIsCategoryDropdownOpen(false);
-                }}
-                className="w-full bg-white border border-slate-300 hover:border-slate-400 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none flex items-center justify-between text-left cursor-pointer shadow-xs"
-              >
-                <span className="font-semibold text-slate-800">{unit}</span>
-                <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-              </button>
-
-              {/* Popover Pencarian Satuan Unit */}
-              {isUnitDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 space-y-1.5 animate-fadeIn">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={unitSearch}
-                      onChange={(e) => setUnitSearch(e.target.value)}
-                      placeholder="Cari atau ketik satuan baru..."
-                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-900 focus:bg-white"
-                    />
-                  </div>
-
-                  <div className="max-h-44 overflow-y-auto space-y-0.5">
-                    {unitList
-                      .filter((u) => u.toLowerCase().includes(unitSearch.toLowerCase()))
-                      .map((uItem) => (
-                        <button
-                          key={uItem}
-                          type="button"
-                          onClick={() => {
-                            setUnit(uItem);
-                            setIsUnitDropdownOpen(false);
-                            setUnitSearch('');
-                          }}
-                          className={`w-full px-3 py-1.5 text-xs rounded-xl flex items-center justify-between text-left transition-colors cursor-pointer ${
-                            uItem === unit
-                              ? 'bg-blue-900 text-white font-bold shadow-xs'
-                              : 'text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          <span>{uItem}</span>
-                          {uItem === unit && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      ))}
-
-                    {unitList.filter((u) =>
-                      u.toLowerCase().includes(unitSearch.toLowerCase())
-                    ).length === 0 && (
-                      <div className="p-3 text-center text-xs text-slate-400">
-                        Satuan "{unitSearch}" belum ada
-                      </div>
-                    )}
-                  </div>
-
-                  {unitSearch.trim() &&
-                    !unitList.some(
-                      (u) => u.toLowerCase() === unitSearch.trim().toLowerCase()
-                    ) && (
-                      <div className="pt-1.5 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => handleAddCustomUnit(unitSearch)}
-                          className="w-full px-3 py-2 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Gunakan "{unitSearch.trim()}" sebagai satuan baru</span>
-                        </button>
-                      </div>
-                    )}
-                </div>
-              )}
-            </div>
-
-            {/* Barcode EAN */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700">
-                  Barcode (EAN-13) *
-                </label>
-                <button
-                  type="button"
-                  onClick={generateRandomBarcode}
-                  className="text-[11px] font-semibold text-blue-900 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles className="w-3 h-3" /> Auto
-                </button>
-              </div>
-              <input
-                type="text"
-                required
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                placeholder="misal: 8991234567809"
-                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm font-mono transition-all outline-none"
+            {activeTab === 'info' && (
+              <ProductBasicInfoTab
+                name={name}
+                setName={setName}
+                categoryId={categoryId}
+                setCategoryId={setCategoryId}
+                categoryList={categoryList}
+                showQuickCategory={showQuickCategory}
+                setShowQuickCategory={setShowQuickCategory}
+                newCategoryName={newCategoryName}
+                setNewCategoryName={setNewCategoryName}
+                handleCreateCategory={handleCreateCategory}
+                handleCreateCategoryFromSearch={handleCreateCategoryFromSearch}
+                unit={unit}
+                setUnit={setUnit}
+                unitList={unitList}
+                handleAddCustomUnit={handleAddCustomUnit}
+                barcode={barcode}
+                setBarcode={setBarcode}
+                generateRandomBarcode={generateRandomBarcode}
+                sku={sku}
+                setSku={setSku}
+                generateAutoSku={generateAutoSku}
+                costPrice={costPrice}
+                setCostPrice={setCostPrice}
+                basePrice={basePrice}
+                setBasePrice={setBasePrice}
+                productMode={productMode}
+                isEdit={isEdit}
+                initialStock={initialStock}
+                setInitialStock={setInitialStock}
+                editPhysicalStock={editPhysicalStock}
+                setEditPhysicalStock={setEditPhysicalStock}
+                minStockAlert={minStockAlert}
+                setMinStockAlert={setMinStockAlert}
+                description={description}
+                setDescription={setDescription}
               />
-            </div>
+            )}
 
-            {/* SKU */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700">
-                  Kode SKU *
-                </label>
-                <button
-                  type="button"
-                  onClick={generateAutoSku}
-                  className="text-[11px] font-semibold text-blue-900 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles className="w-3 h-3" /> Auto
-                </button>
-              </div>
-              <input
-                type="text"
-                required
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="misal: DRK-001"
-                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm font-mono transition-all outline-none"
+            {activeTab === 'photo' && (
+              <ProductPhotoUploadTab
+                imageUrl={imageUrl}
+                setImageUrl={setImageUrl}
+                isCompressingImage={isCompressingImage}
+                setIsCompressingImage={setIsCompressingImage}
+                onError={setError}
               />
-            </div>
+            )}
 
-            {/* Harga Modal (HPP) - Auto-Format Rupiah */}
-            <div>
-              <CurrencyInput
-                id="product-cost-price"
-                label="Harga Modal (HPP)"
-                required
-                value={costPrice}
-                onChange={(val) => setCostPrice(val)}
-                placeholder="0"
-                inputClassName="font-semibold text-slate-900"
+            {activeTab === 'bundling' && (
+              <ProductBundlingTab
+                productMode={productMode}
+                setProductMode={setProductMode}
+                availableProducts={availableProducts}
+                bundleItems={bundleItems}
+                setBundleItems={setBundleItems}
+                basePrice={basePrice}
+                costPrice={costPrice}
+                setCostPrice={setCostPrice}
+                unit={unit}
+                priceTiers={priceTiers}
+                setPriceTiers={setPriceTiers}
+                showPriceTiers={showPriceTiers}
+                setShowPriceTiers={setShowPriceTiers}
               />
-            </div>
+            )}
 
-            {/* Harga Jual (HPJ) - Auto-Format Rupiah */}
-            <div>
-              <CurrencyInput
-                id="product-base-price"
-                label="Harga Jual Standar"
-                required
-                value={basePrice}
-                onChange={(val) => setBasePrice(val)}
-                placeholder="0"
-                inputClassName="font-bold text-blue-950"
+            {activeTab === 'fnb' && !isLaundryMode && (
+              <ProductFnbSettingsTab
+                productMode={productMode}
+                setProductMode={setProductMode}
+                availableModifierGroups={availableModifierGroups}
+                selectedModifierGroupIds={selectedModifierGroupIds}
+                toggleModifierGroup={toggleModifierGroup}
+                loadingModifiers={loadingModifiers}
               />
-            </div>
-
-            {/* Opsi Tipe Pengelolaan: Olahan F&B (Made to Order) vs Barang Ritel vs Paket Komposit Bundling */}
-            <div className="sm:col-span-2 bg-slate-50/90 border border-slate-200 rounded-2xl p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <Package className="w-4 h-4 text-blue-900" />
-                    Tipe Produk & Kontrol Stok
-                  </span>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {productMode === 'COMPOSITE'
-                      ? 'Paket Komposit (Bundling): Membungkus beberapa produk jadi (bisa produk ritel kemasan, olahan F&B, atau campuran keduanya) & memotong stok anak otomatis.'
-                      : productMode === 'FNB'
-                      ? 'Olahan Dapur F&B (Made-to-Order): Kasir tidak diblokir sisa stok, pengurangan bahan baku dilacak via Resep/BOM.'
-                      : 'Barang Kemasan Ritel Fisik: Kuantitas stok dihitung per unit dan berkurang langsung di kasir.'}
-                  </p>
-                </div>
-
-                {/* 3-Way Segmented Toggle Control */}
-                <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1 flex-shrink-0 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProductMode('FNB');
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      productMode === 'FNB'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <InfinityIcon className={`w-3.5 h-3.5 ${productMode === 'FNB' ? 'text-amber-300' : 'text-slate-400'}`} />
-                    Resep / Dapur F&B
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProductMode('STANDARD');
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      productMode === 'STANDARD'
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${productMode === 'STANDARD' ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    Ritel Fisik
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProductMode('COMPOSITE');
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      productMode === 'COMPOSITE'
-                        ? 'bg-amber-800 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Boxes className={`w-3.5 h-3.5 ${productMode === 'COMPOSITE' ? 'text-amber-200' : 'text-slate-400'}`} />
-                    Paket Komposit
-                  </button>
-                </div>
-              </div>
-
-              {/* Sub-Panel 1: Mode Resep / Dapur F&B */}
-              {productMode === 'FNB' && (
-                <div className="p-3 bg-blue-50 border border-blue-200/90 rounded-xl text-xs text-blue-950 flex items-center gap-2">
-                  <span className="text-base">🍳</span>
-                  <span>
-                    Produk diatur sebagai <strong>Menu Olahan Dapur F&B (Made-to-Order)</strong>. Kasir dapat menjual bebas tanpa pembatasan kuantitas etalase. Bahan baku (kopi, gula, susu, dll.) dipotong otomatis saat transaksi melalui sistem <strong>Resep / BOM</strong>.
-                  </span>
-                </div>
-              )}
-
-              {/* Sub-Panel 2: Mode Ritel Fisik Standar */}
-              {productMode === 'STANDARD' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-200/70">
-                  {!isEdit ? (
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-700">
-                          Stok Awal Fisik (Opsional)
-                        </label>
-                        <span className="text-[10px] text-slate-400 font-medium">Bisa 0</span>
-                      </div>
-                      <input
-                        type="number"
-                        min={0}
-                        value={initialStock === 0 ? '' : initialStock}
-                        placeholder="0 (Bisa diisi nanti via Stok Masuk Gudang)"
-                        onChange={(e) => setInitialStock(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none"
-                      />
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Biarkan kosong/0 jika stok akan dimasukkan nanti lewat menu Stok Masuk (PO Gudang) atau Transfer Toko.
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-700">
-                          Saldo Stok Fisik Toko Saat Ini
-                        </label>
-                        <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                          Ritel Fisik
-                        </span>
-                      </div>
-                      <input
-                        type="number"
-                        min={0}
-                        value={editPhysicalStock}
-                        onChange={(e) => setEditPhysicalStock(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none font-bold text-blue-950"
-                      />
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Kuantitas fisik riil di toko. Jika beralih dari Olahan F&B, sistem otomatis mengalibrasi saldo dari dummy 999.999 ke angka ini.
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Batas Minimum Notifikasi Stok Menipis
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={minStockAlert}
-                      onChange={(e) => setMinStockAlert(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Sub-Panel 3: Mode Paket Komposit Bundling (EPIC-29) */}
-              {productMode === 'COMPOSITE' && (
-                <div className="pt-2.5 border-t border-slate-200/70 space-y-3">
-                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-2.5">
-                    <Boxes className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                    <div className="text-xs text-amber-950">
-                      <p className="font-bold">Paket Komposit / Bundling (Bisa Produk Ritel, F&B, atau Campuran)</p>
-                      <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
-                        Daftarkan produk-produk satuan yang menyusun paket ini (bisa sesama produk ritel kemasan, menu olahan dapur, atau kombinasi keduanya). Saat kasir menjual paket ini, sistem otomatis memotong stok fisik atau bahan baku dari masing-masing produk anak secara proporsional.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Form Tambah Produk Anak ke Paket (Searchable Combobox) */}
-                  <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                        <Plus className="w-3.5 h-3.5 text-blue-900" />
-                        Pilih & Tambah Komponen Anak
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-medium">
-                        Tersedia {availableProducts.length} produk katalog
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-start">
-                      {/* Searchable Combobox Trigger & Popover */}
-                      <div className="sm:col-span-8 relative" ref={childDropdownRef}>
-                        {selectedChildId ? (
-                          (() => {
-                            const sel = availableProducts.find((p) => p.id === selectedChildId);
-                            if (!sel) return null;
-                            const isRetail = !sel.hasRecipe && sel.productType !== 'COMPOSITE';
-                            return (
-                              <div className="w-full bg-blue-50/70 border border-blue-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2 shadow-2xs">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  {sel.imageUrl ? (
-                                    <img
-                                      src={sel.imageUrl}
-                                      alt={sel.name}
-                                      className="w-8 h-8 rounded-lg object-cover shrink-0 border border-blue-200"
-                                    />
-                                  ) : (
-                                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 text-blue-900">
-                                      {isRetail ? <Store className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
-                                    </div>
-                                  )}
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-bold text-slate-900 truncate">{sel.name}</p>
-                                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                      <span
-                                        className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                                          isRetail
-                                            ? 'bg-emerald-100 text-emerald-800'
-                                            : 'bg-blue-100 text-blue-800'
-                                        }`}
-                                      >
-                                        {isRetail ? `Stok: ${sel.stock} ${sel.unit || 'Pcs'}` : 'Resep F&B'}
-                                      </span>
-                                      <span className="text-[10px] text-slate-500 font-mono">
-                                        HPP: Rp {Number(sel.costPrice || 0).toLocaleString('id-ID')}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedChildId('')}
-                                    className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-white transition-colors cursor-pointer"
-                                    title="Ganti produk"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setIsChildDropdownOpen(!isChildDropdownOpen)}
-                                    className="p-1 text-blue-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
-                                  >
-                                    <ChevronDown className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })()
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setIsChildDropdownOpen(!isChildDropdownOpen)}
-                            className="w-full bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 outline-none transition-all cursor-pointer flex items-center justify-between text-left shadow-2xs"
-                          >
-                            <span className="flex items-center gap-2 text-slate-500">
-                              <Search className="w-3.5 h-3.5 text-slate-400" />
-                              <span>Cari & pilih produk komponen anak...</span>
-                            </span>
-                            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                          </button>
-                        )}
-
-                        {/* Popover Pencarian Produk Komponen */}
-                        {isChildDropdownOpen && (
-                          <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2.5 space-y-2 animate-fadeIn max-w-full">
-                            {/* Input Search Bar */}
-                            <div className="relative">
-                              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                              <input
-                                autoFocus
-                                type="text"
-                                value={childSearch}
-                                onChange={(e) => setChildSearch(e.target.value)}
-                                placeholder="Ketik nama produk, SKU, atau kategori..."
-                                className="w-full pl-8 pr-7 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-900 focus:bg-white font-medium text-slate-800"
-                              />
-                              {childSearch && (
-                                <button
-                                  type="button"
-                                  onClick={() => setChildSearch('')}
-                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Filter Chips: Semua / Ritel / Resep */}
-                            <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2 overflow-x-auto text-[10px]">
-                              <button
-                                type="button"
-                                onClick={() => setChildFilterType('ALL')}
-                                className={`px-2 py-1 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
-                                  childFilterType === 'ALL'
-                                    ? 'bg-blue-900 text-white'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                Semua ({availableProducts.length})
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setChildFilterType('RETAIL')}
-                                className={`px-2 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
-                                  childFilterType === 'RETAIL'
-                                    ? 'bg-emerald-800 text-white'
-                                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                                }`}
-                              >
-                                <Store className="w-2.5 h-2.5" />
-                                Ritel Fisik ({availableProducts.filter((p) => !p.hasRecipe && p.productType !== 'COMPOSITE').length})
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setChildFilterType('FNB')}
-                                className={`px-2 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
-                                  childFilterType === 'FNB'
-                                    ? 'bg-blue-800 text-white'
-                                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
-                                }`}
-                              >
-                                <Utensils className="w-2.5 h-2.5" />
-                                Resep F&B ({availableProducts.filter((p) => p.hasRecipe).length})
-                              </button>
-                            </div>
-
-                            {/* Daftar Produk Hasil Filter */}
-                            <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 pr-0.5 space-y-0.5">
-                              {filteredAvailableProducts.length === 0 ? (
-                                <div className="p-4 text-center text-xs text-slate-400">
-                                  Tidak ada produk yang cocok dengan pencarian &quot;{childSearch}&quot;.
-                                </div>
-                              ) : (
-                                filteredAvailableProducts.map((p) => {
-                                  const isRetail = !p.hasRecipe && p.productType !== 'COMPOSITE';
-                                  const existingInBundle = bundleItems.find((bi) => bi.childProductId === p.id);
-                                  const isSelected = selectedChildId === p.id;
-
-                                  return (
-                                    <div
-                                      key={p.id}
-                                      onClick={() => {
-                                        setSelectedChildId(p.id);
-                                        setIsChildDropdownOpen(false);
-                                      }}
-                                      className={`p-2 rounded-xl flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
-                                        isSelected
-                                          ? 'bg-blue-50/80'
-                                          : 'hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        {p.imageUrl ? (
-                                          <img
-                                            src={p.imageUrl}
-                                            alt={p.name}
-                                            className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200"
-                                          />
-                                        ) : (
-                                          <div
-                                            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                              isRetail ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'
-                                            }`}
-                                          >
-                                            {isRetail ? <Store className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
-                                          </div>
-                                        )}
-                                        <div className="min-w-0">
-                                          <p className="text-xs font-bold text-slate-900 truncate">{p.name}</p>
-                                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                            {p.category && (
-                                              <span className="text-[10px] text-slate-400">
-                                                {p.category.name}
-                                              </span>
-                                            )}
-                                            <span
-                                              className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                                                isRetail
-                                                  ? 'bg-emerald-100 text-emerald-800'
-                                                  : 'bg-blue-100 text-blue-800'
-                                              }`}
-                                            >
-                                              {isRetail ? `Stok: ${p.stock} ${p.unit || 'Pcs'}` : 'Resep Dapur'}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <div className="text-right">
-                                          <p className="text-xs font-bold font-mono text-slate-800">
-                                            Rp {Number(p.costPrice || 0).toLocaleString('id-ID')}
-                                          </p>
-                                          <p className="text-[10px] text-slate-400">HPP / {p.unit || 'Pcs'}</p>
-                                        </div>
-
-                                        {existingInBundle ? (
-                                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
-                                            Di paket ({existingInBundle.quantity}x)
-                                          </span>
-                                        ) : (
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleAddBundleItem(p);
-                                            }}
-                                            className="px-2 py-1 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-0.5 shadow-2xs"
-                                          >
-                                            <Plus className="w-3 h-3" />
-                                            <span>Tambah</span>
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Stepper Qty Rasio */}
-                      <div className="sm:col-span-2">
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedChildQty(Math.max(1, selectedChildQty - 1))}
-                            className="px-2 py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <input
-                            type="number"
-                            min={1}
-                            value={selectedChildQty}
-                            onChange={(e) => setSelectedChildQty(Math.max(1, Number(e.target.value) || 1))}
-                            className="w-full bg-transparent text-xs font-bold text-slate-800 text-center outline-none py-2"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setSelectedChildQty(selectedChildQty + 1)}
-                            className="px-2 py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Tombol Tambah ke Paket */}
-                      <div className="sm:col-span-2">
-                        <button
-                          type="button"
-                          disabled={!selectedChildId}
-                          onClick={() => handleAddBundleItem()}
-                          className="w-full py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed shadow-2xs flex items-center justify-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>+ Tambah</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Daftar Komponen yang Telah Ditambahkan ke Paket */}
-                  {bundleItems.length === 0 ? (
-                    <div className="p-6 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center space-y-1.5">
-                      <Boxes className="w-8 h-8 text-slate-300 mx-auto" />
-                      <p className="text-xs font-bold text-slate-600">Belum Ada Komponen di Dalam Paket</p>
-                      <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                        Gunakan kotak pencarian di atas untuk memilih dan memasukkan produk ritel atau menu olahan dapur ke dalam paket ini.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 shadow-2xs">
-                      {/* Header Tabel Komponen */}
-                      <div className="px-3.5 py-2.5 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-6">Komponen Anak</div>
-                        <div className="col-span-3 text-center">Rasio Kuantitas</div>
-                        <div className="col-span-2 text-right">Estimasi HPP</div>
-                        <div className="col-span-1 text-center">Aksi</div>
-                      </div>
-
-                      {/* Baris Komponen */}
-                      {bundleItems.map((bi) => {
-                        const originalProd = availableProducts.find((p) => p.id === bi.childProductId);
-                        const isRetail = originalProd ? !originalProd.hasRecipe && originalProd.productType !== 'COMPOSITE' : false;
-
-                        return (
-                          <div key={bi.childProductId} className="px-3.5 py-3 text-xs hover:bg-slate-50/50 transition-colors space-y-2">
-                            <div className="grid grid-cols-12 gap-2 items-center">
-                              {/* Nama & Tipe Komponen */}
-                              <div className="col-span-6 min-w-0 flex items-center gap-2.5">
-                                {originalProd?.imageUrl ? (
-                                  <img
-                                    src={originalProd.imageUrl}
-                                    alt={bi.childProductName}
-                                    className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200"
-                                  />
-                                ) : (
-                                  <div
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                      isRetail ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'
-                                    }`}
-                                  >
-                                    {isRetail ? <Store className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
-                                  </div>
-                                )}
-                                <div className="min-w-0">
-                                  <p className="font-bold text-slate-900 truncate">{bi.childProductName}</p>
-                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                    <span
-                                      className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                                        isRetail
-                                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                          : 'bg-blue-50 text-blue-800 border border-blue-200'
-                                      }`}
-                                    >
-                                      {isRetail ? `Stok: ${originalProd?.stock || 0} ${bi.childUnit}` : 'Resep Dapur'}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400">
-                                      Harga Satuan: Rp {Number(bi.childBasePrice || 0).toLocaleString('id-ID')}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Kontrol Stepper Kuantitas Komponen */}
-                              <div className="col-span-3 flex items-center justify-center">
-                                <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 shadow-2xs">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateBundleItemQty(bi.childProductId, -1)}
-                                    className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 rounded transition-colors cursor-pointer"
-                                    title="Kurangi kuantitas"
-                                  >
-                                    <Minus className="w-3 h-3" />
-                                  </button>
-                                  <span className="w-8 text-center font-black font-mono text-xs text-blue-950">
-                                    {bi.quantity}x
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateBundleItemQty(bi.childProductId, 1)}
-                                    className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 rounded transition-colors cursor-pointer"
-                                    title="Tambah kuantitas"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Subtotal Kontribusi HPP */}
-                              <div className="col-span-2 text-right font-mono">
-                                <span className="font-black text-slate-900 block text-xs">
-                                  Rp {(bi.childAverageCost * bi.quantity).toLocaleString('id-ID')}
-                                </span>
-                                <span className="text-[10px] text-slate-400 block">
-                                  @Rp {bi.childAverageCost.toLocaleString('id-ID')}
-                                </span>
-                              </div>
-
-                              {/* Tombol Hapus */}
-                              <div className="col-span-1 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveBundleItem(bi.childProductId)}
-                                  className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                                  title="Hapus komponen dari paket"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Bar Konfigurasi Slot Dinamis (Mix & Match) */}
-                            <div className="flex flex-wrap items-center gap-2.5 pt-1.5 border-t border-slate-100 text-[11px] bg-slate-50/60 p-2 rounded-xl">
-                              <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">Slot Opsi:</span>
-                                <input
-                                  type="text"
-                                  placeholder="Kosongkan jika komponen tetap (misal: Pilih Minuman)"
-                                  value={bi.slotName || ''}
-                                  onChange={(e) => handleUpdateBundleItemSlot(bi.childProductId, e.target.value)}
-                                  className="flex-1 px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none placeholder:text-slate-400"
-                                />
-                              </div>
-                              {bi.slotName && bi.slotName.trim() !== '' && (
-                                <div className="flex items-center gap-3">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-slate-500 shrink-0 text-[10px] font-bold uppercase">Ekstra:</span>
-                                    <div className="relative">
-                                      <span className="absolute left-2 top-1 text-[10px] text-slate-400 font-bold">+Rp</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="500"
-                                        placeholder="0"
-                                        value={bi.priceAdjustment || ''}
-                                        onChange={(e) => handleUpdateBundleItemPriceAdjustment(bi.childProductId, Number(e.target.value || 0))}
-                                        className="w-24 pl-8 pr-2 py-1 text-xs font-mono bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                                      />
-                                    </div>
-                                  </div>
-                                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 select-none">
-                                    <input
-                                      type="checkbox"
-                                      checked={Boolean(bi.isDefault)}
-                                      onChange={(e) => handleUpdateBundleItemDefault(bi.childProductId, e.target.checked)}
-                                      className="rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer"
-                                    />
-                                    <span className="text-[11px] font-semibold">Opsi Bawaan</span>
-                                  </label>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Baris Ringkasan Finansial & Analisis Margin Laba */}
-                      <div className="p-4 bg-gradient-to-r from-amber-50/70 via-amber-50/40 to-slate-50 space-y-2.5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                          <div>
-                            <span className="text-[11px] font-bold text-amber-900 block">
-                              Total Estimasi Modal (HPP Paket):
-                            </span>
-                            <div className="flex items-baseline gap-2">
-                              <span className="font-black text-amber-950 text-base font-mono">
-                                Rp {estimatedBundleHpp.toLocaleString('id-ID')}
-                              </span>
-                              {basePrice > 0 && (
-                                <span
-                                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                                    basePrice >= estimatedBundleHpp
-                                      ? 'bg-emerald-100 text-emerald-800'
-                                      : 'bg-rose-100 text-rose-800'
-                                  }`}
-                                >
-                                  <TrendingUp className="w-3 h-3" />
-                                  Margin: Rp {(basePrice - estimatedBundleHpp).toLocaleString('id-ID')} (
-                                  {(((basePrice - estimatedBundleHpp) / basePrice) * 100).toFixed(1)}%)
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {estimatedBundleHpp > 0 && costPrice !== estimatedBundleHpp && (
-                            <button
-                              type="button"
-                              onClick={() => setCostPrice(estimatedBundleHpp)}
-                              className="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Sinkronkan ke HPP Produk</span>
-                            </button>
-                          )}
-                        </div>
-
-                        {basePrice > 0 && basePrice < estimatedBundleHpp && (
-                          <div className="flex items-center gap-1.5 text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2 rounded-xl">
-                            <AlertCircle className="w-4 h-4 shrink-0" />
-                            <span>
-                              <strong>Peringatan Margin Negatif:</strong> Harga jual paket (Rp {Number(basePrice).toLocaleString('id-ID')}) lebih rendah dari total modal komponen (Rp {estimatedBundleHpp.toLocaleString('id-ID')}).
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* EPIC-29: Panel Struktur Harga Grosir Bertingkat (Tiered Volume Pricing) */}
-            <div className="sm:col-span-2 bg-slate-50/90 border border-slate-200 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowPriceTiers(!showPriceTiers)}>
-                <div>
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <Tag className="w-4 h-4 text-cyan-700" />
-                    Harga Grosir Bertingkat (Tiered Pricing)
-                  </span>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Berikan harga khusus otomatis saat kasir memasukkan jumlah pembelian tertentu (misal: beli $\ge$ 5 paket harga lebih murah).
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {priceTiers.length > 0 && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-900 border border-cyan-200">
-                      {priceTiers.length} Tier Aktif
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    {showPriceTiers ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {showPriceTiers && (
-                <div className="pt-2.5 border-t border-slate-200/70 space-y-3">
-                  {/* Form Tambah Tier */}
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-                    <span className="text-[11px] font-bold text-slate-700 block">
-                      + Tambah Tingkat Harga Grosir Baru
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                      <div className="sm:col-span-4">
-                        <label className="text-[10px] font-bold text-slate-500 block mb-1">
-                          Minimal Beli (Unit)
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={newTierMinQty}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setNewTierMinQty(val === '' ? '' : Math.max(0, parseInt(val, 10) || 0));
-                          }}
-                          placeholder="e.g. 5"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-900"
-                        />
-                        {newTierMinQty !== '' && Number(newTierMinQty) < 2 && (
-                          <span className="text-[10px] text-amber-600 block mt-1">
-                            Minimal 2 unit untuk harga grosir
-                          </span>
-                        )}
-                      </div>
-                      <div className="sm:col-span-6">
-                        <CurrencyInput
-                          id="new-tier-price"
-                          label="Harga Satuan Grosir"
-                          value={newTierPrice}
-                          onChange={(val) => setNewTierPrice(val)}
-                          placeholder="0"
-                          inputClassName="font-bold text-cyan-950 text-xs py-2"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <button
-                          type="button"
-                          onClick={handleAddPriceTier}
-                          className="w-full py-2 bg-cyan-800 hover:bg-cyan-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                        >
-                          Tambah
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Daftar Tier yang Terpasang */}
-                  {priceTiers.length === 0 ? (
-                    <div className="p-3 bg-white rounded-xl border-2 border-dashed border-slate-200 text-center text-xs text-slate-400">
-                      Belum ada struktur harga grosir. Tambahkan tier kuantitas di atas jika produk ini mendukung pembelian grosir.
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-                      <div className="px-3 py-2 bg-slate-100/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider grid grid-cols-12 gap-2">
-                        <div className="col-span-4">Minimal Beli</div>
-                        <div className="col-span-4 text-right">Harga Grosir / Pcs</div>
-                        <div className="col-span-3 text-right">Hemat / Pcs</div>
-                        <div className="col-span-1 text-center">Aksi</div>
-                      </div>
-                      {priceTiers.map((pt) => {
-                        const savings = basePrice > 0 ? Math.max(0, basePrice - pt.tierPrice) : 0;
-                        return (
-                          <div key={pt.minQuantity} className="px-3 py-2 text-xs grid grid-cols-12 gap-2 items-center">
-                            <div className="col-span-4 font-bold text-slate-900 flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-600" />
-                              <span>Beli &ge; {pt.minQuantity} {unit}</span>
-                            </div>
-                            <div className="col-span-4 text-right font-bold font-mono text-cyan-900">
-                              Rp {pt.tierPrice.toLocaleString('id-ID')}
-                            </div>
-                            <div className="col-span-3 text-right font-mono text-[11px] text-emerald-700 font-bold">
-                              {savings > 0 ? `-Rp ${savings.toLocaleString('id-ID')}` : '-'}
-                            </div>
-                            <div className="col-span-1 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemovePriceTier(pt.minQuantity)}
-                                className="text-slate-400 hover:text-rose-600 p-1 rounded-lg transition-colors cursor-pointer"
-                                title="Hapus tingkat grosir"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Deskripsi */}
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Deskripsi Produk (Opsional)
-              </label>
-              <textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Catatan komposisi atau spesifikasi produk..."
-                className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2 text-sm transition-all outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Section 3: Pilihan Kustomisasi Terpusat (Modifiers & Topping F&B) */}
-          <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5 uppercase tracking-wider">
-                  <Sliders className="w-4 h-4 text-blue-900" />
-                  <span>Kustomisasi Dinamis (Modifiers & Topping)</span>
-                </h4>
-                <p className="text-[11px] text-slate-500">
-                  Pilih grup varian & kustomisasi terpusat yang berlaku untuk menu ini (Level pedas, sugar, es, topping).
-                </p>
-              </div>
-              <span className="text-[11px] font-semibold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 self-start sm:self-auto">
-                {selectedModifierGroupIds.length} grup dipilih
-              </span>
-            </div>
-
-            {loadingModifiers ? (
-              <div className="text-center py-6 bg-white/60 rounded-xl border border-slate-200 text-xs text-slate-500">
-                Memuat daftar modifier terpusat...
-              </div>
-            ) : availableModifierGroups.length === 0 ? (
-              <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-white/60 space-y-1">
-                <Sliders className="w-7 h-7 text-slate-300 mx-auto mb-1" />
-                <p className="text-xs font-semibold text-slate-600">
-                  Belum ada grup modifier di sistem
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Kelola master grup varian & topping terpusat melalui tab <strong>Modifiers</strong> di menu Katalog Produk.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-2.5">
-                {availableModifierGroups.map((group) => {
-                  const isChecked = selectedModifierGroupIds.includes(group.id);
-                  return (
-                    <div
-                      key={group.id}
-                      onClick={() => toggleModifierGroup(group.id)}
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
-                        isChecked
-                          ? 'bg-blue-50/70 border-blue-300 shadow-xs'
-                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}} // event dikontrol oleh onClick container
-                        className="mt-1 w-4 h-4 rounded text-blue-900 focus:ring-blue-900 accent-blue-900 cursor-pointer"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900">
-                            {group.name}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              group.selectionType === 'SINGLE'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}
-                          >
-                            {group.selectionType === 'SINGLE' ? 'Pilih 1 (Radio)' : 'Boleh Multi (Checkbox)'}
-                          </span>
-                          <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                              group.isRequired
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {group.isRequired ? 'Wajib Pilih' : 'Opsional'}
-                          </span>
-                        </div>
-
-                        {/* List Options Preview */}
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          {group.items && group.items.length > 0 ? (
-                            group.items.map((item, idx) => (
-                              <span
-                                key={idx}
-                                className="text-[11px] bg-slate-100 border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md"
-                              >
-                                {item.name}
-                                {item.priceAdjustment > 0
-                                  ? ` (+Rp ${item.priceAdjustment.toLocaleString('id-ID')})`
-                                  : ''}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">
-                              Tidak ada opsi varian
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             )}
           </div>
 
-          </div>
-
-          {/* Footer Tombol - Selalu tampak, tidak terpotong oleh browser mobile navigation bar */}
-          <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-t border-slate-200 bg-slate-50/95 backdrop-blur-xs flex items-center justify-end gap-2.5 sm:gap-3 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              loading={loading}
-              icon={<Check className="w-4 h-4" />}
-            >
-              {isEdit ? 'Simpan Perubahan' : 'Simpan Produk'}
-            </Button>
+          {/* Sticky Action Footer (Rule #10) */}
+          <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-between pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <span className="text-[11px] text-slate-500 hidden sm:inline">
+              * Kolom bertanda bintang wajib diisi
+            </span>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={loading}
+                className="w-1/2 sm:w-auto"
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || isCompressingImage}
+                className="w-1/2 sm:w-auto bg-blue-900 hover:bg-blue-800 text-white font-bold"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Menyimpan...
+                  </>
+                ) : isEdit ? (
+                  'Perbarui Produk'
+                ) : (
+                  'Simpan Produk'
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

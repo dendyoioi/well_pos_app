@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Layers,
   Search,
@@ -15,6 +15,9 @@ import {
   Truck,
   Award,
   Scale,
+  Clock,
+  QrCode,
+  AlertOctagon,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -24,6 +27,7 @@ import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
 import { LaundryStageTrackerModal } from '../components/laundry/LaundryStageTrackerModal';
 import { LaundryProductionKpiModal } from '../components/laundry/LaundryProductionKpiModal';
 import { LaundrySortingModal } from '../components/LaundrySortingModal';
+import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -41,6 +45,8 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   const [orders, setOrders] = useState<LaundryQueueOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [slaFilter, setSlaFilter] = useState<'ALL' | 'DUE_TODAY' | 'OVERDUE'>('ALL');
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [racks, setRacks] = useState<LaundryRack[]>([]);
   const [services, setServices] = useState<LaundryService[]>([]);
 
@@ -313,19 +319,55 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
     }
   };
 
-  const filteredOrders = orders.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      item.invoiceNumber.toLowerCase().includes(q) ||
-      item.customerName.toLowerCase().includes(q) ||
-      (item.customerPhone && item.customerPhone.includes(q)) ||
-      (item.rackCode && item.rackCode.toLowerCase().includes(q))
-    );
-  });
+  // Evaluasi Status SLA Pesanan
+  const getSlaStatus = (order: LaundryQueueOrder): 'OVERDUE' | 'DUE_TODAY' | 'NORMAL' => {
+    if (!order.estimatedReadyAt || order.status === 'COMPLETED') return 'NORMAL';
+    const now = new Date();
+    const est = new Date(order.estimatedReadyAt);
+    if (est.getTime() < now.getTime()) return 'OVERDUE';
+    if (
+      est.getDate() === now.getDate() &&
+      est.getMonth() === now.getMonth() &&
+      est.getFullYear() === now.getFullYear()
+    ) {
+      return 'DUE_TODAY';
+    }
+    return 'NORMAL';
+  };
+
+  const slaStats = useMemo(() => {
+    let dueTodayCount = 0;
+    let overdueCount = 0;
+    orders.forEach((o) => {
+      if (o.status === 'COMPLETED') return;
+      const sla = getSlaStatus(o);
+      if (sla === 'OVERDUE') overdueCount++;
+      else if (sla === 'DUE_TODAY') dueTodayCount++;
+    });
+    return { dueTodayCount, overdueCount };
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((item) => {
+      if (slaFilter !== 'ALL') {
+        const sla = getSlaStatus(item);
+        if (slaFilter === 'OVERDUE' && sla !== 'OVERDUE') return false;
+        if (slaFilter === 'DUE_TODAY' && sla !== 'DUE_TODAY') return false;
+      }
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        item.invoiceNumber.toLowerCase().includes(q) ||
+        item.customerName.toLowerCase().includes(q) ||
+        (item.customerPhone && item.customerPhone.includes(q)) ||
+        (item.rackCode && item.rackCode.toLowerCase().includes(q))
+      );
+    });
+  }, [orders, slaFilter, searchQuery]);
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-16 font-sans animate-fadeIn">
+    <div className="space-y-5 pb-28 sm:pb-16 font-sans animate-fadeIn">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div className="min-w-0">
@@ -359,6 +401,16 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
 
           <button
             type="button"
+            onClick={() => setScannerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+            title="Pindai QR / Barcode Nota dengan Scanner USB atau Kamera"
+          >
+            <QrCode className="w-4 h-4 text-blue-200" />
+            <span>Scan Nota</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setKpiModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
             title="Lihat Rekapitulasi Output & Penilaian Kinerja Staf"
@@ -369,12 +421,75 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
 
           <button
             onClick={() => setShowNewOrderModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Terima Cucian (Drop-off)</span>
           </button>
         </div>
+      </div>
+
+      {/* SLA Instant Filter Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0">
+          <Clock className="w-3.5 h-3.5" />
+          <span>Filter SLA:</span>
+        </span>
+
+        <button
+          type="button"
+          onClick={() => setSlaFilter('ALL')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            slaFilter === 'ALL'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <span>Semua Status</span>
+          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-black/10">
+            {orders.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSlaFilter('DUE_TODAY')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            slaFilter === 'DUE_TODAY'
+              ? 'bg-amber-500 text-white shadow-xs'
+              : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+          }`}
+        >
+          <Clock className="w-3 h-3" />
+          <span>Jatuh Tempo Hari Ini</span>
+          <span
+            className={`text-[10px] font-mono font-black px-1.5 py-0.2 rounded-full ${
+              slaFilter === 'DUE_TODAY' ? 'bg-black/20 text-white' : 'bg-amber-200 text-amber-900'
+            }`}
+          >
+            {slaStats.dueTodayCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSlaFilter('OVERDUE')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            slaFilter === 'OVERDUE'
+              ? 'bg-rose-600 text-white shadow-xs'
+              : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+          }`}
+        >
+          <AlertOctagon className="w-3 h-3" />
+          <span>Terlambat (Overdue SLA)</span>
+          <span
+            className={`text-[10px] font-mono font-black px-1.5 py-0.2 rounded-full ${
+              slaFilter === 'OVERDUE' ? 'bg-black/20 text-white' : 'bg-rose-200 text-rose-900'
+            }`}
+          >
+            {slaStats.overdueCount}
+          </span>
+        </button>
       </div>
 
       {/* Kanban Pipeline Board */}
@@ -410,17 +525,36 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                     colItems.map((item) => {
                       const isPaid = item.paymentStatus === 'PAID';
                       const isPartial = item.paymentStatus === 'PARTIALLY_PAID';
+                      const slaStatus = getSlaStatus(item);
 
                       return (
                         <div
                           key={item.id}
-                          className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs space-y-2 hover:border-blue-300 transition-all text-xs"
+                          className={`bg-white rounded-2xl border p-3.5 shadow-xs space-y-2 hover:border-blue-300 transition-all text-xs ${
+                            slaStatus === 'OVERDUE'
+                              ? 'border-rose-300 ring-1 ring-rose-200'
+                              : slaStatus === 'DUE_TODAY'
+                              ? 'border-amber-300'
+                              : 'border-slate-200'
+                          }`}
                         >
                           <div className="flex items-start justify-between gap-1">
                             <span className="font-mono font-bold text-blue-950 text-[11px]">
                               {item.invoiceNumber}
                             </span>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                              {slaStatus === 'OVERDUE' ? (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
+                                  <AlertOctagon className="w-2.5 h-2.5 text-rose-600" />
+                                  <span>Terlambat</span>
+                                </span>
+                              ) : slaStatus === 'DUE_TODAY' ? (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-0.5">
+                                  <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                  <span>Hari Ini</span>
+                                </span>
+                              ) : null}
+
                               <span
                                 className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded border ${
                                   isPaid
@@ -439,7 +573,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                                   setSelectedOrderForReceipt(item);
                                   setReceiptModalOpen(true);
                                 }}
-                                className="text-slate-400 hover:text-blue-900 transition-colors p-0.5"
+                                className="text-slate-400 hover:text-blue-900 transition-colors p-1"
                                 title="Cetak Struk Thermal"
                               >
                                 <Printer className="w-3.5 h-3.5" />
@@ -545,12 +679,12 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                             <span className="font-bold text-slate-700">Rp {item.grandTotal.toLocaleString('id-ID')}</span>
                           </div>
 
-                          {/* Advance Pipeline Button */}
+                          {/* Advance Pipeline Button with Mobile Touch Target >= 44px */}
                           {item.status !== 'COMPLETED' && (
                             <button
                               type="button"
                               onClick={() => handleAdvanceStatus(item)}
-                              className="w-full mt-1 py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 border border-blue-200 transition-all cursor-pointer"
+                              className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-900 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-blue-200 transition-all cursor-pointer active:scale-95"
                             >
                               <span>
                                 {item.status === 'IRONING_PACKING'
@@ -559,20 +693,20 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                                   ? 'Serahkan ke Pelanggan'
                                   : 'Lanjut ke Tahap Berikutnya'}
                               </span>
-                              <ChevronRight className="w-3 h-3" />
+                              <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                           )}
 
-                          {/* Quick WhatsApp Send Button (Khusus Status Siap Ambil) */}
+                          {/* Quick WhatsApp Send Button (Khusus Status Siap Ambil) with Touch Target >= 44px */}
                           {item.status === 'READY_FOR_PICKUP' && item.customerPhone && (
                             <button
                               type="button"
                               onClick={() => handleSendWhatsAppReady(item)}
                               disabled={sendingWaOrderId === item.orderId}
-                              className="w-full mt-1 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg text-[10px] flex items-center justify-center gap-1 border border-emerald-200 transition-all cursor-pointer"
+                              className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-emerald-200 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
                               title="Kirim ulang pesan WhatsApp bahwa cucian sudah di rak & siap diambil"
                             >
-                              <Send className="w-3 h-3 text-emerald-600" />
+                              <Send className="w-3.5 h-3.5 text-emerald-600" />
                               <span>{sendingWaOrderId === item.orderId ? 'Mengirim...' : 'Kirim WA Siap Ambil'}</span>
                             </button>
                           )}
@@ -1005,6 +1139,24 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           fetchOrders();
         }}
       />
+
+      {/* Modal Barcode Scanner Nota */}
+      {scannerOpen && (
+        <LaundryBarcodeScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          orders={orders}
+          onOrderFound={(order) => {
+            setSearchQuery(order.invoiceNumber);
+            setScannerOpen(false);
+            setWaToast({
+              message: `Nota ${order.invoiceNumber} (${order.customerName}) ditemukan!`,
+              type: 'success',
+            });
+            setTimeout(() => setWaToast(null), 3500);
+          }}
+        />
+      )}
 
       {/* Modal Leaderboard & Penilaian Kinerja Staf (KPI) */}
       <LaundryProductionKpiModal

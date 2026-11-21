@@ -429,14 +429,22 @@ export function buildXZReportEscPos(
     reportData.paymentSummary?.qrisSales ??
     0
   );
+  const otherNonCash = Number(
+    reportData.nonCashSummary?.totalOtherNonCashSales ??
+    reportData.paymentSummary?.otherNonCashSales ??
+    0
+  );
   const totalRevenue = Number(
     reportData.nonCashSummary?.totalRevenue ??
     reportData.paymentSummary?.netRevenue ??
-    (cashSales + qrisSales)
+    (cashSales + qrisSales + otherNonCash)
   );
 
   builder.twoColumns('  Tunai (Cash):', `Rp ${cashSales.toLocaleString('id-ID')}`);
-  builder.twoColumns('  Non-Tunai / QRIS:', `Rp ${qrisSales.toLocaleString('id-ID')}`);
+  builder.twoColumns('  QRIS:', `Rp ${qrisSales.toLocaleString('id-ID')}`);
+  if (otherNonCash > 0) {
+    builder.twoColumns('  Non-Tunai Lainnya:', `Rp ${otherNonCash.toLocaleString('id-ID')}`);
+  }
   builder.divider('-');
   builder.bold(true).twoColumns('TOTAL OMSET (NET):', `Rp ${totalRevenue.toLocaleString('id-ID')}`);
   builder.bold(false);
@@ -452,6 +460,15 @@ export function buildXZReportEscPos(
     builder.twoColumns('Jumlah Transaksi:', `${totalTx} Nota`);
     const avgTicket = Math.round(totalRevenue / totalTx);
     builder.twoColumns('Rata-rata per Nota:', `Rp ${avgTicket.toLocaleString('id-ID')}`);
+  }
+
+  // 6.5 PIUTANG AKTIF / BAYAR NANTI (Pure Summary)
+  if (reportData.receivablesSummary && reportData.receivablesSummary.unpaidCount > 0) {
+    builder.divider('-');
+    builder.bold(true).line('PIUTANG AKTIF / BAYAR NANTI:');
+    builder.bold(false);
+    builder.twoColumns('  Nota Belum Lunas:', `${reportData.receivablesSummary.unpaidCount} Nota`);
+    builder.twoColumns('  Total Piutang:', `Rp ${Number(reportData.receivablesSummary.totalReceivables).toLocaleString('id-ID')}`);
   }
 
   // 7. Kolom Pengesahan Tanda Tangan
