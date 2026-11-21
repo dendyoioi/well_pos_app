@@ -43,6 +43,7 @@ import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
 import { PwaInstallButton } from '../components/PwaInstallBanner';
 import { ThermalPrinterModal } from '../components/pos/ThermalPrinterModal';
 import { api } from '../services/api';
+import { checkIsLaundry } from '../utils/businessType';
 import type { QrLiveOrder } from '../types/qr_menu';
 
 // Code Splitting: Lazy-loaded Secondary Backoffice Views & Modals
@@ -75,6 +76,13 @@ const OnboardingWizardModal = React.lazy(() => import('../components/saas/Onboar
 const FullScreenStoreWizard = React.lazy(() => import('../components/saas/FullScreenStoreWizard').then((m) => ({ default: m.FullScreenStoreWizard })));
 const BillingTokensView = React.lazy(() => import('./BillingTokensView').then((m) => ({ default: m.BillingTokensView })));
 const UserGuideView = React.lazy(() => import('./UserGuideView').then((m) => ({ default: m.UserGuideView })));
+const LaundryServicesView = React.lazy(() => import('./LaundryServicesView').then((m) => ({ default: m.LaundryServicesView })));
+const LaundryQueueView = React.lazy(() => import('./LaundryQueueView').then((m) => ({ default: m.LaundryQueueView })));
+const LaundryProductionView = React.lazy(() => import('./LaundryProductionView').then((m) => ({ default: m.LaundryProductionView })));
+const LaundryRacksView = React.lazy(() => import('./LaundryRacksView').then((m) => ({ default: m.LaundryRacksView })));
+const LaundryTransfersView = React.lazy(() => import('./LaundryTransfersView').then((m) => ({ default: m.LaundryTransfersView })));
+const LaundryPosTerminalView = React.lazy(() => import('./LaundryPosTerminalView').then((m) => ({ default: m.LaundryPosTerminalView })));
+const LaundryBusinessSummaryView = React.lazy(() => import('../components/saas/LaundryBusinessSummaryView').then((m) => ({ default: m.LaundryBusinessSummaryView })));
 
 const ViewTabFallback: React.FC = () => (
   <div className="flex flex-col items-center justify-center p-12 min-h-[350px] text-slate-500 animate-pulse">
@@ -132,10 +140,16 @@ type TabKey =
   | 'settings_channels'
   | 'settings_loyalty'
   | 'outlets'
-  | 'guide';
+  | 'guide'
+  // Layanan Laundry & Dry Clean
+  | 'laundry_services'
+  | 'laundry_queue'
+  | 'laundry_production'
+  | 'laundry_racks'
+  | 'laundry_transfers';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
-  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders'],
+  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders', 'laundry_queue', 'laundry_production', 'laundry_services', 'laundry_racks', 'laundry_transfers'],
   WAREHOUSE: [
     'inventory',
     'warehouses',
@@ -177,6 +191,11 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_loyalty',
     'outlets',
     'guide',
+    'laundry_queue',
+    'laundry_production',
+    'laundry_services',
+    'laundry_racks',
+    'laundry_transfers',
   ],
   ADMIN: [
     'overview',
@@ -213,6 +232,11 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_loyalty',
     'outlets',
     'guide',
+    'laundry_queue',
+    'laundry_production',
+    'laundry_services',
+    'laundry_racks',
+    'laundry_transfers',
   ],
   OWNER: [
     'overview',
@@ -249,8 +273,13 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'settings_loyalty',
     'outlets',
     'guide',
+    'laundry_queue',
+    'laundry_production',
+    'laundry_services',
+    'laundry_racks',
+    'laundry_transfers',
   ],
-  KITCHEN: ['qr_orders', 'recipes', 'overview'],
+  KITCHEN: ['qr_orders', 'recipes', 'overview', 'laundry_production', 'laundry_queue'],
   WAITER: ['pos', 'orders', 'qr_orders'],
 };
 
@@ -353,6 +382,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
     const selected = outlets.find((o) => o.id === outletId);
     if (selected) {
       setActiveOutlet(selected);
+      // Reset state sementara kasir POS saat berpindah outlet
+      setAppendOrderData(null);
+      setSelectedQrOrderForPos(null);
+
+      // Reset tab spesifik vertikal jika berpindah antara F&B dan Laundry
+      const targetIsLaundry = checkIsLaundry(selected, user);
+      const laundryOnlyTabs: TabKey[] = [
+        'laundry_services',
+        'laundry_queue',
+        'laundry_production',
+        'laundry_racks',
+        'laundry_transfers',
+      ];
+      const fnbOnlyTabs: TabKey[] = [
+        'qr_tables',
+        'qr_settings',
+        'qr_orders',
+        'qr_guest_menu',
+        'recipes',
+        'modifiers',
+        'settings_channels',
+      ];
+
+      if (!targetIsLaundry && laundryOnlyTabs.includes(activeTab)) {
+        setActiveTab('overview');
+      } else if (targetIsLaundry && fnbOnlyTabs.includes(activeTab)) {
+        setActiveTab('overview');
+      }
+
       if (selected.isWarehouse) {
         const allowedWarehouseTabs: TabKey[] = [
           'inventory',
@@ -487,6 +545,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
   const badge = getRoleBadge(user.role);
   const allowedTabs = ROLE_TABS[user.role] || ['pos'];
 
+  // Deteksi Vertikal Mode Laundry
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet, user);
+  }, [activeOutlet, user]);
+
   // Hanya Admin & Supervisor yang berhak berpindah toko (Multi-Outlet Switcher)
   const canSwitchOutlet = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
 
@@ -522,25 +585,45 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       >
         <Suspense fallback={<ViewTabFallback />}>
           {activeTab === 'pos' ? (
-          <PosTerminalView
-            activeOutlet={activeOutlet}
-            currentUserRole={user.role}
-            currentUser={user}
-            onOutletFeesUpdated={handleUpdateOutletFees}
-            appendOrderData={appendOrderData}
-            onClearAppendOrder={() => setAppendOrderData(null)}
-            loadQrOrderData={selectedQrOrderForPos}
-            onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
-            onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
-            onLogout={onLogout}
-            allowedTabs={allowedTabs}
-          />
-        ) : activeTab === 'overview' ? (
-          <BusinessSummaryView
-            activeOutlet={activeOutlet}
-            onOpenPos={() => setActiveTab('pos')}
-          />
-        ) : activeTab === 'billing_tokens' ? (
+            isLaundryMode ? (
+              <LaundryPosTerminalView
+                key={activeOutlet?.id || 'default-laundry-pos'}
+                activeOutlet={activeOutlet}
+                currentUser={user}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+                onLogout={onLogout}
+              />
+            ) : (
+              <PosTerminalView
+                key={activeOutlet?.id || 'default-fnb-pos'}
+                activeOutlet={activeOutlet}
+                currentUserRole={user.role}
+                currentUser={user}
+                onOutletFeesUpdated={handleUpdateOutletFees}
+                appendOrderData={appendOrderData}
+                onClearAppendOrder={() => setAppendOrderData(null)}
+                loadQrOrderData={selectedQrOrderForPos}
+                onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+                onLogout={onLogout}
+                allowedTabs={allowedTabs}
+              />
+            )
+          ) : activeTab === 'overview' ? (
+            isLaundryMode ? (
+              <LaundryBusinessSummaryView
+                activeOutlet={activeOutlet}
+                currentUser={user}
+                onOpenPos={() => setActiveTab('pos')}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+              />
+            ) : (
+              <BusinessSummaryView
+                activeOutlet={activeOutlet}
+                onOpenPos={() => setActiveTab('pos')}
+              />
+            )
+          ) : activeTab === 'billing_tokens' ? (
           <BillingTokensView
             user={user}
             activeOutlet={activeOutlet}
@@ -686,7 +769,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         ) : activeTab === 'staff_users' || activeTab === 'users' ? (
           <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
         ) : activeTab === 'staff_roles' ? (
-          <StaffRolesView onBackToStaffList={() => setActiveTab('staff_users')} />
+          <StaffRolesView
+            activeOutlet={activeOutlet}
+            currentUser={user}
+            onBackToStaffList={() => setActiveTab('staff_users')}
+          />
         ) : activeTab === 'settings_receipt' ? (
           <ReceiptSettingsView
             activeOutlet={activeOutlet}
@@ -731,6 +818,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             }}
             currentUserRole={user.role}
           />
+        ) : activeTab === 'laundry_services' ? (
+          <LaundryServicesView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_queue' ? (
+          <LaundryQueueView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_production' ? (
+          <LaundryProductionView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_racks' ? (
+          <LaundryRacksView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_transfers' ? (
+          <LaundryTransfersView activeOutlet={activeOutlet} />
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}
@@ -1549,20 +1646,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
         <Suspense fallback={<ViewTabFallback />}>
           {activeTab === 'pos' ? (
-          <PosTerminalView
-            activeOutlet={activeOutlet}
-            currentUserRole={user.role}
-            currentUser={user}
-            onOutletFeesUpdated={handleUpdateOutletFees}
-            appendOrderData={appendOrderData}
-            onClearAppendOrder={() => setAppendOrderData(null)}
-            loadQrOrderData={selectedQrOrderForPos}
-            onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
-            onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
-            onLogout={onLogout}
-            allowedTabs={allowedTabs}
-          />
-        ) : activeTab === 'overview' ? (
+            isLaundryMode ? (
+              <LaundryPosTerminalView
+                key={activeOutlet?.id || 'default-laundry-pos'}
+                activeOutlet={activeOutlet}
+                currentUser={user}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+                onLogout={onLogout}
+              />
+            ) : (
+              <PosTerminalView
+                key={activeOutlet?.id || 'default-fnb-pos'}
+                activeOutlet={activeOutlet}
+                currentUserRole={user.role}
+                currentUser={user}
+                onOutletFeesUpdated={handleUpdateOutletFees}
+                appendOrderData={appendOrderData}
+                onClearAppendOrder={() => setAppendOrderData(null)}
+                loadQrOrderData={selectedQrOrderForPos}
+                onClearLoadQrOrder={() => setSelectedQrOrderForPos(null)}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+                onLogout={onLogout}
+                allowedTabs={allowedTabs}
+              />
+            )
+          ) : activeTab === 'overview' ? (
           <div className="space-y-8">
             {/* Welcome Hero Banner in Deep Navy */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 border border-blue-800/40 p-6 sm:p-8 shadow-xl text-white">
@@ -2039,6 +2147,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               currentUserRole={user.role}
             />
           </div>
+        ) : activeTab === 'laundry_services' ? (
+          <LaundryServicesView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_queue' ? (
+          <LaundryQueueView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_production' ? (
+          <LaundryProductionView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_racks' ? (
+          <LaundryRacksView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_transfers' ? (
+          <LaundryTransfersView activeOutlet={activeOutlet} />
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}

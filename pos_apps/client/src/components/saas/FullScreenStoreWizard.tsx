@@ -35,7 +35,12 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>(() => {
+    if (ownerName.toLowerCase().includes('laundry') || ownerEmail.toLowerCase().includes('laundry')) {
+      return ['Laundry & Dry Clean'];
+    }
+    return [];
+  });
   const [activeTab, setActiveTab] = useState<'ALL' | 'Ritel' | 'Restoran' | 'Layanan'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -317,6 +322,72 @@ export const FullScreenStoreWizard: React.FC<FullScreenStoreWizardProps> = ({
                   </button>
                 </div>
               )}
+
+              {/* Laundry Mode Notice */}
+              {selectedIndustries.some((ind) => ind.toLowerCase().includes('laundry')) && (
+                <div className="mb-3 p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 flex items-start gap-2.5 text-xs shadow-2xs">
+                  <Sparkles className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Mode Layanan Laundry &amp; Dry Clean Aktif:</span>
+                    <p className="text-sky-700 text-[11px] mt-0.5">
+                      Dashboard toko akan otomatis mengaktifkan antarmuka khusus Laundry (Layanan Kiloan/Satuan, Workflow Cucian, Rak Simpan, dan Notifikasi WhatsApp) serta menonaktifkan modul dapur F&amp;B yang tidak relevan.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pilihan Cepat & Populer */}
+              <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                <span className="text-[11px] font-bold text-slate-500 mr-1">Rekomendasi Cepat:</span>
+                <button
+                  type="button"
+                  onClick={() => toggleIndustry('Laundry & Dry Clean')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedIndustries.includes('Laundry & Dry Clean')
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <span>🧺 Laundry &amp; Dry Clean</span>
+                  {selectedIndustries.includes('Laundry & Dry Clean') && <Check className="w-3 h-3" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleIndustry('Kedai Kopi')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedIndustries.includes('Kedai Kopi')
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <span>☕ Kedai Kopi</span>
+                  {selectedIndustries.includes('Kedai Kopi') && <Check className="w-3 h-3" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleIndustry('Minimarket')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedIndustries.includes('Minimarket')
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <span>🏪 Minimarket</span>
+                  {selectedIndustries.includes('Minimarket') && <Check className="w-3 h-3" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleIndustry('Restoran Cepat Saji')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedIndustries.includes('Restoran Cepat Saji')
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'
+                  }`}
+                >
+                  <span>🍔 Resto Cepat Saji</span>
+                  {selectedIndustries.includes('Restoran Cepat Saji') && <Check className="w-3 h-3" />}
+                </button>
+              </div>
 
               {/* Search & Sector Filters */}
               <div className="space-y-2.5">

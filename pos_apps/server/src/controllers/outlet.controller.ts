@@ -43,6 +43,7 @@ const createOutletSchema = z.object({
   isWarehouse: z.boolean().optional(),
   warehouseId: z.string().uuid().nullable().optional(),
   feesConfig: z.array(feeItemSchema).optional(),
+  industries: z.array(z.string()).optional(),
 });
 
 const updateOutletSchema = z.object({
@@ -52,6 +53,7 @@ const updateOutletSchema = z.object({
   isWarehouse: z.boolean().optional(),
   warehouseId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional(),
+  industries: z.array(z.string()).optional(),
   receiptConfig: z.object({
     paperSize: z.enum(['58mm', '80mm']).default('58mm'),
     footerText: z.string().optional(),

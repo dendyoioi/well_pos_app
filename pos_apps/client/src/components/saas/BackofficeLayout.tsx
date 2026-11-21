@@ -31,6 +31,7 @@ import {
   ShieldAlert,
   BookOpen,
   ChefHat,
+  Shirt,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -38,8 +39,16 @@ import { api, type PlatformNotification } from '../../services/api';
 import { FloatingGuideWidget } from '../ui/FloatingGuideWidget';
 import { PwaInstallButton } from '../PwaInstallBanner';
 import { WellPosLogo } from '../ui/WellPosLogo';
+import { checkIsLaundry } from '../../utils/businessType';
 
 export const TAB_TO_GROUP_MAP: Record<string, string> = {
+  // Operasional Laundry & Dry Clean
+  laundry_services: 'laundry_ops',
+  laundry_queue: 'laundry_ops',
+  laundry_production: 'laundry_ops',
+  laundry_racks: 'laundry_ops',
+  laundry_transfers: 'laundry_ops',
+
   // Menu & Produk
   products: 'menu_produk',
   categories: 'menu_produk',
@@ -108,18 +117,24 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   onLogout,
   children,
 }) => {
+  // Deteksi Mode Industri Laundry & Dry Clean
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet, user);
+  }, [activeOutlet, user]);
+
   // Hak Akses Panduan: Hanya Owner dan Supervisor yang dapat mengakses SOP / Panduan
   const canViewGuide = user && (user.role === 'OWNER' || user.role === 'ADMIN' || user.role === 'SUPERVISOR');
 
   // Induk grup accordion dari halaman aktif saat ini
   const activeParentGroup = TAB_TO_GROUP_MAP[activeTab];
 
-  // Accordion state for sidebar groups (F&B Centric)
+  // Accordion state for sidebar groups
   // Menjamin menu grup dari halaman aktif selalu terbuka secara default
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initialGroup = TAB_TO_GROUP_MAP[activeTab];
     return {
-      menu_produk: initialGroup === 'menu_produk' || !initialGroup,
+      laundry_ops: initialGroup === 'laundry_ops' || isLaundryMode,
+      menu_produk: initialGroup === 'menu_produk' || (!initialGroup && !isLaundryMode),
       buku_menu: initialGroup === 'buku_menu',
       stok: initialGroup === 'stok',
       laporan: initialGroup === 'laporan',
@@ -589,7 +604,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           }`}
         >
           <LayoutDashboard className="w-4 h-4 shrink-0" />
-          <span>Ringkasan Bisnis</span>
+          <span>{isLaundryMode ? 'Ringkasan Bisnis Laundry' : 'Ringkasan Bisnis'}</span>
         </button>
 
         {/* Menu Khusus Pemilik: Paket & Kuota Token */}
@@ -621,148 +636,242 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           </button>
         )}
 
-        {/* 1. Group: Menu & Produk F&B */}
-        <div className="pt-1">
-          <button
-            onClick={() => toggleGroup('menu_produk')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
-              activeParentGroup === 'menu_produk'
-                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
-                : 'text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <UtensilsCrossed className={`w-4 h-4 shrink-0 transition-colors ${
-                activeParentGroup === 'menu_produk' ? 'text-blue-900' : 'text-slate-500'
-              }`} />
-              <span>Menu &amp; Produk</span>
-            </span>
-            {openGroups.menu_produk ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'menu_produk' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+        {/* KHUSUS MODE LAUNDRY: Group Operasional Laundry */}
+        {isLaundryMode && (
+          <div className="pt-1">
+            <button
+              onClick={() => toggleGroup('laundry_ops')}
+              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+                activeParentGroup === 'laundry_ops'
+                  ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Shirt className={`w-4 h-4 shrink-0 transition-colors ${
+                  activeParentGroup === 'laundry_ops' ? 'text-blue-900' : 'text-slate-500'
+                }`} />
+                <span>Operasional Laundry</span>
+              </span>
+              {openGroups.laundry_ops ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'laundry_ops' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </button>
+            {openGroups.laundry_ops && (
+              <div className="pl-8 pr-2 py-1 space-y-1">
+                <button
+                  onClick={() => handleSelectTab('laundry_queue')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'laundry_queue'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Antrean &amp; Status Cucian</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                    activeTab === 'laundry_queue' ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    Live
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('laundry_production')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'laundry_production'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Stasiun Produksi (Workshop)</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                    activeTab === 'laundry_production' ? 'bg-indigo-800 text-white' : 'bg-indigo-100 text-indigo-800'
+                  }`}>
+                    SOP
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('laundry_services')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'laundry_services'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Layanan &amp; Tarif Laundry</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('laundry_racks')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'laundry_racks'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Manajemen Rak &amp; Simpan</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('laundry_transfers')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'laundry_transfers'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Surat Jalan &amp; Workshop</span>
+                </button>
+              </div>
             )}
-          </button>
-          {openGroups.menu_produk && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
-              <button
-                onClick={() => handleSelectTab('products')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'products'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Daftar Menu</span>
-              </button>
-              <button
-                onClick={() => handleSelectTab('categories')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'categories'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Kategori Menu</span>
-              </button>
-              <button
-                onClick={() => handleSelectTab('modifiers')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'modifiers'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Modifier &amp; Topping</span>
-              </button>
-              <button
-                onClick={() => handleSelectTab('recipes')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'recipes'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Resep &amp; Bahan (BOM)</span>
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* 2. Group: Buku Menu QR (Self-Order) */}
-        <div className="pt-1">
-          <button
-            onClick={() => toggleGroup('buku_menu')}
-            className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
-              activeParentGroup === 'buku_menu'
-                ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
-                : 'text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <QrCode className={`w-4 h-4 shrink-0 transition-colors ${
-                activeParentGroup === 'buku_menu' ? 'text-blue-900' : 'text-slate-500'
-              }`} />
-              <span>Buku Menu QR</span>
-            </span>
-            {openGroups.buku_menu ? (
-              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'buku_menu' ? 'text-blue-900' : 'text-slate-400'}`} />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+        {/* 1. Group: Menu & Produk F&B (Disembunyikan jika Mode Laundry) */}
+        {!isLaundryMode && (
+          <div className="pt-1">
+            <button
+              onClick={() => toggleGroup('menu_produk')}
+              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+                activeParentGroup === 'menu_produk'
+                  ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <UtensilsCrossed className={`w-4 h-4 shrink-0 transition-colors ${
+                  activeParentGroup === 'menu_produk' ? 'text-blue-900' : 'text-slate-500'
+                }`} />
+                <span>Menu &amp; Produk</span>
+              </span>
+              {openGroups.menu_produk ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'menu_produk' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </button>
+            {openGroups.menu_produk && (
+              <div className="pl-8 pr-2 py-1 space-y-1">
+                <button
+                  onClick={() => handleSelectTab('products')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'products'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Daftar Menu</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('categories')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'categories'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Kategori Menu</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('modifiers')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'modifiers'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Modifier &amp; Topping</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('recipes')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'recipes'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Resep &amp; Bahan (BOM)</span>
+                </button>
+              </div>
             )}
-          </button>
-          {openGroups.buku_menu && (
-            <div className="pl-8 pr-2 py-1 space-y-1">
-              <button
-                onClick={() => handleSelectTab('qr_tables')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'qr_tables'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Daftar Meja &amp; QR</span>
-              </button>
-              <button
-                onClick={() => handleSelectTab('qr_settings')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'qr_settings'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Pengaturan Buku Menu</span>
-              </button>
-              <button
-                onClick={() => handleSelectTab('qr_orders')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'qr_orders'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Pesanan Mandiri Masuk</span>
-              </button>
-              <button
-                onClick={() => handleSelectTab('qr_guest_menu')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'qr_guest_menu'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Tampilan Menu Tamu</span>
-                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
-                  activeTab === 'qr_guest_menu' ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-900'
-                }`}>
-                  Pratinjau
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* 3. Group: Bahan Baku & Stok */}
+        {/* 2. Group: Buku Menu QR (Disembunyikan jika Mode Laundry) */}
+        {!isLaundryMode && (
+          <div className="pt-1">
+            <button
+              onClick={() => toggleGroup('buku_menu')}
+              className={`w-full text-left px-3 py-2 rounded-xl font-bold flex items-center justify-between transition-colors ${
+                activeParentGroup === 'buku_menu'
+                  ? 'bg-blue-50/80 text-blue-950 font-black ring-1 ring-blue-200/60'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <QrCode className={`w-4 h-4 shrink-0 transition-colors ${
+                  activeParentGroup === 'buku_menu' ? 'text-blue-900' : 'text-slate-500'
+                }`} />
+                <span>Buku Menu QR</span>
+              </span>
+              {openGroups.buku_menu ? (
+                <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'buku_menu' ? 'text-blue-900' : 'text-slate-400'}`} />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              )}
+            </button>
+            {openGroups.buku_menu && (
+              <div className="pl-8 pr-2 py-1 space-y-1">
+                <button
+                  onClick={() => handleSelectTab('qr_tables')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'qr_tables'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Daftar Meja &amp; QR</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('qr_settings')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'qr_settings'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Pengaturan Buku Menu</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('qr_orders')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'qr_orders'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Pesanan Mandiri Masuk</span>
+                </button>
+                <button
+                  onClick={() => handleSelectTab('qr_guest_menu')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'qr_guest_menu'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Tampilan Menu Tamu</span>
+                  <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
+                    activeTab === 'qr_guest_menu' ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-900'
+                  }`}>
+                    Pratinjau
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 3. Group: Bahan Baku & Stok / Bahan Cuci & Perlengkapan */}
         <div className="pt-1">
           <button
             onClick={() => toggleGroup('stok')}
@@ -776,7 +885,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <Boxes className={`w-4 h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>Bahan Baku &amp; Stok</span>
+              <span>{isLaundryMode ? 'Bahan Cuci & Perlengkapan' : 'Bahan Baku & Stok'}</span>
             </span>
             {openGroups.stok ? (
               <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'stok' ? 'text-blue-900' : 'text-slate-400'}`} />
@@ -794,7 +903,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Stok Bahan Baku</span>
+                <span>{isLaundryMode ? 'Stok Bahan Cuci & Parfum' : 'Stok Bahan Baku'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('warehouses')}
@@ -804,7 +913,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Kelola Gudang</span>
+                <span>{isLaundryMode ? 'Gudang & Workshop Pasokan' : 'Kelola Gudang'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('purchase_orders')}
@@ -814,7 +923,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Pengadaan (PO)</span>
+                <span>{isLaundryMode ? 'Pengadaan Bahan (PO)' : 'Pengadaan (PO)'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('transfers')}
@@ -834,7 +943,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Riwayat Mutasi Stok</span>
+                <span>{isLaundryMode ? 'Riwayat Pemakaian & Mutasi' : 'Riwayat Mutasi Stok'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('suppliers')}
@@ -844,7 +953,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Pemasok / Supplier</span>
+                <span>{isLaundryMode ? 'Distributor / Vendor Bahan' : 'Pemasok / Supplier'}</span>
               </button>
             </div>
           )}
@@ -917,7 +1026,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Analisis Menu &amp; HPP</span>
+                <span>{isLaundryMode ? 'Analisis Layanan & Tonase' : 'Analisis Menu & HPP'}</span>
               </button>
             </div>
           )}
@@ -937,7 +1046,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <Tag className={`w-4 h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>Promosi &amp; Diskon</span>
+              <span>{isLaundryMode ? 'Promosi & Kupon' : 'Promosi & Diskon'}</span>
             </span>
             {openGroups.promosi ? (
               <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'promosi' ? 'text-blue-900' : 'text-slate-400'}`} />
@@ -955,7 +1064,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Diskon &amp; Voucher</span>
+                <span>{isLaundryMode ? 'Diskon & Kupon Promosi' : 'Diskon & Voucher'}</span>
               </button>
             </div>
           )}
@@ -975,7 +1084,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <Users className={`w-4 h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>Pelanggan &amp; Kasbon</span>
+              <span>{isLaundryMode ? 'Pelanggan & Piutang' : 'Pelanggan & Kasbon'}</span>
             </span>
             {openGroups.pelanggan ? (
               <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pelanggan' ? 'text-blue-900' : 'text-slate-400'}`} />
@@ -993,7 +1102,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Direktori Pelanggan</span>
+                <span>{isLaundryMode ? 'Direktori Pelanggan & Alamat' : 'Direktori Pelanggan'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('customers', 'debts')}
@@ -1003,7 +1112,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Buku Kasbon &amp; Piutang</span>
+                <span>{isLaundryMode ? 'Buku Piutang & Bayar Nanti' : 'Buku Kasbon & Piutang'}</span>
               </button>
             </div>
           )}
@@ -1023,7 +1132,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <Users className={`w-4 h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>Manajemen Staf</span>
+              <span>{isLaundryMode ? 'Manajemen Staf & Operator' : 'Manajemen Staf'}</span>
             </span>
             {openGroups.staf ? (
               <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'staf' ? 'text-blue-900' : 'text-slate-400'}`} />
@@ -1041,7 +1150,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Kelola Staf</span>
+                <span>{isLaundryMode ? 'Kelola Staf & Operator' : 'Kelola Staf'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('staff_roles')}
@@ -1051,7 +1160,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Akses &amp; Peran</span>
+                <span>{isLaundryMode ? 'Akses & Peran Operator' : 'Akses & Peran'}</span>
               </button>
             </div>
           )}
@@ -1071,7 +1180,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <Settings className={`w-4 h-4 shrink-0 transition-colors ${
                 activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-500'
               }`} />
-              <span>Pengaturan Resto</span>
+              <span>{isLaundryMode ? 'Pengaturan Toko' : 'Pengaturan Resto'}</span>
             </span>
             {openGroups.pengaturan ? (
               <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${activeParentGroup === 'pengaturan' ? 'text-blue-900' : 'text-slate-400'}`} />
@@ -1089,18 +1198,20 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Format Struk Kasir</span>
+                <span>{isLaundryMode ? 'Format Struk & Tag Pakaian' : 'Format Struk Kasir'}</span>
               </button>
-              <button
-                onClick={() => handleSelectTab('settings_taxes')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'settings_taxes'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Pajak (PB1) &amp; Biaya Layanan</span>
-              </button>
+              {!isLaundryMode && (
+                <button
+                  onClick={() => handleSelectTab('settings_taxes')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'settings_taxes'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Pajak (PB1) &amp; Biaya Layanan</span>
+                </button>
+              )}
               <button
                 onClick={() => handleSelectTab('settings_payment')}
                 className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
@@ -1111,16 +1222,18 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               >
                 <span>Metode Pembayaran &amp; QRIS</span>
               </button>
-              <button
-                onClick={() => handleSelectTab('settings_channels')}
-                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                  activeTab === 'settings_channels'
-                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                }`}
-              >
-                <span>Kanal Penjualan &amp; Mitra</span>
-              </button>
+              {!isLaundryMode && (
+                <button
+                  onClick={() => handleSelectTab('settings_channels')}
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    activeTab === 'settings_channels'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                >
+                  <span>Kanal Penjualan &amp; Mitra</span>
+                </button>
+              )}
               <button
                 onClick={() => handleSelectTab('settings_loyalty')}
                 className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
@@ -1129,7 +1242,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Program Loyalitas &amp; Poin</span>
+                <span>{isLaundryMode ? 'Program Member & Poin' : 'Program Loyalitas & Poin'}</span>
               </button>
               <button
                 onClick={() => handleSelectTab('outlets')}
@@ -1139,7 +1252,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                 }`}
               >
-                <span>Profil &amp; Outlet Toko</span>
+                <span>{isLaundryMode ? 'Daftar Toko & Workshop' : 'Profil & Outlet Toko'}</span>
               </button>
             </div>
           )}
@@ -1208,6 +1321,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   {isWarehouseActive ? (
                     <span className="text-[10px] bg-indigo-200/80 text-indigo-900 px-1.5 py-0.5 rounded font-black shrink-0">
                       Gudang
+                    </span>
+                  ) : isLaundryMode ? (
+                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold shrink-0 flex items-center gap-1">
+                      <span>🧺</span>
+                      <span className="hidden xs:inline">Laundry</span>
                     </span>
                   ) : null}
                   <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />

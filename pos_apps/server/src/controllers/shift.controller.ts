@@ -144,12 +144,16 @@ export const getCurrentShift = async (req: Request, res: Response) => {
       });
     }
 
-    // Ambil rekap transaksi berjalan selama shift ini
+    // Ambil rekap transaksi berjalan selama shift ini (termasuk DP dan pelunasan lintas-shift, kecualikan pelunasan kasbon agar tidak double count)
     const paymentRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT pt.payment_method as "paymentMethod", pt.amount
        FROM "payment_transactions" pt
        JOIN "orders" o ON o.id = pt.order_id
-       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       WHERE COALESCE(pt.shift_id, o.shift_id) = $1 
+         AND pt.status = 'CAPTURED' 
+         AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+         AND (pt.reference_number IS NULL OR pt.reference_number NOT LIKE 'DEBT-PAY-%')
+         AND (pt.metadata IS NULL OR (pt.metadata->>'debtPaymentId') IS NULL);`,
       activeShift.id
     );
 
@@ -157,16 +161,26 @@ export const getCurrentShift = async (req: Request, res: Response) => {
     let cashSalesCount = 0;
     let qrisSalesTotal = 0;
     let qrisSalesCount = 0;
+    let otherNonCashSalesTotal = 0;
+    let otherNonCashSalesCount = 0;
 
     paymentRows.forEach((p) => {
+      const amt = Number(p.amount);
       if (p.paymentMethod === 'CASH') {
-        cashSalesTotal += Number(p.amount);
+        cashSalesTotal += amt;
         cashSalesCount += 1;
       } else if (p.paymentMethod === 'QRIS') {
-        qrisSalesTotal += Number(p.amount);
+        qrisSalesTotal += amt;
         qrisSalesCount += 1;
+      } else {
+        otherNonCashSalesTotal += amt;
+        otherNonCashSalesCount += 1;
       }
     });
+
+    const nonCashSalesTotal = qrisSalesTotal + otherNonCashSalesTotal;
+    const nonCashSalesCount = qrisSalesCount + otherNonCashSalesCount;
+    const totalRevenue = cashSalesTotal + nonCashSalesTotal;
 
     const countRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT count(*)::int as count FROM "orders" 
@@ -193,7 +207,10 @@ export const getCurrentShift = async (req: Request, res: Response) => {
       if (cm.type === 'CASH_OUT') {
         totalCashOut += Number(cm.amount);
       } else if (cm.type === 'CASH_IN') {
-        totalCashIn += Number(cm.amount);
+        // Kecualikan DEBT_REPAYMENT agar tidak double count dengan totalDebtCashIn
+        if (cm.category !== 'DEBT_REPAYMENT') {
+          totalCashIn += Number(cm.amount);
+        }
       }
     });
 
@@ -284,7 +301,11 @@ export const getCurrentShift = async (req: Request, res: Response) => {
           cashSalesCount,
           qrisSalesTotal,
           qrisSalesCount,
-          totalRevenue: cashSalesTotal + qrisSalesTotal,
+          otherNonCashSalesTotal,
+          otherNonCashSalesCount,
+          nonCashSalesTotal,
+          nonCashSalesCount,
+          totalRevenue,
           totalCashOut,
           totalCashIn,
           totalDebtCashIn,
@@ -331,16 +352,31 @@ export const getXReport = async (req: Request, res: Response) => {
       });
     }
 
-    const orderRows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o.id, o.invoice_number as "invoiceNumber", o.subtotal, o.discount_amount as "discountAmount",
-              o.tax_amount as "taxAmount", COALESCE(o.service_total, 0) as "serviceCharge", o.grand_total as "grandTotal",
-              o.created_at as "createdAt", pt.payment_method as "paymentMethod", pt.amount
-       FROM "orders" o
-       LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
-       WHERE o.shift_id = $1 AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
-       ORDER BY o.created_at DESC;`,
+    const paymentRows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT pt.payment_method as "paymentMethod", pt.amount
+       FROM "payment_transactions" pt
+       JOIN "orders" o ON o.id = pt.order_id
+       WHERE COALESCE(pt.shift_id, o.shift_id) = $1 
+         AND pt.status = 'CAPTURED' 
+         AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+         AND (pt.reference_number IS NULL OR pt.reference_number NOT LIKE 'DEBT-PAY-%')
+         AND (pt.metadata IS NULL OR (pt.metadata->>'debtPaymentId') IS NULL);`,
       activeShift.id
     );
+
+    const shiftOrders = await prisma.order.findMany({
+      where: {
+        shiftId: activeShift.id,
+        orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
+      },
+      include: {
+        payments: {
+          where: { status: 'CAPTURED' },
+          select: { paymentMethod: true, amount: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
     let totalGrossSales = 0;
     let totalDiscounts = 0;
@@ -348,27 +384,48 @@ export const getXReport = async (req: Request, res: Response) => {
     let totalService = 0;
     let totalCashSales = 0;
     let totalQrisSales = 0;
-    const orderMap = new Map<string, any>();
+    let totalOtherNonCashSales = 0;
 
-    orderRows.forEach((row) => {
-      if (!orderMap.has(row.id)) {
-        orderMap.set(row.id, {
-          invoiceNumber: row.invoiceNumber,
-          createdAt: row.createdAt,
-          grandTotal: Number(row.grandTotal || 0),
-          paymentMethod: row.paymentMethod || 'CASH',
-        });
-        totalGrossSales += Number(row.subtotal || 0);
-        totalDiscounts += Number(row.discountAmount || 0);
-        totalTax += Number(row.taxAmount || 0);
-        totalService += Number(row.serviceCharge || 0);
-      }
-      if (row.paymentMethod === 'CASH') {
-        totalCashSales += Number(row.amount || 0);
-      } else if (row.paymentMethod === 'QRIS') {
-        totalQrisSales += Number(row.amount || 0);
+    shiftOrders.forEach((o) => {
+      totalGrossSales += Number(o.subtotal || 0);
+      totalDiscounts += Number(o.discountTotal || 0);
+      totalTax += Number(o.taxTotal || 0);
+      totalService += Number(o.serviceTotal || 0);
+    });
+
+    paymentRows.forEach((p) => {
+      const amt = Number(p.amount || 0);
+      if (p.paymentMethod === 'CASH') {
+        totalCashSales += amt;
+      } else if (p.paymentMethod === 'QRIS') {
+        totalQrisSales += amt;
+      } else {
+        totalOtherNonCashSales += amt;
       }
     });
+
+    const totalNonCashSales = totalQrisSales + totalOtherNonCashSales;
+    const netRevenue = totalCashSales + totalNonCashSales;
+
+    const unpaidLaundryOrders = shiftOrders.filter(
+      (o) => o.paymentStatus === 'UNPAID' || o.paymentStatus === 'PARTIALLY_PAID'
+    );
+    const totalUnpaidReceivables = unpaidLaundryOrders.reduce((sum, o) => {
+      const tot = Number(o.totalAmount || 0);
+      const paid = Number(o.paidAmount || 0);
+      return sum + Math.max(0, tot - paid);
+    }, 0);
+
+    const allOrders = shiftOrders.map((o) => {
+      const primaryPayment = o.payments[0]?.paymentMethod || (o.paymentStatus === 'UNPAID' ? 'UNPAID' : 'CASH');
+      return {
+        invoiceNumber: o.invoiceNumber,
+        createdAt: o.createdAt,
+        grandTotal: Number(o.totalAmount || 0),
+        paymentMethod: primaryPayment,
+      };
+    });
+    const recentOrders = allOrders.slice(0, 20);
 
     // Ambil mutasi kas shift
     const cashMovements = await prisma.cashMovement.findMany({
@@ -388,7 +445,10 @@ export const getXReport = async (req: Request, res: Response) => {
       if (cm.type === 'CASH_OUT') {
         totalCashOut += Number(cm.amount);
       } else if (cm.type === 'CASH_IN') {
-        totalCashIn += Number(cm.amount);
+        // Kecualikan DEBT_REPAYMENT agar tidak double count dengan totalDebtCashIn
+        if (cm.category !== 'DEBT_REPAYMENT') {
+          totalCashIn += Number(cm.amount);
+        }
       }
     });
 
@@ -426,10 +486,6 @@ export const getXReport = async (req: Request, res: Response) => {
 
     const startingCash = Number(activeShift.startingCash);
     const expectedCashInDrawer = startingCash + totalCashSales + totalCashIn + totalDebtCashIn - totalCashOut;
-    const netRevenue = totalCashSales + totalQrisSales;
-
-    const allOrders = Array.from(orderMap.values());
-    const recentOrders = allOrders.slice(0, 20);
 
     return res.status(200).json({
       status: 'success',
@@ -458,10 +514,16 @@ export const getXReport = async (req: Request, res: Response) => {
         paymentSummary: {
           cashSales: totalCashSales,
           qrisSales: totalQrisSales,
+          otherNonCashSales: totalOtherNonCashSales,
+          nonCashSales: totalNonCashSales,
           netRevenue,
         },
+        receivablesSummary: {
+          unpaidCount: unpaidLaundryOrders.length,
+          totalReceivables: totalUnpaidReceivables,
+        },
         transactionSummary: {
-          totalOrders: orderMap.size,
+          totalOrders: shiftOrders.length,
           totalGrossSales,
           totalDiscounts,
           totalTax,
@@ -517,10 +579,16 @@ export const closeShift = async (req: Request, res: Response) => {
     }
 
     // Validasi Integritas Operasional: Kasir DILARANG tutup shift jika masih ada tagihan belum lunas (Open Tab / UNPAID)
+    // Pengecualian: Outlet berindustri LAUNDRY diizinkan tutup shift dengan order UNPAID / PARTIALLY_PAID
+    const outletIndustries = (activeShift.outlet.industries as any) || [];
+    const isLaundryOutlet = Array.isArray(outletIndustries)
+      ? outletIndustries.some((i) => typeof i === 'string' && (i.toLowerCase().includes('laundry') || i.toLowerCase().includes('cuci') || i.toLowerCase().includes('dry clean')))
+      : typeof outletIndustries === 'string' && (outletIndustries.toLowerCase().includes('laundry') || outletIndustries.toLowerCase().includes('cuci'));
+
     const unpaidOrders = await prisma.order.findMany({
       where: {
         shiftId: activeShift.id,
-        paymentStatus: 'UNPAID',
+        paymentStatus: { in: ['UNPAID', 'PARTIALLY_PAID'] },
         orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
       },
       select: {
@@ -528,46 +596,62 @@ export const closeShift = async (req: Request, res: Response) => {
         invoiceNumber: true,
         tableNumber: true,
         totalAmount: true,
+        paidAmount: true,
+        paymentStatus: true,
       },
     });
 
-    if (unpaidOrders.length > 0) {
-      const invoiceList = unpaidOrders
-        .map((o) => o.invoiceNumber || o.id.slice(0, 8))
-        .join(', ');
-      return res.status(400).json({
-        status: 'error',
-        code: 'UNPAID_ORDERS_REMAINING',
-        message: `Tutup shift ditolak: Masih terdapat ${unpaidOrders.length} tagihan belum dibayar (${invoiceList}). Harap selesaikan pembayaran atau batalkan pesanan terlebih dahulu sebelum menutup shift.`,
-        data: { unpaidOrders },
-      });
+    if (!isLaundryOutlet) {
+      const strictUnpaid = unpaidOrders.filter((o) => o.paymentStatus === 'UNPAID');
+      if (strictUnpaid.length > 0) {
+        const invoiceList = strictUnpaid
+          .map((o) => o.invoiceNumber || o.id.slice(0, 8))
+          .join(', ');
+        return res.status(400).json({
+          status: 'error',
+          code: 'UNPAID_ORDERS_REMAINING',
+          message: `Tutup shift ditolak: Masih terdapat ${strictUnpaid.length} tagihan belum dibayar (${invoiceList}). Harap selesaikan pembayaran atau batalkan pesanan terlebih dahulu sebelum menutup shift.`,
+          data: { unpaidOrders: strictUnpaid },
+        });
+      }
     }
 
     const { actualCash, notes } = parseResult.data;
 
-    // Hitung rekap seluruh order pada shift ini
+    // Hitung rekap seluruh pembayaran yang ditangkap (CAPTURED) pada shift ini (termasuk DP dan pelunasan lintas-shift)
     const paymentRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT pt.payment_method as "paymentMethod", pt.amount
        FROM "payment_transactions" pt
        JOIN "orders" o ON o.id = pt.order_id
-       WHERE o.shift_id = $1 AND pt.status = 'CAPTURED' AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       WHERE COALESCE(pt.shift_id, o.shift_id) = $1 
+         AND pt.status = 'CAPTURED' 
+         AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+         AND (pt.reference_number IS NULL OR pt.reference_number NOT LIKE 'DEBT-PAY-%')
+         AND (pt.metadata IS NULL OR (pt.metadata->>'debtPaymentId') IS NULL);`,
       activeShift.id
     );
 
     let totalCashSales = 0;
     let totalQrisSales = 0;
+    let totalOtherNonCashSales = 0;
 
     paymentRows.forEach((p) => {
+      const amt = Number(p.amount);
       if (p.paymentMethod === 'CASH') {
-        totalCashSales += Number(p.amount);
+        totalCashSales += amt;
       } else if (p.paymentMethod === 'QRIS') {
-        totalQrisSales += Number(p.amount);
+        totalQrisSales += amt;
+      } else {
+        totalOtherNonCashSales += amt;
       }
     });
 
+    const totalNonCashSales = totalQrisSales + totalOtherNonCashSales;
+    const totalRevenue = totalCashSales + totalNonCashSales;
+
     const countRows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT count(*)::int as count FROM "orders" 
-       WHERE shift_id = $1 AND payment_status = 'PAID' AND order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       WHERE shift_id = $1 AND order_status NOT IN ('CANCELLED', 'VOIDED');`,
       activeShift.id
     );
     const totalOrders = countRows[0]?.count || 0;
@@ -577,15 +661,21 @@ export const closeShift = async (req: Request, res: Response) => {
       `SELECT COALESCE(o.channel, o.order_type, 'DINE_IN') as channel, COUNT(*)::int as count,
               COALESCE(SUM(o.grand_total), 0) as revenue
        FROM "orders" o
-       WHERE o.shift_id = $1 AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+       WHERE o.shift_id = $1 AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
        GROUP BY COALESCE(o.channel, o.order_type, 'DINE_IN')
        ORDER BY revenue DESC;`,
       activeShift.id
     );
 
     // ─── Rata-rata nilai transaksi (Average Order Value) ─────────────────────
-    const totalRevenue = totalCashSales + totalQrisSales;
     const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+
+    // Hitung total piutang belum tertagih (untuk Laundry)
+    const totalUnpaidReceivables = unpaidOrders.reduce((sum, o) => {
+      const tot = Number(o.totalAmount || 0);
+      const paid = Number(o.paidAmount || 0);
+      return sum + Math.max(0, tot - paid);
+    }, 0);
 
     // Ambil mutasi kas pada shift ini
     const cashMovements = await prisma.cashMovement.findMany({
@@ -605,7 +695,10 @@ export const closeShift = async (req: Request, res: Response) => {
       if (cm.type === 'CASH_OUT') {
         totalCashOut += Number(cm.amount);
       } else if (cm.type === 'CASH_IN') {
-        totalCashIn += Number(cm.amount);
+        // Kecualikan DEBT_REPAYMENT agar tidak double count dengan totalDebtCashIn
+        if (cm.category !== 'DEBT_REPAYMENT') {
+          totalCashIn += Number(cm.amount);
+        }
       }
     });
 
@@ -645,7 +738,7 @@ export const closeShift = async (req: Request, res: Response) => {
     const shiftOrders = await prisma.order.findMany({
       where: {
         shiftId: activeShift.id,
-        paymentStatus: 'PAID',
+        paymentStatus: { in: ['PAID', 'PARTIALLY_PAID'] },
         orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
       },
       orderBy: { createdAt: 'desc' },
@@ -751,8 +844,14 @@ export const closeShift = async (req: Request, res: Response) => {
         cashMovements,
         nonCashSummary: {
           totalQrisSales,
+          totalOtherNonCashSales,
+          totalNonCashSales,
           totalRevenue,
           avgOrderValue,
+        },
+        receivablesSummary: {
+          unpaidCount: unpaidOrders.length,
+          totalReceivables: totalUnpaidReceivables,
         },
         channelBreakdown: channelRows.map((r) => ({
           channel: r.channel,
@@ -869,9 +968,13 @@ export const getShiftById = async (req: Request, res: Response) => {
       `SELECT o.id, o.grand_total as "grandTotal", o.invoice_number as "invoiceNumber", o.created_at,
               o.order_status as "orderStatus",
               pt.payment_method as "paymentMethod", pt.amount
-       FROM "orders" o
-       LEFT JOIN "payment_transactions" pt ON pt.order_id = o.id AND pt.status = 'CAPTURED'
-       WHERE o.shift_id = $1 AND o.payment_status = 'PAID' AND o.order_status NOT IN ('CANCELLED', 'VOIDED');`,
+       FROM "payment_transactions" pt
+       JOIN "orders" o ON o.id = pt.order_id
+       WHERE COALESCE(pt.shift_id, o.shift_id) = $1 
+         AND pt.status = 'CAPTURED' 
+         AND o.order_status NOT IN ('CANCELLED', 'VOIDED')
+         AND (pt.reference_number IS NULL OR pt.reference_number NOT LIKE 'DEBT-PAY-%')
+         AND (pt.metadata IS NULL OR (pt.metadata->>'debtPaymentId') IS NULL);`,
       id
     );
 
@@ -912,7 +1015,11 @@ export const getShiftById = async (req: Request, res: Response) => {
     let totalCashIn = 0;
     cashMovements.forEach((cm) => {
       if (cm.type === 'CASH_OUT') totalCashOut += Number(cm.amount);
-      else if (cm.type === 'CASH_IN') totalCashIn += Number(cm.amount);
+      else if (cm.type === 'CASH_IN') {
+        if (cm.category !== 'DEBT_REPAYMENT') {
+          totalCashIn += Number(cm.amount);
+        }
+      }
     });
 
     // Ambil transaksi pelunasan kasbon pelanggan tunai selama shift ini
@@ -951,7 +1058,7 @@ export const getShiftById = async (req: Request, res: Response) => {
     const shiftOrders = await prisma.order.findMany({
       where: {
         shiftId: shift.id,
-        paymentStatus: 'PAID',
+        paymentStatus: { in: ['PAID', 'PARTIALLY_PAID'] },
         orderStatus: { notIn: ['CANCELLED', 'VOIDED'] },
       },
       orderBy: { createdAt: 'desc' },

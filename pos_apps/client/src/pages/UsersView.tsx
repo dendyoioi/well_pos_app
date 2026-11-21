@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useDialog } from '../context/DialogContext';
+import { checkIsLaundry } from '../utils/businessType';
 import { TablePagination } from '../components/TablePagination';
 import { AttendanceReportView } from '../components/attendance/AttendanceReportView';
 import type { RolePermissions } from '../types/auth';
@@ -62,12 +63,19 @@ const ROLE_ID_TO_SYSTEM_ENUM: Record<string, string> = {
   'role-supervisor': 'SUPERVISOR',
   'role-cashier': 'CASHIER',
   'role-warehouse': 'WAREHOUSE',
+  'role-production': 'KITCHEN',
   'role-barista': 'KITCHEN',
+  'role-courier': 'WAITER',
   'role-waiter': 'WAITER',
 };
 
 export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateToRoles }) => {
   const dialog = useDialog();
+
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet);
+  }, [activeOutlet]);
+
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [roles, setRoles] = useState<RolePermissions[]>([]);
@@ -107,7 +115,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   const [showPinField, setShowPinField] = useState(false);
 
   // Auto-generate 5-digit Staff ID sesuai standar hierarki:
-  // 0000x: Owner/Admin | 1000x: Kasir | 2000x: Supervisor | 3000x: Gudang
+  // 0000x: Owner/Admin | 1000x: Kasir | 2000x: Supervisor | 3000x: Gudang | 4000x: Produksi | 5000x: Kurir
   const generateRandomStaffId = (targetRole?: string) => {
     const roleToUse = targetRole || formData.role;
     let minSeq = 10001;
@@ -122,6 +130,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     } else if (roleToUse === 'WAREHOUSE') {
       minSeq = 30001;
       maxSeq = 39999;
+    } else if (roleToUse === 'KITCHEN') {
+      minSeq = 40001;
+      maxSeq = 49999;
+    } else if (roleToUse === 'WAITER') {
+      minSeq = 50001;
+      maxSeq = 59999;
     }
 
     const existingCodes = new Set(staffList.map((s) => s.userCode));
@@ -437,14 +451,20 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     if (upper.includes('SUPERVISOR') || upper.includes('MANAGER')) {
       return { label: roleName, color: 'bg-amber-100 text-amber-800 border-amber-200' };
     }
-    if (upper.includes('GUDANG') || upper.includes('WAREHOUSE')) {
-      return { label: roleName, color: 'bg-sky-100 text-sky-800 border-sky-200' };
+    if (upper.includes('PRODUCTION') || upper.includes('PRODUKSI') || upper.includes('OPERATOR')) {
+      return { label: isLaundryMode ? 'Operator Produksi' : 'Kru Produksi', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' };
     }
     if (upper.includes('BARISTA') || upper.includes('KITCHEN') || upper.includes('DAPUR')) {
-      return { label: roleName, color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+      return { label: isLaundryMode ? 'Operator Produksi' : roleName, color: isLaundryMode ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+    }
+    if (upper.includes('COURIER') || upper.includes('KURIR') || upper.includes('DRIVER')) {
+      return { label: isLaundryMode ? 'Kurir Antar-Jemput' : 'Kurir', color: 'bg-teal-100 text-teal-800 border-teal-200' };
     }
     if (upper.includes('WAITER') || upper.includes('PELAYAN')) {
-      return { label: roleName, color: 'bg-teal-100 text-teal-800 border-teal-200' };
+      return { label: isLaundryMode ? 'Kurir Antar-Jemput' : roleName, color: 'bg-teal-100 text-teal-800 border-teal-200' };
+    }
+    if (upper.includes('GUDANG') || upper.includes('WAREHOUSE')) {
+      return { label: roleName, color: 'bg-sky-100 text-sky-800 border-sky-200' };
     }
     return { label: roleName, color: 'bg-blue-100 text-blue-900 border-blue-200' };
   };
@@ -476,6 +496,13 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   const totalStaff = staffList.length;
   const activeCashiers = staffList.filter((s) => s.role.toUpperCase().includes('CASHIER') && s.isActive).length;
   const activeWarehouse = staffList.filter((s) => s.role.toUpperCase().includes('WAREHOUSE') && s.isActive).length;
+  const activeProduction = staffList.filter(
+    (s) =>
+      (s.role.toUpperCase().includes('KITCHEN') ||
+        s.role.toUpperCase().includes('PRODUKSI') ||
+        s.role.toUpperCase().includes('OPERATOR')) &&
+      s.isActive
+  ).length;
   const activeAdmins = staffList.filter(
     (s) => (s.role.toUpperCase().includes('ADMIN') || s.role.toUpperCase().includes('SUPERVISOR')) && s.isActive
   ).length;
@@ -523,7 +550,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             {formMode === 'CREATE' ? 'Tambah Staf' : 'Ubah Data Staf'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Lengkapi data staf resto, nomor ID petugas, kredensial login, dan wewenang peran POS.
+            Lengkapi data staf {isLaundryMode ? 'laundry' : 'resto/toko'}, nomor ID petugas, kredensial login, dan wewenang peran POS.
           </p>
         </div>
 
@@ -601,6 +628,15 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                           </option>
                         );
                       })
+                    ) : isLaundryMode ? (
+                      <>
+                        <option value="CASHIER">Kasir / Front Desk Laundry</option>
+                        <option value="KITCHEN">Operator Produksi (Cuci, Kering, Setrika, Packing)</option>
+                        <option value="SUPERVISOR">Supervisor / Kepala Produksi</option>
+                        <option value="WAITER">Kurir Antar-Jemput (Pickup &amp; Delivery)</option>
+                        <option value="WAREHOUSE">Staf Gudang &amp; Perlengkapan</option>
+                        <option value="OWNER">Pemilik Usaha (Owner / Admin)</option>
+                      </>
                     ) : (
                       <>
                         <option value="CASHIER">Kasir Toko</option>
@@ -945,7 +981,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             <span>Manajemen Staf & Pengguna</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola akun petugas kasir, barista, supervisor, nomor ID 5-digit, PIN cepat, dan wewenang sistem.
+            {isLaundryMode
+              ? 'Kelola akun petugas kasir, operator produksi, supervisor, nomor ID 5-digit, PIN cepat, dan wewenang sistem.'
+              : 'Kelola akun petugas kasir, barista, supervisor, nomor ID 5-digit, PIN cepat, dan wewenang sistem.'}
           </p>
         </div>
 
@@ -1045,9 +1083,15 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
 
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3 min-w-0">
               <div className="min-w-0">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate block">Staf Gudang</span>
-                <div className="text-2xl font-black font-mono text-sky-900 mt-1">{activeWarehouse}</div>
-                <p className="text-[11px] text-sky-600 mt-0.5 truncate">Akses mutasi stok</p>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate block">
+                  {isLaundryMode ? 'Operator Produksi' : 'Staf Gudang'}
+                </span>
+                <div className="text-2xl font-black font-mono text-sky-900 mt-1">
+                  {isLaundryMode ? activeProduction : activeWarehouse}
+                </div>
+                <p className="text-[11px] text-sky-600 mt-0.5 truncate">
+                  {isLaundryMode ? 'Cuci, kering & setrika' : 'Akses mutasi stok'}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-900 flex items-center justify-center font-bold shrink-0">
                 <UserCheck className="w-5 h-5 shrink-0" />
@@ -1101,7 +1145,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             </div>
 
             <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
-              {['ALL', 'CASHIER', 'WAREHOUSE', 'SUPERVISOR', 'ADMIN'].map((r) => (
+              {(isLaundryMode
+                ? ['ALL', 'CASHIER', 'KITCHEN', 'SUPERVISOR', 'ADMIN']
+                : ['ALL', 'CASHIER', 'WAREHOUSE', 'SUPERVISOR', 'ADMIN']
+              ).map((r) => (
                 <button
                   key={r}
                   onClick={() => setRoleFilter(r)}
@@ -1115,6 +1162,8 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                     ? 'Semua Peran'
                     : r === 'CASHIER'
                     ? 'Kasir'
+                    : r === 'KITCHEN'
+                    ? 'Operator Produksi'
                     : r === 'WAREHOUSE'
                     ? 'Gudang'
                     : r === 'SUPERVISOR'

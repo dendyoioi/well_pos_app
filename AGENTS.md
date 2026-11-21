@@ -64,8 +64,9 @@ Meskipun User **lupa** mengetik tag `[DOC]`, jika User memberikan instruksi yang
 
 AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
 
-1. ❌ **DILARANG Mengubah Styling ke TailwindCSS**:
-   - Frontend Well POS murni menggunakan **Vanilla CSS** (`index.css`) dengan curated clean classes. Jangan menginstal, menyarankan, atau menginjeksi utility-classes TailwindCSS tanpa izin tertulis eksplisit.
+1. 🎨 **STANDAR STYLING: TAILWIND CSS v3 + CURATED CLEAN CLASSES (`index.css`)**:
+   - Frontend Well POS menggunakan kombinasi **Tailwind CSS v3** untuk utility layout/spacing/responsif dan curated custom classes di **`index.css`** (clean white-blue palette, soft subtle shadows).
+   - DILARANG menginstal library styling CSS-in-JS eksternal baru (seperti Styled Components, Emotion, Bootstrap, atau Chakra UI) yang membebani bundle size dan merusak konsistensi desain.
 2. ❌ **DILARANG Membuat Modal Bertumpuk (Zero Stacked Modals Policy)**:
    - Jangan pernah menampilkan pop-up modal di atas modal lain. Alur kerja multi-step atau wizard kompleks wajib menggunakan antarmuka layar penuh (seperti `FullScreenStoreWizard.tsx`) atau layout tab terpisah.
 3. ❌ **DILARANG Memasukkan Hardcoded Tenant Fallback**:
@@ -115,7 +116,8 @@ AI Agent **DILARANG KERAS** melakukan hal-hal berikut di repositori ini:
     - Kartu metrik transaksi **Tunai (Cash)** dan **QRIS Non-Tunai** wajib sinkron 1:1 dengan jumlah baris yang berstatus pembayaran tersebut pada tabel transaksi.
     - **Mandatory Automation Check**: Setiap sesi regression testing (`npm run test:smoke` Step 3.5) wajib memverifikasi konsistensi metrik dan anti-falsifikasi metode pembayaran ini.
 15. 🔒 **INTEGRITAS TUTUP SHIFT (LOCK ON UNPAID ORDERS) & VISIBILITAS KASIR TRANSAKSI**:
-    - **Larangan Tutup Shift dengan Tagihan Menggantung**: Kasir **DILARANG KERAS** menutup shift jika masih terdapat tagihan berstatus `paymentStatus === 'UNPAID'` (Open Tab / Tagihan Meja Aktif). Sistem backend wajib menolak request `POST /api/shifts/close` dengan HTTP 400 `UNPAID_ORDERS_REMAINING`, dan antarmuka kasir wajib menampilkan daftar nomor invoice yang belum lunas.
+    - **Larangan Tutup Shift dengan Tagihan Menggantung (F&B / Retail)**: Kasir F&B/Retail **DILARANG KERAS** menutup shift jika masih terdapat tagihan berstatus `paymentStatus === 'UNPAID'` (Open Tab / Tagihan Meja Aktif). Sistem backend wajib menolak request `POST /api/shifts/close` dengan HTTP 400 `UNPAID_ORDERS_REMAINING`, dan antarmuka kasir wajib menampilkan daftar nomor invoice yang belum lunas.
+    - **Pengecualian Vertikal Laundry**: Untuk outlet binatu/laundry (`industries` memuat `LAUNDRY`), kasir diperbolehkan menutup shift harian meskipun terdapat cucian berstatus `UNPAID` atau `PARTIALLY_PAID` (Down Payment / DP) yang masih diproses/di rak. Sistem backend mengizinkan tutup shift dan otomatis mencantumkan ringkasan piutang aktif tersebut pada slip Z-Report.
     - **Visibilitas Akuntabilitas Kasir**: Riwayat transaksi kasir wajib memuat kolom **Kasir** (`order.cashier.name`) secara eksplisit di desktop dan mobile agar mempermudah proses audit dan investigasi selisih kas.
     - **Mandatory Automation Check**: Terverifikasi secara permanen pada `npm run test:smoke` (Step 3.6).
 16. 🔄 **KEBIJAKAN ZERO REDUNDANT REFRESH BUTTON (ANTI-TOMBOL REFRESH MANDIRI)**:

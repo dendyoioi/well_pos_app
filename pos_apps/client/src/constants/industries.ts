@@ -66,6 +66,7 @@ export const INDUSTRY_CATEGORIES: IndustryCategory[] = [
     industryType: 'Layanan',
     language: 'id',
     industryNameList: [
+      'Laundry & Dry Clean',
       'Salon Kecantikan dan Rambut',
       'Salon Kecantikan Hewan Peliharaan',
       'Tempat Pijat',

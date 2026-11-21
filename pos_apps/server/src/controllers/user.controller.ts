@@ -14,8 +14,8 @@ function mapToSystemRole(roleInput?: string): Role {
   }
   // Semantic fallbacks
   if (upper.includes('SUPERVISOR') || upper.includes('MANAGER')) return Role.SUPERVISOR;
-  if (upper.includes('KITCHEN') || upper.includes('BARISTA') || upper.includes('COOK')) return Role.KITCHEN;
-  if (upper.includes('WAITER') || upper.includes('PELAYAN')) return Role.WAITER;
+  if (upper.includes('KITCHEN') || upper.includes('BARISTA') || upper.includes('COOK') || upper.includes('PRODUCTION') || upper.includes('PRODUKSI') || upper.includes('OPERATOR')) return Role.KITCHEN;
+  if (upper.includes('WAITER') || upper.includes('PELAYAN') || upper.includes('COURIER') || upper.includes('KURIR') || upper.includes('DRIVER')) return Role.WAITER;
   if (upper.includes('GUDANG') || upper.includes('WAREHOUSE')) return Role.WAREHOUSE;
   if (upper.includes('ADMIN') || upper.includes('OWNER')) return Role.ADMIN;
   return Role.CASHIER;
@@ -457,17 +457,62 @@ export const deleteUser = async (req: Request, res: Response) => {
 // =========================================================================
 // AKSES & PERAN (GRANULAR RBAC DOMAIN)
 // =========================================================================
-import { roleService, DEFAULT_FNB_ROLES, RolePermissions, SYSTEM_PERMISSIONS } from '../services/role.service';
+import {
+  roleService,
+  DEFAULT_FNB_ROLES,
+  RolePermissions,
+  SYSTEM_PERMISSIONS,
+  SYSTEM_LAUNDRY_PERMISSIONS,
+} from '../services/role.service';
+
+const checkTenantIsLaundry = async (tenantId: string): Promise<boolean> => {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { businessVertical: true, businessType: true, name: true },
+    });
+    if (
+      tenant?.businessVertical === 'SERVICES' ||
+      (typeof tenant?.businessType === 'string' && tenant.businessType.toLowerCase().includes('laundry')) ||
+      (typeof tenant?.name === 'string' && tenant.name.toLowerCase().includes('laundry'))
+    ) {
+      return true;
+    }
+    const laundryOutlet = await prisma.outlet.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          { name: { contains: 'laundry', mode: 'insensitive' } },
+          { name: { contains: 'cuci', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+    return !!laundryOutlet;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Mendapatkan daftar master izin sistem fungsional
  * @route GET /api/users/roles/permissions
  */
-export const getSystemPermissions = async (_req: Request, res: Response) => {
-  return res.status(200).json({
-    status: 'success',
-    data: SYSTEM_PERMISSIONS,
-  });
+export const getSystemPermissions = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const isLaundry = tenantId ? await checkTenantIsLaundry(tenantId) : false;
+
+    return res.status(200).json({
+      status: 'success',
+      data: isLaundry ? SYSTEM_LAUNDRY_PERMISSIONS : SYSTEM_PERMISSIONS,
+    });
+  } catch (err) {
+    return res.status(200).json({
+      status: 'success',
+      data: SYSTEM_PERMISSIONS,
+    });
+  }
 };
 
 /**
@@ -481,7 +526,8 @@ export const getRoles = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
-    const allRoles = roleService.getTenantRoles(tenantId);
+    const isLaundry = await checkTenantIsLaundry(tenantId);
+    const allRoles = roleService.getTenantRoles(tenantId, isLaundry);
 
     // Hitung staff count per role
     const users = await prisma.user.findMany({
@@ -494,9 +540,9 @@ export const getRoles = async (req: Request, res: Response) => {
       if (r.id === 'role-owner') count = users.filter((u) => u.role === 'ADMIN' || (u.role as any) === 'OWNER').length;
       else if (r.id === 'role-supervisor') count = users.filter((u) => u.role === 'SUPERVISOR').length;
       else if (r.id === 'role-cashier') count = users.filter((u) => u.role === 'CASHIER').length;
-      else if (r.id === 'role-barista') count = users.filter((u) => u.role === 'KITCHEN' || (u.role as any) === 'BARISTA').length;
+      else if (r.id === 'role-production' || r.id === 'role-barista') count = users.filter((u) => u.role === 'KITCHEN' || (u.role as any) === 'BARISTA' || (u.role as any) === 'PRODUCTION').length;
       else if (r.id === 'role-warehouse') count = users.filter((u) => u.role === 'WAREHOUSE').length;
-      else if (r.id === 'role-waiter') count = users.filter((u) => u.role === 'WAITER').length;
+      else if (r.id === 'role-courier' || r.id === 'role-waiter') count = users.filter((u) => u.role === 'WAITER' || (u.role as any) === 'COURIER').length;
       else count = 0;
 
       return {

@@ -1685,7 +1685,10 @@ export const createInitialStore = async (req: Request, res: Response) => {
           'Kios di Pusat Kuliner',
         ].includes(ind)
       );
-      const isServices = industries.some((ind) =>
+      const isLaundry = industries.some((ind) =>
+        typeof ind === 'string' && ind.toLowerCase().includes('laundry')
+      );
+      const isServices = isLaundry || industries.some((ind) =>
         ['Layanan', 'Salon Kecantikan dan Rambut', 'Bengkel Mobil', 'Spa', 'Pusat Kebugaran'].includes(ind)
       );
       const vertical = isFnB ? BusinessVertical.FNB : isServices ? BusinessVertical.SERVICES : BusinessVertical.RETAIL;
@@ -1696,7 +1699,7 @@ export const createInitialStore = async (req: Request, res: Response) => {
         data: {
           name: merchantName,
           businessVertical: vertical,
-          businessType: industries.join(', '),
+          businessType: isLaundry ? 'LAUNDRY' : industries.join(', '),
           enableRecipeTracking: isFnB,
         },
       });
@@ -1704,6 +1707,10 @@ export const createInitialStore = async (req: Request, res: Response) => {
       // 3. Buat Outlet Toko
       const existingOutletsCount = await tx.outlet.count({ where: { tenantId } });
       const code = `OUT-0${existingOutletsCount + 1}`;
+
+      const receiptFooter = isLaundry
+        ? `Terima kasih atas kepercayaan Anda di ${storeName}! Harap simpan nota untuk bukti pengambilan cucian.`
+        : `Terima kasih telah berbelanja di ${storeName}!`;
 
       const outlet = await tx.outlet.create({
         data: {
@@ -1717,7 +1724,7 @@ export const createInitialStore = async (req: Request, res: Response) => {
           isActive: true,
           receiptConfig: {
             paperSize: '58mm',
-            footerText: `Terima kasih telah berbelanja di ${storeName}!`,
+            footerText: receiptFooter,
             showWatermark: true,
           },
         },

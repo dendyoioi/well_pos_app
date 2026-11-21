@@ -1,0 +1,6168 @@
+{
+  "code": 200,
+  "data": [
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 70000,
+      "layanan_idlayanan": "LYN10716841564189663",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN10716841564189663",
+        "nama_layanan": "Baby Playmate",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-15T20:13:39+07:00",
+        "updated_at": "2023-05-15T20:13:39+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-15T20:13:39+07:00",
+      "updated_at": "2023-05-15T20:13:39+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 17000,
+      "layanan_idlayanan": "LYN11617008506592572",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN11617008506592572",
+        "nama_layanan": "Kaos Lengan Panjang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-11-25T01:31:00+07:00",
+        "updated_at": "2023-11-25T01:31:00+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-11-25T01:31:00+07:00",
+      "updated_at": "2023-11-25T01:31:00+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN12716833396135356",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN12716833396135356",
+        "nama_layanan": "Tas Gunung",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN13316833396131686",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN13316833396131686",
+        "nama_layanan": "Celana Panjang [ Anak ]",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-03-09T21:05:17+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-03-09T21:05:17+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN13616833396127402",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN13616833396127402",
+        "nama_layanan": "Cuci Setrika Wangi Ekpress",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 21600000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2026-02-19T00:22:09+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2026-02-19T00:22:09+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 3000,
+      "layanan_idlayanan": "LYN15616833416094535",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN15616833416094535",
+        "nama_layanan": "Cuci Saja",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 3600000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:53:30+07:00",
+        "updated_at": "2026-02-19T00:01:17+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:53:30+07:00",
+      "updated_at": "2026-02-19T00:01:17+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN15916833396137081",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN15916833396137081",
+        "nama_layanan": "Bedcover Single",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 80000,
+      "layanan_idlayanan": "LYN16016848239673193",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN16016848239673193",
+        "nama_layanan": "Sepatu Kulit Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-23T13:39:27+07:00",
+        "updated_at": "2023-05-23T13:39:27+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-23T13:39:27+07:00",
+      "updated_at": "2023-05-23T13:39:27+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN16316833396124605",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN16316833396124605",
+        "nama_layanan": "Handuk Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 12000,
+      "layanan_idlayanan": "LYN17816833396134178",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN17816833396134178",
+        "nama_layanan": "Tas Jinjing",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:40:57+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:40:57+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 40000,
+      "layanan_idlayanan": "LYN19016833396133836",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN19016833396133836",
+        "nama_layanan": "Bantal / Guling Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 432000000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2024-01-31T23:31:43+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2024-01-31T23:31:43+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN19516833396117453",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN19516833396117453",
+        "nama_layanan": "Matras",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 17000,
+      "layanan_idlayanan": "LYN20016833396134546",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN20016833396134546",
+        "nama_layanan": "Batik",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN20616833396129564",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN20616833396129564",
+        "nama_layanan": "Wearpack",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-09T02:01:00+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-09T02:01:00+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 17000,
+      "layanan_idlayanan": "LYN22716833396131186",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN22716833396131186",
+        "nama_layanan": "Safari",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 8000,
+      "layanan_idlayanan": "LYN23316833396115400",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN23316833396115400",
+        "nama_layanan": "Dasi",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN23416883929404706",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN23416883929404706",
+        "nama_layanan": "Jaket Jeans",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-07-03T21:02:21+07:00",
+        "updated_at": "2023-07-03T21:02:21+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-07-03T21:02:21+07:00",
+      "updated_at": "2023-07-03T21:02:21+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN23916833396111485",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN23916833396111485",
+        "nama_layanan": "Gorden Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN23916833396112482",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN23916833396112482",
+        "nama_layanan": "Sprei Set 1 Bantal/Guling",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2024-01-31T23:23:36+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2024-01-31T23:23:36+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN24416833687332882",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN24416833687332882",
+        "nama_layanan": "Cuci Setrika Wangi 1 Hari",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 86400000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T17:25:34+07:00",
+        "updated_at": "2026-02-19T00:23:10+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T17:25:34+07:00",
+      "updated_at": "2026-02-19T00:23:10+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 8000,
+      "layanan_idlayanan": "LYN25116833737692739",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN25116833737692739",
+        "nama_layanan": "Cuci Setrika Wangi 2 Hari",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 172800000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T18:49:29+07:00",
+        "updated_at": "2024-01-31T23:03:18+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T18:49:29+07:00",
+      "updated_at": "2024-01-31T23:03:18+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 13000,
+      "layanan_idlayanan": "LYN25516833396126920",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN25516833396126920",
+        "nama_layanan": "Rok Pendek",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-08T19:03:17+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-08T19:03:17+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN26016833396149216",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN26016833396149216",
+        "nama_layanan": "Boneka Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN26416833396123475",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN26416833396123475",
+        "nama_layanan": "Sweater",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2024-02-08T00:57:28+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2024-02-08T00:57:28+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN26916833396145553",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN26916833396145553",
+        "nama_layanan": "Sandal",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 8000,
+      "layanan_idlayanan": "LYN27116833396135744",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN27116833396135744",
+        "nama_layanan": "Keset Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN28216833396114768",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN28216833396114768",
+        "nama_layanan": "Gamis",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 55000,
+      "layanan_idlayanan": "LYN28216848270417074",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN28216848270417074",
+        "nama_layanan": "Jaket Tebal Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-23T14:30:42+07:00",
+        "updated_at": "2023-05-23T14:30:42+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-23T14:30:42+07:00",
+      "updated_at": "2023-05-23T14:30:42+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN28416833396133695",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN28416833396133695",
+        "nama_layanan": "Dress",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN28416833396144847",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN28416833396144847",
+        "nama_layanan": "Kain Songket",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 60000,
+      "layanan_idlayanan": "LYN28816833396139064",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN28816833396139064",
+        "nama_layanan": "Baby Carseat Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-09T02:10:24+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-09T02:10:24+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 3000,
+      "layanan_idlayanan": "LYN29316833416292968",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN29316833416292968",
+        "nama_layanan": "Kering Saja",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 3600000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:53:50+07:00",
+        "updated_at": "2026-02-19T00:28:42+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:53:50+07:00",
+      "updated_at": "2026-02-19T00:28:42+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN30416833396128458",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN30416833396128458",
+        "nama_layanan": "Set Blouse Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-09T02:07:27+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-09T02:07:27+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN30916833396119927",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN30916833396119927",
+        "nama_layanan": "Tunik",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN31016833396132695",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN31016833396132695",
+        "nama_layanan": "Handuk Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN31616833396119987",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN31616833396119987",
+        "nama_layanan": "Vitrase Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-09T02:08:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-09T02:08:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN31617073282096258",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN31617073282096258",
+        "nama_layanan": "Baju Anak Stel",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-02-08T00:50:10+07:00",
+        "updated_at": "2024-02-08T00:50:10+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-02-08T00:50:10+07:00",
+      "updated_at": "2024-02-08T00:50:10+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN32016833396135108",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN32016833396135108",
+        "nama_layanan": "Jaket Tebal",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN32916833396146506",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN32916833396146506",
+        "nama_layanan": "Blazer",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-15T20:16:49+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-15T20:16:49+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 8000,
+      "layanan_idlayanan": "LYN33316833396135666",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN33316833396135666",
+        "nama_layanan": "Ciput / Inner Hijab",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-09T02:03:05+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-09T02:03:05+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN33416833396121863",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN33416833396121863",
+        "nama_layanan": "Tas Kulit/Suede Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN34416833396117933",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN34416833396117933",
+        "nama_layanan": "Taplak besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN34516833396136859",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN34516833396136859",
+        "nama_layanan": "Gorden Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN35416841565595005",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN35416841565595005",
+        "nama_layanan": "Batik Premium / Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-15T20:16:00+07:00",
+        "updated_at": "2023-05-15T20:16:00+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-15T20:16:00+07:00",
+      "updated_at": "2023-05-15T20:16:00+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 80000,
+      "layanan_idlayanan": "LYN35716848234611542",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN35716848234611542",
+        "nama_layanan": "Jaket Suede Premium / Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-23T13:31:01+07:00",
+        "updated_at": "2023-05-23T13:32:53+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-23T13:31:01+07:00",
+      "updated_at": "2023-05-23T13:32:53+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN36517099925971736",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN36517099925971736",
+        "nama_layanan": "Celana Panjang [ Bahan / Jeans ]",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-03-09T20:56:37+07:00",
+        "updated_at": "2024-03-09T21:00:08+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-03-09T20:56:37+07:00",
+      "updated_at": "2024-03-09T21:00:08+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 50000,
+      "layanan_idlayanan": "LYN36916833396122580",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN36916833396122580",
+        "nama_layanan": "Set Bedcover Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 70000,
+      "layanan_idlayanan": "LYN37917073284659160",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN37917073284659160",
+        "nama_layanan": "Gaun Pengantin",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 345600000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-02-08T00:54:25+07:00",
+        "updated_at": "2024-02-08T00:54:25+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-02-08T00:54:25+07:00",
+      "updated_at": "2024-02-08T00:54:25+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 16000,
+      "layanan_idlayanan": "LYN38417226913445923",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN38417226913445923",
+        "nama_layanan": "Sarung Tangan Balap",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-08-03T20:22:24+07:00",
+        "updated_at": "2024-08-03T20:22:24+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-08-03T20:22:24+07:00",
+      "updated_at": "2024-08-03T20:22:24+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN38516833396122611",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN38516833396122611",
+        "nama_layanan": "Boneka Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 345600000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN39516833396121164",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN39516833396121164",
+        "nama_layanan": "Sprei Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-09T02:13:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-09T02:13:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 22000,
+      "layanan_idlayanan": "LYN39516833396133804",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN39516833396133804",
+        "nama_layanan": "Jaket Parasut",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 120000,
+      "layanan_idlayanan": "LYN39616833396128980",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN39616833396128980",
+        "nama_layanan": "Stroller Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 432000000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2024-01-31T23:29:58+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2024-01-31T23:29:58+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN40016833396132860",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN40016833396132860",
+        "nama_layanan": "Sprei Single",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-09T01:59:58+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-09T01:59:58+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 13000,
+      "layanan_idlayanan": "LYN41216833396132288",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN41216833396132288",
+        "nama_layanan": "Keset Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 12000,
+      "layanan_idlayanan": "LYN41317067175792382",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN41317067175792382",
+        "nama_layanan": "Setrika Wangi Ekspress",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 43200000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-01-31T23:12:59+07:00",
+        "updated_at": "2026-02-19T00:24:02+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-01-31T23:12:59+07:00",
+      "updated_at": "2026-02-19T00:24:02+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN41317095542074267",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN41317095542074267",
+        "nama_layanan": "Jas Hujan Setelan",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-03-04T19:10:08+07:00",
+        "updated_at": "2024-03-04T19:10:08+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-03-04T19:10:08+07:00",
+      "updated_at": "2024-03-04T19:10:08+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 45000,
+      "layanan_idlayanan": "LYN41416833396133698",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN41416833396133698",
+        "nama_layanan": "Jas Setelan ",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 40000,
+      "layanan_idlayanan": "LYN43416833396124049",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN43416833396124049",
+        "nama_layanan": "Set Bedcover Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 60000,
+      "layanan_idlayanan": "LYN43416883929869939",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN43416883929869939",
+        "nama_layanan": "Jaket Jeans Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-07-03T21:03:07+07:00",
+        "updated_at": "2023-07-03T21:03:07+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-07-03T21:03:07+07:00",
+      "updated_at": "2023-07-03T21:03:07+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN43517073275565172",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN43517073275565172",
+        "nama_layanan": "Kemeja Lengan Panjang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-02-08T00:39:17+07:00",
+        "updated_at": "2024-02-08T00:39:17+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-02-08T00:39:17+07:00",
+      "updated_at": "2024-02-08T00:39:17+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 8000,
+      "layanan_idlayanan": "LYN45717714331827791",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN45717714331827791",
+        "nama_layanan": "Cuci Lipat Rapi 1 Hari",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 86400000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2026-02-18T23:46:23+07:00",
+        "updated_at": "2026-02-18T23:46:23+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2026-02-18T23:46:23+07:00",
+      "updated_at": "2026-02-18T23:46:23+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 38000,
+      "layanan_idlayanan": "LYN47116915038558461",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN47116915038558461",
+        "nama_layanan": "Sweater Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-08-08T21:10:56+07:00",
+        "updated_at": "2023-08-08T21:10:56+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-08-08T21:10:56+07:00",
+      "updated_at": "2023-08-08T21:10:56+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN47316839205026325",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN47316839205026325",
+        "nama_layanan": "Topi Premium / Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-13T02:41:43+07:00",
+        "updated_at": "2023-05-14T13:19:02+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-13T02:41:43+07:00",
+      "updated_at": "2023-05-14T13:19:02+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN47716868344165339",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN47716868344165339",
+        "nama_layanan": "Blangkon",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-06-15T20:06:57+07:00",
+        "updated_at": "2023-06-15T20:49:10+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-06-15T20:06:57+07:00",
+      "updated_at": "2023-06-15T20:49:10+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN47916833396138790",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN47916833396138790",
+        "nama_layanan": "Topi",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2026-07-27T16:35:39+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2026-07-27T16:35:39+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN48716833396138723",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN48716833396138723",
+        "nama_layanan": "Bedcover Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN49816833396138136",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN49816833396138136",
+        "nama_layanan": "Jaket Kulit",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN50016833396129717",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN50016833396129717",
+        "nama_layanan": "Rok Plisket",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 80000,
+      "layanan_idlayanan": "LYN50116833396123316",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN50116833396123316",
+        "nama_layanan": "Koper Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-09T02:11:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-09T02:11:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN50316833396136351",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN50316833396136351",
+        "nama_layanan": "Celana Pendek [ Bahan / Jeans ]",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2024-03-09T21:01:31+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2024-03-09T21:01:31+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN51016833396121720",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN51016833396121720",
+        "nama_layanan": "Korset",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN51016833396126393",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN51016833396126393",
+        "nama_layanan": "Taplak Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-09T02:09:29+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-09T02:09:29+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN51217222589012369",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN51217222589012369",
+        "nama_layanan": "Kain Bendera",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 5,
+        "satuan": {
+          "iddata_satuan": 5,
+          "nama": "Lembar",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:25+07:00",
+          "updated_at": "2018-09-05T16:20:12+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-07-29T20:15:02+07:00",
+        "updated_at": "2024-07-29T20:15:02+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-07-29T20:15:02+07:00",
+      "updated_at": "2024-07-29T20:15:02+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN52116833396115339",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN52116833396115339",
+        "nama_layanan": "Jas",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN53616843595092074",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN53616843595092074",
+        "nama_layanan": "Kemeja Premium / Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-18T04:38:29+07:00",
+        "updated_at": "2023-05-18T04:38:29+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-18T04:38:29+07:00",
+      "updated_at": "2023-05-18T04:38:29+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN53916833396139732",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN53916833396139732",
+        "nama_layanan": "Boneka Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN54416833396129424",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN54416833396129424",
+        "nama_layanan": "Tas Pinggang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:40:23+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:40:23+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 8000,
+      "layanan_idlayanan": "LYN55116833396126227",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN55116833396126227",
+        "nama_layanan": "Setrika Wangi 1 Hari",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 86400000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2026-02-19T00:24:41+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2026-02-19T00:24:41+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN55716833396134215",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN55716833396134215",
+        "nama_layanan": "Sprei Set 4 Bantal/Guling",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:25:45+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:25:45+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN56216833396126981",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN56216833396126981",
+        "nama_layanan": "Vitrase Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-09T02:09:37+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-09T02:09:37+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN56616833396118679",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN56616833396118679",
+        "nama_layanan": "Rok Panjang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN56616833396139081",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN56616833396139081",
+        "nama_layanan": "Bantal / Guling Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 432000000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:32:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:32:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 12000,
+      "layanan_idlayanan": "LYN56917226913197252",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN56917226913197252",
+        "nama_layanan": "Sarung Tangan Kulit",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-08-03T20:21:59+07:00",
+        "updated_at": "2024-08-03T20:21:59+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-08-03T20:21:59+07:00",
+      "updated_at": "2024-08-03T20:21:59+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN57016833396113925",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN57016833396113925",
+        "nama_layanan": "Blouse Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-15T20:17:21+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-15T20:17:21+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 60000,
+      "layanan_idlayanan": "LYN57016833396116942",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN57016833396116942",
+        "nama_layanan": "Koper Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:11+07:00",
+        "updated_at": "2023-05-06T09:20:11+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:11+07:00",
+      "updated_at": "2023-05-06T09:20:11+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN58216833396138431",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN58216833396138431",
+        "nama_layanan": "Underwear",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2024-01-31T23:36:55+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2024-01-31T23:36:55+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN59016861076864429",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN59016861076864429",
+        "nama_layanan": "Beanie Hat",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-06-07T10:14:46+07:00",
+        "updated_at": "2023-06-27T15:10:22+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-06-07T10:14:46+07:00",
+      "updated_at": "2023-06-27T15:10:22+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN59816833396117843",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN59816833396117843",
+        "nama_layanan": "Bantal / Guling Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 432000000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2024-01-31T23:31:59+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2024-01-31T23:31:59+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN60116833396132429",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN60116833396132429",
+        "nama_layanan": "Cuci Lipat Rapi 6 Jam",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 21600000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2026-02-18T23:44:41+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2026-02-18T23:44:41+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 65000,
+      "layanan_idlayanan": "LYN60416869215547202",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN60416869215547202",
+        "nama_layanan": "Jaket Kulit Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-06-16T20:19:14+07:00",
+        "updated_at": "2023-06-16T20:19:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-06-16T20:19:14+07:00",
+      "updated_at": "2023-06-16T20:19:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 45000,
+      "layanan_idlayanan": "LYN61216833396139159",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN61216833396139159",
+        "nama_layanan": "Sepatu Kulit/Suede",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 85000,
+      "layanan_idlayanan": "LYN61416848238174026",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN61416848238174026",
+        "nama_layanan": "Sepatu Suede Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-23T13:36:58+07:00",
+        "updated_at": "2023-05-23T13:36:58+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-23T13:36:58+07:00",
+      "updated_at": "2023-05-23T13:36:58+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN62016833396112160",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN62016833396112160",
+        "nama_layanan": "Kebaya Set",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN63416833396124816",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN63416833396124816",
+        "nama_layanan": "Sepatu Kanvas/Sneakers",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN63516833396125024",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN63516833396125024",
+        "nama_layanan": "Handuk Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:27:31+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:27:31+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN63716833396125132",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN63716833396125132",
+        "nama_layanan": "Helm Half Face",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-12-26T17:48:24+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-12-26T17:48:24+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 55000,
+      "layanan_idlayanan": "LYN64016842991628604",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN64016842991628604",
+        "nama_layanan": "Sepatu Kanvas / Sneakers Premium ",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-17T11:52:42+07:00",
+        "updated_at": "2023-05-23T13:44:47+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-17T11:52:42+07:00",
+      "updated_at": "2023-05-23T13:44:47+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 7000,
+      "layanan_idlayanan": "LYN64816834413602816",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN64816834413602816",
+        "nama_layanan": "Setrika Wangi 2 Hari",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 172800000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-07T13:36:00+07:00",
+        "updated_at": "2026-02-19T00:26:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-07T13:36:00+07:00",
+      "updated_at": "2026-02-19T00:26:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN65816833396123760",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN65816833396123760",
+        "nama_layanan": "Kemeja Lengan Pendek",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2024-02-08T00:40:04+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2024-02-08T00:40:04+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN66516833396114544",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN66516833396114544",
+        "nama_layanan": "Gamis Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-09T02:10:56+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-09T02:10:56+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN67917073278783152",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN67917073278783152",
+        "nama_layanan": "Baju Tidur Stel",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-02-08T00:44:39+07:00",
+        "updated_at": "2024-02-08T00:44:39+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-02-08T00:44:39+07:00",
+      "updated_at": "2024-02-08T00:44:39+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN68816833396122744",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN68816833396122744",
+        "nama_layanan": "Long Dress",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN69016833396133709",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN69016833396133709",
+        "nama_layanan": "Selimut Tebal",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 6000,
+      "layanan_idlayanan": "LYN71217226912991238",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN71217226912991238",
+        "nama_layanan": "Sarung Tangan Kain",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-08-03T20:21:39+07:00",
+        "updated_at": "2024-08-03T20:21:39+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-08-03T20:21:39+07:00",
+      "updated_at": "2024-08-03T20:21:39+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 5000,
+      "layanan_idlayanan": "LYN71516878535822954",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN71516878535822954",
+        "nama_layanan": "Kaos Kaki Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 172800000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-06-27T15:13:03+07:00",
+        "updated_at": "2023-06-27T15:13:03+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-06-27T15:13:03+07:00",
+      "updated_at": "2023-06-27T15:13:03+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN71616833396138282",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN71616833396138282",
+        "nama_layanan": "Syal",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN73616833396141444",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN73616833396141444",
+        "nama_layanan": "Bedcover Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 12000,
+      "layanan_idlayanan": "LYN74417099931782797",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN74417099931782797",
+        "nama_layanan": "Celana Pendek [ Anak ]",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-03-09T21:06:18+07:00",
+        "updated_at": "2024-03-09T21:06:18+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-03-09T21:06:18+07:00",
+      "updated_at": "2024-03-09T21:06:18+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN74516833396132544",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN74516833396132544",
+        "nama_layanan": "Taplak Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:36:16+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:36:16+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 5000,
+      "layanan_idlayanan": "LYN74916833396149400",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN74916833396149400",
+        "nama_layanan": "Boneka Mini",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN75216833396118980",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN75216833396118980",
+        "nama_layanan": "Umbul - Umbul",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:11+07:00",
+        "updated_at": "2023-05-06T09:20:11+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:11+07:00",
+      "updated_at": "2023-05-06T09:20:11+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 50000,
+      "layanan_idlayanan": "LYN75916841563641418",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN75916841563641418",
+        "nama_layanan": "Tempat Tidur Bayi / Baby Sleepers",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-15T20:12:45+07:00",
+        "updated_at": "2023-05-15T20:12:45+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-15T20:12:45+07:00",
+      "updated_at": "2023-05-15T20:12:45+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN76216833396121147",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN76216833396121147",
+        "nama_layanan": "Celana Jeans Premium / Eksklusif",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-15T20:18:37+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-15T20:18:37+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN76916833396134530",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN76916833396134530",
+        "nama_layanan": "Sarung",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN77316833396113506",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN77316833396113506",
+        "nama_layanan": "Gendongan Bayi",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN77416833396126111",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN77416833396126111",
+        "nama_layanan": "Safari Setelan",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN78116833396113595",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN78116833396113595",
+        "nama_layanan": "Keset Besar ",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 40000,
+      "layanan_idlayanan": "LYN78316833396126842",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN78316833396126842",
+        "nama_layanan": "Gaun Panjang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 40000,
+      "layanan_idlayanan": "LYN78616833396113106",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN78616833396113106",
+        "nama_layanan": "Tas Kulit",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN78616833396131587",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN78616833396131587",
+        "nama_layanan": "Jaket Kain / Kanvas",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-08-08T21:05:41+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-08-08T21:05:41+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN79416833396131362",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN79416833396131362",
+        "nama_layanan": "Sprei Sedang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-08T19:03:41+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-08T19:03:41+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN79517073280102746",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN79517073280102746",
+        "nama_layanan": "Baju Olahraga Stel",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2024-02-08T00:46:51+07:00",
+        "updated_at": "2024-02-08T00:46:51+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2024-02-08T00:46:51+07:00",
+      "updated_at": "2024-02-08T00:46:51+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 45000,
+      "layanan_idlayanan": "LYN80116833396129134",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN80116833396129134",
+        "nama_layanan": "Surpet",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN80616833396126468",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN80616833396126468",
+        "nama_layanan": "Sarung Bantal / Guling",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 48000,
+      "layanan_idlayanan": "LYN80916915037162658",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN80916915037162658",
+        "nama_layanan": "Jaket Kain / Kanvas Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-08-08T21:08:37+07:00",
+        "updated_at": "2023-08-08T21:08:37+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-08-08T21:08:37+07:00",
+      "updated_at": "2023-08-08T21:08:37+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN81316833396124664",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN81316833396124664",
+        "nama_layanan": "Cardigan",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN81416833396125103",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN81416833396125103",
+        "nama_layanan": "Sprei Set 2 Bantal/Guling",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2024-01-31T23:24:22+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2024-01-31T23:24:22+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN81916833396138529",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN81916833396138529",
+        "nama_layanan": "Kasur Bayi",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN82216840450482139",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN82216840450482139",
+        "nama_layanan": "Alas Mouse Laptop / PC",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-14T13:17:28+07:00",
+        "updated_at": "2023-05-15T20:14:33+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-14T13:17:28+07:00",
+      "updated_at": "2023-05-15T20:14:33+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 50000,
+      "layanan_idlayanan": "LYN82416848237098326",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN82416848237098326",
+        "nama_layanan": "Jaket Suede",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-23T13:35:10+07:00",
+        "updated_at": "2023-05-23T13:35:10+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-23T13:35:10+07:00",
+      "updated_at": "2023-05-23T13:35:10+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN82916839205533666",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN82916839205533666",
+        "nama_layanan": "Flatshoes ",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-13T02:42:34+07:00",
+        "updated_at": "2023-05-13T02:42:34+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-13T02:42:34+07:00",
+      "updated_at": "2023-05-13T02:42:34+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN83916833396121002",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN83916833396121002",
+        "nama_layanan": "Tas Ransel",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 13000,
+      "layanan_idlayanan": "LYN83916833396124037",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN83916833396124037",
+        "nama_layanan": "Rompi",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 50000,
+      "layanan_idlayanan": "LYN83916833396147010",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN83916833396147010",
+        "nama_layanan": "Helm Full Face",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-12-26T17:48:55+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-12-26T17:48:55+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 22000,
+      "layanan_idlayanan": "LYN85816833396139936",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN85816833396139936",
+        "nama_layanan": "Mukena Setelan",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2024-02-08T00:36:09+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2024-02-08T00:36:09+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN85816878536128837",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN85816878536128837",
+        "nama_layanan": "Kaos Kaki Panjang",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 172800000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-06-27T15:13:33+07:00",
+        "updated_at": "2024-01-31T23:35:28+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-06-27T15:13:33+07:00",
+      "updated_at": "2024-01-31T23:35:28+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 18000,
+      "layanan_idlayanan": "LYN86016833396137937",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN86016833396137937",
+        "nama_layanan": "Kebaya",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 30000,
+      "layanan_idlayanan": "LYN87416833396133113",
+      "min_order_reg": 1,
+      "min_order_depo": 1,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN87416833396133113",
+        "nama_layanan": "Hambal",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 604800000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 10000,
+      "layanan_idlayanan": "LYN88216833396116135",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN88216833396116135",
+        "nama_layanan": "Kerudung/Hijab",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:11+07:00",
+        "updated_at": "2023-05-06T09:20:11+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:11+07:00",
+      "updated_at": "2023-05-06T09:20:11+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 5000,
+      "layanan_idlayanan": "LYN89116833396129085",
+      "min_order_reg": 3,
+      "min_order_depo": 3,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN89116833396129085",
+        "nama_layanan": "Paket Mandiri",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 10800000,
+        "data_satuan_iddata_satuan": 1,
+        "satuan": {
+          "iddata_satuan": 1,
+          "nama": "KG",
+          "jenis_satuan": 1,
+          "created_at": "2017-12-14T16:57:37+07:00",
+          "updated_at": "0001-01-01T00:00:00Z",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2026-02-19T00:27:59+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2026-02-19T00:27:59+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN89716833396146068",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN89716833396146068",
+        "nama_layanan": "Sajadah",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 40000,
+      "layanan_idlayanan": "LYN90416833396113392",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN90416833396113392",
+        "nama_layanan": "Koper Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 60000,
+      "layanan_idlayanan": "LYN92316833396131234",
+      "min_order_reg": 1,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN92316833396131234",
+        "nama_layanan": "Set Bedcover Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 6,
+        "satuan": {
+          "iddata_satuan": 6,
+          "nama": "Stel",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:27+07:00",
+          "updated_at": "2018-09-26T09:56:15+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 50000,
+      "layanan_idlayanan": "LYN92616833396123589",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN92616833396123589",
+        "nama_layanan": "Boneka Jumbo",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 345600000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN93416833396129430",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN93416833396129430",
+        "nama_layanan": "Selimut Tipis ",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 15000,
+      "layanan_idlayanan": "LYN95016833396117683",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN95016833396117683",
+        "nama_layanan": "Blouse",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 25000,
+      "layanan_idlayanan": "LYN95216833396136004",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN95216833396136004",
+        "nama_layanan": "Gaun Pendek",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-06T09:20:14+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-06T09:20:14+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 52000,
+      "layanan_idlayanan": "LYN95316848268892733",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN95316848268892733",
+        "nama_layanan": "Jaket Parasut Premium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-23T14:28:10+07:00",
+        "updated_at": "2023-05-23T14:29:36+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-23T14:28:10+07:00",
+      "updated_at": "2023-05-23T14:29:36+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 40000,
+      "layanan_idlayanan": "LYN97916833396124928",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN97916833396124928",
+        "nama_layanan": "Karpet Kecil",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:12+07:00",
+        "updated_at": "2023-05-06T09:20:12+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:12+07:00",
+      "updated_at": "2023-05-06T09:20:12+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 12000,
+      "layanan_idlayanan": "LYN97916833396134368",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN97916833396134368",
+        "nama_layanan": "Kaos Lengan Pendek",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-11-25T01:31:47+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-11-25T01:31:47+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 35000,
+      "layanan_idlayanan": "LYN98316833396148312",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN98316833396148312",
+        "nama_layanan": "Karpet Rasfur 1.5 m x 1 m",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:14+07:00",
+        "updated_at": "2023-05-09T01:59:18+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:14+07:00",
+      "updated_at": "2023-05-09T01:59:18+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 100000,
+      "layanan_idlayanan": "LYN99516833396121128",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN99516833396121128",
+        "nama_layanan": "Stroller Medium",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:13+07:00",
+        "updated_at": "2023-05-06T09:20:13+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:13+07:00",
+      "updated_at": "2023-05-06T09:20:13+07:00",
+      "hapus": 0
+    },
+    {
+      "outlet_idoutlet": "OTL16832679238034",
+      "harga": 20000,
+      "layanan_idlayanan": "LYN99616833396111396",
+      "min_order_reg": 0,
+      "min_order_depo": 0,
+      "use_inventory": 0,
+      "layanan": {
+        "idlayanan": "LYN99616833396111396",
+        "nama_layanan": "Korset Besar",
+        "owner_idowner": "OWN16832677397601",
+        "outlet_idoutlet": "OTL16832679238034",
+        "jumlah": 1,
+        "durasi_penyelesaian": 259200000,
+        "data_satuan_iddata_satuan": 4,
+        "satuan": {
+          "iddata_satuan": 4,
+          "nama": "PCS",
+          "jenis_satuan": 3,
+          "created_at": "2018-01-08T15:29:18+07:00",
+          "updated_at": "2018-09-05T16:20:26+07:00",
+          "hapus": 0
+        },
+        "harga_layanan": null,
+        "whitelabel_layanan": null,
+        "upah_tahapan_layanan": null,
+        "layanan_tags": null,
+        "created_at": "2023-05-06T09:20:11+07:00",
+        "updated_at": "2024-01-31T23:27:56+07:00",
+        "hapus": 0
+      },
+      "layanan_snap": null,
+      "snap": {
+        "use_snapbrige": false,
+        "mesin_use": ""
+      },
+      "created_at": "2023-05-06T09:20:11+07:00",
+      "updated_at": "2024-01-31T23:27:56+07:00",
+      "hapus": 0
+    }
+  ],
+  "msg": "Success",
+  "reason": null,
+  "status": true
+}

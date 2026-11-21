@@ -285,6 +285,177 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "product_bundle_items" ADD COLUMN IF NOT EXISTS "is_default" BOOLEAN DEFAULT FALSE;
     `,
   },
+  {
+    id: '20261119_01_laundry_services_and_racks',
+    description: 'Menambahkan tabel laundry_services, laundry_racks, dan laundry_order_details untuk vertikal operasional POS Laundry & Dry Clean (EPIC-30)',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "laundry_services" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "name" VARCHAR(255) NOT NULL,
+        "category" VARCHAR(50) NOT NULL DEFAULT 'KILOAN',
+        "unit" VARCHAR(20) NOT NULL DEFAULT 'KG',
+        "price" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "min_order_qty" DECIMAL(10, 2) NOT NULL DEFAULT 1.00,
+        "duration_hours" INTEGER NOT NULL DEFAULT 48,
+        "express_multiplier" DECIMAL(5, 2) NOT NULL DEFAULT 1.00,
+        "description" TEXT,
+        "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_services_tenant_id_category_is_active_idx" ON "laundry_services"("tenant_id", "category", "is_active");
+
+      CREATE TABLE IF NOT EXISTS "laundry_racks" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "code" VARCHAR(50) NOT NULL,
+        "name" VARCHAR(255) NOT NULL,
+        "category" VARCHAR(50) NOT NULL DEFAULT 'KILOAN',
+        "capacity" INTEGER NOT NULL DEFAULT 10,
+        "location_note" TEXT,
+        "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "laundry_racks_tenant_id_outlet_id_code_key" UNIQUE ("tenant_id", "outlet_id", "code")
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_racks_tenant_id_outlet_id_is_active_idx" ON "laundry_racks"("tenant_id", "outlet_id", "is_active");
+
+      CREATE TABLE IF NOT EXISTS "laundry_order_details" (
+        "id" TEXT PRIMARY KEY,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "status" VARCHAR(50) NOT NULL DEFAULT 'RECEIVED',
+        "rack_code" VARCHAR(50),
+        "total_weight_kg" DECIMAL(10, 3),
+        "total_pieces" INTEGER DEFAULT 0,
+        "perfume_variant" VARCHAR(100),
+        "estimated_ready_at" TIMESTAMP(3),
+        "completed_at" TIMESTAMP(3),
+        "picked_up_at" TIMESTAMP(3),
+        "picked_up_by" VARCHAR(100),
+        "customer_notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "laundry_order_details_order_id_key" UNIQUE ("order_id")
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_id_outlet_id_status_idx" ON "laundry_order_details"("tenant_id", "outlet_id", "status");
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_id_rack_code_idx" ON "laundry_order_details"("tenant_id", "rack_code");
+    `,
+  },
+  {
+    id: '20261119_02_laundry_multi_branch_and_manifests',
+    description: 'Menambahkan kolom is_workshop, transfer_status, dan tabel laundry_transfer_manifests serta laundry_transfer_items untuk mode workshop & mutasi cucian antar-cabang',
+    sql: `
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "is_workshop" BOOLEAN DEFAULT false;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "transfer_status" VARCHAR(50) DEFAULT 'AT_OUTLET';
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "workshop_outlet_id" TEXT;
+
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_id_transfer_status_idx" ON "laundry_order_details"("tenant_id", "transfer_status");
+
+      CREATE TABLE IF NOT EXISTS "laundry_transfer_manifests" (
+        "id" TEXT PRIMARY KEY,
+        "manifest_number" TEXT NOT NULL,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "source_outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "target_outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "status" VARCHAR(50) NOT NULL DEFAULT 'DISPATCHED',
+        "direction" VARCHAR(50) NOT NULL DEFAULT 'TO_WORKSHOP',
+        "driver_name" TEXT,
+        "vehicle_plate" TEXT,
+        "total_orders_count" INTEGER NOT NULL DEFAULT 0,
+        "total_weight_kg" DECIMAL(10, 3),
+        "notes" TEXT,
+        "dispatched_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "received_at" TIMESTAMP(3),
+        "received_by" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "laundry_transfer_manifests_tenant_manifest_key" UNIQUE ("tenant_id", "manifest_number")
+      );
+
+      CREATE INDEX IF NOT EXISTS "laundry_transfer_manifests_source_idx" ON "laundry_transfer_manifests"("tenant_id", "source_outlet_id", "status");
+      CREATE INDEX IF NOT EXISTS "laundry_transfer_manifests_target_idx" ON "laundry_transfer_manifests"("tenant_id", "target_outlet_id", "status");
+
+      CREATE TABLE IF NOT EXISTS "laundry_transfer_items" (
+        "id" TEXT PRIMARY KEY,
+        "manifest_id" TEXT NOT NULL REFERENCES "laundry_transfer_manifests"("id") ON DELETE CASCADE,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "laundry_transfer_items_manifest_order_key" UNIQUE ("manifest_id", "order_id")
+      );
+
+      CREATE INDEX IF NOT EXISTS "laundry_transfer_items_order_idx" ON "laundry_transfer_items"("order_id");
+    `,
+  },
+  {
+    id: '20261119_03_laundry_11_production_stages_and_logs',
+    description: 'Menambahkan kolom current_stage dan tabel laundry_stage_logs untuk audit trail 11 tahapan workflow produksi dan penilaian kinerja staf',
+    sql: `
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "current_stage" VARCHAR(50) DEFAULT 'DROP_OFF';
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_id_current_stage_idx" ON "laundry_order_details"("tenant_id", "current_stage");
+
+      CREATE TABLE IF NOT EXISTS "laundry_stage_logs" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+        "laundry_detail_id" TEXT NOT NULL REFERENCES "laundry_order_details"("id") ON DELETE CASCADE,
+        "stage" VARCHAR(50) NOT NULL,
+        "operator_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "operator_name" TEXT,
+        "weight_kg" DECIMAL(10, 3),
+        "pieces_count" INTEGER DEFAULT 0,
+        "started_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "completed_at" TIMESTAMP(3),
+        "duration_minutes" INTEGER,
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "laundry_stage_logs_tenant_order_idx" ON "laundry_stage_logs"("tenant_id", "order_id");
+      CREATE INDEX IF NOT EXISTS "laundry_stage_logs_tenant_operator_stage_idx" ON "laundry_stage_logs"("tenant_id", "operator_id", "stage");
+      CREATE INDEX IF NOT EXISTS "laundry_stage_logs_tenant_stage_completed_idx" ON "laundry_stage_logs"("tenant_id", "stage", "completed_at");
+    `,
+  },
+  {
+    id: '20261120_01_laundry_custom_stages_and_sorting',
+    description: 'Menambahkan kolom laundry_stages pada tenants dan outlets, stages pada laundry_services, serta garment_counts, defects, defect_notes, is_sorted pada laundry_order_details untuk tahapan kustom dan formulir sortir pabrikasi binatu',
+    sql: `
+      ALTER TABLE "tenants" ADD COLUMN IF NOT EXISTS "laundry_stages" JSONB;
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "laundry_stages" JSONB;
+      ALTER TABLE "laundry_services" ADD COLUMN IF NOT EXISTS "stages" JSONB;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "garment_counts" JSONB;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "defects" JSONB;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "defect_notes" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "is_sorted" BOOLEAN DEFAULT FALSE;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "sorted_at" TIMESTAMP(3);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "sorted_by" TEXT;
+    `,
+  },
+  {
+    id: '20261121_01_payment_transactions_shift_tracking',
+    description: 'Menambahkan kolom shift_id, outlet_id, dan cashier_id pada payment_transactions untuk pelacakan akuntansi kas laci lintas-shift dan pembayaran DP/pelunasan laundry',
+    sql: `
+      ALTER TABLE "payment_transactions" ADD COLUMN IF NOT EXISTS "shift_id" TEXT;
+      ALTER TABLE "payment_transactions" ADD COLUMN IF NOT EXISTS "outlet_id" TEXT;
+      ALTER TABLE "payment_transactions" ADD COLUMN IF NOT EXISTS "cashier_id" TEXT;
+
+      ALTER TABLE "payment_transactions" DROP CONSTRAINT IF EXISTS "payment_transactions_shift_id_fkey";
+      ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_shift_id_fkey" FOREIGN KEY ("shift_id") REFERENCES "shifts"("id") ON DELETE SET NULL;
+
+      ALTER TABLE "payment_transactions" DROP CONSTRAINT IF EXISTS "payment_transactions_outlet_id_fkey";
+      ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "outlets"("id") ON DELETE SET NULL;
+
+      ALTER TABLE "payment_transactions" DROP CONSTRAINT IF EXISTS "payment_transactions_cashier_id_fkey";
+      ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_cashier_id_fkey" FOREIGN KEY ("cashier_id") REFERENCES "users"("id") ON DELETE SET NULL;
+
+      CREATE INDEX IF NOT EXISTS "payment_transactions_tenant_shift_status_idx" ON "payment_transactions"("tenant_id", "shift_id", "status");
+      CREATE INDEX IF NOT EXISTS "payment_transactions_tenant_outlet_idx" ON "payment_transactions"("tenant_id", "outlet_id");
+    `,
+  },
 ];
 
 /**

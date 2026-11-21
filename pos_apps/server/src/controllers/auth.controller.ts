@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -100,6 +103,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
             name: true,
             address: true,
             phone: true,
+            industries: true,
           },
         },
         tenant: {
@@ -109,6 +113,8 @@ export const loginWithPassword = async (req: Request, res: Response) => {
             phone: true,
             status: true,
             slug: true,
+            businessType: true,
+            businessVertical: true,
           },
         },
       },
@@ -194,6 +200,8 @@ export const loginWithPassword = async (req: Request, res: Response) => {
                 name: user.tenant.name,
                 phone: user.tenant.phone,
                 slug: user.tenant.slug,
+                businessType: user.tenant.businessType,
+                businessVertical: user.tenant.businessVertical,
               }
             : null,
           outlet: user.outlet,
@@ -267,6 +275,17 @@ export const loginWithPin = async (req: Request, res: Response) => {
             name: true,
             address: true,
             phone: true,
+            industries: true,
+          },
+        },
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            slug: true,
+            businessType: true,
+            businessVertical: true,
           },
         },
       },
@@ -332,6 +351,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
           canCashOut: (user as any).canCashOut ?? false,
           hasPin: !!user.pinHash,
           tenantId: user.tenantId,
+          tenant: (user as any).tenant || null,
           outlet: user.outlet,
           subscription: subscriptionInfo,
         },
@@ -369,6 +389,7 @@ export const getProfile = async (req: Request, res: Response) => {
             address: true,
             phone: true,
             isActive: true,
+            industries: true,
           },
         },
         tenant: {
@@ -378,6 +399,8 @@ export const getProfile = async (req: Request, res: Response) => {
             phone: true,
             status: true,
             slug: true,
+            businessType: true,
+            businessVertical: true,
           },
         },
       },
@@ -409,6 +432,8 @@ export const getProfile = async (req: Request, res: Response) => {
               name: user.tenant.name,
               phone: user.tenant.phone,
               slug: user.tenant.slug,
+              businessType: user.tenant.businessType,
+              businessVertical: user.tenant.businessVertical,
             }
           : null,
         isActive: user.isActive,
@@ -507,6 +532,17 @@ export const pairDevice = async (req: Request, res: Response) => {
             name: true,
             address: true,
             phone: true,
+            industries: true,
+          },
+        },
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            slug: true,
+            businessType: true,
+            businessVertical: true,
           },
         },
       },

@@ -2537,6 +2537,241 @@ export const api = {
     });
     return res.json();
   },
+
+  // ==========================================
+  // MODUL POS LAUNDRY & DRY CLEAN (EPIC-30)
+  // ==========================================
+  getLaundryServices: async (): Promise<any> => {
+    const res = await fetch('/api/laundry/services', { headers: authHeader() });
+    return res.json();
+  },
+
+  createLaundryService: async (data: any): Promise<any> => {
+    const res = await fetch('/api/laundry/services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateLaundryService: async (id: string, data: any): Promise<any> => {
+    const res = await fetch(`/api/laundry/services/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deleteLaundryService: async (id: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/services/${id}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getLaundryRacks: async (outletId?: string): Promise<any> => {
+    const url = outletId ? `/api/laundry/racks?outletId=${outletId}` : '/api/laundry/racks';
+    const res = await fetch(url, { headers: authHeader() });
+    return res.json();
+  },
+
+  createLaundryRack: async (data: any): Promise<any> => {
+    const res = await fetch('/api/laundry/racks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getLaundryOrders: async (outletId?: string, status?: string): Promise<any> => {
+    const searchParams = new URLSearchParams();
+    if (outletId) searchParams.append('outletId', outletId);
+    if (status) searchParams.append('status', status);
+    const res = await fetch(`/api/laundry/orders?${searchParams.toString()}`, { headers: authHeader() });
+    return res.json();
+  },
+
+  createLaundryOrder: async (data: any): Promise<any> => {
+    const res = await fetch('/api/laundry/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateLaundryOrderStatus: async (id: string, data: { status: string; rackCode?: string | null; pickedUpBy?: string | null }): Promise<any> => {
+    const res = await fetch(`/api/laundry/orders/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  sendLaundryWhatsApp: async (id: string, data?: { type?: 'READY' | 'COMPLETED'; phoneOverride?: string }): Promise<any> => {
+    const res = await fetch(`/api/laundry/orders/${id}/send-whatsapp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data || {}),
+    });
+    return res.json();
+  },
+
+  getLaundryManifests: async (params?: {
+    sourceOutletId?: string;
+    targetOutletId?: string;
+    status?: string;
+    direction?: string;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.sourceOutletId) query.append('sourceOutletId', params.sourceOutletId);
+    if (params?.targetOutletId) query.append('targetOutletId', params.targetOutletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.direction) query.append('direction', params.direction);
+    const res = await fetch(`/api/laundry/manifests?${query.toString()}`, { headers: authHeader() });
+    return res.json();
+  },
+
+  createLaundryManifest: async (data: any): Promise<any> => {
+    const res = await fetch('/api/laundry/manifests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  receiveLaundryManifest: async (id: string, data?: { receivedBy?: string }): Promise<any> => {
+    const res = await fetch(`/api/laundry/manifests/${id}/receive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data || {}),
+    });
+    return res.json();
+  },
+
+  getAvailableOrdersForManifest: async (outletId: string, direction: 'TO_WORKSHOP' | 'TO_OUTLET' = 'TO_WORKSHOP'): Promise<any> => {
+    const res = await fetch(`/api/laundry/manifests/available-orders?outletId=${outletId}&direction=${direction}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getLaundryWorkshops: async (): Promise<any> => {
+    const res = await fetch('/api/laundry/workshops', { headers: authHeader() });
+    return res.json();
+  },
+
+  toggleOutletWorkshopMode: async (id: string, isWorkshop: boolean): Promise<any> => {
+    const res = await fetch(`/api/laundry/workshops/${id}/toggle`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ isWorkshop }),
+    });
+    return res.json();
+  },
+
+  advanceLaundryStage: async (
+    id: string,
+    data: {
+      nextStage: string;
+      operatorId?: string;
+      operatorName?: string;
+      notes?: string;
+      rackCode?: string;
+      pickedUpBy?: string;
+    }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/orders/${id}/advance-stage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getLaundryStageLogs: async (id: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/orders/${id}/stage-logs`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getLaundryProductionKpi: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    operatorId?: string;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.operatorId) query.append('operatorId', params.operatorId);
+    const res = await fetch(`/api/laundry/production-kpi?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // PENGATURAN TAHAPAN PRODUKSI TOKO (OWNER CUSTOM STAGES)
+  // ----------------------------------------------------
+  getLaundryStageSettings: async (): Promise<any> => {
+    const res = await fetch('/api/laundry/stage-settings', {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateLaundryStageSettings: async (stages: any[]): Promise<any> => {
+    const res = await fetch('/api/laundry/stage-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ stages }),
+    });
+    return res.json();
+  },
+
+  resetLaundryStageSettings: async (): Promise<any> => {
+    const res = await fetch('/api/laundry/stage-settings/reset', {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // SORTIR PAKAIAN & QUALITY CONTROL (QC)
+  // ----------------------------------------------------
+  saveLaundrySortingData: async (
+    id: string,
+    data: {
+      garmentCounts: { type: string; qty: number }[];
+      defects?: string[];
+      defectNotes?: string;
+      operatorName?: string;
+      advanceToNext?: boolean;
+    }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/orders/${id}/sort`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // PUBLIC TRACKING VIA QR STRUK NOTA
+  // ----------------------------------------------------
+  getPublicLaundryTracking: async (invoiceNumber: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/public/track/${encodeURIComponent(invoiceNumber)}`);
+    return res.json();
+  },
 };
 
 // ----------------------------------------------------

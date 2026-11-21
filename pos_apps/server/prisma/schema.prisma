@@ -45,6 +45,7 @@ model Tenant {
   allowNegativeStock   Boolean          @default(false) @map("allow_negative_stock")
   enableBatchTracking  Boolean          @default(false) @map("enable_batch_tracking")
   enableRecipeTracking Boolean          @default(false) @map("enable_recipe_tracking")
+  laundryStages        Json?            @map("laundry_stages")
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
 
@@ -91,6 +92,11 @@ model Tenant {
   attendances           Attendance[]
   productBundleItems    ProductBundleItem[]
   productPriceTiers     ProductPriceTier[]
+  laundryServices       LaundryService[]
+  laundryRacks          LaundryRack[]
+  laundryOrderDetails   LaundryOrderDetail[]
+  laundryTransferManifests LaundryTransferManifest[]
+  laundryStageLogs      LaundryStageLog[]
 
   @@map("tenants")
 }
@@ -229,7 +235,9 @@ model User {
   dispatchedTransfers StockTransfer[] @relation("TransferDispatchedByUser")
   receivedTransfers   StockTransfer[] @relation("TransferReceivedByUser")
   customerDebtPayments CustomerDebtPayment[]
+  paymentTransactions PaymentTransaction[]
   attendances         Attendance[]
+  laundryStageLogs    LaundryStageLog[]
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -247,6 +255,7 @@ model Outlet {
   phone         String?
   industries    Json?     @map("industries")
   isWarehouse   Boolean?  @default(false) @map("is_warehouse")
+  isWorkshop    Boolean?  @default(false) @map("is_workshop")
   warehouseId   String?   @map("warehouse_id")
   timezone      String?   @default("Asia/Jakarta") @map("timezone")
   receiptConfig Json?     @map("receipt_config")
@@ -255,6 +264,7 @@ model Outlet {
   paymentConfig Json?     @map("payment_config")
   loyaltyConfig Json?     @map("loyalty_config")
   attendanceConfig Json?  @map("attendance_config")
+  laundryStages Json?     @map("laundry_stages")
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -271,7 +281,12 @@ model Outlet {
   outletProducts   OutletProduct[]
   customerDebts    CustomerDebt[]
   customerDebtPayments CustomerDebtPayment[]
+  paymentTransactions PaymentTransaction[]
   attendances      Attendance[]
+  laundryRacks     LaundryRack[]
+  laundryOrderDetails LaundryOrderDetail[]
+  sourceLaundryManifests LaundryTransferManifest[] @relation("ManifestSourceOutlet")
+  targetLaundryManifests LaundryTransferManifest[] @relation("ManifestTargetOutlet")
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -300,6 +315,7 @@ model Shift {
   orders Order[]
   cashMovements CashMovement[]
   customerDebtPayments CustomerDebtPayment[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([tenantId, outletId, status])
   @@map("shifts")
@@ -818,6 +834,9 @@ model Order {
   promotionUsages PromotionUsage[]
   pointLedgers    CustomerPointLedger[]
   customerDebts   CustomerDebt[]
+  laundryDetail   LaundryOrderDetail?
+  laundryTransferItems LaundryTransferItem[]
+  laundryStageLogs     LaundryStageLog[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -861,6 +880,9 @@ model PaymentTransaction {
   id              String          @id @default(uuid())
   tenantId        String          @map("tenant_id")
   orderId         String          @map("order_id")
+  shiftId         String?         @map("shift_id")
+  outletId        String?         @map("outlet_id")
+  cashierId       String?         @map("cashier_id")
   paymentMethod   PaymentMethod   @map("payment_method") // CASH, QRIS, CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, EWALLET, VOUCHER
   amount          Decimal         @db.Decimal(15, 2)
   referenceNumber String?         @map("reference_number")
@@ -872,10 +894,15 @@ model PaymentTransaction {
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  shift   Shift?   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  outlet  Outlet?  @relation(fields: [outletId], references: [id], onDelete: SetNull)
+  cashier User?    @relation(fields: [cashierId], references: [id], onDelete: SetNull)
   refunds Refund[]
 
   @@index([tenantId, orderId])
   @@index([tenantId, status])
+  @@index([tenantId, shiftId, status])
+  @@index([tenantId, outletId])
   @@map("payment_transactions")
 }
 
@@ -1464,4 +1491,162 @@ model EmailVerification {
 
   @@index([email, purpose, isVerified])
   @@map("email_verifications")
+}
+
+// ==========================================
+// EPIC-30: LAUNDRY & DRY CLEAN SPECIALIZED VERTICAL
+// ==========================================
+
+model LaundryService {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  name              String
+  category          String   @default("KILOAN") // 'KILOAN', 'SATUAN', 'EXPRESS', 'SEPATU_TAS'
+  unit              String   @default("KG") // 'KG', 'PCS', 'PASANG', 'METER'
+  price             Decimal  @default(0) @db.Decimal(15, 2)
+  minOrderQty       Decimal  @default(1.00) @map("min_order_qty") @db.Decimal(10, 2)
+  durationHours     Int      @default(48) @map("duration_hours")
+  expressMultiplier Decimal  @default(1.00) @map("express_multiplier") @db.Decimal(5, 2)
+  description       String?
+  stages            Json?
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, category, isActive])
+  @@map("laundry_services")
+}
+
+model LaundryRack {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  outletId     String   @map("outlet_id")
+  code         String   // RAK-A1, HGR-B1
+  name         String
+  category     String   @default("KILOAN") // 'KILOAN', 'SATUAN', 'EXPRESS', 'SEPATU_TAS'
+  capacity     Int      @default(10)
+  locationNote String?  @map("location_note")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, outletId, code])
+  @@index([tenantId, outletId, isActive])
+  @@map("laundry_racks")
+}
+
+model LaundryOrderDetail {
+  id               String    @id @default(uuid())
+  orderId          String    @unique @map("order_id")
+  tenantId         String    @map("tenant_id")
+  outletId         String    @map("outlet_id")
+  status           String    @default("RECEIVED") // 'RECEIVED', 'WASHING_DRYING', 'IRONING_PACKING', 'READY_FOR_PICKUP', 'COMPLETED'
+  currentStage     String    @default("DROP_OFF") @map("current_stage") // 11 Stages: DROP_OFF, TAGGING, SORTING, SPOTTING, WASHING, DRYING, IRONING, FOLDING, PACKING, RACK_STORAGE, HANDOVER
+  rackCode         String?   @map("rack_code")
+  totalWeightKg    Decimal?  @map("total_weight_kg") @db.Decimal(10, 3)
+  totalPieces      Int       @default(0) @map("total_pieces")
+  perfumeVariant   String?   @map("perfume_variant")
+  transferStatus   String?   @default("AT_OUTLET") @map("transfer_status") // 'AT_OUTLET', 'IN_TRANSIT_TO_WORKSHOP', 'AT_WORKSHOP', 'IN_TRANSIT_TO_OUTLET'
+  workshopOutletId String?   @map("workshop_outlet_id")
+  estimatedReadyAt DateTime? @map("estimated_ready_at")
+  completedAt      DateTime? @map("completed_at")
+  pickedUpAt       DateTime? @map("picked_up_at")
+  pickedUpBy       String?   @map("picked_up_by")
+  customerNotes    String?   @map("customer_notes")
+  garmentCounts    Json?     @map("garment_counts")
+  defects          Json?
+  defectNotes      String?   @map("defect_notes")
+  isSorted         Boolean   @default(false) @map("is_sorted")
+  sortedAt         DateTime? @map("sorted_at")
+  sortedBy         String?   @map("sorted_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  order     Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet    Outlet             @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  stageLogs LaundryStageLog[]
+
+  @@index([tenantId, outletId, status])
+  @@index([tenantId, currentStage])
+  @@index([tenantId, rackCode])
+  @@index([tenantId, transferStatus])
+  @@map("laundry_order_details")
+}
+
+model LaundryTransferManifest {
+  id               String    @id @default(uuid())
+  manifestNumber   String    @map("manifest_number")
+  tenantId         String    @map("tenant_id")
+  sourceOutletId   String    @map("source_outlet_id")
+  targetOutletId   String    @map("target_outlet_id")
+  status           String    @default("DISPATCHED") // 'DISPATCHED', 'RECEIVED', 'CANCELLED'
+  direction        String    @default("TO_WORKSHOP") // 'TO_WORKSHOP', 'TO_OUTLET'
+  driverName       String?   @map("driver_name")
+  vehiclePlate     String?   @map("vehicle_plate")
+  totalOrdersCount Int       @default(0) @map("total_orders_count")
+  totalWeightKg    Decimal?  @map("total_weight_kg") @db.Decimal(10, 3)
+  notes            String?
+  dispatchedAt     DateTime  @default(now()) @map("dispatched_at")
+  receivedAt       DateTime? @map("received_at")
+  receivedBy       String?   @map("received_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  sourceOutlet Outlet                @relation("ManifestSourceOutlet", fields: [sourceOutletId], references: [id], onDelete: Restrict)
+  targetOutlet Outlet                @relation("ManifestTargetOutlet", fields: [targetOutletId], references: [id], onDelete: Restrict)
+  items        LaundryTransferItem[]
+
+  @@unique([tenantId, manifestNumber])
+  @@index([tenantId, sourceOutletId, status])
+  @@index([tenantId, targetOutletId, status])
+  @@map("laundry_transfer_manifests")
+}
+
+model LaundryTransferItem {
+  id         String   @id @default(uuid())
+  manifestId String   @map("manifest_id")
+  orderId    String   @map("order_id")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  manifest LaundryTransferManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  order    Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([manifestId, orderId])
+  @@index([orderId])
+  @@map("laundry_transfer_items")
+}
+
+model LaundryStageLog {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  orderId         String    @map("order_id")
+  laundryDetailId String    @map("laundry_detail_id")
+  stage           String    // DROP_OFF, TAGGING, SORTING, SPOTTING, WASHING, DRYING, IRONING, FOLDING, PACKING, RACK_STORAGE, HANDOVER
+  operatorId      String?   @map("operator_id")
+  operatorName    String?   @map("operator_name")
+  weightKg        Decimal?  @map("weight_kg") @db.Decimal(10, 3)
+  piecesCount     Int?      @default(0) @map("pieces_count")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  durationMinutes Int?      @map("duration_minutes")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  laundryDetail LaundryOrderDetail @relation(fields: [laundryDetailId], references: [id], onDelete: Cascade)
+  operator      User?              @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, orderId])
+  @@index([tenantId, operatorId, stage])
+  @@index([tenantId, stage, completedAt])
+  @@map("laundry_stage_logs")
 }

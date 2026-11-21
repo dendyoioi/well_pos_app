@@ -1,7 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Request, Response, NextFunction } from 'express';
 import compression from 'compression';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth.routes';
 import { categoryRouter } from './routes/category.routes';
@@ -23,6 +25,7 @@ import { stockTransferRouter } from './routes/stock_transfer.routes';
 import { promotionRouter } from './routes/promotion.routes';
 import qrMenuRouter from './routes/qr_menu.routes';
 import { attendanceRouter } from './routes/attendance.routes';
+import { laundryRouter } from './routes/laundry.routes';
 import { prisma } from './config/prisma';
 
 import { securityHeaders, authRateLimiter } from './middlewares/security.middleware';
@@ -97,6 +100,7 @@ app.use('/api/reports', reportRouter);
 app.use('/api/users', userRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/qr-menu', qrMenuRouter);
+app.use('/api/laundry', laundryRouter);
 
 // Root endpoint info
 app.get('/', (_req: Request, res: Response) => {

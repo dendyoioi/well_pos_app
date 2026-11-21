@@ -22,6 +22,9 @@ const CustomerQrMenuView = lazy(() =>
 const MaintenancePage = lazy(() =>
   import('./pages/MaintenancePage').then((m) => ({ default: m.MaintenancePage }))
 );
+const PublicLaundryTrackingPage = lazy(() =>
+  import('./pages/PublicLaundryTrackingPage').then((m) => ({ default: m.PublicLaundryTrackingPage }))
+);
 
 const ViewLoadingFallback = () => (
   <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -41,7 +44,29 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
 
-  // View routing: 'landing' | 'pos-login' | 'superadmin' | 'menu'
+  // View routing: 'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track'
+  const [trackInvoice, setTrackInvoice] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    const hash = window.location.hash.toLowerCase();
+    const search = new URLSearchParams(window.location.search);
+    if (search.get('track')) return search.get('track') || '';
+    if (search.get('invoice')) return search.get('invoice') || '';
+    if (hash.startsWith('#track')) {
+      const qIdx = hash.indexOf('?');
+      if (qIdx !== -1) {
+        const p = new URLSearchParams(hash.slice(qIdx));
+        return p.get('invoice') || p.get('track') || '';
+      }
+      const parts = hash.split('/');
+      if (parts.length > 1) return parts[1];
+    }
+    const path = window.location.pathname;
+    if (path.startsWith('/track/')) {
+      return path.replace('/track/', '');
+    }
+    return '';
+  });
+
   const [menuParams, setMenuParams] = useState<{ outletId: string; table: string }>(() => {
     const hash = window.location.hash;
     if (hash.startsWith('#menu')) {
@@ -54,16 +79,21 @@ export const App: React.FC = () => {
     return { outletId: '', table: '01' };
   });
 
-  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu'>(() => {
-    const hash = window.location.hash.toLowerCase();
-    if (hash.startsWith('#menu')) return 'menu';
-    if (hash === '#pos' || hash === '#login') return 'pos-login';
-    // Hanya izinkan akses jika URL hash tepat sesuai kode rahasia internal
-    if (hash === SUPERADMIN_SECRET_HASH) return 'superadmin';
-    // Honeypot: Jika ada yang menebak #superadmin, #admin, dll, alihkan diam-diam ke landing
-    if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) {
-      window.history.replaceState(null, '', window.location.pathname);
-      return 'landing';
+  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track'>(() => {
+    if (typeof window !== 'undefined') {
+      const search = new URLSearchParams(window.location.search);
+      if (search.has('track') || window.location.pathname.startsWith('/track')) return 'track';
+      const hash = window.location.hash.toLowerCase();
+      if (hash.startsWith('#track')) return 'track';
+      if (hash.startsWith('#menu')) return 'menu';
+      if (hash === '#pos' || hash === '#login') return 'pos-login';
+      // Hanya izinkan akses jika URL hash tepat sesuai kode rahasia internal
+      if (hash === SUPERADMIN_SECRET_HASH) return 'superadmin';
+      // Honeypot: Jika ada yang menebak #superadmin, #admin, dll, alihkan diam-diam ke landing
+      if (['#superadmin', '#admin', '#saas-admin', '#platform'].includes(hash)) {
+        window.history.replaceState(null, '', window.location.pathname);
+        return 'landing';
+      }
     }
     return 'landing';
   });
@@ -118,7 +148,17 @@ export const App: React.FC = () => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       const lower = hash.toLowerCase();
-      if (lower.startsWith('#menu')) {
+      if (lower.startsWith('#track')) {
+        const qIdx = hash.indexOf('?');
+        if (qIdx !== -1) {
+          const p = new URLSearchParams(hash.slice(qIdx));
+          setTrackInvoice(p.get('invoice') || p.get('track') || '');
+        } else {
+          const parts = hash.split('/');
+          if (parts.length > 1) setTrackInvoice(parts[1]);
+        }
+        setViewMode('track');
+      } else if (lower.startsWith('#menu')) {
         const qIdx = hash.indexOf('?');
         if (qIdx !== -1) {
           const p = new URLSearchParams(hash.slice(qIdx));
@@ -294,8 +334,14 @@ export const App: React.FC = () => {
       <DialogProvider>
         <PullToRefresh>
           <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
-          {/* JIKA MODE BUKU MENU QR, TAMPILKAN HALAMAN PELANGGAN */}
-          {viewMode === 'menu' ? (
+          {/* JIKA MODE TRACKING PUBLIK LAUNDRY VIA SCAN QR STRUK */}
+          {viewMode === 'track' ? (
+            <div className="flex-1 flex flex-col">
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <PublicLaundryTrackingPage initialInvoiceNumber={trackInvoice} />
+              </Suspense>
+            </div>
+          ) : viewMode === 'menu' ? (
             <div className="flex-1 flex flex-col">
               <Suspense fallback={<ViewLoadingFallback />}>
                 <CustomerQrMenuView

@@ -1249,10 +1249,12 @@ export class SalesDualWriteService extends BaseDualWriteService {
           tx,
           `INSERT INTO "payment_transactions" (
             "id", "tenant_id", "order_id", "payment_method", "amount",
-            "reference_number", "gateway_provider", "status", "metadata", "paid_at", "created_at"
+            "reference_number", "gateway_provider", "status", "metadata", "paid_at", "created_at",
+            "shift_id", "outlet_id", "cashier_id"
           ) VALUES (
             $1, $2, $3, $4::"PaymentMethod", $5,
-            $6, $7, $8::"PaymentTxStatus", null, (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC')
+            $6, $7, $8::"PaymentTxStatus", null, (NOW() AT TIME ZONE 'UTC'), (NOW() AT TIME ZONE 'UTC'),
+            $9, $10, $11
           )
           ON CONFLICT ("id") DO NOTHING;`,
           paymentId,
@@ -1262,7 +1264,10 @@ export class SalesDualWriteService extends BaseDualWriteService {
           netAmount,
           p.qrisReference || `PAY-${paymentId.substring(0, 8)}`,
           p.method === 'QRIS' ? 'STATIC_QRIS' : null,
-          p.status || 'CAPTURED'
+          p.status || 'CAPTURED',
+          dto.shiftId || null,
+          dto.targetOutletId || null,
+          dto.cashierId || null
         );
         targetRecordsAffected++;
 

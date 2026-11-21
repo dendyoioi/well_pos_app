@@ -286,6 +286,7 @@ export interface Outlet {
   address?: string | null;
   phone?: string | null;
   isWarehouse?: boolean;
+  isWorkshop?: boolean;
   warehouseId?: string | null;
   warehouse?: Outlet | null;
   feesConfig?: OutletFee[] | null;
@@ -295,6 +296,7 @@ export interface Outlet {
   loyaltyConfig?: OutletLoyaltyConfig | null;
   timezone?: string | null;
   attendanceConfig?: any;
+  industries?: string[] | null;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

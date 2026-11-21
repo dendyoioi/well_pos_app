@@ -22,6 +22,7 @@ import {
 import { api } from '../services/api';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { useDialog } from '../context/DialogContext';
+import { checkIsLaundry } from '../utils/businessType';
 import type { RolePermissions, PermissionDefinition, PermissionCategory } from '../types/auth';
 
 export const SYSTEM_PERMISSIONS_FALLBACK: PermissionDefinition[] = [
@@ -222,6 +223,296 @@ export const SYSTEM_PERMISSIONS_FALLBACK: PermissionDefinition[] = [
   },
 ];
 
+export const SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK: PermissionDefinition[] = [
+  // 1. Kasir & Penjualan POS Laundry
+  {
+    id: 'sales_shift',
+    label: 'Buka & Tutup Shift Kasir',
+    description: 'Mengelola modal kas awal dan rekap fisik uang di laci kasir',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_checkout',
+    label: 'Proses Transaksi & Pembayaran Laundry',
+    description: 'Penerimaan cucian, timbang kiloan/satuan, DP/Lunas, dan cetak nota',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_hold',
+    label: 'Tahan & Lanjutkan Antrean (Hold Order)',
+    description: 'Menyimpan pesanan sementara saat pelanggan belum selesai memilah pakaian',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_discount',
+    label: 'Pemberian Diskon Manual',
+    description: 'Memberikan potongan harga langsung sesuai batas toleransi peran',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_void',
+    label: 'Pembatalan & Void Nota (Refund)',
+    description: 'Membatalkan item atau transaksi cucian yang sudah terlanjur dicetak',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_drawer',
+    label: 'Buka Laci Uang Manual (No-Sale)',
+    description: 'Membuka laci kas fisik tanpa harus melakukan transaksi penjualan',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_reprint',
+    label: 'Cetak Ulang Struk / Kirim WhatsApp',
+    description: 'Mencetak ulang struk nota thermal atau mengirimkan e-receipt WhatsApp ke pelanggan',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_cash_expense',
+    label: 'Catat Kas Keluar / Pengeluaran Kasir',
+    description: 'Mencatat pengeluaran uang tunai operasional (iuran lingkungan, belanja toko mendesak, dll.)',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_customer_debt',
+    label: 'Kasbon / Bayar Nanti saat Ambil Cucian',
+    description: 'Memproses pesanan laundry dengan status bayar belakangan saat cucian selesai',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'sales_debt_payment',
+    label: 'Terima Pelunasan Kasbon / Sisa DP di Kasir',
+    description: 'Menerima pembayaran sisa tagihan saat pelanggan mengambil cucian bersih di counter',
+    category: 'REGISTER_SALES',
+  },
+  {
+    id: 'attendance_clock',
+    label: 'Absensi Mandiri Staf (Clock In & Out)',
+    description: 'Mencatat waktu absensi kehadiran datang dan pulang kerja mandiri menggunakan PIN staf di kasir',
+    category: 'REGISTER_SALES',
+  },
+
+  // 2. Operasional & Produksi Laundry
+  {
+    id: 'laundry_queue_view',
+    label: 'Pantau Antrean Produksi Cucian',
+    description: 'Melihat antrean pengerjaan cucian masuk, estimasi waktu selesai, dan status tiap SPK order',
+    category: 'LAUNDRY_OPERATIONS',
+  },
+  {
+    id: 'laundry_queue_update',
+    label: 'Update Status Cuci, Kering, Setrika & Siap',
+    description: 'Memproses tahapan mesin cuci, pengering dryer, setrika uap rapi, hingga packing parfum segel',
+    category: 'LAUNDRY_OPERATIONS',
+  },
+  {
+    id: 'laundry_racks_manage',
+    label: 'Penataan & Manajemen Slot Rak Cucian',
+    description: 'Menempatkan bungkusan cucian siap ambil ke nomor slot rak dan memonitor rak kosong/penuh',
+    category: 'LAUNDRY_OPERATIONS',
+  },
+  {
+    id: 'laundry_handover',
+    label: 'Serah Terima Cucian Bersih (Handover)',
+    description: 'Verifikasi nomor nota/telepon pelanggan dan serah terima bungkusan pakaian dari rak simpan',
+    category: 'LAUNDRY_OPERATIONS',
+  },
+  {
+    id: 'laundry_transfers',
+    label: 'Transfer Cucian Antar-Workshop / Outlet',
+    description: 'Mengirim dan menerima pakaian kotor/bersih antar workshop central dan counter penerimaan',
+    category: 'LAUNDRY_OPERATIONS',
+  },
+  {
+    id: 'laundry_courier',
+    label: 'Tugas Kurir Antar-Jemput (Pickup & Delivery)',
+    description: 'Menerima order pickup ke rumah pelanggan dan mengantar cucian bersih sampai ke alamat tujuan',
+    category: 'LAUNDRY_OPERATIONS',
+  },
+
+  // 3. Layanan, Tarif & Add-on Laundry
+  {
+    id: 'menu_view',
+    label: 'Lihat Daftar Layanan & Tarif',
+    description: 'Melihat katalog layanan aktif toko (Kiloan, Satuan, Express) tanpa hak mengedit',
+    category: 'CATALOG_RECIPES',
+  },
+  {
+    id: 'menu_manage',
+    label: 'Tambah & Edit Layanan Laundry / Tarif',
+    description: 'Mengatur nama layanan, estimasi durasi jam, batas minimal order (kg/pcs), dan penetapan tarif',
+    category: 'CATALOG_RECIPES',
+  },
+  {
+    id: 'menu_recipe',
+    label: 'Kebutuhan Bahan Cuci & HPP per Kg/Pcs',
+    description: 'Mengatur estimasi pemakaian konsentrat deterjen, softener, dan plastik per satuan cucian',
+    category: 'CATALOG_RECIPES',
+  },
+  {
+    id: 'menu_modifiers',
+    label: 'Kelola Pilihan Parfum & Add-on Laundry',
+    description: 'Mengatur varian aroma parfum (Lavender, Ocean Fresh, Akasia) dan layanan tambahan (Anti Bakteri, Hanger, Plastik Klip)',
+    category: 'CATALOG_RECIPES',
+  },
+  {
+    id: 'menu_barcode_labels',
+    label: 'Cetak Tag Baju & Barcode Rak Cucian',
+    description: 'Mencetak pita label anti-air untuk baju kiloan/satuan dan kode barcode identitas slot rak',
+    category: 'CATALOG_RECIPES',
+  },
+
+  // 4. Bahan Cuci & Perlengkapan (Supplies)
+  {
+    id: 'stock_view',
+    label: 'Lihat Saldo Stok Bahan Cuci & Perlengkapan',
+    description: 'Melihat sisa persediaan deterjen cair/bubuk, softener, parfum, plastik packing, dan hanger',
+    category: 'INVENTORY_STOCK',
+  },
+  {
+    id: 'stock_in',
+    label: 'Penerimaan Perlengkapan Supplier (PO)',
+    description: 'Mencatat pasokan bahan kimia cuci dan kemasan masuk dari vendor serta faktur pembelian',
+    category: 'INVENTORY_STOCK',
+  },
+  {
+    id: 'stock_adjustment',
+    label: 'Opname Fisik & Penyesuaian Stok Supplies',
+    description: 'Mencatat selisih fisik deterjen tumpah, botol bocor, plastik rusak, atau koreksi berkala',
+    category: 'INVENTORY_STOCK',
+  },
+  {
+    id: 'stock_transfer',
+    label: 'Transfer Perlengkapan Antar-Toko / Gudang',
+    description: 'Mengirim dan menerima mutasi persediaan deterjen & plastik antar outlet laundry',
+    category: 'INVENTORY_STOCK',
+  },
+
+  // 5. Laporan & Finansial Laundry
+  {
+    id: 'report_x',
+    label: 'Laporan Shift Kasir Berjalan (X-Report)',
+    description: 'Melihat ringkasan total uang masuk selama sesi shift kasir sedang berjalan',
+    category: 'REPORTS_FINANCIAL',
+  },
+  {
+    id: 'report_z',
+    label: 'Rekap Tutup Shift Kasir (Z-Report)',
+    description: 'Melihat laporan tutup buku shift kasir dan audit selisih kas fisik laci',
+    category: 'REPORTS_FINANCIAL',
+  },
+  {
+    id: 'report_sales',
+    label: 'Laporan Penjualan & Layanan Terlaris',
+    description: 'Analisis statistik omset, perbandingan kiloan vs satuan, tren jam ramai, dan produktivitas outlet',
+    category: 'REPORTS_FINANCIAL',
+  },
+  {
+    id: 'report_pnl',
+    label: 'Laporan Laba Rugi & HPP Riil (P&L)',
+    description: 'Melihat pendapatan bersih, biaya bahan kimia cuci/listrik/air, dan margin profitabilitas usaha',
+    category: 'REPORTS_FINANCIAL',
+  },
+  {
+    id: 'report_cash_flow',
+    label: 'Laporan Arus Kas Riil (Cash Flow)',
+    description: 'Melihat mutasi uang kas masuk, operasional keluar, setoran modal, dan saldo kas bersih outlet',
+    category: 'REPORTS_FINANCIAL',
+  },
+  {
+    id: 'crm_debt_manage',
+    label: 'Buku Piutang CRM & Pengingat Tagihan WhatsApp',
+    description: 'Melihat buku piutang pelanggan, status titip cuci belum lunas, dan kirim pengingat tagihan WhatsApp',
+    category: 'REPORTS_FINANCIAL',
+  },
+
+  // 6. Tata Kelola & Toko Laundry
+  {
+    id: 'settings_staff',
+    label: 'Kelola Akun Pegawai & PIN Staf',
+    description: 'Menambah staf kasir/operator, mengatur PIN 5-digit, dan penugasan toko / outlet',
+    category: 'SETTINGS_GOVERNANCE',
+  },
+  {
+    id: 'settings_roles',
+    label: 'Atur Hak Akses & Peran Staf',
+    description: 'Mengonfigurasi wewenang fitur dan toleransi diskon per peran staf',
+    category: 'SETTINGS_GOVERNANCE',
+  },
+  {
+    id: 'settings_tax',
+    label: 'Atur Pajak (PPN) & Biaya Layanan',
+    description: 'Menentukan persentase pajak pertambahan nilai dan biaya admin per outlet',
+    category: 'SETTINGS_GOVERNANCE',
+  },
+  {
+    id: 'settings_printer',
+    label: 'Konfigurasi Printer Thermal & Tag Cucian',
+    description: 'Mengatur ukuran kertas nota thermal 58mm/80mm, template nota, dan printer label tag pakaian',
+    category: 'SETTINGS_GOVERNANCE',
+  },
+  {
+    id: 'attendance_manage',
+    label: 'Rekapitulasi Absensi & Jam Kerja Toko',
+    description: 'Melihat rekap kehadiran seluruh tim laundry, jadwal shift kerja, dan toleransi keterlambatan',
+    category: 'SETTINGS_GOVERNANCE',
+  },
+];
+
+const CATEGORY_META_LAUNDRY: Record<
+  PermissionCategory,
+  {
+    title: string;
+    subtitle: string;
+    icon: React.ElementType;
+    badgeStyle: string;
+    headerBg: string;
+  }
+> = {
+  REGISTER_SALES: {
+    title: 'Kasir & Penjualan POS Laundry',
+    subtitle: 'Penerimaan cucian kotor, timbangan kiloan/satuan, DP/lunas, laci kas, dan cetak nota thermal',
+    icon: CreditCard,
+    badgeStyle: 'bg-blue-50 text-blue-700 border-blue-200',
+    headerBg: 'from-blue-50/60 to-transparent',
+  },
+  LAUNDRY_OPERATIONS: {
+    title: 'Operasional & Produksi Laundry',
+    subtitle: 'Tahapan cuci, pengering dryer, setrika uap, packing segel, slot rak simpan, dan kurir antar-jemput',
+    icon: Sparkles,
+    badgeStyle: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    headerBg: 'from-indigo-50/60 to-transparent',
+  },
+  CATALOG_RECIPES: {
+    title: 'Layanan, Tarif & Add-on Laundry',
+    subtitle: 'Katalog kiloan/satuan/express, durasi jam pengerjaan, aroma parfum, dan cetak tag baju anti-air',
+    icon: Sliders,
+    badgeStyle: 'bg-amber-50 text-amber-800 border-amber-200',
+    headerBg: 'from-amber-50/60 to-transparent',
+  },
+  INVENTORY_STOCK: {
+    title: 'Bahan Cuci & Perlengkapan (Supplies)',
+    subtitle: 'Persediaan deterjen, softener, parfum, plastik packing, hanger, faktur PO, dan opname stok',
+    icon: Boxes,
+    badgeStyle: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+    headerBg: 'from-cyan-50/60 to-transparent',
+  },
+  REPORTS_FINANCIAL: {
+    title: 'Laporan & Finansial Laundry',
+    subtitle: 'Audit omset kiloan vs satuan, laporan shift X/Z kasir, buku piutang CRM, laba rugi, dan arus kas',
+    icon: BarChart3,
+    badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    headerBg: 'from-emerald-50/60 to-transparent',
+  },
+  SETTINGS_GOVERNANCE: {
+    title: 'Tata Kelola & Toko Laundry',
+    subtitle: 'Wewenang PIN staf, hak akses, jadwal absensi shift, pajak PPN, dan konfigurasi printer nota',
+    icon: Shield,
+    badgeStyle: 'bg-purple-50 text-purple-800 border-purple-200',
+    headerBg: 'from-purple-50/60 to-transparent',
+  },
+};
+
 const CATEGORY_META: Record<
   PermissionCategory,
   {
@@ -238,6 +529,13 @@ const CATEGORY_META: Record<
     icon: CreditCard,
     badgeStyle: 'bg-blue-50 text-blue-700 border-blue-200',
     headerBg: 'from-blue-50/60 to-transparent',
+  },
+  LAUNDRY_OPERATIONS: {
+    title: 'Operasional Laundry',
+    subtitle: 'Tahapan cuci, pengering dryer, setrika uap, rak simpan, dan antar-jemput',
+    icon: Sparkles,
+    badgeStyle: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    headerBg: 'from-indigo-50/60 to-transparent',
   },
   CATALOG_RECIPES: {
     title: 'Menu, Resep & Modifiers',
@@ -397,18 +695,199 @@ export const DEFAULT_FNB_ROLES_FALLBACK: RolePermissions[] = [
   },
 ];
 
+export const DEFAULT_LAUNDRY_ROLES_FALLBACK: RolePermissions[] = [
+  {
+    id: 'role-owner',
+    name: 'Pemilik Usaha (Owner / Admin)',
+    description: 'Akses penuh tanpa batas ke seluruh modul operasional laundry, finansial, dan pengaturan toko',
+    status: true,
+    isDefault: true,
+    permissions: SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK.map((p) => p.id),
+    businessPermissions: {
+      orderDiscount: { maxPercent: 100, maxAmount: 10000000 },
+      productDiscount: { maxPercent: 100, maxAmount: 10000000 },
+    },
+    staffCount: 1,
+  },
+  {
+    id: 'role-supervisor',
+    name: 'Supervisor / Kepala Produksi',
+    description: 'Mengawasi operasional harian, kontrol antrean cucian, otorisasi void & diskon kasir, absensi, dan laporan shift',
+    status: true,
+    isDefault: true,
+    permissions: [
+      'sales_shift',
+      'sales_checkout',
+      'sales_hold',
+      'sales_discount',
+      'sales_void',
+      'sales_drawer',
+      'sales_reprint',
+      'sales_cash_expense',
+      'sales_customer_debt',
+      'sales_debt_payment',
+      'attendance_clock',
+      'laundry_queue_view',
+      'laundry_queue_update',
+      'laundry_racks_manage',
+      'laundry_handover',
+      'laundry_transfers',
+      'laundry_courier',
+      'menu_view',
+      'menu_manage',
+      'menu_modifiers',
+      'menu_barcode_labels',
+      'stock_view',
+      'stock_in',
+      'stock_adjustment',
+      'stock_transfer',
+      'report_x',
+      'report_z',
+      'report_sales',
+      'report_cash_flow',
+      'crm_debt_manage',
+      'settings_printer',
+      'attendance_manage',
+    ],
+    businessPermissions: {
+      orderDiscount: { maxPercent: 30, maxAmount: 250000 },
+      productDiscount: { maxPercent: 30, maxAmount: 250000 },
+    },
+    staffCount: 1,
+  },
+  {
+    id: 'role-cashier',
+    name: 'Kasir / Front Desk Laundry',
+    description: 'Melayani penerimaan cucian (drop-off), timbangan kiloan/satuan, aroma parfum & add-on, pembayaran lunas/DP, nota, dan penyerahan cucian (handover)',
+    status: true,
+    isDefault: true,
+    permissions: [
+      'sales_shift',
+      'sales_checkout',
+      'sales_hold',
+      'sales_discount',
+      'sales_reprint',
+      'sales_cash_expense',
+      'sales_customer_debt',
+      'sales_debt_payment',
+      'attendance_clock',
+      'laundry_queue_view',
+      'laundry_racks_manage',
+      'laundry_handover',
+      'menu_view',
+      'report_x',
+    ],
+    businessPermissions: {
+      orderDiscount: { maxPercent: 10, maxAmount: 50000 },
+      productDiscount: { maxPercent: 10, maxAmount: 50000 },
+    },
+    staffCount: 2,
+  },
+  {
+    id: 'role-production',
+    name: 'Operator Produksi (Cuci, Kering, Setrika, Packing)',
+    description: 'Bertanggung jawab atas proses pencucian mesin, pengeringan dryer, setrika uap rapi, packing parfum segel, hingga penataan ke slot rak simpan',
+    status: true,
+    isDefault: true,
+    permissions: [
+      'laundry_queue_view',
+      'laundry_queue_update',
+      'laundry_racks_manage',
+      'menu_view',
+      'stock_view',
+      'attendance_clock',
+    ],
+    businessPermissions: {
+      orderDiscount: { maxPercent: 0, maxAmount: 0 },
+      productDiscount: { maxPercent: 0, maxAmount: 0 },
+    },
+    staffCount: 1,
+  },
+  {
+    id: 'role-courier',
+    name: 'Kurir Antar-Jemput (Pickup & Delivery)',
+    description: 'Melayani pickup cucian kotor dari pelanggan, delivery pakaian bersih, serta serah terima manifes transfer antar-outlet/workshop',
+    status: true,
+    isDefault: true,
+    permissions: [
+      'laundry_courier',
+      'laundry_handover',
+      'sales_hold',
+      'attendance_clock',
+    ],
+    businessPermissions: {
+      orderDiscount: { maxPercent: 0, maxAmount: 0 },
+      productDiscount: { maxPercent: 0, maxAmount: 0 },
+    },
+    staffCount: 1,
+  },
+  {
+    id: 'role-warehouse',
+    name: 'Staf Gudang & Perlengkapan (Supplies)',
+    description: 'Fokus pada persediaan konsentrat deterjen, softener, parfum, chemical noda, plastik packing, hanger, opname, dan absensi',
+    status: true,
+    isDefault: true,
+    permissions: [
+      'stock_view',
+      'stock_in',
+      'stock_adjustment',
+      'stock_transfer',
+      'menu_view',
+      'menu_barcode_labels',
+      'attendance_clock',
+    ],
+    businessPermissions: {
+      orderDiscount: { maxPercent: 0, maxAmount: 0 },
+      productDiscount: { maxPercent: 0, maxAmount: 0 },
+    },
+    staffCount: 1,
+  },
+];
+
 interface StaffRolesViewProps {
   onBackToStaffList?: () => void;
   initialCreateMode?: boolean;
+  activeOutlet?: any;
+  currentUser?: any;
 }
 
 export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
   onBackToStaffList,
   initialCreateMode = false,
+  activeOutlet,
+  currentUser,
 }) => {
   const dialog = useDialog();
-  const [roles, setRoles] = useState<RolePermissions[]>(DEFAULT_FNB_ROLES_FALLBACK);
-  const [systemPermissions, setSystemPermissions] = useState<PermissionDefinition[]>(SYSTEM_PERMISSIONS_FALLBACK);
+
+  const [isLaundryDetected, setIsLaundryDetected] = useState<boolean>(() =>
+    checkIsLaundry(activeOutlet, currentUser)
+  );
+
+  useEffect(() => {
+    const isLaundry = checkIsLaundry(activeOutlet, currentUser);
+    if (isLaundry) {
+      setIsLaundryDetected(true);
+      setSystemPermissions((prev) => {
+        const hasLaundry = prev.some((p) => p.category === 'LAUNDRY_OPERATIONS' || p.id.startsWith('laundry_'));
+        return hasLaundry ? prev : SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK;
+      });
+      setRoles((prev) => {
+        const hasFnb = prev.some((r) => r.name.toLowerCase().includes('barista') || r.name.toLowerCase().includes('kitchen') || r.name.toLowerCase().includes('waiter'));
+        return hasFnb ? DEFAULT_LAUNDRY_ROLES_FALLBACK : prev;
+      });
+    }
+  }, [activeOutlet, currentUser]);
+
+  const [systemPermissions, setSystemPermissions] = useState<PermissionDefinition[]>(
+    isLaundryDetected ? SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK : SYSTEM_PERMISSIONS_FALLBACK
+  );
+
+  const isLaundryMode = isLaundryDetected || checkIsLaundry(activeOutlet, currentUser, systemPermissions);
+
+  const fallbackRoles = isLaundryMode ? DEFAULT_LAUNDRY_ROLES_FALLBACK : DEFAULT_FNB_ROLES_FALLBACK;
+  const fallbackPermissions = isLaundryMode ? SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK : SYSTEM_PERMISSIONS_FALLBACK;
+
+  const [roles, setRoles] = useState<RolePermissions[]>(fallbackRoles);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(initialCreateMode);
   const [selectedRole, setSelectedRole] = useState<RolePermissions | null>(null);
@@ -438,17 +917,33 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
         api.getSystemPermissions ? api.getSystemPermissions().catch(() => null) : Promise.resolve(null),
       ]);
 
+      let detectedLaundry = isLaundryDetected || checkIsLaundry(activeOutlet, currentUser);
+
+      if (permsRes && permsRes.status === 'success' && Array.isArray(permsRes.data) && permsRes.data.length > 0) {
+        const hasLaundryPerms = permsRes.data.some((p: any) => p?.category === 'LAUNDRY_OPERATIONS' || (typeof p?.id === 'string' && p.id.startsWith('laundry_')));
+        if (detectedLaundry && !hasLaundryPerms) {
+          setSystemPermissions(SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK);
+        } else {
+          setSystemPermissions(permsRes.data);
+        }
+        if (checkIsLaundry(activeOutlet, currentUser, permsRes.data)) {
+          detectedLaundry = true;
+          setIsLaundryDetected(true);
+        }
+      } else {
+        setSystemPermissions(detectedLaundry ? SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK : SYSTEM_PERMISSIONS_FALLBACK);
+      }
+
+      const activeFallbackRoles = detectedLaundry ? DEFAULT_LAUNDRY_ROLES_FALLBACK : DEFAULT_FNB_ROLES_FALLBACK;
       if (rolesRes && rolesRes.status === 'success' && Array.isArray(rolesRes.data) && rolesRes.data.length > 0) {
         setRoles(rolesRes.data);
       } else {
-        setRoles(DEFAULT_FNB_ROLES_FALLBACK);
-      }
-      if (permsRes && permsRes.status === 'success' && Array.isArray(permsRes.data) && permsRes.data.length > 0) {
-        setSystemPermissions(permsRes.data);
+        setRoles(activeFallbackRoles);
       }
     } catch (err) {
       console.error('Gagal mengambil data peran atau wewenang:', err);
-      setRoles(DEFAULT_FNB_ROLES_FALLBACK);
+      setRoles(fallbackRoles);
+      setSystemPermissions(fallbackPermissions);
     } finally {
       setLoading(false);
     }
@@ -456,7 +951,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [isLaundryMode]);
 
   const handleStartCreate = () => {
     setSelectedRole(null);
@@ -464,16 +959,30 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
     setDescription('');
     setStatus(true);
     setSearchFilter('');
-    // Default sensible permissions for standard staff (Kasir umum)
-    setSelectedPermissions([
-      'sales_shift',
-      'sales_checkout',
-      'sales_hold',
-      'sales_reprint',
-      'attendance_clock',
-      'menu_view',
-      'report_x',
-    ]);
+    // Default sensible permissions for standard staff (Kasir laundry / kasir toko)
+    setSelectedPermissions(
+      isLaundryMode
+        ? [
+            'sales_shift',
+            'sales_checkout',
+            'sales_hold',
+            'sales_reprint',
+            'laundry_queue_view',
+            'laundry_handover',
+            'attendance_clock',
+            'menu_view',
+            'report_x',
+          ]
+        : [
+            'sales_shift',
+            'sales_checkout',
+            'sales_hold',
+            'sales_reprint',
+            'attendance_clock',
+            'menu_view',
+            'report_x',
+          ]
+    );
     setOrderMaxPercent(10);
     setOrderMaxAmount(50000);
     setProductMaxPercent(10);
@@ -605,13 +1114,22 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
   };
 
   // Group permissions by category
-  const categories: PermissionCategory[] = [
-    'REGISTER_SALES',
-    'CATALOG_RECIPES',
-    'INVENTORY_STOCK',
-    'REPORTS_FINANCIAL',
-    'SETTINGS_GOVERNANCE',
-  ];
+  const categories: PermissionCategory[] = isLaundryMode
+    ? [
+        'REGISTER_SALES',
+        'LAUNDRY_OPERATIONS',
+        'CATALOG_RECIPES',
+        'INVENTORY_STOCK',
+        'REPORTS_FINANCIAL',
+        'SETTINGS_GOVERNANCE',
+      ]
+    : [
+        'REGISTER_SALES',
+        'CATALOG_RECIPES',
+        'INVENTORY_STOCK',
+        'REPORTS_FINANCIAL',
+        'SETTINGS_GOVERNANCE',
+      ];
 
   // =========================================================================
   // VIEW: FORM TAMBAH / UBAH PERAN (WELL POS STUDIO DESIGN)
@@ -690,7 +1208,9 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-sm font-black text-slate-900">Profil &amp; Status</h3>
-                    <p className="text-[11px] text-slate-400">Identitas peran tim kerja</p>
+                    <p className="text-[11px] text-slate-400">
+                      Identitas peran tim {isLaundryMode ? 'laundry' : 'kerja'}
+                    </p>
                   </div>
                 </div>
 
@@ -705,7 +1225,11 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Contoh: Barista Senior / Captain Kasir"
+                    placeholder={
+                      isLaundryMode
+                        ? 'Contoh: Operator Produksi / Kasir Front Desk / Kurir Antar-Jemput'
+                        : 'Contoh: Barista Senior / Captain Kasir'
+                    }
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 text-xs font-semibold text-slate-900 transition-all outline-hidden shadow-2xs"
                   />
                 </div>
@@ -719,7 +1243,11 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                     rows={3}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Jelaskan ringkasan tanggung jawab dan cakupan kerja peran ini..."
+                    placeholder={
+                      isLaundryMode
+                        ? 'Jelaskan ringkasan tanggung jawab operasional cuci, setrika, kasir, atau pengantaran...'
+                        : 'Jelaskan ringkasan tanggung jawab dan cakupan kerja peran ini...'
+                    }
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 text-xs font-normal text-slate-800 transition-all outline-hidden resize-none shadow-2xs"
                   />
                 </div>
@@ -765,7 +1293,9 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-blue-900" />
-                    <h4 className="text-xs font-black text-slate-800">Diskon Transaksi (Per Nota)</h4>
+                    <h4 className="text-xs font-black text-slate-800">
+                      Diskon Transaksi (Per Nota{isLaundryMode ? ' Cucian' : ''})
+                    </h4>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -805,7 +1335,9 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                 <div className="space-y-3 pt-3 border-t border-slate-100">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-amber-600" />
-                    <h4 className="text-xs font-black text-slate-800">Diskon Produk (Per Menu)</h4>
+                    <h4 className="text-xs font-black text-slate-800">
+                      {isLaundryMode ? 'Diskon Layanan / Produk (Per Layanan)' : 'Diskon Produk (Per Menu)'}
+                    </h4>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -886,7 +1418,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             </div>
 
             {/* ============================================================= */}
-            {/* KOLOM KANAN (8 COLS): STUDIO WEWENANG 5 DOMAIN OPERASIONAL     */}
+            {/* KOLOM KANAN (8 COLS): STUDIO WEWENANG DOMAIN OPERASIONAL       */}
             {/* ============================================================= */}
             <div className="lg:col-span-8 space-y-6">
               {/* Toolbar & Filter */}
@@ -901,7 +1433,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Aktifkan izin fitur berdasarkan ranah tanggung jawab nyata tim restoran
+                    Aktifkan izin fitur berdasarkan ranah tanggung jawab nyata tim {isLaundryMode ? 'laundry' : 'restoran'}
                   </p>
                 </div>
 
@@ -917,10 +1449,11 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                 </div>
               </div>
 
-              {/* 5 Domain Modules */}
+              {/* Domain Modules */}
               <div className="space-y-6">
                 {categories.map((category) => {
-                  const meta = CATEGORY_META[category];
+                  const meta = (isLaundryMode ? CATEGORY_META_LAUNDRY : CATEGORY_META)[category];
+                  if (!meta) return null;
                   const categoryPerms = filteredPermissions.filter((p) => p.category === category);
                   if (categoryPerms.length === 0 && searchFilter) return null;
 
@@ -1061,7 +1594,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Atur wewenang tim resto Anda berdasarkan domain fungsi operasional (Kasir, Resep/Menu, Gudang, Finansial, dan Tata Kelola) dengan pembatasan diskon yang aman.
+            Atur wewenang tim {isLaundryMode ? 'laundry' : 'resto'} Anda berdasarkan domain fungsi operasional ({isLaundryMode ? 'Kasir, Operasional Cuci & Rak, Layanan/Tarif, Supplies, Finansial, dan Tata Kelola' : 'Kasir, Resep/Menu, Gudang, Finansial, dan Tata Kelola'}) dengan pembatasan diskon yang aman.
           </p>
         </div>
 
@@ -1111,7 +1644,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Peran Baku Sistem</p>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="font-mono text-2xl font-black text-slate-900">{defaultRolesCount}</span>
-              <span className="text-xs font-bold text-slate-500">Standar F&amp;B</span>
+              <span className="text-xs font-bold text-slate-500">Standar {isLaundryMode ? 'Laundry' : 'F&B'}</span>
             </div>
           </div>
         </div>
@@ -1224,7 +1757,8 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
 
                   <div className="flex flex-wrap gap-1.5">
                     {activeCategories.map((cat) => {
-                      const meta = CATEGORY_META[cat];
+                      const meta = (isLaundryMode ? CATEGORY_META_LAUNDRY : CATEGORY_META)[cat];
+                      if (!meta) return null;
                       return (
                         <span
                           key={cat}

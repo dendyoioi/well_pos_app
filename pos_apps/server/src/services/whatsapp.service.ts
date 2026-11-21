@@ -38,6 +38,25 @@ export interface OrderWhatsAppData {
   }>;
 }
 
+export interface LaundryNotificationData {
+  invoiceNumber: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  outlet: {
+    name: string;
+    address?: string | null;
+    phone?: string | null;
+    receiptConfig?: any;
+  };
+  servicesSummary: string;
+  perfume?: string | null;
+  rackCode?: string | null;
+  grandTotal: number;
+  remainingAmount: number;
+  status: string;
+  estimatedCompletionDate?: string | Date | null;
+}
+
 export interface PlatformWhatsAppConfig {
   enabled: boolean;
   provider: 'FONNTE';
@@ -310,6 +329,160 @@ export class WhatsAppService {
       return {
         status: 'error',
         message: `Koneksi ke gateway WhatsApp terputus: ${err.message}`,
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+  }
+
+  /**
+   * Format pesan WhatsApp notifikasi Cucian Siap Diambil
+   */
+  public formatLaundryReadyText(data: LaundryNotificationData): string {
+    const outletName = (data.outlet?.name || 'Well Laundry').toUpperCase();
+    const customer = data.customerName || 'Pelanggan Setia';
+    const remaining = Number(data.remainingAmount) || 0;
+    const grandTotal = Number(data.grandTotal) || 0;
+
+    const paymentNote =
+      remaining <= 0
+        ? '• Status Bayar : *LUNAS* ✅'
+        : `• Total Biaya  : Rp ${grandTotal.toLocaleString('id-ID')}\n• Sisa Tagihan : *Rp ${remaining.toLocaleString('id-ID')}* (Bayar saat ambil)`;
+
+    return (
+      `*NOTIFIKASI CUCIAN SIAP AMBIL*\n` +
+      `*${outletName}*\n` +
+      `================================\n` +
+      `Halo Kak *${customer}*, cucian Anda telah selesai kami proses dengan bersih, rapi, dan harum! ✨\n\n` +
+      `📋 *DETAIL ORDER:*\n` +
+      `• No. Nota     : #${data.invoiceNumber}\n` +
+      `• Layanan      : ${data.servicesSummary}\n` +
+      (data.perfume ? `• Aroma Wangi  : ${data.perfume}\n` : '') +
+      `• Lokasi Rak   : *${data.rackCode || 'Area Rak Siap Ambil'}*\n\n` +
+      `💰 *STATUS PEMBAYARAN:*\n` +
+      `${paymentNote}\n\n` +
+      `📍 *LOKASI OUTLET:*\n` +
+      `${data.outlet.address || data.outlet.name}\n` +
+      (data.outlet.phone ? `Telp/WA: ${data.outlet.phone}\n` : '') +
+      `================================\n` +
+      `_Silakan tunjukkan pesan ini atau sebutkan No. Nota saat pengambilan cucian._\n` +
+      `_Terima kasih telah mempercayakan pakaian Anda di ${data.outlet.name}!_`
+    );
+  }
+
+  /**
+   * Format pesan WhatsApp notifikasi Cucian Selesai Diambil (Handover)
+   */
+  public formatLaundryCompletedText(data: LaundryNotificationData): string {
+    const outletName = (data.outlet?.name || 'Well Laundry').toUpperCase();
+    const customer = data.customerName || 'Pelanggan Setia';
+
+    return (
+      `*NOTIFIKASI PENGAMBILAN CUCIAN*\n` +
+      `*${outletName}*\n` +
+      `================================\n` +
+      `Halo Kak *${customer}*, terima kasih banyak!\n` +
+      `Cucian Anda dengan No. Nota *#${data.invoiceNumber}* telah berhasil diserahkan/diambil.\n\n` +
+      `• Status       : *SELESAI & DIAMBIL* ✅\n` +
+      `• Pembayaran   : *LUNAS*\n` +
+      (data.servicesSummary ? `• Layanan      : ${data.servicesSummary}\n` : '') +
+      `\nSemoga Anda puas dengan hasil cucian dan keharumannya. Sampai jumpa di cucian berikutnya! ✨\n` +
+      `================================\n` +
+      `_${data.outlet.name}_`
+    );
+  }
+
+  /**
+   * Kirim Notifikasi Laundry Otomatis via WhatsApp Gateway (Fonnte API)
+   */
+  public async sendLaundryNotification(
+    data: LaundryNotificationData,
+    type: 'READY' | 'COMPLETED',
+    targetPhoneOverride?: string
+  ): Promise<WhatsAppSendResult> {
+    const rawPhone = targetPhoneOverride || data.customerPhone;
+    if (!rawPhone || !rawPhone.trim()) {
+      return {
+        status: 'error',
+        message: 'Nomor WhatsApp pelanggan tidak tersedia',
+        targetPhone: '',
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+
+    const cleanPhone = this.normalizePhone(rawPhone);
+    const { apiKey, enabled } = this.resolveApiKey(data.outlet?.receiptConfig);
+
+    if (!enabled) {
+      return {
+        status: 'error',
+        message: 'Layanan WhatsApp Gateway dinonaktifkan untuk toko ini',
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+
+    const messageText =
+      type === 'READY'
+        ? this.formatLaundryReadyText(data)
+        : this.formatLaundryCompletedText(data);
+
+    // Fallback jika belum terpasang token Fonnte
+    if (!apiKey) {
+      console.log(`[WHATSAPP UNCONFIGURED] Notifikasi laundry (${type}) ke ${cleanPhone} tidak dikirim via API karena token Fonnte belum dipasang.`);
+      return {
+        status: 'error',
+        message: 'WhatsApp Gateway belum diaktivasi di outlet ini. Silakan atur token Fonnte di Pengaturan Toko.',
+        targetPhone: cleanPhone,
+        isMock: true,
+        provider: 'FONNTE',
+      };
+    }
+
+    try {
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: cleanPhone,
+          message: messageText,
+          countryCode: '62',
+        }),
+      });
+
+      const resJson: any = await response.json();
+
+      if (response.ok && resJson.status === true) {
+        return {
+          status: 'success',
+          message: `Notifikasi WhatsApp (${type}) berhasil dikirim ke +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      } else {
+        const errorMsg = resJson.reason || resJson.message || 'Gagal mengirim notifikasi via Fonnte API';
+        return {
+          status: 'error',
+          message: `Fonnte: ${errorMsg}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      }
+    } catch (err: any) {
+      console.error('[WHATSAPP API ERROR]', err);
+      return {
+        status: 'error',
+        message: `Koneksi gateway WhatsApp terputus: ${err.message}`,
         targetPhone: cleanPhone,
         isMock: false,
         provider: 'FONNTE',

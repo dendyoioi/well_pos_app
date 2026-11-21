@@ -45,6 +45,7 @@ export interface AuthResponse {
 
 export type PermissionCategory =
   | 'REGISTER_SALES'
+  | 'LAUNDRY_OPERATIONS'
   | 'CATALOG_RECIPES'
   | 'INVENTORY_STOCK'
   | 'REPORTS_FINANCIAL'

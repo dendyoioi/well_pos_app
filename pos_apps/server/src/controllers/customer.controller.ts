@@ -890,6 +890,9 @@ export const payCustomerDebt = async (req: Request, res: Response) => {
         data: {
           tenantId,
           orderId: debt.orderId,
+          shiftId: shiftId || null,
+          outletId: debt.outletId || req.user?.outletId || null,
+          cashierId: cashierId || null,
           paymentMethod,
           amount,
           status: 'CAPTURED',
