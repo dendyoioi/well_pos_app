@@ -31,8 +31,19 @@ export const createRateLimiter = (options: RateLimiterOptions) => {
   const { windowMs, maxRequests, message = 'Terlalu banyak permintaan dari alamat IP ini. Silakan coba beberapa saat lagi.' } = options;
   const clientStore: Map<string, ClientRecord> = new Map();
 
+  // Periodic sweep setiap 5 menit untuk membersihkan record kedaluwarsa (anti memory-leak pada RAM 512MB)
+  const sweepInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of clientStore.entries()) {
+      if (now > record.resetTime) {
+        clientStore.delete(ip);
+      }
+    }
+  }, 5 * 60 * 1000);
+  sweepInterval.unref();
+
   return (req: Request, res: Response, next: NextFunction) => {
-    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
     const now = Date.now();
 
     let record = clientStore.get(clientIp);
@@ -70,6 +81,13 @@ export const authRateLimiter = createRateLimiter({
   windowMs: 60 * 1000, // 1 Menit
   maxRequests: 60,      // Maksimal 60 request per IP per menit
   message: 'Batas percobaan autentikasi terlampaui. Silakan tunggu 1 menit.',
+});
+
+// Rate limiter khusus endpoint pelaporan client error crash telemetry (anti-flooding)
+export const clientErrorRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 Menit
+  maxRequests: 20,      // Maksimal 20 request per IP per menit
+  message: 'Batas pengiriman laporan error terlampaui. Silakan tunggu 1 menit.',
 });
 
 // Fix S1: Rate limiter khusus endpoint QR self-order publik (anti-spam pesanan)

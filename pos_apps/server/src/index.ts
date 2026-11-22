@@ -28,10 +28,11 @@ import { prisma } from './config/prisma';
 import { securityHeaders, authRateLimiter } from './middlewares/security.middleware';
 import { maintenanceMiddleware } from './middlewares/maintenance.middleware';
 
-// Muat environment variables dari .env
-dotenv.config();
-
 const app = express();
+
+// Trust proxy layer (Render reverse proxy) untuk akurasi pembacaan req.ip
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 5001;
 
 // Middleware global
@@ -41,9 +42,17 @@ app.use(compression({
   threshold: 1024, // Hanya kompres payload >= 1 KB
   level: 6,        // Rasio kompresi optimal tanpa membebani CPU
 }));
-// Fix T3: CORS dengan whitelist origin fleksibel (mendukung '*', localhost, dan *.vercel.app)
-const rawOrigins = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const allowedOrigins = rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
+
+// CORS dengan validasi ketat (exact match domain resmi, regex preview Vercel proyek, dan dev lokal)
+const rawOrigins = process.env.CLIENT_ORIGIN || '';
+const clientEnvOrigins = rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
+const staticAllowedOrigins = [
+  'https://wellpos.id',
+  'https://beta.wellpos.id',
+  'https://well-pos-app.vercel.app',
+];
+const vercelPreviewRegex = /^https:\/\/well-pos-app(?:-[a-z0-9-]+)?\.vercel\.app$/;
+const localDevRegex = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -51,20 +60,23 @@ app.use(cors({
     if (!origin) {
       return callback(null, true);
     }
-    // 2. Jika wildcard '*' disetel atau origin ada di whitelist persis
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    // 3. Izinkan domain deployment Vercel (preview & production) serta local development
+    // 2. Exact match: CLIENT_ORIGIN env, domain resmi, dan domain Vercel production
     if (
-      origin.endsWith('.vercel.app') ||
-      origin.endsWith('wellpos.id') ||
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1')
+      clientEnvOrigins.includes('*') ||
+      clientEnvOrigins.includes(origin) ||
+      staticAllowedOrigins.includes(origin)
     ) {
       return callback(null, true);
     }
-    // 4. Tolak jika origin tidak dikenali
+    // 3. Dev lokal (http://localhost:* atau http://127.0.0.1:*)
+    if (localDevRegex.test(origin)) {
+      return callback(null, true);
+    }
+    // 4. Regex khusus branch preview Vercel resmi proyek Well POS
+    if (vercelPreviewRegex.test(origin)) {
+      return callback(null, true);
+    }
+    // 5. Tolak jika origin tidak diizinkan
     return callback(new Error(`CORS: Origin '${origin}' tidak diizinkan`));
   },
   credentials: true,
@@ -168,11 +180,17 @@ if (process.env.NODE_ENV !== 'test' && require.main === module) {
 // Penanganan Graceful Shutdown
 const shutdown = async () => {
   console.log('\nMematikan server secara aman...');
-  server.close(async () => {
+  if (server) {
+    server.close(async () => {
+      await prisma.$disconnect();
+      console.log('Koneksi database terputus. Server selesai dimatikan.');
+      process.exit(0);
+    });
+  } else {
     await prisma.$disconnect();
     console.log('Koneksi database terputus. Server selesai dimatikan.');
     process.exit(0);
-  });
+  }
 };
 
 process.on('SIGINT', shutdown);
