@@ -141,16 +141,26 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
         }).join('\n')
       : `• ${order.serviceName} (${order.totalWeightKg ? `${order.totalWeightKg} Kg` : `${order.totalPieces} Pcs`})`;
 
+    const dType = (order.deliveryType as string) || '';
+    let deliveryModaText = 'Moda: *🧺 Ambil di Toko*\n';
+    if (dType === 'PICKUP_ONLY') {
+      deliveryModaText = `Moda: *🛵 Jemput Cucian Saja*\nAlamat: ${order.customerAddress || '-'}\n`;
+    } else if (dType === 'DELIVERY_ONLY' || dType === 'DELIVERY') {
+      deliveryModaText = `Moda: *🛵 Antar ke Alamat Pelanggan*\nAlamat: ${order.customerAddress || '-'}\n`;
+    } else if (dType === 'PICKUP_AND_DELIVERY') {
+      deliveryModaText = `Moda: *🛵 Antar-Jemput Bolak-Balik*\nAlamat: ${order.customerAddress || '-'}\n`;
+    }
+
     const message = `*TANDA TERIMA LAUNDRY — ${outlet?.name || 'WELL LAUNDRY'}*
 No. Nota: *${order.invoiceNumber}*
 Pelanggan: ${order.customerName}
-${order.deliveryType === 'DELIVERY' ? `Moda: *🛵 Antar-Jemput Kurir (${order.deliveryDistanceKm || 0} km)*\nAlamat Pengantaran: ${order.customerAddress || '-'}\n` : 'Moda: *🧺 Ambil di Toko*\n'}Aroma: ${order.perfumeVariant}
+${deliveryModaText}Aroma: ${order.perfumeVariant}
 ${order.rackCode ? `Lokasi Rak: *${order.rackCode}*\n` : ''}Estimasi Selesai: *${order.estimatedReadyAt ? new Date(order.estimatedReadyAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Sesuai Jadwal'}*
 
 *Rincian Cucian:*
 ${itemsSummary}
 
-Total Biaya: Rp ${order.grandTotal.toLocaleString('id-ID')}
+${order.deliveryFee ? `Biaya Delivery: Rp ${order.deliveryFee.toLocaleString('id-ID')}\n` : ''}Total Biaya: Rp ${order.grandTotal.toLocaleString('id-ID')}
 Terbayar: Rp ${(order.paidAmount || 0).toLocaleString('id-ID')}
 Status Pembayaran: *${isPaid ? 'LUNAS' : `BELUM LUNAS (Sisa: Rp ${remainingAmount.toLocaleString('id-ID')})`}*
 
@@ -446,7 +456,15 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
               )}
               {order.customerAddress && (
                 <div className="flex justify-between items-start text-[9.5px]">
-                  <span className="shrink-0">{order.deliveryType === 'DELIVERY' ? '🛵 Antar ke:' : 'Alamat:'}</span>
+                  <span className="shrink-0">
+                    {String(order.deliveryType) === 'PICKUP_ONLY'
+                      ? '🛵 Jemput di:'
+                      : String(order.deliveryType) === 'PICKUP_AND_DELIVERY'
+                      ? '🛵 Antar-Jemput:'
+                      : String(order.deliveryType) === 'DELIVERY_ONLY' || String(order.deliveryType) === 'DELIVERY'
+                      ? '🛵 Antar ke:'
+                      : 'Alamat:'}
+                  </span>
                   <span className="font-semibold text-slate-800 text-right pl-2 leading-tight">
                     {order.customerAddress}
                   </span>

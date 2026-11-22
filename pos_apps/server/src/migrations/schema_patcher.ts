@@ -525,6 +525,30 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_status_created_idx" ON "laundry_order_details"("tenant_id", "status", "created_at" DESC);
     `,
   },
+  {
+    id: '20261122_01_laundry_delivery_and_ongkir_module',
+    description: 'Menambahkan kolom delivery_config pada outlets dan kolom delivery_type, delivery_status, delivery_fee, dll pada laundry_order_details',
+    sql: `
+      -- 1. Tambah laundry_delivery_config ke outlets
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "laundry_delivery_config" JSONB;
+
+      -- 2. Tambah kolom delivery ke laundry_order_details
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_type" VARCHAR(50) NOT NULL DEFAULT 'NONE';
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_status" VARCHAR(50);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_fee" DECIMAL(15, 2) NOT NULL DEFAULT 0;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_zone_name" VARCHAR(100);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_address" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_notes" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_scheduled_at" TIMESTAMP(3);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "courier_name" VARCHAR(100);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "courier_phone" VARCHAR(50);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivered_at" TIMESTAMP(3);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_proof_photo_url" TEXT;
+
+      -- 3. Tambah index delivery
+      CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_outlet_delivery_idx" ON "laundry_order_details"("tenant_id", "outlet_id", "delivery_type", "delivery_status");
+    `,
+  },
 ];
 
 /**

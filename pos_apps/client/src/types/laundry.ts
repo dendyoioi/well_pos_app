@@ -125,7 +125,7 @@ export interface LaundryQueueOrder {
   customerName: string;
   customerPhone?: string | null;
   customerAddress?: string | null;
-  deliveryType?: 'SELF_PICKUP' | 'DELIVERY';
+  deliveryType?: 'SELF_PICKUP' | 'DELIVERY' | LaundryDeliveryType | string;
   deliveryDistanceKm?: number;
   deliveryFee?: number;
   serviceName: string;
@@ -178,6 +178,8 @@ export interface LaundryTransferManifest {
   driverName?: string | null;
   vehiclePlate?: string | null;
   totalOrdersCount: number;
+  totalOrders?: number;
+  totalPieces?: number;
   totalWeightKg?: number | null;
   notes?: string | null;
   dispatchedAt: string;
@@ -298,4 +300,105 @@ export interface CustomerLaundryWallet {
   quotaKg: number;
   quotaExpiresAt?: string | null;
   ledgers?: CustomerLaundryWalletLedger[];
+}
+
+export type LaundryDeliveryType =
+  | 'NONE'
+  | 'PICKUP_ONLY'
+  | 'DELIVERY_ONLY'
+  | 'PICKUP_AND_DELIVERY'
+  | 'SELF_PICKUP'
+  | 'DELIVERY';
+
+export type LaundryDeliveryStatus =
+  | 'PENDING_PICKUP'
+  | 'PICKED_UP'
+  | 'READY_TO_DELIVER'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'CANCELLED';
+
+export interface LaundryDeliveryZone {
+  id: string;
+  name: string;
+  fee: number;
+  minOrderAmount?: number;
+  isActive?: boolean;
+  estimatedDeliveryTime?: string;
+}
+
+export interface LaundryDeliveryConfig {
+  enabled: boolean;
+  freeDeliveryMinAmount: number;
+  freeDeliveryMinWeightKg: number;
+  roundTripMultiplier: number;
+  zones: LaundryDeliveryZone[];
+}
+
+export interface LaundryDeliveryTask {
+  id: string;
+  orderId: string;
+  invoiceNumber: string;
+  status: LaundryStatus;
+  currentStage: string;
+  rackCode?: string | null;
+  serviceName?: string;
+  totalWeightKg?: number | null;
+  totalPieces: number;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentStatus: string;
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+  } | null;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  deliveryType: string;
+  deliveryStatus: LaundryDeliveryStatus;
+  deliveryFee: number;
+  deliveryZoneName?: string | null;
+  deliveryAddress?: string | null;
+  deliveryNotes?: string | null;
+  deliveryScheduledAt?: string | null;
+  courierName?: string | null;
+  courierPhone?: string | null;
+  deliveredAt?: string | null;
+  deliveryProofPhotoUrl?: string | null;
+  createdAt: string;
+  order: {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    paidAmount: number;
+    paymentStatus: string;
+    paymentMethod?: string;
+    status?: string;
+    currentStage?: string;
+    customer?: {
+      id: string;
+      name: string;
+      phone?: string | null;
+      address?: string | null;
+    } | null;
+    serviceName?: string;
+    rackCode?: string | null;
+    totalWeightKg?: number | null;
+    totalPieces?: number;
+  };
+}
+
+export interface LaundryDeliveryKpi {
+  pendingPickup: number;
+  readyToDeliver: number;
+  outForDelivery: number;
+  deliveredToday: number;
+  totalCodRemaining: number;
 }

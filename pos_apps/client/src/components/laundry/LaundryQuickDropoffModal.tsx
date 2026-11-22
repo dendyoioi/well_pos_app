@@ -17,9 +17,17 @@ import {
   QrCode,
   AlertCircle,
   Loader2,
+  Truck,
+  ChevronDown,
 } from 'lucide-react';
 import type { Outlet } from '../../types/outlet';
-import type { LaundryService, LaundryQueueOrder, CustomerLaundryWallet } from '../../types/laundry';
+import type {
+  LaundryService,
+  LaundryQueueOrder,
+  CustomerLaundryWallet,
+  LaundryDeliveryConfig,
+  LaundryDeliveryType,
+} from '../../types/laundry';
 import { api, customerApi } from '../../services/api';
 import { WhatsAppInput, CurrencyInput } from '../ui';
 import { generateIdempotencyKey } from '../../utils/offlineQueue';
@@ -89,6 +97,13 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Delivery & Antar-Jemput
+  const [deliveryConfig, setDeliveryConfig] = useState<LaundryDeliveryConfig | null>(null);
+  const [deliveryType, setDeliveryType] = useState<LaundryDeliveryType>('NONE');
+  const [deliveryZoneId, setDeliveryZoneId] = useState<string>('');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
+  const [deliveryNotes, setDeliveryNotes] = useState<string>('');
+
   // Helper Format Satuan Unit Ramah Pengguna
   const formatServiceUnit = (unit?: string) => {
     if (!unit) return '/Kg';
@@ -112,7 +127,10 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     Promise.all([
       api.getLaundryServices().catch(() => ({ status: 'error', data: [] })),
       customerApi.getCustomers({ limit: 50 }).catch(() => ({ status: 'error', data: [] })),
-    ]).then(([srvRes, custRes]) => {
+      activeOutlet?.id
+        ? api.getLaundryDeliveryConfig(activeOutlet.id).catch(() => ({ status: 'error', data: null }))
+        : Promise.resolve({ status: 'error', data: null }),
+    ]).then(([srvRes, custRes, delRes]) => {
       if (!mounted) return;
       if (srvRes.status === 'success' && Array.isArray(srvRes.data)) {
         setServices(srvRes.data);
@@ -133,6 +151,12 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       }
       if (custRes.status === 'success' && Array.isArray(custRes.data)) {
         setCustomersList(custRes.data);
+      }
+      if (delRes.status === 'success' && delRes.data) {
+        setDeliveryConfig(delRes.data);
+        if (delRes.data.zones && delRes.data.zones.length > 0) {
+          setDeliveryZoneId(delRes.data.zones[0].id);
+        }
       }
       setLoadingServices(false);
     });
@@ -188,6 +212,9 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     setCustomerName(cust.name || '');
     setCustomerPhone(cust.phone ? `+62${cust.phone.replace(/^(\+62|0)/, '')}` : '');
     setCustomerSearch(cust.name || '');
+    if (cust.address && !deliveryAddress) {
+      setDeliveryAddress(cust.address);
+    }
     setShowCustomerDropdown(false);
 
     // Fetch customer wallet / quota if available
@@ -212,6 +239,9 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     setCustomerPhone('');
     setCustomerSearch('');
     setCustomerWallet(null);
+    setDeliveryAddress('');
+    setDeliveryNotes('');
+    setDeliveryType('NONE');
   };
 
   // Toggle Spotting Notes
@@ -234,9 +264,19 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     setTotalPieces((prev) => Math.max(1, prev + delta));
   };
 
-  // Calculate Subtotal & Billed Quantity
-  const { billedQty, isUnderMinimum, minOrderQty, subtotal } = useMemo(() => {
-    if (!currentService) return { billedQty: 0, isUnderMinimum: false, minOrderQty: 0, subtotal: 0 };
+  // Calculate Subtotal & Billed Quantity & Delivery Fee
+  const { billedQty, isUnderMinimum, minOrderQty, subtotal, deliveryFee, isFreeDelivery, grandTotal } = useMemo(() => {
+    if (!currentService) {
+      return {
+        billedQty: 0,
+        isUnderMinimum: false,
+        minOrderQty: 0,
+        subtotal: 0,
+        deliveryFee: 0,
+        isFreeDelivery: false,
+        grandTotal: 0,
+      };
+    }
 
     const minQty = Number(currentService.minOrderQty) || 0;
     const isKiloan = currentService.category === 'KILOAN' || currentService.unit.toLowerCase() === 'kg';
@@ -244,13 +284,37 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     const billed = isKiloan ? (underMin ? minQty : weightKg) : weightKg;
     const total = billed * Number(currentService.price);
 
+    let effectiveFee = 0;
+    let free = false;
+
+    if (deliveryType !== 'NONE') {
+      const zones = deliveryConfig?.zones || [];
+      const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
+      const baseFee = selectedZone ? Number(selectedZone.fee) : 10000;
+      const multiplier = deliveryType === 'PICKUP_AND_DELIVERY' ? (deliveryConfig?.roundTripMultiplier || 1.8) : 1;
+      const calculatedFee = Math.round(baseFee * multiplier);
+
+      if (deliveryConfig?.freeDeliveryMinAmount && total >= Number(deliveryConfig.freeDeliveryMinAmount)) {
+        free = true;
+        effectiveFee = 0;
+      } else if (deliveryConfig?.freeDeliveryMinWeightKg && weightKg >= Number(deliveryConfig.freeDeliveryMinWeightKg)) {
+        free = true;
+        effectiveFee = 0;
+      } else {
+        effectiveFee = calculatedFee;
+      }
+    }
+
     return {
       billedQty: billed,
       isUnderMinimum: underMin,
       minOrderQty: minQty,
       subtotal: total,
+      deliveryFee: effectiveFee,
+      isFreeDelivery: free,
+      grandTotal: total + effectiveFee,
     };
-  }, [currentService, weightKg]);
+  }, [currentService, weightKg, deliveryType, deliveryZoneId, deliveryConfig]);
 
   // Submission Handler
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -283,15 +347,21 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           : `+62${customerPhone.replace(/^0+/, '')}`
         : undefined;
 
+      const zones = deliveryConfig?.zones || [];
+      const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
+
       const payload = {
         outletId: activeOutlet.id,
         customerId: selectedCustomer?.id || undefined,
         customerName: customerName.trim(),
         customerPhone: formattedPhone,
-        deliveryType: 'SELF_PICKUP',
+        deliveryType: deliveryType,
         deliveryDistanceKm: 0,
         deliveryFeePerKm: 0,
-        deliveryFee: 0,
+        deliveryFee: deliveryFee,
+        deliveryZoneName: deliveryType !== 'NONE' ? selectedZone?.name : undefined,
+        deliveryAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() : undefined,
+        deliveryNotes: deliveryType !== 'NONE' ? deliveryNotes.trim() : undefined,
         items: [
           {
             serviceId: currentService.id,
@@ -309,7 +379,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
         totalPieces: Math.max(1, Math.round(Number(totalPieces || 1))),
         perfumeVariant: perfumeVariant || 'Lavender',
         estimatedReadyHours: Math.max(1, Math.round(Number(currentService.durationHours || 24))),
-        depositAmount: paymentChoice === 'PAID' ? Number(subtotal) : paymentChoice === 'PARTIAL' ? Number(depositAmount) : 0,
+        depositAmount: paymentChoice === 'PAID' ? Number(grandTotal) : paymentChoice === 'PARTIAL' ? Number(depositAmount) : 0,
         discountAmount: 0,
         paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
         customerNotes: compiledNotes || undefined,
@@ -329,10 +399,10 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           invoiceNumber: orderData.invoiceNumber,
           customerName: orderData.customer?.name || customerName.trim(),
           customerPhone: orderData.customer?.phone || formattedPhone || null,
-          customerAddress: null,
-          deliveryType: 'SELF_PICKUP',
+          customerAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() || null : null,
+          deliveryType: deliveryType,
           deliveryDistanceKm: 0,
-          deliveryFee: 0,
+          deliveryFee: deliveryFee,
           status: orderData.laundryDetail?.status || 'RECEIVED',
           currentStage: (orderData.laundryDetail as any)?.currentStage || 'DROP_OFF',
           serviceName: currentService.name,
@@ -340,9 +410,9 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           totalPieces: orderData.laundryDetail?.totalPieces || totalPieces,
           perfumeVariant: perfumeVariant,
           rackCode: orderData.laundryDetail?.rackCode || null,
-          grandTotal: Number(orderData.totalAmount || subtotal),
+          grandTotal: Number(orderData.totalAmount || grandTotal),
           paidAmount: Number(
-            orderData.paidAmount || (paymentChoice === 'PAID' ? subtotal : paymentChoice === 'PARTIAL' ? depositAmount : 0)
+            orderData.paidAmount || (paymentChoice === 'PAID' ? grandTotal : paymentChoice === 'PARTIAL' ? depositAmount : 0)
           ),
           paymentStatus: orderData.paymentStatus,
           createdAt: orderData.createdAt,
@@ -831,6 +901,95 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             </div>
           </div>
 
+          {/* ── SECTION: MODA ANTAR-JEMPUT (DELIVERY) ────────────────────────── */}
+          <div className="space-y-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-blue-900" />
+                Moda Antar-Jemput
+              </label>
+              {deliveryType !== 'NONE' && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                  isFreeDelivery
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-blue-100 text-blue-900'
+                }`}>
+                  {isFreeDelivery ? 'Gratis Ongkir' : `Ongkir: Rp ${deliveryFee.toLocaleString('id-ID')}`}
+                </span>
+              )}
+            </div>
+
+            {/* Segmented Tipe Delivery */}
+            <div className="grid grid-cols-4 gap-1">
+              {[
+                { key: 'NONE', label: 'Ambil Sendiri' },
+                { key: 'PICKUP_ONLY', label: 'Jemput Saja' },
+                { key: 'DELIVERY_ONLY', label: 'Antar Saja' },
+                { key: 'PICKUP_AND_DELIVERY', label: 'Jemput & Antar' },
+              ].map((dt) => (
+                <button
+                  key={dt.key}
+                  type="button"
+                  onClick={() => setDeliveryType(dt.key as any)}
+                  className={`py-1.5 px-1 rounded-xl text-[10px] font-bold border transition-all text-center leading-tight cursor-pointer ${
+                    deliveryType === dt.key
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {dt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Detail Zona & Alamat */}
+            {deliveryType !== 'NONE' && (
+              <div className="pt-2 border-t border-slate-200/80 space-y-2 animate-fadeIn">
+                {deliveryConfig?.zones && deliveryConfig.zones.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600">Pilih Zona / Tarif Antar</label>
+                    <div className="relative">
+                      <select
+                        value={deliveryZoneId}
+                        onChange={(e) => setDeliveryZoneId(e.target.value)}
+                        className="w-full appearance-none pr-10 pl-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-900"
+                      >
+                        {deliveryConfig.zones.map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.name} — Rp {Number(z.fee).toLocaleString('id-ID')}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600">Alamat Lengkap Pengantaran / Penjemputan</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Masukkan alamat lengkap (jalan, nomor, patokan rumah)..."
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600">Catatan Khusus Kurir (Opsional)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Titip satpam komplek / jemput sore"
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* ── 2.5 SECTION: PILIHAN PEMBAYARAN ───────────────────────────────── */}
           <div className="space-y-2.5 pt-1">
             <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -915,8 +1074,13 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               Total Tagihan
             </div>
             <div className="text-xl sm:text-2xl font-black text-blue-950 font-mono">
-              Rp {subtotal.toLocaleString('id-ID')}
+              Rp {grandTotal.toLocaleString('id-ID')}
             </div>
+            {deliveryType !== 'NONE' && (
+              <div className="text-[10px] font-semibold text-slate-500">
+                {deliveryFee === 0 ? '✓ Bebas Ongkir' : `Termasuk Ongkir Rp ${deliveryFee.toLocaleString('id-ID')}`}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

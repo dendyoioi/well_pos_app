@@ -28,6 +28,10 @@ import {
   uploadLaundryConditionPhoto,
   getCustomerLaundryWallet,
   topupCustomerLaundryWallet,
+  getLaundryDeliveryConfig,
+  updateLaundryDeliveryConfig,
+  getLaundryDeliveries,
+  updateLaundryDeliveryStatus,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -66,6 +70,12 @@ router.post('/orders/:id/sort', saveLaundrySortingData);
 // --- Dompet Laundry Pelanggan (Deposit Saldo & Kuota Kiloan) ---
 router.get('/customers/:customerId/wallet', getCustomerLaundryWallet);
 router.post('/customers/:customerId/wallet/topup', topupCustomerLaundryWallet);
+
+// --- Modul Delivery Pelanggan & Ongkir Otomatis ---
+router.get('/delivery-config', getLaundryDeliveryConfig);
+router.put('/delivery-config', updateLaundryDeliveryConfig);
+router.get('/deliveries', getLaundryDeliveries);
+router.patch('/deliveries/:orderId/status', updateLaundryDeliveryStatus);
 
 // --- Sistem Tahapan Produksi & Audit Trail Operator ---
 router.post('/orders/:id/advance-stage', advanceLaundryStage);

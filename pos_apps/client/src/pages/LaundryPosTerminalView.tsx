@@ -31,9 +31,16 @@ import {
   WifiOff,
   ShoppingCart,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
-import type { LaundryService, LaundryQueueOrder, CustomerLaundryWallet } from '../types/laundry';
+import type {
+  LaundryService,
+  LaundryQueueOrder,
+  CustomerLaundryWallet,
+  LaundryDeliveryConfig,
+  LaundryDeliveryType,
+} from '../types/laundry';
 import { api, customerApi } from '../services/api';
 import { WhatsAppInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
@@ -175,6 +182,13 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [feedbackToast, setFeedbackToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [mobileCartSheetOpen, setMobileCartSheetOpen] = useState(false);
 
+  // Delivery & Antar-Jemput State
+  const [deliveryConfig, setDeliveryConfig] = useState<LaundryDeliveryConfig | null>(null);
+  const [deliveryType, setDeliveryType] = useState<LaundryDeliveryType>('NONE');
+  const [deliveryZoneId, setDeliveryZoneId] = useState<string>('');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
+  const [deliveryNotes, setDeliveryNotes] = useState<string>('');
+
   // Ambil daftar layanan dari API
   const fetchServices = async () => {
     try {
@@ -205,12 +219,28 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   useEffect(() => {
     fetchServices();
     fetchCustomers();
+    if (activeOutlet?.id) {
+      api
+        .getLaundryDeliveryConfig(activeOutlet.id)
+        .then((res) => {
+          if (res.status === 'success' && res.data) {
+            setDeliveryConfig(res.data);
+            if (res.data.zones && res.data.zones.length > 0) {
+              setDeliveryZoneId(res.data.zones[0].id);
+            }
+          }
+        })
+        .catch(() => {});
+    }
   }, [activeOutlet?.id]);
 
   const handleSelectCustomer = (cust: any) => {
     setCustomerName(cust.name || '');
     setCustomerPhone(cust.phone ? cust.phone.replace(/^\+?62/, '') : '');
     setSelectedCustomerId(cust.id);
+    if (cust.address && !deliveryAddress) {
+      setDeliveryAddress(cust.address);
+    }
     setCustomerSearchModalOpen(false);
     setQuickAddModalOpen(false);
     setFeedbackToast({
@@ -576,11 +606,37 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         ? Math.round((subtotal * Math.min(100, numDisc)) / 100)
         : Math.min(subtotal, numDisc);
 
-    const grandTotal = Math.max(0, subtotal - calculatedDiscount);
+    let effectiveDeliveryFee = 0;
+    let isFreeDelivery = false;
+    let freeDeliveryReason = '';
+
+    if (deliveryType !== 'NONE') {
+      const zones = deliveryConfig?.zones || [];
+      const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
+      const baseFee = selectedZone ? Number(selectedZone.fee) : 10000;
+      const multiplier = deliveryType === 'PICKUP_AND_DELIVERY' ? (deliveryConfig?.roundTripMultiplier || 1.8) : 1;
+      const calculatedFee = Math.round(baseFee * multiplier);
+
+      if (deliveryConfig?.freeDeliveryMinAmount && subtotal >= Number(deliveryConfig.freeDeliveryMinAmount)) {
+        isFreeDelivery = true;
+        freeDeliveryReason = `Min. Rp ${Number(deliveryConfig.freeDeliveryMinAmount).toLocaleString('id-ID')}`;
+        effectiveDeliveryFee = 0;
+      } else if (deliveryConfig?.freeDeliveryMinWeightKg && totalKg >= Number(deliveryConfig.freeDeliveryMinWeightKg)) {
+        isFreeDelivery = true;
+        freeDeliveryReason = `Min. ${Number(deliveryConfig.freeDeliveryMinWeightKg)} Kg`;
+        effectiveDeliveryFee = 0;
+      } else {
+        effectiveDeliveryFee = calculatedFee;
+      }
+    }
+
+    const grandTotal = Math.max(0, subtotal - calculatedDiscount) + effectiveDeliveryFee;
 
     return {
       subtotal,
-      deliveryFee: 0,
+      deliveryFee: effectiveDeliveryFee,
+      isFreeDelivery,
+      freeDeliveryReason,
       discountAmount: calculatedDiscount,
       grandTotal,
       totalKg: Number(totalKg.toFixed(2)),
@@ -588,7 +644,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       maxHours,
       readyDate,
     };
-  }, [cartItems, discountType, discountValue]);
+  }, [cartItems, discountType, discountValue, deliveryType, deliveryZoneId, deliveryConfig]);
 
   // Transaksi Baru (Reset Form & Keranjang)
   const handleNewTransaction = () => {
@@ -603,6 +659,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setPaymentMethod('CASH');
     setDiscountValue('0');
     setShowDiscountInput(false);
+    setDeliveryType('NONE');
+    setDeliveryAddress('');
+    setDeliveryNotes('');
   };
 
   // Listener Shortcut Keyboard Kasir (F1: Transaksi Baru, F2: Cari Member / Selesaikan Transaksi, Esc: Tutup Modal)
@@ -671,15 +730,21 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     try {
       const fullNotes = cartItems.map((i) => i.notes).filter(Boolean).join('; ');
 
+      const zones = deliveryConfig?.zones || [];
+      const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
+
       const payload = {
         outletId: activeOutlet.id,
         customerId: selectedCustomerId || undefined,
         customerName: customerName.trim(),
         customerPhone: customerPhone ? `+62${customerPhone.replace(/^0+/, '')}` : undefined,
-        deliveryType: 'SELF_PICKUP',
+        deliveryType: deliveryType,
         deliveryDistanceKm: 0,
         deliveryFeePerKm: 0,
-        deliveryFee: 0,
+        deliveryFee: cartTotals.deliveryFee,
+        deliveryZoneName: deliveryType !== 'NONE' ? selectedZone?.name : undefined,
+        deliveryAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() : undefined,
+        deliveryNotes: deliveryType !== 'NONE' ? deliveryNotes.trim() : undefined,
         items: cartItems.map((item) => ({
           serviceId: item.serviceId,
           name: item.name,
@@ -715,10 +780,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           invoiceNumber: orderData.invoiceNumber,
           customerName: orderData.customer?.name || customerName.trim(),
           customerPhone: orderData.customer?.phone || customerPhone.trim() || null,
-          customerAddress: null,
-          deliveryType: 'SELF_PICKUP',
+          customerAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() || null : null,
+          deliveryType: deliveryType,
           deliveryDistanceKm: 0,
-          deliveryFee: 0,
+          deliveryFee: cartTotals.deliveryFee,
           status: orderData.laundryDetail?.status || 'RECEIVED',
           currentStage: (orderData.laundryDetail as any)?.currentStage || 'DROP_OFF',
           serviceName: cartItems[0]?.name || 'Layanan Laundry',
@@ -755,6 +820,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         setPaymentChoice('PAID');
         setDiscountValue('0');
         setShowDiscountInput(false);
+        setDeliveryType('NONE');
+        setDeliveryAddress('');
+        setDeliveryNotes('');
 
         // Refresh CRM list
         fetchCustomers();
@@ -969,6 +1037,95 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 </span>
               </div>
             )}
+
+            {/* Opsi Pengantaran & Penjemputan Pelanggan (Delivery) */}
+            <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-blue-900" />
+                  <span>Moda Antar-Jemput</span>
+                </label>
+                {deliveryType !== 'NONE' && (
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                    cartTotals.isFreeDelivery
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-blue-100 text-blue-900'
+                  }`}>
+                    {cartTotals.isFreeDelivery ? `Gratis Ongkir (${cartTotals.freeDeliveryReason})` : `Ongkir: Rp ${cartTotals.deliveryFee.toLocaleString('id-ID')}`}
+                  </span>
+                )}
+              </div>
+
+              {/* Segmented Button Tipe Delivery */}
+              <div className="grid grid-cols-4 gap-1">
+                {[
+                  { key: 'NONE', label: 'Ambil Sendiri' },
+                  { key: 'PICKUP_ONLY', label: 'Jemput Saja' },
+                  { key: 'DELIVERY_ONLY', label: 'Antar Saja' },
+                  { key: 'PICKUP_AND_DELIVERY', label: 'Jemput & Antar' },
+                ].map((dt) => (
+                  <button
+                    key={dt.key}
+                    type="button"
+                    onClick={() => setDeliveryType(dt.key as any)}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border transition-all text-center leading-tight cursor-pointer ${
+                      deliveryType === dt.key
+                        ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {dt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Detail Zona & Alamat jika bukan Ambil Sendiri */}
+              {deliveryType !== 'NONE' && (
+                <div className="pt-2 border-t border-slate-200/80 space-y-2 animate-fadeIn">
+                  {deliveryConfig?.zones && deliveryConfig.zones.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-600">Pilih Zona / Tarif Antar</label>
+                      <div className="relative">
+                        <select
+                          value={deliveryZoneId}
+                          onChange={(e) => setDeliveryZoneId(e.target.value)}
+                          className="w-full appearance-none pr-10 pl-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-900"
+                        >
+                          {deliveryConfig.zones.map((z) => (
+                            <option key={z.id} value={z.id}>
+                              {z.name} — Rp {Number(z.fee).toLocaleString('id-ID')}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600">Alamat Lengkap Pengantaran / Penjemputan</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Masukkan alamat lengkap (jalan, nomor, patokan rumah)..."
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900 resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600">Catatan Khusus Kurir (Opsional)</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Tolong jemput sebelum jam 2 siang, pagar hitam"
+                      value={deliveryNotes}
+                      onChange={(e) => setDeliveryNotes(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Skema Bayar */}
             <div className="space-y-1">
@@ -1263,6 +1420,18 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 <span>Subtotal ({cartItems.length} Layanan):</span>
                 <span>Rp {cartTotals.subtotal.toLocaleString('id-ID')}</span>
               </div>
+              {deliveryType !== 'NONE' && (
+                <div className="flex items-center justify-between text-xs text-blue-900 font-bold">
+                  <span>Ongkos Antar-Jemput:</span>
+                  <span>
+                    {cartTotals.deliveryFee === 0 ? (
+                      <span className="text-emerald-700">GRATIS</span>
+                    ) : (
+                      `Rp ${cartTotals.deliveryFee.toLocaleString('id-ID')}`
+                    )}
+                  </span>
+                </div>
+              )}
               {cartTotals.discountAmount > 0 && (
                 <div className="flex items-center justify-between text-xs text-rose-600 font-bold">
                   <span>Diskon Promo:</span>

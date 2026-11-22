@@ -41,10 +41,16 @@ const createLaundryOrderSchema = z.object({
   customerName: z.string().min(2, 'Nama pelanggan wajib diisi'),
   customerPhone: z.string().optional().nullable(),
   customerAddress: z.string().optional().nullable(),
-  deliveryType: z.enum(['SELF_PICKUP', 'DELIVERY']).optional().default('SELF_PICKUP'),
+  deliveryType: z.enum(['NONE', 'PICKUP_ONLY', 'DELIVERY_ONLY', 'PICKUP_AND_DELIVERY', 'SELF_PICKUP', 'DELIVERY']).optional().default('NONE'),
   deliveryDistanceKm: z.number().min(0).optional().default(0),
   deliveryFeePerKm: z.number().min(0).optional().default(0),
   deliveryFee: z.number().min(0).optional().default(0),
+  deliveryZoneName: z.string().optional().nullable(),
+  deliveryAddress: z.string().optional().nullable(),
+  deliveryNotes: z.string().optional().nullable(),
+  deliveryScheduledAt: z.union([z.string(), z.date()]).optional().nullable(),
+  courierName: z.string().optional().nullable(),
+  courierPhone: z.string().optional().nullable(),
   items: z.array(
     z.object({
       serviceId: z.string().optional(),
@@ -486,6 +492,16 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
       transferStatus: detail.transferStatus || 'AT_OUTLET',
       workshopOutletId: detail.workshopOutletId || null,
       customerNotes: detail.customerNotes || null,
+      deliveryType: detail.deliveryType || 'NONE',
+      deliveryStatus: detail.deliveryStatus || null,
+      deliveryFee: Number(detail.deliveryFee || 0),
+      deliveryZoneName: detail.deliveryZoneName || null,
+      deliveryAddress: detail.deliveryAddress || detail.order.customer?.address || null,
+      deliveryNotes: detail.deliveryNotes || null,
+      courierName: detail.courierName || null,
+      courierPhone: detail.courierPhone || null,
+      deliveredAt: detail.deliveredAt || null,
+      deliveryProofPhotoUrl: detail.deliveryProofPhotoUrl || null,
       estimatedReadyAt: detail.estimatedReadyAt,
       completedAt: detail.completedAt,
       pickedUpAt: detail.pickedUpAt,
@@ -549,10 +565,16 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       customerName,
       customerPhone,
       customerAddress,
-      deliveryType,
+      deliveryType: rawDeliveryType,
       deliveryDistanceKm,
       deliveryFeePerKm,
       deliveryFee,
+      deliveryZoneName,
+      deliveryAddress,
+      deliveryNotes,
+      deliveryScheduledAt,
+      courierName,
+      courierPhone,
       items,
       totalPieces,
       perfumeVariant,
@@ -562,6 +584,13 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       paymentMethod,
       customerNotes,
     } = parseResult.data;
+
+    let deliveryType = rawDeliveryType || 'NONE';
+    if (deliveryType === 'SELF_PICKUP') deliveryType = 'NONE';
+    if (deliveryType === 'DELIVERY') deliveryType = 'DELIVERY_ONLY';
+    const isDelivery = deliveryType !== 'NONE';
+
+    const effectiveAddress = (deliveryAddress || customerAddress || '').trim();
 
     // Validasi prasyarat pembayaran deposit / kuota: pelanggan terdaftar wajib dipilih
     if ((paymentMethod === 'CUSTOMER_DEPOSIT' || paymentMethod === 'LAUNDRY_QUOTA') && !customerId) {
@@ -575,10 +604,10 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
 
     // 1. Dapatkan atau daftarkan Customer jika belum ada, serta update alamat jika disediakan
     let effectiveCustomerId = customerId;
-    if (effectiveCustomerId && customerAddress && customerAddress.trim()) {
+    if (effectiveCustomerId && effectiveAddress) {
       await prisma.customer.updateMany({
         where: { id: effectiveCustomerId, tenantId },
-        data: { address: customerAddress.trim() },
+        data: { address: effectiveAddress },
       });
     } else if (!effectiveCustomerId && customerName.trim()) {
       let cust = await prisma.customer.findFirst({
@@ -597,13 +626,13 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
             tenantId,
             name: customerName.trim(),
             phone: customerPhone?.trim() || null,
-            address: customerAddress?.trim() || null,
+            address: effectiveAddress || null,
           },
         });
-      } else if (customerAddress && customerAddress.trim() && !cust.address) {
+      } else if (effectiveAddress && !cust.address) {
         await prisma.customer.update({
           where: { id: cust.id },
-          data: { address: customerAddress.trim() },
+          data: { address: effectiveAddress },
         });
       }
       effectiveCustomerId = cust.id;
@@ -644,19 +673,34 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
     });
 
     // Ongkos Kirim Antar-Jemput
-    const effectiveDeliveryFee = deliveryType === 'DELIVERY' ? Number(deliveryFee || 0) : 0;
+    const effectiveDeliveryFee = isDelivery ? Number(deliveryFee || 0) : 0;
     const effectiveDiscount = discountAmount ? Math.min(subtotal + effectiveDeliveryFee, discountAmount) : 0;
     const grandTotal = Math.max(0, subtotal + effectiveDeliveryFee - effectiveDiscount);
     const paidAmount = paymentMethod === 'UNPAID' ? 0 : Math.min(grandTotal, depositAmount || grandTotal);
 
+    let initialDeliveryStatus: string | null = null;
+    if (isDelivery) {
+      if (deliveryType === 'PICKUP_ONLY' || deliveryType === 'PICKUP_AND_DELIVERY') {
+        initialDeliveryStatus = 'PENDING_PICKUP';
+      } else if (deliveryType === 'DELIVERY_ONLY') {
+        initialDeliveryStatus = 'PICKED_UP';
+      }
+    }
+
     // Keterangan Pengantaran & Catatan
     let formattedNotes = customerNotes?.trim() || '';
-    if (deliveryType === 'DELIVERY') {
-      const distInfo = deliveryDistanceKm ? `${deliveryDistanceKm} km` : 'Kurir';
+    if (isDelivery) {
+      const typeLabel =
+        deliveryType === 'PICKUP_ONLY'
+          ? 'Jemput'
+          : deliveryType === 'DELIVERY_ONLY'
+          ? 'Antar'
+          : 'Jemput & Antar';
+      const zoneInfo = deliveryZoneName ? ` (${deliveryZoneName})` : '';
       const feeInfo = effectiveDeliveryFee > 0 ? ` (Ongkir: Rp ${effectiveDeliveryFee.toLocaleString('id-ID')})` : ' (Gratis Ongkir)';
-      const addrInfo = customerAddress?.trim() ? `Alamat: ${customerAddress.trim()}` : '';
-      const deliveryHeader = `🛵 [Antar-Jemput ${distInfo}${feeInfo}] ${addrInfo}`;
-      formattedNotes = formattedNotes ? `${deliveryHeader} | Patokan: ${formattedNotes}` : deliveryHeader;
+      const addrInfo = effectiveAddress ? `Alamat: ${effectiveAddress}` : '';
+      const deliveryHeader = `🛵 [${typeLabel}${zoneInfo}${feeInfo}] ${addrInfo}`;
+      formattedNotes = formattedNotes ? `${deliveryHeader} | Catatan: ${formattedNotes}` : deliveryHeader;
     } else {
       formattedNotes = formattedNotes ? `🧺 [Ambil di Toko] ${formattedNotes}` : '🧺 [Ambil di Toko]';
     }
@@ -713,8 +757,8 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
           invoiceNumber,
           orderStatus: OrderStatus.CONFIRMED,
           paymentStatus,
-          orderType: deliveryType === 'DELIVERY' ? 'DELIVERY' : 'SERVICES',
-          channel: deliveryType === 'DELIVERY' ? 'DELIVERY' : 'DIRECT_STORE',
+          orderType: isDelivery ? 'DELIVERY' : 'SERVICES',
+          channel: isDelivery ? 'DELIVERY' : 'DIRECT_STORE',
           subtotal,
           serviceTotal: effectiveDeliveryFee,
           discountTotal: effectiveDiscount,
@@ -741,6 +785,15 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
           perfumeVariant,
           estimatedReadyAt,
           customerNotes: formattedNotes || null,
+          deliveryType,
+          deliveryStatus: initialDeliveryStatus,
+          deliveryFee: effectiveDeliveryFee,
+          deliveryZoneName: deliveryZoneName || null,
+          deliveryAddress: effectiveAddress || null,
+          deliveryNotes: deliveryNotes || null,
+          deliveryScheduledAt: deliveryScheduledAt ? new Date(deliveryScheduledAt) : null,
+          courierName: courierName || null,
+          courierPhone: courierPhone || null,
         },
       });
 
@@ -760,6 +813,29 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
           notes: 'Penerimaan pakaian & penimbangan awal di kasir',
         },
       });
+
+      // Catat piutang CustomerDebt jika belum lunas penuh dan pelanggan terdaftar
+      const remainingAmount = grandTotal - paidAmount;
+      if (remainingAmount > 0 && effectiveCustomerId) {
+        const defaultDueDays = 7;
+        const resolvedDueDate = new Date();
+        resolvedDueDate.setDate(resolvedDueDate.getDate() + defaultDueDays);
+
+        await tx.customerDebt.create({
+          data: {
+            tenantId,
+            outletId,
+            customerId: effectiveCustomerId,
+            orderId: order.id,
+            totalAmount: grandTotal,
+            paidAmount,
+            remainingAmount,
+            dueDate: resolvedDueDate,
+            status: paidAmount > 0 ? 'PARTIAL' : 'UNPAID',
+            notes: `Piutang laundry nota ${order.invoiceNumber}${isDelivery ? ' (termasuk ongkir)' : ''}`,
+          },
+        });
+      }
 
       // Catat transaksi pembayaran jika ada pembayaran di awal
       if (paidAmount > 0 && paymentMethod !== 'UNPAID') {
@@ -924,8 +1000,15 @@ export const updateLaundryStatus = async (req: Request, res: Response) => {
       updatePayload.rackCode = rackCode ? rackCode.toUpperCase().trim() : null;
     }
 
-    if (status === 'READY_FOR_PICKUP' && !detail.completedAt) {
-      updatePayload.completedAt = new Date();
+    if (status === 'READY_FOR_PICKUP') {
+      if (!detail.completedAt) {
+        updatePayload.completedAt = new Date();
+      }
+      if (['DELIVERY_ONLY', 'PICKUP_AND_DELIVERY', 'DELIVERY'].includes(detail.deliveryType)) {
+        if (!['OUT_FOR_DELIVERY', 'DELIVERED'].includes(detail.deliveryStatus || '')) {
+          updatePayload.deliveryStatus = 'READY_TO_DELIVER';
+        }
+      }
     }
 
     if (status === 'COMPLETED') {
@@ -1682,9 +1765,14 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
       status: stageConfig.macroStatus,
     };
 
-    if (nextStage === 'RACK_STORAGE') {
+    if (nextStage === 'RACK_STORAGE' || stageConfig.macroStatus === 'READY_FOR_PICKUP') {
       detailUpdate.rackCode = rackCode ? rackCode.toUpperCase().trim() : detail.rackCode || 'RAK-A1';
       if (!detail.completedAt) detailUpdate.completedAt = now;
+      if (['DELIVERY_ONLY', 'PICKUP_AND_DELIVERY', 'DELIVERY'].includes(detail.deliveryType)) {
+        if (!['OUT_FOR_DELIVERY', 'DELIVERED'].includes(detail.deliveryStatus || '')) {
+          detailUpdate.deliveryStatus = 'READY_TO_DELIVER';
+        }
+      }
     }
 
     if (nextStage === 'HANDOVER') {
@@ -2189,6 +2277,13 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
         defects: order.laundryDetail.defects,
         defectNotes: order.laundryDetail.defectNotes,
         conditionPhotos: order.laundryDetail.conditionPhotos || [],
+        deliveryType: order.laundryDetail.deliveryType || 'NONE',
+        deliveryStatus: order.laundryDetail.deliveryStatus || null,
+        deliveryFee: Number(order.laundryDetail.deliveryFee || 0),
+        deliveryZoneName: order.laundryDetail.deliveryZoneName || null,
+        deliveryAddress: order.laundryDetail.deliveryAddress || null,
+        courierName: order.laundryDetail.courierName || null,
+        deliveredAt: order.laundryDetail.deliveredAt || null,
         items: order.items.map((oi) => ({
           name: oi.productName || 'Layanan Laundry',
           quantity: oi.quantity,
@@ -2524,5 +2619,396 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
   } catch (error: any) {
     console.error('Error topupCustomerLaundryWallet:', error);
     return res.status(500).json({ status: 'error', message: error.message || 'Gagal memproses top-up saldo laundry' });
+  }
+};
+
+// ==========================================
+// 12. DELIVERY & ONGKIR OTOMATIS
+// ==========================================
+
+const DEFAULT_DELIVERY_CONFIG = {
+  enabled: true,
+  freeDeliveryMinAmount: 50000,
+  freeDeliveryMinWeightKg: 5,
+  roundTripMultiplier: 1.5,
+  zones: [
+    { id: 'zone_near', name: 'Zona Dekat (<= 2 Km)', fee: 5000 },
+    { id: 'zone_mid', name: 'Zona Menengah (2 - 5 Km)', fee: 10000 },
+    { id: 'zone_far', name: 'Zona Jauh (> 5 Km)', fee: 15000 },
+  ],
+};
+
+/**
+ * Mengambil konfigurasi tarif ongkir dan zona delivery toko
+ */
+export const getLaundryDeliveryConfig = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const outletId = (req.query.outletId as string) || req.user?.outletId;
+    if (!tenantId || !outletId) {
+      return res.status(400).json({ status: 'error', message: 'ID Toko / Outlet wajib disertakan' });
+    }
+
+    const outlet = await prisma.outlet.findFirst({
+      where: { id: outletId, tenantId },
+      select: { laundryDeliveryConfig: true },
+    });
+
+    const config = (outlet?.laundryDeliveryConfig as any) || DEFAULT_DELIVERY_CONFIG;
+    return res.status(200).json({ status: 'success', data: config });
+  } catch (error: any) {
+    console.error('Error getLaundryDeliveryConfig:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil konfigurasi delivery' });
+  }
+};
+
+/**
+ * Menyimpan konfigurasi tarif ongkir dan zona delivery toko
+ */
+export const updateLaundryDeliveryConfig = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { outletId, config } = req.body;
+    const targetOutletId = outletId || req.user?.outletId;
+    if (!tenantId || !targetOutletId) {
+      return res.status(400).json({ status: 'error', message: 'ID Toko / Outlet wajib disertakan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Pengelola/Supervisor yang dapat mengubah tarif delivery' });
+    }
+
+    const payload = config && typeof config === 'object' ? config : req.body;
+    delete (payload as any).outletId;
+
+    const updated = await prisma.outlet.update({
+      where: { id: targetOutletId },
+      data: { laundryDeliveryConfig: payload },
+      select: { laundryDeliveryConfig: true },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Konfigurasi delivery berhasil disimpan',
+      data: updated.laundryDeliveryConfig,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryDeliveryConfig:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menyimpan konfigurasi delivery' });
+  }
+};
+
+/**
+ * Mengambil daftar tugas penjemputan dan pengantaran cucian pelanggan beserta KPI
+ */
+export const getLaundryDeliveries = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const outletId = (req.query.outletId as string) || req.user?.outletId;
+    const status = req.query.status as string;
+    const search = ((req.query.search as string) || '').trim().toLowerCase();
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const whereClause: any = {
+      tenantId,
+      ...(outletId ? { outletId } : {}),
+      deliveryType: { notIn: ['NONE'] },
+    };
+
+    if (status && status !== 'ALL') {
+      whereClause.deliveryStatus = status;
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { order: { invoiceNumber: { contains: search, mode: 'insensitive' } } },
+        { order: { customer: { name: { contains: search, mode: 'insensitive' } } } },
+        { order: { customer: { phone: { contains: search, mode: 'insensitive' } } } },
+        { deliveryAddress: { contains: search, mode: 'insensitive' } },
+        { courierName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const details = await prisma.laundryOrderDetail.findMany({
+      where: whereClause,
+      include: {
+        order: {
+          include: {
+            customer: true,
+            items: true,
+            cashier: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+
+    // Hitung KPI Delivery untuk seluruh outlet aktif
+    const allOutletDeliveries = await prisma.laundryOrderDetail.findMany({
+      where: {
+        tenantId,
+        ...(outletId ? { outletId } : {}),
+        deliveryType: { notIn: ['NONE'] },
+      },
+      include: {
+        order: { select: { totalAmount: true, paidAmount: true, paymentStatus: true } },
+      },
+    });
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    let pendingPickup = 0;
+    let readyToDeliver = 0;
+    let outForDelivery = 0;
+    let deliveredToday = 0;
+    let totalCodRemaining = 0;
+
+    for (const d of allOutletDeliveries) {
+      if (d.deliveryStatus === 'PENDING_PICKUP') pendingPickup++;
+      else if (d.deliveryStatus === 'READY_TO_DELIVER') readyToDeliver++;
+      else if (d.deliveryStatus === 'OUT_FOR_DELIVERY') outForDelivery++;
+
+      if (d.deliveryStatus === 'DELIVERED' && d.deliveredAt && new Date(d.deliveredAt) >= startOfToday) {
+        deliveredToday++;
+      }
+
+      if (['READY_TO_DELIVER', 'OUT_FOR_DELIVERY'].includes(d.deliveryStatus || '')) {
+        const remaining = Math.max(0, Number(d.order.totalAmount) - Number(d.order.paidAmount || 0));
+        if (remaining > 0 && d.order.paymentStatus !== 'PAID') {
+          totalCodRemaining += remaining;
+        }
+      }
+    }
+
+    const formatted = details.map((d) => ({
+      id: d.id,
+      orderId: d.orderId,
+      invoiceNumber: d.order.invoiceNumber,
+      status: d.status,
+      currentStage: d.currentStage,
+      rackCode: d.rackCode,
+      totalWeightKg: d.totalWeightKg ? Number(d.totalWeightKg) : null,
+      totalPieces: d.totalPieces,
+      totalAmount: Number(d.order.totalAmount),
+      paidAmount: Number(d.order.paidAmount || 0),
+      remainingAmount: Math.max(0, Number(d.order.totalAmount) - Number(d.order.paidAmount || 0)),
+      paymentStatus: d.order.paymentStatus,
+      serviceName: d.order.items[0]?.productName || 'Layanan Laundry',
+      customer: d.order.customer
+        ? {
+            id: d.order.customer.id,
+            name: d.order.customer.name,
+            phone: d.order.customer.phone,
+            address: d.order.customer.address,
+          }
+        : null,
+      items: d.order.items.map((i) => ({
+        name: i.productName,
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice),
+        subtotal: Number(i.subtotal),
+      })),
+      deliveryType: d.deliveryType,
+      deliveryStatus: d.deliveryStatus || 'PENDING_PICKUP',
+      deliveryFee: Number(d.deliveryFee || 0),
+      deliveryZoneName: d.deliveryZoneName,
+      deliveryAddress: d.deliveryAddress || d.order.customer?.address || null,
+      deliveryNotes: d.deliveryNotes,
+      deliveryScheduledAt: d.deliveryScheduledAt,
+      courierName: d.courierName,
+      courierPhone: d.courierPhone,
+      deliveredAt: d.deliveredAt,
+      deliveryProofPhotoUrl: d.deliveryProofPhotoUrl,
+      createdAt: d.createdAt,
+      order: {
+        id: d.order.id,
+        invoiceNumber: d.order.invoiceNumber,
+        totalAmount: Number(d.order.totalAmount),
+        paidAmount: Number(d.order.paidAmount || 0),
+        paymentStatus: d.order.paymentStatus,
+        paymentMethod: d.order.paymentMethod,
+        status: d.status,
+        currentStage: d.currentStage,
+        rackCode: d.rackCode,
+        serviceName: d.order.items[0]?.productName || 'Layanan Laundry',
+        totalWeightKg: d.totalWeightKg ? Number(d.totalWeightKg) : undefined,
+        totalPieces: d.totalPieces,
+        customer: d.order.customer
+          ? {
+              id: d.order.customer.id,
+              name: d.order.customer.name,
+              phone: d.order.customer.phone,
+              address: d.order.customer.address,
+            }
+          : null,
+      },
+    }));
+
+    return res.status(200).json({
+      status: 'success',
+      data: formatted,
+      kpi: {
+        pendingPickup,
+        readyToDeliver,
+        outForDelivery,
+        deliveredToday,
+        totalCodRemaining,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryDeliveries:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil data delivery laundry' });
+  }
+};
+
+/**
+ * Memperbarui status kurir/delivery dan memproses pelunasan COD jika selesai
+ */
+export const updateLaundryDeliveryStatus = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const {
+      deliveryStatus,
+      courierName,
+      courierPhone,
+      deliveryProofPhotoUrl,
+      deliveryNotes,
+      collectCodPayment,
+      codPaymentMethod,
+    } = req.body;
+
+    if (!deliveryStatus) {
+      return res.status(400).json({ status: 'error', message: 'Status delivery wajib diisi' });
+    }
+
+    const detail = await prisma.laundryOrderDetail.findFirst({
+      where: {
+        tenantId,
+        OR: [{ id: orderId }, { orderId }],
+      },
+      include: {
+        order: true,
+      },
+    });
+
+    if (!detail) {
+      return res.status(404).json({ status: 'error', message: 'Data delivery cucian tidak ditemukan' });
+    }
+
+    const now = new Date();
+    const updateDetailData: any = {
+      deliveryStatus,
+    };
+
+    if (courierName !== undefined) updateDetailData.courierName = courierName ? courierName.trim() : null;
+    if (courierPhone !== undefined) updateDetailData.courierPhone = courierPhone ? courierPhone.trim() : null;
+    if (deliveryProofPhotoUrl !== undefined) updateDetailData.deliveryProofPhotoUrl = deliveryProofPhotoUrl || null;
+    if (deliveryNotes !== undefined) updateDetailData.deliveryNotes = deliveryNotes || null;
+
+    if (deliveryStatus === 'DELIVERED') {
+      updateDetailData.deliveredAt = now;
+      updateDetailData.status = 'COMPLETED';
+      updateDetailData.currentStage = 'HANDOVER';
+      if (!detail.completedAt) updateDetailData.completedAt = now;
+      updateDetailData.pickedUpAt = now;
+      updateDetailData.pickedUpBy = courierName ? `Kurir: ${courierName}` : 'Kurir Delivery';
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedDetail = await tx.laundryOrderDetail.update({
+        where: { id: detail.id },
+        data: updateDetailData,
+      });
+
+      if (deliveryStatus === 'DELIVERED') {
+        const orderDataToUpdate: any = { orderStatus: OrderStatus.COMPLETED };
+
+        const currentPaid = Number(detail.order.paidAmount || 0);
+        const total = Number(detail.order.totalAmount);
+        const remaining = Math.max(0, total - currentPaid);
+
+        if (collectCodPayment && remaining > 0) {
+          orderDataToUpdate.paymentStatus = PaymentStatus.PAID;
+          orderDataToUpdate.paidAmount = total;
+
+          const activeShift = await tx.shift.findFirst({
+            where: {
+              tenantId,
+              outletId: detail.outletId,
+              status: ShiftStatus.OPEN,
+            },
+          });
+
+          let method: PaymentMethod = PaymentMethod.CASH;
+          if (codPaymentMethod === 'QRIS') method = PaymentMethod.QRIS;
+          else if (codPaymentMethod === 'TRANSFER') method = PaymentMethod.BANK_TRANSFER;
+
+          await tx.paymentTransaction.create({
+            data: {
+              tenantId,
+              orderId: detail.order.id,
+              shiftId: activeShift?.id || null,
+              outletId: detail.outletId,
+              cashierId: userId || null,
+              paymentMethod: method,
+              amount: remaining,
+              status: PaymentTxStatus.CAPTURED,
+            },
+          });
+
+          await tx.customerDebt.updateMany({
+            where: { tenantId, orderId: detail.order.id },
+            data: {
+              paidAmount: total,
+              remainingAmount: 0,
+              status: 'PAID',
+            },
+          });
+        } else if (remaining === 0) {
+          orderDataToUpdate.paymentStatus = PaymentStatus.PAID;
+        }
+
+        await tx.order.update({
+          where: { id: detail.order.id },
+          data: orderDataToUpdate,
+        });
+
+        await tx.laundryStageLog.create({
+          data: {
+            tenantId,
+            orderId: detail.order.id,
+            laundryDetailId: detail.id,
+            stage: 'HANDOVER',
+            operatorId: userId,
+            operatorName: courierName ? `Kurir: ${courierName}` : ((req.user as any)?.name || 'Kurir Delivery'),
+            completedAt: now,
+            durationMinutes: 0,
+            notes: `Pengantaran selesai ke pelanggan oleh ${courierName || 'Kurir'}${collectCodPayment ? ' (Pelunasan COD Berhasil)' : ''}`,
+          },
+        });
+      }
+
+      return updatedDetail;
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Status delivery berhasil diperbarui menjadi ${deliveryStatus}`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryDeliveryStatus:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui status delivery laundry' });
   }
 };

@@ -268,6 +268,7 @@ model Outlet {
   loyaltyConfig Json?     @map("loyalty_config")
   attendanceConfig Json?  @map("attendance_config")
   laundryStages Json?     @map("laundry_stages")
+  laundryDeliveryConfig Json? @map("laundry_delivery_config")
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -1575,6 +1576,17 @@ model LaundryOrderDetail {
   isSorted         Boolean   @default(false) @map("is_sorted")
   sortedAt         DateTime? @map("sorted_at")
   sortedBy         String?   @map("sorted_by")
+  deliveryType          String    @default("NONE") @map("delivery_type") // 'NONE' | 'PICKUP_ONLY' | 'DELIVERY_ONLY' | 'PICKUP_AND_DELIVERY'
+  deliveryStatus        String?   @map("delivery_status") // 'PENDING_PICKUP' | 'PICKED_UP' | 'READY_TO_DELIVER' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED'
+  deliveryFee           Decimal   @default(0) @map("delivery_fee") @db.Decimal(15, 2)
+  deliveryZoneName      String?   @map("delivery_zone_name")
+  deliveryAddress       String?   @map("delivery_address")
+  deliveryNotes         String?   @map("delivery_notes")
+  deliveryScheduledAt   DateTime? @map("delivery_scheduled_at")
+  courierName           String?   @map("courier_name")
+  courierPhone          String?   @map("courier_phone")
+  deliveredAt           DateTime? @map("delivered_at")
+  deliveryProofPhotoUrl String?   @map("delivery_proof_photo_url")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -1589,6 +1601,7 @@ model LaundryOrderDetail {
   @@index([tenantId, currentStage])
   @@index([tenantId, rackCode])
   @@index([tenantId, transferStatus])
+  @@index([tenantId, outletId, deliveryType, deliveryStatus])
   @@index([tenantId, outletId, estimatedReadyAt], map: "idx_laundry_details_tenant_outlet_sla")
   @@map("laundry_order_details")
 }
@@ -1715,4 +1728,12 @@ model CustomerLaundryWalletLedger {
   @@index([tenantId, shiftId])
   @@index([tenantId, createdAt])
   @@map("customer_laundry_wallet_ledgers")
+}
+
+model SchemaPatch {
+  id          String    @id
+  description String?
+  appliedAt   DateTime? @default(now()) @map("applied_at")
+
+  @@map("_schema_patches")
 }

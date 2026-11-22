@@ -2840,6 +2840,63 @@ export const api = {
     const res = await fetch(`/api/laundry/public/track/${encodeURIComponent(invoiceNumber)}`);
     return res.json();
   },
+
+  // ----------------------------------------------------
+  // MODUL DELIVERY PELANGGAN & ONGKIR OTOMATIS
+  // ----------------------------------------------------
+  getLaundryDeliveryConfig: async (outletId?: string): Promise<any> => {
+    const params = outletId ? `?outletId=${encodeURIComponent(outletId)}` : '';
+    const res = await fetch(`/api/laundry/delivery-config${params}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateLaundryDeliveryConfig: async (data: { outletId: string; config?: any; [key: string]: any }): Promise<any> => {
+    const res = await fetch('/api/laundry/delivery-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getLaundryDeliveries: async (params?: {
+    outletId?: string;
+    status?: string;
+    search?: string;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.search) query.append('search', params.search);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const res = await fetch(`/api/laundry/deliveries${queryString}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateLaundryDeliveryStatus: async (
+    orderId: string,
+    data: {
+      deliveryStatus: string;
+      courierName?: string;
+      courierPhone?: string;
+      deliveryProofPhotoUrl?: string;
+      deliveryNotes?: string;
+      collectCodPayment?: boolean;
+      codPaymentMethod?: string;
+    }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/deliveries/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
 };
 
 // ----------------------------------------------------

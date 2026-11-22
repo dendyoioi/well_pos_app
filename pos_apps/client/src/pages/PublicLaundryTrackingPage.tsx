@@ -11,6 +11,7 @@ import {
   Check,
   Search,
   Camera,
+  Truck,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -228,6 +229,65 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 </div>
               </div>
             </div>
+
+            {/* Delivery Status Card */}
+            {data.deliveryType && data.deliveryType !== 'NONE' && (
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-blue-900" />
+                    <span>Layanan Antar-Jemput (Delivery)</span>
+                  </h3>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-black ${
+                      data.deliveryStatus === 'DELIVERED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : data.deliveryStatus === 'OUT_FOR_DELIVERY'
+                        ? 'bg-indigo-100 text-indigo-900 animate-pulse'
+                        : 'bg-blue-100 text-blue-900'
+                    }`}
+                  >
+                    {data.deliveryStatus === 'PENDING_PICKUP'
+                      ? 'Menunggu Penjemputan'
+                      : data.deliveryStatus === 'PICKED_UP'
+                      ? 'Sudah Dijemput Kurir'
+                      : data.deliveryStatus === 'READY_TO_DELIVER'
+                      ? 'Siap Diantar'
+                      : data.deliveryStatus === 'OUT_FOR_DELIVERY'
+                      ? '🛵 Kurir Menuju Alamat Anda'
+                      : data.deliveryStatus === 'DELIVERED'
+                      ? '✓ Selesai Diantar'
+                      : 'Dalam Proses'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-blue-900 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold block">Alamat Tujuan</span>
+                      <p className="font-semibold text-slate-800">{data.deliveryAddress || '-'}</p>
+                    </div>
+                  </div>
+
+                  {data.courierName && (
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                      <span className="text-slate-500">Kurir Bertugas:</span>
+                      <span className="font-black text-slate-900">{data.courierName}</span>
+                    </div>
+                  )}
+
+                  {data.deliveryFee > 0 && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500">Biaya Delivery:</span>
+                      <span className="font-bold text-blue-900">
+                        Rp {Number(data.deliveryFee).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Stepper Timeline Pengerjaan */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">

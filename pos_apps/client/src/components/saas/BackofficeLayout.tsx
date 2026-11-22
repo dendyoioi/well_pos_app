@@ -557,7 +557,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                 }`}
               >
                 <Truck className="w-4 h-4 shrink-0" />
-                <span>Transfer Cucian Workshop</span>
+                <span>Delivery &amp; Antar-Jemput</span>
               </button>
             </div>
           ) : (
@@ -909,11 +909,11 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                       ? 'bg-blue-900 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                   }`}
-                  title="Surat Jalan & Workshop"
+                  title="Delivery"
                 >
                   <span className="flex items-center gap-2">
                     <Truck className="w-4 h-4 shrink-0 lg:hidden" />
-                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Surat Jalan &amp; Workshop</span>
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Delivery</span>
                   </span>
                 </button>
               </div>
