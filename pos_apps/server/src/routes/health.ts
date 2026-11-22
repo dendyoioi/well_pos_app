@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
+import { clientErrorRateLimiter } from '../middlewares/security.middleware';
 
 export const healthRouter = Router();
 
@@ -19,10 +20,13 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
       uptime: process.uptime(),
     });
   } catch (error) {
+    console.error('[HealthCheck] Database error:', error);
     return res.status(503).json({
       status: 'error',
       message: 'Gagal terhubung ke database PostgreSQL',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: process.env.NODE_ENV === 'development'
+        ? (error instanceof Error ? error.message : 'Unknown error')
+        : undefined,
       timestamp: new Date().toISOString(),
     });
   }
@@ -32,7 +36,7 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
  * @route POST /api/health/client-error
  * @desc Menerima log crash runtime / unhandled rejection dari klien browser (P0-1 Monitoring)
  */
-healthRouter.post('/client-error', (req: Request, res: Response) => {
+healthRouter.post('/client-error', clientErrorRateLimiter, (req: Request, res: Response) => {
   const { id, message, stack, route, source, userAgent, viewport } = req.body || {};
 
   console.warn(`[CLIENT_CRASH_REPORT] ID: ${id || 'N/A'} | Route: ${route || '#'} | Source: ${source || 'client'}`);
