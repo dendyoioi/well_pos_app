@@ -54,16 +54,20 @@ jobs:
           chmod 600 ~/.config/rclone/rclone.conf
 
       - name: Upload Backup to Google Drive
+        env:
+          GDRIVE_TARGET: ${{ github.ref_name == 'main' && 'gdrive:WellPOS-Backups/prod/' || 'gdrive:WellPOS-Backups/dev/' }}
         run: |
-          rclone copy pos_apps/server/backups/ gdrive:WellPOS-Backups/dev/ \
+          rclone copy pos_apps/server/backups/ "$GDRIVE_TARGET" \
             --include "*.json.gz" \
             --include "*.sha256" \
             --include "*.dump" \
             -v
 
       - name: Rotate Old Backups on Google Drive (> 30 Days)
+        env:
+          GDRIVE_TARGET: ${{ github.ref_name == 'main' && 'gdrive:WellPOS-Backups/prod/' || 'gdrive:WellPOS-Backups/dev/' }}
         run: |
-          rclone delete gdrive:WellPOS-Backups/dev/ --min-age 30d -v
+          rclone delete "$GDRIVE_TARGET" --min-age 30d -v
 
       - name: Cleanup Rclone Configuration
         if: always()

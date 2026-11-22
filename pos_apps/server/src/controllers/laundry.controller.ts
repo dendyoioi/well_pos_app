@@ -3347,7 +3347,14 @@ export const updateLaundryDeliveryStatus = async (req: Request, res: Response) =
 
     if (courierName !== undefined) updateDetailData.courierName = courierName ? courierName.trim() : null;
     if (courierPhone !== undefined) updateDetailData.courierPhone = courierPhone ? courierPhone.trim() : null;
-    if (deliveryProofPhotoUrl !== undefined) updateDetailData.deliveryProofPhotoUrl = deliveryProofPhotoUrl || null;
+    if (deliveryProofPhotoUrl !== undefined) {
+      const resolvedProofPhoto = await storageService.resolveDataUrlToStorage({
+        input: deliveryProofPhotoUrl,
+        tenantId,
+        module: 'laundry-delivery',
+      });
+      updateDetailData.deliveryProofPhotoUrl = resolvedProofPhoto || null;
+    }
     if (deliveryNotes !== undefined) updateDetailData.deliveryNotes = deliveryNotes || null;
 
     if (deliveryStatus === 'DELIVERED') {

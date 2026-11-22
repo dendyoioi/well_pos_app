@@ -34,6 +34,13 @@ export interface PresignedUrlResult {
   provider: 'r2' | 'local';
 }
 
+export interface ResolveDataUrlOptions {
+  input?: string | null;
+  tenantId: string;
+  module: string;
+  maxBytes?: number;
+}
+
 export class StorageService {
   private s3Client: S3Client | null = null;
   private bucketName: string | null = null;
@@ -66,7 +73,7 @@ export class StorageService {
         this.bucketName = bucketName;
         this.publicUrl = publicUrl.replace(/\/$/, '');
         this.isR2Configured = true;
-        console.log(`[StorageService] Initialized with Cloudflare R2 provider (Bucket: ${bucketName})`);
+        console.log(`[StorageService] Initialized with Cloudflare R2 provider (Bucket: ${bucketName}, Prefix: ${this.getEnvPrefix()})`);
       } catch (err) {
         console.error('[StorageService] Failed to initialize S3Client for R2, falling back to local:', err);
         this.isR2Configured = false;
@@ -82,15 +89,29 @@ export class StorageService {
   }
 
   /**
-   * Generates a canonical multi-tenant storage key:
-   * tenants/${tenantId}/${module}/${YYYY-MM}/${uuid}.${ext}
+   * Mendapatkan prefix environment aktif untuk isolasi bucket R2.
+   * Prioritas: STORAGE_ENV_PREFIX -> 'prod' (jika NODE_ENV & APP_ENV production) -> default 'dev'.
+   */
+  public getEnvPrefix(): string {
+    const custom = process.env.STORAGE_ENV_PREFIX?.trim();
+    if (custom) return custom;
+    if (process.env.NODE_ENV === 'production' && process.env.APP_ENV === 'production') {
+      return 'prod';
+    }
+    return 'dev';
+  }
+
+  /**
+   * Generates a canonical multi-tenant storage key with environment isolation:
+   * ${envPrefix}/tenants/${tenantId}/${module}/${YYYY-MM}/${uuid}.${ext}
    */
   private generateStorageKey(tenantId: string, module: string, ext: string): { key: string; filename: string; dateFolder: string } {
     const now = new Date();
     const dateFolder = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const cleanExt = ext.replace(/^\./, '').toLowerCase();
     const filename = `${crypto.randomUUID()}.${cleanExt}`;
-    const key = `tenants/${tenantId}/${module}/${dateFolder}/${filename}`;
+    const envPrefix = this.getEnvPrefix();
+    const key = `${envPrefix}/tenants/${tenantId}/${module}/${dateFolder}/${filename}`;
     return { key, filename, dateFolder };
   }
 
@@ -177,7 +198,79 @@ export class StorageService {
   }
 
   /**
+   * Mengonversi Base64 Data URL menjadi URL media tersimpan (R2 atau Local),
+   * atau meloloskan input jika sudah berupa URL (http/https/uploads) secara transparan.
+   */
+  async resolveDataUrlToStorage(options: ResolveDataUrlOptions): Promise<string | null | undefined> {
+    const { input, tenantId, module, maxBytes = 2 * 1024 * 1024 } = options;
+
+    // 1. Jika kosong / null / undefined
+    if (input === null) return null;
+    if (input === undefined) return undefined;
+    if (input === '') return '';
+
+    // 2. Jika sudah berupa URL publik atau path statis lokal, kembalikan langsung (100% backward compatible)
+    if (
+      input.startsWith('http://') ||
+      input.startsWith('https://') ||
+      input.startsWith('/uploads/') ||
+      input.startsWith('uploads/')
+    ) {
+      return input;
+    }
+
+    // 3. Proses jika berupa Base64 Data URL
+    if (input.startsWith('data:')) {
+      const matches = input.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+      if (!matches) {
+        throw new Error('Format Data URL gambar tidak valid');
+      }
+
+      const rawSubtype = matches[1].toLowerCase();
+
+      // Tolak SVG demi alasan keamanan anti-XSS
+      if (rawSubtype === 'svg+xml' || rawSubtype === 'svg') {
+        throw new Error('Format SVG tidak diizinkan untuk upload gambar demi alasan keamanan');
+      }
+
+      const ALLOWED_MIME_EXTS: Record<string, { ext: string; contentType: string }> = {
+        jpeg: { ext: 'jpg', contentType: 'image/jpeg' },
+        jpg: { ext: 'jpg', contentType: 'image/jpeg' },
+        png: { ext: 'png', contentType: 'image/png' },
+        webp: { ext: 'webp', contentType: 'image/webp' },
+      };
+
+      const mimeConfig = ALLOWED_MIME_EXTS[rawSubtype];
+      if (!mimeConfig) {
+        throw new Error(`Format gambar '${rawSubtype}' tidak didukung. Hanya JPEG, PNG, dan WebP yang diizinkan.`);
+      }
+
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      if (buffer.length > maxBytes) {
+        const maxMb = Math.round(maxBytes / (1024 * 1024));
+        throw new Error(`Ukuran file gambar melebihi batas maksimum ${maxMb} MB`);
+      }
+
+      const uploadResult = await this.uploadBuffer({
+        buffer,
+        contentType: mimeConfig.contentType,
+        ext: mimeConfig.ext,
+        tenantId,
+        module,
+      });
+
+      return uploadResult.url;
+    }
+
+    // Default passthrough jika string biasa
+    return input;
+  }
+
+  /**
    * Deletes a file from Cloudflare R2 or local disk storage.
+   * Mendukung key dengan prefix dev/tenants/, prod/tenants/, maupun legacy tenants/.
    */
   async deleteFile(keyOrUrl: string): Promise<boolean> {
     if (!keyOrUrl) return false;
@@ -190,7 +283,13 @@ export class StorageService {
           r2Key = keyOrUrl.substring(this.publicUrl.length).replace(/^\//, '');
         }
 
-        if (r2Key.startsWith('tenants/')) {
+        const isR2Key =
+          r2Key.startsWith('tenants/') ||
+          r2Key.startsWith('dev/tenants/') ||
+          r2Key.startsWith('prod/tenants/') ||
+          /^[a-zA-Z0-9_-]+\/tenants\//.test(r2Key);
+
+        if (isR2Key) {
           await this.s3Client.send(
             new DeleteObjectCommand({
               Bucket: this.bucketName,

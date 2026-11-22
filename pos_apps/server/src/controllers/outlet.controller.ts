@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../config/prisma';
+import { storageService } from '../services/storage.service';
 import { locationDualWriteService } from '../services/dual_write';
 
 // Skema Biaya Dinamis Outlet
@@ -336,6 +337,9 @@ export const updateOutlet = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
 
     const parseResult = updateOutletSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -347,6 +351,25 @@ export const updateOutlet = async (req: Request, res: Response) => {
     }
 
     const updateData = { ...parseResult.data };
+
+    // Konversi logo struk jika berupa Base64 Data URL menjadi URL media tersimpan
+    if (updateData.receiptConfig && typeof updateData.receiptConfig === 'object') {
+      const rc = updateData.receiptConfig as any;
+      if (rc.logoUrl) {
+        rc.logoUrl = await storageService.resolveDataUrlToStorage({
+          input: rc.logoUrl,
+          tenantId,
+          module: 'outlets',
+        });
+      }
+      if (rc.logo) {
+        rc.logo = await storageService.resolveDataUrlToStorage({
+          input: rc.logo,
+          tenantId,
+          module: 'outlets',
+        });
+      }
+    }
 
     // Validasi kepemilikan tenant
     const existingOutlet = await prisma.outlet.findFirst({
@@ -539,6 +562,14 @@ export const updateOutletPaymentConfig = async (req: Request, res: Response) => 
   try {
     const { id } = req.params;
     const userRole = req.user?.role;
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    if (!tenantId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Tenant ID tidak ditemukan pada sesi autentikasi',
+      });
+    }
 
     if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
       return res.status(403).json({
@@ -553,6 +584,38 @@ export const updateOutletPaymentConfig = async (req: Request, res: Response) => 
         status: 'error',
         message: 'Format paymentConfig tidak valid',
       });
+    }
+
+    // Konversi gambar QRIS jika berupa Base64 Data URL menjadi URL media tersimpan
+    if (paymentConfig.qrisImageUrl) {
+      paymentConfig.qrisImageUrl = await storageService.resolveDataUrlToStorage({
+        input: paymentConfig.qrisImageUrl,
+        tenantId,
+        module: 'outlets',
+      });
+    }
+    if (paymentConfig.qrisImage) {
+      paymentConfig.qrisImage = await storageService.resolveDataUrlToStorage({
+        input: paymentConfig.qrisImage,
+        tenantId,
+        module: 'outlets',
+      });
+    }
+    if (paymentConfig.qris && typeof paymentConfig.qris === 'object') {
+      if (paymentConfig.qris.imageUrl) {
+        paymentConfig.qris.imageUrl = await storageService.resolveDataUrlToStorage({
+          input: paymentConfig.qris.imageUrl,
+          tenantId,
+          module: 'outlets',
+        });
+      }
+      if (paymentConfig.qris.qrisImage) {
+        paymentConfig.qris.qrisImage = await storageService.resolveDataUrlToStorage({
+          input: paymentConfig.qris.qrisImage,
+          tenantId,
+          module: 'outlets',
+        });
+      }
     }
 
     await prisma.$executeRawUnsafe(

@@ -28,6 +28,7 @@ import { promotionRouter } from './routes/promotion.routes';
 import qrMenuRouter from './routes/qr_menu.routes';
 import { attendanceRouter } from './routes/attendance.routes';
 import { laundryRouter } from './routes/laundry.routes';
+import { mediaRouter } from './routes/media.routes';
 import { prisma } from './config/prisma';
 
 import { securityHeaders, authRateLimiter } from './middlewares/security.middleware';
@@ -121,6 +122,7 @@ app.use('/api/users', userRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/qr-menu', qrMenuRouter);
 app.use('/api/laundry', laundryRouter);
+app.use('/api/media', mediaRouter);
 
 // Root endpoint info
 app.get('/', (_req: Request, res: Response) => {

@@ -5,6 +5,7 @@ import { prisma } from '../config/prisma';
 import { catalogDualWriteService } from '../services/dual_write';
 import { catalogReadAdapter, isReadFromTargetEnabled } from '../services/read_adapters';
 import { cacheService } from '../services/cache.service';
+import { storageService } from '../services/storage.service';
 
 // Skema validasi pembuatan produk baru
 const createProductSchema = z.object({
@@ -261,6 +262,13 @@ export const createProduct = async (req: Request, res: Response) => {
       });
     }
 
+    // Konversi imageUrl jika berupa Base64 Data URL menjadi URL media tersimpan
+    const resolvedImageUrl = await storageService.resolveDataUrlToStorage({
+      input: imageUrl,
+      tenantId: userTenantId!,
+      module: 'products',
+    });
+
     // Gunakan Dual-Write Service untuk sinkronisasi atomik ke target schema
     const result = await prisma.$transaction(async (tx) => {
       const dwResult = await catalogDualWriteService.createProduct(
@@ -273,7 +281,7 @@ export const createProduct = async (req: Request, res: Response) => {
           basePrice,
           unit,
           description: description || null,
-          imageUrl: imageUrl || null,
+          imageUrl: resolvedImageUrl || null,
           initialStock,
           minStockAlert,
           outletId: targetOutletId,
@@ -428,6 +436,16 @@ export const updateProduct = async (req: Request, res: Response) => {
       }
     }
 
+    // Konversi imageUrl jika berupa Base64 Data URL menjadi URL media tersimpan
+    let resolvedImageUrl = imageUrl;
+    if (imageUrl !== undefined) {
+      resolvedImageUrl = await storageService.resolveDataUrlToStorage({
+        input: imageUrl,
+        tenantId: userTenantId!,
+        module: 'products',
+      });
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       await catalogDualWriteService.updateProduct(
         id,
@@ -440,7 +458,7 @@ export const updateProduct = async (req: Request, res: Response) => {
           basePrice,
           unit: unit || undefined,
           description: description || null,
-          imageUrl: imageUrl || null,
+          imageUrl: resolvedImageUrl || null,
           isActive,
           productType,
           hasStock,
