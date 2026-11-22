@@ -18,6 +18,7 @@ import {
   Clock,
   QrCode,
   AlertOctagon,
+  RotateCcw,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -28,6 +29,7 @@ import { LaundryStageTrackerModal } from '../components/laundry/LaundryStageTrac
 import { LaundryProductionKpiModal } from '../components/laundry/LaundryProductionKpiModal';
 import { LaundrySortingModal } from '../components/LaundrySortingModal';
 import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
+import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -81,6 +83,10 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
 
   // State Modal Penilaian Kinerja Staf (KPI)
   const [kpiModalOpen, setKpiModalOpen] = useState(false);
+
+  // State Modal Klaim Garansi Cuci Ulang (Rewash Rp 0)
+  const [rewashModalOpen, setRewashModalOpen] = useState(false);
+  const [selectedOrderForRewash, setSelectedOrderForRewash] = useState<LaundryQueueOrder | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -486,6 +492,13 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                               {item.invoiceNumber}
                             </span>
                             <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                              {Boolean(item.defectNotes && item.defectNotes.includes('[REWASH/GARANSI:')) && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-600 text-white border border-rose-700 flex items-center gap-1 shadow-2xs">
+                                  <RotateCcw className="w-2.5 h-2.5" />
+                                  <span>GARANSI / REWASH</span>
+                                </span>
+                              )}
+
                               {slaStatus === 'OVERDUE' ? (
                                 <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
                                   <AlertOctagon className="w-2.5 h-2.5 text-rose-600" />
@@ -651,6 +664,22 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                             >
                               <Send className="w-3.5 h-3.5 text-emerald-600" />
                               <span>{sendingWaOrderId === item.orderId ? 'Mengirim...' : 'Kirim WA Siap Ambil'}</span>
+                            </button>
+                          )}
+
+                          {/* Tombol Cuci Ulang Garansi (Khusus Status Siap Ambil / Selesai) with Touch Target >= 44px */}
+                          {(item.status === 'READY_FOR_PICKUP' || item.status === 'COMPLETED') && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOrderForRewash(item);
+                                setRewashModalOpen(true);
+                              }}
+                              className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-rose-200 transition-all cursor-pointer active:scale-95"
+                              title="Klaim Garansi Cuci Ulang Pelanggan (Rp 0)"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Cuci Ulang (Garansi)</span>
                             </button>
                           )}
                         </div>
@@ -868,6 +897,27 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
         isOpen={kpiModalOpen}
         onClose={() => setKpiModalOpen(false)}
       />
+
+      {/* Modal Klaim Garansi Cuci Ulang (Rewash Rp 0) */}
+      {rewashModalOpen && selectedOrderForRewash && (
+        <LaundryRewashModal
+          isOpen={rewashModalOpen}
+          onClose={() => {
+            setRewashModalOpen(false);
+            setSelectedOrderForRewash(null);
+          }}
+          order={selectedOrderForRewash}
+          onSuccess={() => {
+            fetchOrders();
+            fetchRacks();
+            setWaToast({
+              message: `Garansi cuci ulang (Rewash Rp 0) untuk Nota ${selectedOrderForRewash.invoiceNumber} berhasil diaktifkan!`,
+              type: 'success',
+            });
+            setTimeout(() => setWaToast(null), 3500);
+          }}
+        />
+      )}
 
       {/* Floating Feedback Toast WhatsApp Gateway */}
       {waToast && (

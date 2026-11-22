@@ -327,6 +327,7 @@ export const getLaundryRacks = async (req: Request, res: Response) => {
             id: true,
             invoiceNumber: true,
             totalAmount: true,
+            paidAmount: true,
             paymentStatus: true,
             customer: { select: { name: true, phone: true } },
           },
@@ -339,17 +340,26 @@ export const getLaundryRacks = async (req: Request, res: Response) => {
       return {
         ...rack,
         currentCount: ordersInThisRack.length,
-        activeOrders: ordersInThisRack.map((o) => ({
-          orderId: o.orderId,
-          orderNumber: o.order.invoiceNumber,
-          customerName: o.order.customer?.name || 'Pelanggan Walk-In',
-          customerPhone: o.order.customer?.phone || null,
-          totalWeightKg: o.totalWeightKg ? Number(o.totalWeightKg) : null,
-          totalPieces: o.totalPieces,
-          paymentStatus: o.order.paymentStatus,
-          status: o.status,
-          readyAt: o.estimatedReadyAt,
-        })),
+        activeOrders: ordersInThisRack.map((o) => {
+          const totalAmount = Number(o.order.totalAmount || 0);
+          const paidAmount = Number(o.order.paidAmount || 0);
+          return {
+            orderId: o.orderId,
+            orderNumber: o.order.invoiceNumber,
+            customerName: o.order.customer?.name || 'Pelanggan Walk-In',
+            customerPhone: o.order.customer?.phone || null,
+            totalWeightKg: o.totalWeightKg ? Number(o.totalWeightKg) : null,
+            totalPieces: o.totalPieces,
+            totalAmount,
+            paidAmount,
+            remainingAmount: Math.max(0, totalAmount - paidAmount),
+            paymentStatus: o.order.paymentStatus,
+            status: o.status,
+            readyAt: o.estimatedReadyAt || o.completedAt || o.updatedAt,
+            updatedAt: o.updatedAt,
+            createdAt: o.createdAt,
+          };
+        }),
       };
     });
 
@@ -505,6 +515,11 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
       estimatedReadyAt: detail.estimatedReadyAt,
       completedAt: detail.completedAt,
       pickedUpAt: detail.pickedUpAt,
+      defects: detail.defects || null,
+      defectNotes: detail.defectNotes || null,
+      conditionPhotos: detail.conditionPhotos || null,
+      isSorted: detail.isSorted,
+      garmentCounts: detail.garmentCounts || null,
       createdAt: detail.createdAt,
     }));
 
@@ -2741,6 +2756,7 @@ export const getLaundryDeliveries = async (req: Request, res: Response) => {
             customer: true,
             items: true,
             cashier: { select: { id: true, name: true } },
+            payments: { take: 1, orderBy: { createdAt: 'desc' } },
           },
         },
       },
@@ -2831,7 +2847,7 @@ export const getLaundryDeliveries = async (req: Request, res: Response) => {
         totalAmount: Number(d.order.totalAmount),
         paidAmount: Number(d.order.paidAmount || 0),
         paymentStatus: d.order.paymentStatus,
-        paymentMethod: d.order.paymentMethod,
+        paymentMethod: d.order.payments?.[0]?.paymentMethod || null,
         status: d.status,
         currentStage: d.currentStage,
         rackCode: d.rackCode,
@@ -3010,5 +3026,100 @@ export const updateLaundryDeliveryStatus = async (req: Request, res: Response) =
   } catch (error: any) {
     console.error('Error updateLaundryDeliveryStatus:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memperbarui status delivery laundry' });
+  }
+};
+
+/**
+ * Garansi Cuci Ulang (Rewash Rp 0)
+ * Mengembalikan cucian yang telah siap ambil atau selesai ke tahapan produksi tanpa mengubah omset transaksi.
+ */
+export const rewashLaundryOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const { reason, notes, targetStage, operatorName } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Alasan cuci ulang (garansi) wajib diisi' });
+    }
+
+    const detail = await prisma.laundryOrderDetail.findFirst({
+      where: {
+        tenantId,
+        OR: [{ id }, { orderId: id }],
+      },
+      include: {
+        order: {
+          include: { customer: true },
+        },
+      },
+    });
+
+    if (!detail) {
+      return res.status(404).json({ status: 'error', message: 'Pesanan laundry tidak ditemukan' });
+    }
+
+    const cleanReason = reason.trim();
+    const additionalNotes = notes ? notes.trim() : '';
+    const reasonTag = `[REWASH/GARANSI: ${cleanReason}]${additionalNotes ? ` (${additionalNotes})` : ''}`;
+    const updatedDefectNotes = detail.defectNotes ? `${detail.defectNotes}\n${reasonTag}` : reasonTag;
+    const resolvedOperator = operatorName?.trim() || (req.user as any)?.name || 'Kasir / Operator';
+    const chosenStage = targetStage || 'SPOTTING';
+    const now = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Reset LaundryOrderDetail: status -> WASHING_DRYING, currentStage -> targetStage || 'SPOTTING', kosongkan rackCode
+      const updated = await tx.laundryOrderDetail.update({
+        where: { id: detail.id },
+        data: {
+          status: 'WASHING_DRYING',
+          currentStage: chosenStage,
+          rackCode: null,
+          defectNotes: updatedDefectNotes,
+          pickedUpAt: null,
+          pickedUpBy: null,
+        },
+      });
+
+      // 2. Kembalikan Order.orderStatus -> IN_PROGRESS (Order.totalAmount & Order.paymentStatus TETAP UTUH)
+      await tx.order.update({
+        where: { id: detail.orderId },
+        data: {
+          orderStatus: OrderStatus.IN_PROGRESS,
+        },
+      });
+
+      // 3. Catat audit trail di LaundryStageLog
+      await tx.laundryStageLog.create({
+        data: {
+          tenantId,
+          orderId: detail.orderId,
+          laundryDetailId: detail.id,
+          stage: 'REWASH',
+          operatorId: userId || null,
+          operatorName: resolvedOperator,
+          weightKg: detail.totalWeightKg,
+          piecesCount: detail.totalPieces,
+          completedAt: now,
+          durationMinutes: 0,
+          notes: `Cuci Ulang Garansi (Rp 0): ${cleanReason}${additionalNotes ? ` - ${additionalNotes}` : ''}`,
+        },
+      });
+
+      return updated;
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Garansi cuci ulang berhasil diaktifkan: ${cleanReason}`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error rewashLaundryOrder:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memproses garansi cuci ulang' });
   }
 };

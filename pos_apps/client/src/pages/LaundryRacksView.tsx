@@ -1,5 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Archive, Plus, Search, CheckCircle2, Clock, AlertCircle, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Archive,
+  Plus,
+  Search,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  AlertTriangle,
+  ChevronDown,
+  Send,
+} from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
 import type { LaundryRack } from '../types/laundry';
@@ -20,9 +30,30 @@ const INITIAL_MOCK_RACKS: LaundryRack[] = [
     locationNote: 'Lantai 1 - Sebelah Kasir',
     isActive: true,
     activeOrders: [
-      { orderId: '1', orderNumber: 'LD-241101-002', customerName: 'Siti Aminah', totalPieces: 14, totalWeightKg: 4.8, status: 'READY_FOR_PICKUP', paymentStatus: 'PAID', readyAt: 'Hari ini 15:00' },
-      { orderId: '2', orderNumber: 'LD-241101-007', customerName: 'Budi Hartono', totalPieces: 9, totalWeightKg: 3.2, status: 'READY_FOR_PICKUP', paymentStatus: 'UNPAID', readyAt: 'Kemarin' },
-    ]
+      {
+        orderId: '1',
+        orderNumber: 'LD-241101-002',
+        customerName: 'Siti Aminah',
+        customerPhone: '081234567890',
+        totalPieces: 14,
+        totalWeightKg: 4.8,
+        status: 'READY_FOR_PICKUP',
+        paymentStatus: 'PAID',
+        readyAt: new Date(Date.now() - 9 * 86400000).toISOString(),
+      },
+      {
+        orderId: '2',
+        orderNumber: 'LD-241101-007',
+        customerName: 'Budi Hartono',
+        customerPhone: '081298765432',
+        totalPieces: 9,
+        totalWeightKg: 3.2,
+        status: 'READY_FOR_PICKUP',
+        paymentStatus: 'UNPAID',
+        remainingAmount: 45000,
+        readyAt: new Date(Date.now() - 16 * 86400000).toISOString(),
+      },
+    ],
   },
   {
     id: 'rack-02',
@@ -35,8 +66,19 @@ const INITIAL_MOCK_RACKS: LaundryRack[] = [
     locationNote: 'Lantai 1 - Sebelah Rak A1',
     isActive: true,
     activeOrders: [
-      { orderId: '3', orderNumber: 'LD-241101-011', customerName: 'Rina Wijaya', totalPieces: 7, totalWeightKg: 2.5, status: 'READY_FOR_PICKUP', paymentStatus: 'PARTIALLY_PAID', readyAt: 'Besok 10:00' },
-    ]
+      {
+        orderId: '3',
+        orderNumber: 'LD-241101-011',
+        customerName: 'Rina Wijaya',
+        customerPhone: '081311223344',
+        totalPieces: 7,
+        totalWeightKg: 2.5,
+        status: 'READY_FOR_PICKUP',
+        paymentStatus: 'PARTIALLY_PAID',
+        remainingAmount: 20000,
+        readyAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+      },
+    ],
   },
   {
     id: 'rack-03',
@@ -49,8 +91,17 @@ const INITIAL_MOCK_RACKS: LaundryRack[] = [
     locationNote: 'Gantungan Khusus Jas & Gaun',
     isActive: true,
     activeOrders: [
-      { orderId: '4', orderNumber: 'LD-241101-005', customerName: 'Dra. Maya', totalPieces: 2, status: 'READY_FOR_PICKUP', paymentStatus: 'PAID', readyAt: 'Hari ini 18:00' },
-    ]
+      {
+        orderId: '4',
+        orderNumber: 'LD-241101-005',
+        customerName: 'Dra. Maya',
+        customerPhone: '081255667788',
+        totalPieces: 2,
+        status: 'READY_FOR_PICKUP',
+        paymentStatus: 'PAID',
+        readyAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+      },
+    ],
   },
   {
     id: 'rack-04',
@@ -63,8 +114,18 @@ const INITIAL_MOCK_RACKS: LaundryRack[] = [
     locationNote: 'Area Meja Pengemasan Depan',
     isActive: true,
     activeOrders: [
-      { orderId: '5', orderNumber: 'LD-241101-019', customerName: 'David Lee', totalPieces: 6, totalWeightKg: 2.1, status: 'READY_FOR_PICKUP', paymentStatus: 'PAID', readyAt: 'Hari ini 12:30' },
-    ]
+      {
+        orderId: '5',
+        orderNumber: 'LD-241101-019',
+        customerName: 'David Lee',
+        customerPhone: '081900112233',
+        totalPieces: 6,
+        totalWeightKg: 2.1,
+        status: 'READY_FOR_PICKUP',
+        paymentStatus: 'PAID',
+        readyAt: new Date().toISOString(),
+      },
+    ],
   },
   {
     id: 'rack-05',
@@ -76,8 +137,8 @@ const INITIAL_MOCK_RACKS: LaundryRack[] = [
     currentCount: 0,
     locationNote: 'Lantai 2 - Ruang Treatment',
     isActive: true,
-    activeOrders: []
-  }
+    activeOrders: [],
+  },
 ];
 
 export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet }) => {
@@ -119,13 +180,89 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
     fetchRacks();
   }, [activeOutlet?.id]);
 
+  const getDaysInRack = (order: any): number => {
+    if (!order) return 0;
+    const dateStr = order.readyAt || order.updatedAt || order.createdAt;
+    if (!dateStr) return 0;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      if (typeof dateStr === 'string' && dateStr.toLowerCase().includes('kemarin')) return 1;
+      return 0;
+    }
+    const diffMs = Date.now() - d.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
+  const stagnantOrdersCount = useMemo(() => {
+    let count = 0;
+    racks.forEach((rack) => {
+      (rack.activeOrders || []).forEach((order) => {
+        if (getDaysInRack(order) >= 7) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }, [racks]);
+
   const filteredRacks = racks.filter((rack) => {
-    const matchesCategory = selectedCategory === 'ALL' || rack.category === selectedCategory;
-    const matchesSearch = rack.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          rack.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (rack.locationNote && rack.locationNote.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory =
+      selectedCategory === 'ALL'
+        ? true
+        : selectedCategory === 'STAGNANT'
+        ? (rack.activeOrders || []).some((o) => getDaysInRack(o) >= 7)
+        : rack.category === selectedCategory;
+    const matchesSearch =
+      rack.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      rack.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (rack.locationNote && rack.locationNote.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
+
+  const handleSendWaReminder = (order: any, rack: LaundryRack) => {
+    const phoneRaw = order.customerPhone;
+    if (!phoneRaw) {
+      alert(`Nomor WhatsApp untuk pelanggan ${order.customerName} tidak tersedia`);
+      return;
+    }
+    let cleanPhone = phoneRaw.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+
+    const days = getDaysInRack(order);
+    const remaining = Number(
+      order.remainingAmount !== undefined
+        ? order.remainingAmount
+        : order.paymentStatus === 'PAID'
+        ? 0
+        : order.totalAmount || 0
+    );
+    const isPaid = order.paymentStatus === 'PAID' || remaining === 0;
+
+    const paymentText = isPaid
+      ? '• Status Pembayaran: *LUNAS* ✅'
+      : `• Sisa Tagihan: *Rp ${remaining.toLocaleString('id-ID')}* (dapat dibayar saat ambil)`;
+
+    const origin =
+      typeof window !== 'undefined' && window.location.origin
+        ? window.location.origin
+        : 'https://wellpos.id';
+    const trackingUrl = `${origin}/track/${encodeURIComponent(order.orderNumber)}`;
+
+    const message =
+      `*PENGINGAT PENGAMBILAN CUCIAN — ${(activeOutlet?.name || 'WELL LAUNDRY').toUpperCase()}*\n\n` +
+      `Halo Kak *${order.customerName}*,\n` +
+      `Kami informasikan bahwa cucian Anda telah selesai kami proses dan saat ini tersimpan rapi di rak kami:\n\n` +
+      `📋 *DETAIL NOTA:*\n` +
+      `• No. Nota     : *${order.orderNumber}*\n` +
+      `• Lokasi Rak   : *${rack.code} (${rack.name})*\n` +
+      `• Waktu Tunggu : *${days > 0 ? `${days} hari` : 'Siap diambil'}* di rak\n` +
+      `${paymentText}\n\n` +
+      `🔍 *Pantau Status & Rincian Cucian Live:*\n${trackingUrl}\n\n` +
+      `Silakan kunjungi outlet kami untuk mengambil pakaian Anda.\n` +
+      `Terima kasih atas kepercayaannya! ✨`;
+
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   const handleAddRack = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,10 +327,10 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors shadow-sm"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm transition-colors shadow-xs cursor-pointer active:scale-95"
         >
           <Plus className="w-4 h-4" />
-          Tambah Rak Baru
+          <span>Tambah Rak Baru</span>
         </button>
       </div>
 
@@ -202,23 +339,33 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
         <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
           {[
             { id: 'ALL', label: 'Semua Rak' },
+            { id: 'STAGNANT', label: `Mengendap > 7 Hari (${stagnantOrdersCount})` },
             { id: 'KILOAN', label: 'Cucian Kiloan' },
             { id: 'SATUAN', label: 'Dry Clean & Satuan' },
             { id: 'EXPRESS', label: 'Cepat / Express' },
             { id: 'SEPATU_TAS', label: 'Sepatu & Tas' },
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                selectedCategory === cat.id
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+          ].map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            const isStagnantTab = cat.id === 'STAGNANT';
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? isStagnantTab
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'bg-slate-900 text-white'
+                    : isStagnantTab && stagnantOrdersCount > 0
+                    ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {isStagnantTab && <AlertTriangle className="w-3 h-3 text-amber-500" />}
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="relative w-full sm:w-72">
@@ -246,6 +393,8 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
               const current = rack.currentCount || 0;
               const isSelected = selectedRack?.id === rack.id;
               const occupancyRatio = rack.capacity > 0 ? (current / rack.capacity) * 100 : 0;
+              const stagnantCount = (rack.activeOrders || []).filter((o) => getDaysInRack(o) >= 7).length;
+
               return (
                 <div
                   key={rack.id}
@@ -265,9 +414,17 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
                         {rack.category}
                       </span>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${getOccupancyColor(current, rack.capacity)}`}>
-                      {current} / {rack.capacity} Slot
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {stagnantCount > 0 && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                          <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                          <span>{stagnantCount} Mengendap</span>
+                        </span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${getOccupancyColor(current, rack.capacity)}`}>
+                        {current} / {rack.capacity} Slot
+                      </span>
+                    </div>
                   </div>
 
                   <h3 className="font-semibold text-slate-900 text-sm mb-1">{rack.name}</h3>
@@ -330,23 +487,81 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
                   </div>
 
                   {selectedRack.activeOrders && selectedRack.activeOrders.length > 0 ? (
-                    selectedRack.activeOrders.map((order, idx) => (
-                      <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100/70 transition-colors">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-mono text-xs font-bold text-slate-900">{order.orderNumber}</span>
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
-                            <CheckCircle2 className="w-3 h-3" /> Siap Ambil
-                          </span>
+                    selectedRack.activeOrders.map((order, idx) => {
+                      const days = getDaysInRack(order);
+                      const isStagnantRose = days >= 14;
+                      const isStagnantAmber = days >= 7;
+                      const isPaid = order.paymentStatus === 'PAID';
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-3.5 rounded-2xl border transition-all space-y-2 ${
+                            isStagnantRose
+                              ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-200'
+                              : isStagnantAmber
+                              ? 'bg-amber-50/70 border-amber-300'
+                              : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="font-mono text-xs font-bold text-slate-900">{order.orderNumber}</span>
+                            {isStagnantRose ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full">
+                                <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                <span>Mengendap {days} Hari</span>
+                              </span>
+                            ) : isStagnantAmber ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>Mengendap {days} Hari</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Siap Ambil</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-extrabold text-slate-800">{order.customerName}</span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                              }`}
+                            >
+                              {isPaid ? 'LUNAS' : 'BELUM LUNAS'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                            <span>
+                              {order.totalPieces} potong {order.totalWeightKg ? `(${order.totalWeightKg} kg)` : ''}
+                            </span>
+                            <span className="text-slate-400">
+                              {order.readyAt && !isNaN(new Date(order.readyAt).getTime())
+                                ? new Date(order.readyAt).toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                  })
+                                : order.readyAt || 'Siap'}
+                            </span>
+                          </div>
+
+                          {/* 1-Klik Tombol Ingatkan WA */}
+                          <button
+                            type="button"
+                            onClick={() => handleSendWaReminder(order, selectedRack)}
+                            className="w-full mt-1 min-h-[36px] py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-emerald-300 transition-all cursor-pointer active:scale-95"
+                            title="Kirim pesan WhatsApp pengingat pengambilan cucian"
+                          >
+                            <Send className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Ingatkan WA</span>
+                          </button>
                         </div>
-                        <div className="text-xs font-semibold text-slate-800">{order.customerName}</div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5">
-                          <span>{order.totalPieces} potong {order.totalWeightKg ? `(${order.totalWeightKg} kg)` : ''}</span>
-                          <span className="inline-flex items-center gap-1 text-slate-400">
-                            <Clock className="w-3 h-3" /> {order.readyAt || 'Siap'}
-                          </span>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="py-8 text-center">
                       <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
@@ -477,7 +692,7 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2 text-sm font-bold bg-blue-900 hover:bg-blue-800 text-white rounded-xl transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {saving ? 'Menyimpan...' : 'Simpan Rak'}
                 </button>

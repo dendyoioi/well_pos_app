@@ -339,11 +339,16 @@ export class WhatsAppService {
   /**
    * Format pesan WhatsApp notifikasi Cucian Siap Diambil
    */
-  public formatLaundryReadyText(data: LaundryNotificationData): string {
+  public formatLaundryReadyText(data: LaundryNotificationData, trackingUrlOverride?: string): string {
     const outletName = (data.outlet?.name || 'Well Laundry').toUpperCase();
     const customer = data.customerName || 'Pelanggan Setia';
     const remaining = Number(data.remainingAmount) || 0;
     const grandTotal = Number(data.grandTotal) || 0;
+    const trackingUrl =
+      trackingUrlOverride ||
+      (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://wellpos.id').replace(/\/$/, '') +
+        '/track/' +
+        encodeURIComponent(data.invoiceNumber);
 
     const paymentNote =
       remaining <= 0
@@ -360,6 +365,7 @@ export class WhatsAppService {
       `• Layanan      : ${data.servicesSummary}\n` +
       (data.perfume ? `• Aroma Wangi  : ${data.perfume}\n` : '') +
       `• Lokasi Rak   : *${data.rackCode || 'Area Rak Siap Ambil'}*\n\n` +
+      `🔍 Pantau progres cucian Anda: ${trackingUrl}\n\n` +
       `💰 *STATUS PEMBAYARAN:*\n` +
       `${paymentNote}\n\n` +
       `📍 *LOKASI OUTLET:*\n` +
@@ -374,9 +380,14 @@ export class WhatsAppService {
   /**
    * Format pesan WhatsApp notifikasi Cucian Selesai Diambil (Handover)
    */
-  public formatLaundryCompletedText(data: LaundryNotificationData): string {
+  public formatLaundryCompletedText(data: LaundryNotificationData, trackingUrlOverride?: string): string {
     const outletName = (data.outlet?.name || 'Well Laundry').toUpperCase();
     const customer = data.customerName || 'Pelanggan Setia';
+    const trackingUrl =
+      trackingUrlOverride ||
+      (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://wellpos.id').replace(/\/$/, '') +
+        '/track/' +
+        encodeURIComponent(data.invoiceNumber);
 
     return (
       `*NOTIFIKASI PENGAMBILAN CUCIAN*\n` +
@@ -387,6 +398,7 @@ export class WhatsAppService {
       `• Status       : *SELESAI & DIAMBIL* ✅\n` +
       `• Pembayaran   : *LUNAS*\n` +
       (data.servicesSummary ? `• Layanan      : ${data.servicesSummary}\n` : '') +
+      `\n🔍 Pantau progres cucian Anda: ${trackingUrl}\n` +
       `\nSemoga Anda puas dengan hasil cucian dan keharumannya. Sampai jumpa di cucian berikutnya! ✨\n` +
       `================================\n` +
       `_${data.outlet.name}_`
@@ -425,10 +437,15 @@ export class WhatsAppService {
       };
     }
 
+    const trackingUrl =
+      (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://wellpos.id').replace(/\/$/, '') +
+      '/track/' +
+      encodeURIComponent(data.invoiceNumber);
+
     const messageText =
       type === 'READY'
-        ? this.formatLaundryReadyText(data)
-        : this.formatLaundryCompletedText(data);
+        ? this.formatLaundryReadyText(data, trackingUrl)
+        : this.formatLaundryCompletedText(data, trackingUrl);
 
     // Fallback jika belum terpasang token Fonnte
     if (!apiKey) {

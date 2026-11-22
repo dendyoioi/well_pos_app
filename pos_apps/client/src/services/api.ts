@@ -2657,6 +2657,18 @@ export const api = {
     return res.json();
   },
 
+  rewashLaundryOrder: async (
+    id: string,
+    data: { reason: string; notes?: string; targetStage?: string; operatorName?: string }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/orders/${id}/rewash`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   getLaundryManifests: async (params?: {
     sourceOutletId?: string;
     targetOutletId?: string;

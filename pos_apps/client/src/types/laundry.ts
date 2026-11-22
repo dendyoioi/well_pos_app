@@ -112,8 +112,13 @@ export interface LaundryRack {
     totalWeightKg?: number | null;
     totalPieces: number;
     paymentStatus: string;
+    totalAmount?: number;
+    paidAmount?: number;
+    remainingAmount?: number;
     status: LaundryStatus;
     readyAt?: string | null;
+    updatedAt?: string | Date;
+    createdAt?: string | Date;
   }[];
 }
 

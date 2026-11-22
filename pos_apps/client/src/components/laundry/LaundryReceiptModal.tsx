@@ -12,6 +12,8 @@ import {
   Tag,
   Bluetooth,
   ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import type { LaundryQueueOrder } from '../../types/laundry';
 import type { Outlet } from '../../types/outlet';
@@ -40,10 +42,23 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   const [sendingGateway, setSendingGateway] = useState(false);
   const [gatewayMessage, setGatewayMessage] = useState<string | null>(null);
   const [printStatusMsg, setPrintStatusMsg] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const receiptPrintRef = useRef<HTMLDivElement>(null);
   const printerHub = useThermalPrinterHub();
 
   if (!isOpen || !order) return null;
+
+  const trackingUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/track/${encodeURIComponent(order.invoiceNumber)}`
+    : `https://wellpos.id/track/${encodeURIComponent(order.invoiceNumber)}`;
+
+  const handleCopyLink = () => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(trackingUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const is58mm = paperSize === '58mm';
   const remainingAmount = Math.max(0, order.grandTotal - (order.paidAmount || 0));
@@ -163,6 +178,9 @@ ${itemsSummary}
 ${order.deliveryFee ? `Biaya Delivery: Rp ${order.deliveryFee.toLocaleString('id-ID')}\n` : ''}Total Biaya: Rp ${order.grandTotal.toLocaleString('id-ID')}
 Terbayar: Rp ${(order.paidAmount || 0).toLocaleString('id-ID')}
 Status Pembayaran: *${isPaid ? 'LUNAS' : `BELUM LUNAS (Sisa: Rp ${remainingAmount.toLocaleString('id-ID')})`}*
+
+🔍 *Pantau Status Cucian Live:*
+${trackingUrl}
 
 Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
@@ -571,6 +589,30 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
             <div className="border-b border-dashed border-slate-400 my-2" />
 
+            {/* Blok QR Code Tracking Live Pelanggan */}
+            <div className="border border-slate-900/80 p-2.5 text-center rounded bg-slate-50 space-y-1.5 my-2">
+              <div className="text-[9px] font-black uppercase tracking-wider text-blue-950">
+                PANTAU STATUS CUCIAN LIVE
+              </div>
+              <div className="flex justify-center py-0.5">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(
+                    trackingUrl
+                  )}`}
+                  alt="QR Tracking"
+                  className="w-24 h-24 object-contain mx-auto border border-slate-200 rounded p-1 bg-white"
+                />
+              </div>
+              <div className="text-[9px] font-bold text-slate-700">
+                Pindai QR untuk pantau status cucian live
+              </div>
+              <div className="text-[8px] font-mono text-slate-500 break-all">
+                /track/{order.invoiceNumber}
+              </div>
+            </div>
+
+            <div className="border-b border-dashed border-slate-400 my-2" />
+
             {/* Syarat & Ketentuan Laundry */}
             <div className="text-[8.5px] text-slate-500 leading-tight space-y-1">
               <p className="font-bold text-slate-700">Syarat &amp; Ketentuan:</p>
@@ -591,35 +633,55 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
     {/* Sticky Action Footer */}
     <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-      {order.customerPhone ? (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-            title="Buka WhatsApp Web / App langsung"
-          >
-            <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Buka wa.me</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSendViaGateway}
-            disabled={sendingGateway}
-            className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-            title="Kirim pesan langsung via Fonnte Gateway Server"
-          >
-            <Send className="w-3.5 h-3.5 text-blue-700" />
-            <span>{sendingGateway ? 'Mengirim...' : 'Kirim via Gateway'}</span>
-          </button>
-          {gatewayMessage && (
-            <div className="hidden lg:flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{gatewayMessage}</span>
-            </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          title="Salin tautan pelacakan online ke clipboard"
+        >
+          {copiedLink ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-emerald-700 font-bold">Tersalin!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5 text-slate-500" />
+              <span>Salin Link</span>
+            </>
           )}
-        </div>
-      ) : <div />}
+        </button>
+        {order.customerPhone && (
+          <>
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              title="Buka WhatsApp Web / App langsung"
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Buka wa.me</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSendViaGateway}
+              disabled={sendingGateway}
+              className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              title="Kirim pesan langsung via Fonnte Gateway Server"
+            >
+              <Send className="w-3.5 h-3.5 text-blue-700" />
+              <span>{sendingGateway ? 'Mengirim...' : 'Kirim via Gateway'}</span>
+            </button>
+          </>
+        )}
+        {gatewayMessage && (
+          <div className="hidden lg:flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{gatewayMessage}</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-end gap-2 flex-wrap">
         {printStatusMsg && (

@@ -32,6 +32,7 @@ import {
   updateLaundryDeliveryConfig,
   getLaundryDeliveries,
   updateLaundryDeliveryStatus,
+  rewashLaundryOrder,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -62,6 +63,7 @@ router.get('/orders', getLaundryOrders);
 router.post('/orders', createLaundryOrder);
 router.patch('/orders/:id/status', updateLaundryStatus);
 router.post('/orders/:id/send-whatsapp', sendLaundryWhatsApp);
+router.post('/orders/:id/rewash', rewashLaundryOrder);
 
 // --- Modul Sortir Pakaian & Bukti Foto Kondisi Anti-Komplain ---
 router.post('/upload-photo', uploadLaundryConditionPhoto);

@@ -289,6 +289,22 @@ export function buildReceiptEscPos(order: any, options: EscPosOptions = {}): Uin
     builder.twoColumns('Pembayaran:', 'LUNAS');
   }
 
+  // 6.5. QR Code Tracking Publik (Khusus Mode Laundry)
+  const isLaundryOrder = Boolean(
+    (order.invoiceNumber && String(order.invoiceNumber).startsWith('LD-')) ||
+    order.laundryDetail ||
+    order.perfumeVariant
+  );
+  if (isLaundryOrder && order.invoiceNumber) {
+    const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://wellpos.id';
+    const trackingUrl = `${origin}/track/${encodeURIComponent(order.invoiceNumber)}`;
+    builder.divider('-');
+    builder.align('center');
+    builder.line('Scan QR: Pantau Status Cucian');
+    builder.qrCode(trackingUrl, paperSize === '58mm' ? 5 : 6);
+    builder.line(`/track/${order.invoiceNumber}`);
+  }
+
   // 7. Footer Struk
   builder.divider('-');
   builder.align('center');
