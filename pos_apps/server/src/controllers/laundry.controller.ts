@@ -6,6 +6,7 @@ import { prisma } from '../config/prisma';
 import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Prisma } from '@prisma/client';
 import { whatsAppService, LaundryNotificationData } from '../services/whatsapp.service';
 import { idempotencyService } from '../services/idempotency.service';
+import { storageService } from '../services/storage.service';
 
 // ==========================================
 // 1. SCHEMAS
@@ -2789,23 +2790,20 @@ export const uploadLaundryConditionPhoto = async (req: Request, res: Response) =
       });
     }
 
-    // Buat direktori static uploads/laundry/<tenantId>
-    const tenantUploadDir = path.join(__dirname, '../../uploads/laundry', tenantId);
-    if (!fs.existsSync(tenantUploadDir)) {
-      fs.mkdirSync(tenantUploadDir, { recursive: true });
-    }
-
-    const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
-    const filePath = path.join(tenantUploadDir, filename);
-    await fs.promises.writeFile(filePath, buffer);
-
-    const relativeUrl = `/uploads/laundry/${tenantId}/${filename}`;
+    const contentType = `image/${rawSubtype === 'jpg' ? 'jpeg' : rawSubtype}`;
+    const uploadResult = await storageService.uploadBuffer({
+      buffer,
+      contentType,
+      ext,
+      tenantId,
+      module: 'laundry',
+    });
 
     return res.status(200).json({
       status: 'success',
       message: 'Foto kondisi pakaian berhasil diunggah',
       data: {
-        url: relativeUrl,
+        url: uploadResult.url,
         caption: caption || '',
         stage: stage || 'SORTING',
         uploadedBy: (req.user as any)?.name || 'Kasir',

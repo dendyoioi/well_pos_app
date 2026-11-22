@@ -1,0 +1,71 @@
+name: Database Backup to Google Drive
+
+on:
+  schedule:
+    # Setiap hari pukul 03:00 WIB (20:00 UTC)
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: db-backup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup PostgreSQL Database to Google Drive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'pos_apps/server/package-lock.json'
+
+      - name: Install Server Dependencies & Generate Prisma Client
+        run: |
+          npm ci
+          npx prisma generate
+        working-directory: pos_apps/server
+
+      - name: Run Database Backup
+        run: |
+          npm run db:backup
+        working-directory: pos_apps/server
+        env:
+          REMOTE_DATABASE_URL: ${{ secrets.REMOTE_DATABASE_URL }}
+
+      - name: Install Rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rclone
+
+      - name: Configure Rclone for Google Drive
+        env:
+          RCLONE_CONFIG_GDRIVE: ${{ secrets.RCLONE_CONFIG_GDRIVE }}
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s\n' "$RCLONE_CONFIG_GDRIVE" > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
+
+      - name: Upload Backup to Google Drive
+        run: |
+          rclone copy pos_apps/server/backups/ gdrive:WellPOS-Backups/dev/ \
+            --include "*.json.gz" \
+            --include "*.sha256" \
+            --include "*.dump" \
+            -v
+
+      - name: Rotate Old Backups on Google Drive (> 30 Days)
+        run: |
+          rclone delete gdrive:WellPOS-Backups/dev/ --min-age 30d -v
+
+      - name: Cleanup Rclone Configuration
+        if: always()
+        run: |
+          rm -f ~/.config/rclone/rclone.conf
