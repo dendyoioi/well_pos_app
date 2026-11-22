@@ -62,7 +62,6 @@ app.use(cors({
     }
     // 2. Exact match: CLIENT_ORIGIN env, domain resmi, dan domain Vercel production
     if (
-      clientEnvOrigins.includes('*') ||
       clientEnvOrigins.includes(origin) ||
       staticAllowedOrigins.includes(origin)
     ) {
