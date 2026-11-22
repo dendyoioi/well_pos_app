@@ -100,6 +100,17 @@ export const getLaundryServices = async (req: Request, res: Response) => {
 
     let services = await prisma.laundryService.findMany({
       where: { tenantId },
+      include: {
+        bomItems: {
+          include: {
+            inventoryItem: {
+              select: {
+                averageCost: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: [{ isActive: 'desc' }, { category: 'asc' }, { name: 'asc' }],
     });
 
@@ -129,6 +140,17 @@ export const getLaundryServices = async (req: Request, res: Response) => {
 
       services = await prisma.laundryService.findMany({
         where: { tenantId },
+        include: {
+          bomItems: {
+            include: {
+              inventoryItem: {
+                select: {
+                  averageCost: true,
+                },
+              },
+            },
+          },
+        },
         orderBy: [{ isActive: 'desc' }, { category: 'asc' }, { name: 'asc' }],
       });
     }
@@ -152,13 +174,36 @@ export const getLaundryServices = async (req: Request, res: Response) => {
       }
       services = await prisma.laundryService.findMany({
         where: { tenantId },
+        include: {
+          bomItems: {
+            include: {
+              inventoryItem: {
+                select: {
+                  averageCost: true,
+                },
+              },
+            },
+          },
+        },
         orderBy: [{ isActive: 'desc' }, { category: 'asc' }, { name: 'asc' }],
       });
     }
 
+    const formattedServices = services.map((s: any) => {
+      const bomItemsCount = s.bomItems?.length || 0;
+      const estimatedBomCost = (s.bomItems || []).reduce((acc: number, item: any) => {
+        return acc + Math.round(Number(item.quantityPerUnit) * Number(item.inventoryItem?.averageCost || 0));
+      }, 0);
+      return {
+        ...s,
+        bomItemsCount,
+        estimatedBomCost,
+      };
+    });
+
     return res.status(200).json({
       status: 'success',
-      data: services,
+      data: formattedServices,
     });
   } catch (error: any) {
     console.error('Error getLaundryServices:', error);
@@ -262,6 +307,177 @@ export const deleteLaundryService = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error deleteLaundryService:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal menonaktifkan layanan laundry' });
+  }
+};
+
+/**
+ * Mengambil konfigurasi takaran bahan cuci (Bill of Materials / BoM) untuk layanan laundry
+ * @route GET /api/laundry/services/:id/bom
+ */
+export const getLaundryServiceBom = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const service = await prisma.laundryService.findFirst({
+      where: { id, tenantId },
+    });
+    if (!service) {
+      return res.status(404).json({ status: 'error', message: 'Layanan laundry tidak ditemukan' });
+    }
+
+    const bomItems = await prisma.laundryServiceBomItem.findMany({
+      where: { tenantId, laundryServiceId: id },
+      include: {
+        inventoryItem: {
+          select: {
+            id: true,
+            itemCode: true,
+            name: true,
+            canonicalUom: true,
+            purchaseUom: true,
+            purchaseConversionFactor: true,
+            averageCost: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let totalBomCost = 0;
+    const formattedItems = bomItems.map((item) => {
+      const avgCost = Number(item.inventoryItem.averageCost || 0);
+      const qty = Number(item.quantityPerUnit);
+      const lineCost = Math.round(avgCost * qty);
+      totalBomCost += lineCost;
+      return {
+        id: item.id,
+        inventoryItemId: item.inventoryItemId,
+        itemCode: item.inventoryItem.itemCode,
+        name: item.inventoryItem.name,
+        canonicalUom: item.inventoryItem.canonicalUom,
+        purchaseUom: item.inventoryItem.purchaseUom,
+        purchaseConversionFactor: Number(item.inventoryItem.purchaseConversionFactor || 1),
+        averageCost: avgCost,
+        quantityPerUnit: qty,
+        consumptionBasis: item.consumptionBasis,
+        notes: item.notes,
+        lineCost,
+      };
+    });
+
+    const servicePrice = Number(service.price);
+    const grossMargin = Math.max(0, servicePrice - totalBomCost);
+    const marginPercent = servicePrice > 0 ? Math.round((grossMargin / servicePrice) * 100) : 0;
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        service: {
+          id: service.id,
+          name: service.name,
+          category: service.category,
+          unit: service.unit,
+          price: servicePrice,
+        },
+        bomItems: formattedItems,
+        totalBomCost,
+        grossMargin,
+        marginPercent,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryServiceBom:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil konfigurasi takaran bahan (BoM)' });
+  }
+};
+
+const saveBomSchema = z.object({
+  bomItems: z.array(
+    z.object({
+      inventoryItemId: z.string().uuid('ID Bahan tidak valid'),
+      quantityPerUnit: z.number().positive('Takaran harus berupa angka positif'),
+      consumptionBasis: z.enum(['PER_UNIT', 'PER_ORDER']).default('PER_UNIT'),
+      notes: z.string().optional().nullable(),
+    })
+  ),
+});
+
+/**
+ * Menyimpan / memperbarui daftar takaran bahan (BoM) untuk layanan laundry
+ * @route PUT /api/laundry/services/:id/bom
+ */
+export const saveLaundryServiceBom = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const service = await prisma.laundryService.findFirst({
+      where: { id, tenantId },
+    });
+    if (!service) {
+      return res.status(404).json({ status: 'error', message: 'Layanan laundry tidak ditemukan' });
+    }
+
+    const parseResult = saveBomSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi form takaran bahan (BoM) gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { bomItems } = parseResult.data;
+
+    if (bomItems.length > 0) {
+      const itemIds = bomItems.map((b) => b.inventoryItemId);
+      const verifiedItems = await prisma.inventoryItem.findMany({
+        where: { tenantId, id: { in: itemIds } },
+        select: { id: true },
+      });
+      if (verifiedItems.length !== itemIds.length) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Salah satu bahan baku yang dipilih tidak valid atau bukan milik toko Anda',
+        });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Hapus konfigurasi BoM lama untuk service ini
+      await tx.laundryServiceBomItem.deleteMany({
+        where: { tenantId, laundryServiceId: id },
+      });
+
+      // Simpan konfigurasi baru
+      for (const item of bomItems) {
+        await tx.laundryServiceBomItem.create({
+          data: {
+            tenantId,
+            laundryServiceId: id,
+            inventoryItemId: item.inventoryItemId,
+            quantityPerUnit: item.quantityPerUnit,
+            consumptionBasis: item.consumptionBasis,
+            notes: item.notes || null,
+          },
+        });
+      }
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Konfigurasi takaran bahan cuci (BoM) berhasil disimpan',
+    });
+  } catch (error: any) {
+    console.error('Error saveLaundryServiceBom:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menyimpan takaran bahan (BoM)' });
   }
 };
 
@@ -1102,6 +1318,17 @@ export const updateLaundryStatus = async (req: Request, res: Response) => {
         });
       }
 
+      // Auto-BoM Deduction jika cucian masuk status WASHING_DRYING atau lebih lanjut dan belum dipotong
+      const isWashOrBeyondStatus =
+        status === 'WASHING_DRYING' ||
+        status === 'IRONING_PACKING' ||
+        status === 'READY_FOR_PICKUP' ||
+        status === 'COMPLETED';
+
+      if (isWashOrBeyondStatus && !detail.isBomDeducted) {
+        await deductLaundryOrderBom(tx, detail, tenantId, userId);
+      }
+
       return resDetail;
     });
 
@@ -1699,6 +1926,186 @@ export const LAUNDRY_11_STAGES = [
 ] as const;
 
 /**
+ * Helper: Pemotongan Stok Bahan Cuci Otomatis (Auto-BoM Deduction)
+ * Dijalankan saat cucian masuk ke proses cuci (WASHING / CUCI / WASHING_DRYING atau tahapan sesudahnya)
+ * Idempotent: hanya dieksekusi 1x (is_bom_deducted: false -> true)
+ */
+export async function deductLaundryOrderBom(
+  tx: Prisma.TransactionClient,
+  detail: any,
+  tenantId: string,
+  userId?: string | null
+) {
+  if (detail.isBomDeducted) {
+    return { deducted: false, reason: 'ALREADY_DEDUCTED' };
+  }
+
+  // 1. Ambil order dengan relasi items jika belum ada
+  let orderItems = detail.order?.items;
+  let invoiceNumber = detail.order?.invoiceNumber;
+  if (!orderItems || orderItems.length === 0) {
+    const fullOrder = await tx.order.findUnique({
+      where: { id: detail.orderId },
+      include: { items: true },
+    });
+    orderItems = fullOrder?.items || [];
+    invoiceNumber = fullOrder?.invoiceNumber;
+  }
+
+  if (orderItems.length === 0) {
+    await tx.laundryOrderDetail.update({
+      where: { id: detail.id },
+      data: { isBomDeducted: true, bomDeductedAt: new Date() },
+    });
+    return { deducted: false, reason: 'NO_ITEMS' };
+  }
+
+  // 2. Cari semua layanan laundry yang cocok dengan nama item di order
+  const itemNames = orderItems.map((i: any) => i.productName);
+  const matchedServices = await tx.laundryService.findMany({
+    where: {
+      tenantId,
+      name: { in: itemNames },
+    },
+    include: {
+      bomItems: {
+        include: {
+          inventoryItem: true,
+        },
+      },
+    },
+  });
+
+  if (matchedServices.length === 0) {
+    await tx.laundryOrderDetail.update({
+      where: { id: detail.id },
+      data: { isBomDeducted: true, bomDeductedAt: new Date() },
+    });
+    return { deducted: false, reason: 'NO_MATCHED_SERVICES' };
+  }
+
+  // 3. Resolusi lokasi penyimpanan (default storage location outlet)
+  let storageLoc = await tx.storageLocation.findFirst({
+    where: { tenantId, outletId: detail.outletId, isActive: true },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+  });
+
+  if (!storageLoc) {
+    storageLoc = await tx.storageLocation.create({
+      data: {
+        tenantId,
+        outletId: detail.outletId,
+        name: 'Gudang Utama & Dapur',
+        isDefault: true,
+      },
+    });
+  }
+
+  // 4. Hitung total konsumsi per inventoryItem
+  const consumptionMap = new Map<string, { qty: number; avgCost: number; itemName: string; uom: string; serviceNames: string[] }>();
+
+  for (const service of matchedServices) {
+    if (!service.bomItems || service.bomItems.length === 0) continue;
+
+    const matchingOrderItems = orderItems.filter((i: any) => i.productName === service.name);
+    const orderItemQty = matchingOrderItems.reduce((acc: number, cur: any) => acc + Number(cur.quantity || 1), 0);
+    const effectiveUnits = (service.unit === 'KG' && detail.totalWeightKg && Number(detail.totalWeightKg) > 0)
+      ? Number(detail.totalWeightKg)
+      : Math.max(1, orderItemQty);
+
+    for (const bom of service.bomItems) {
+      const perUnitQty = Number(bom.quantityPerUnit);
+      let consumedQty = 0;
+      if (bom.consumptionBasis === 'PER_ORDER') {
+        consumedQty = perUnitQty; // Flat 1x per nota
+      } else {
+        consumedQty = perUnitQty * effectiveUnits;
+      }
+
+      const existing = consumptionMap.get(bom.inventoryItemId);
+      if (existing) {
+        if (bom.consumptionBasis !== 'PER_ORDER') {
+          existing.qty += consumedQty;
+        }
+        if (!existing.serviceNames.includes(service.name)) {
+          existing.serviceNames.push(service.name);
+        }
+      } else {
+        consumptionMap.set(bom.inventoryItemId, {
+          qty: consumedQty,
+          avgCost: Number(bom.inventoryItem.averageCost || 0),
+          itemName: bom.inventoryItem.name,
+          uom: bom.inventoryItem.canonicalUom,
+          serviceNames: [service.name],
+        });
+      }
+    }
+  }
+
+  // 5. Potong stok dan buat ledger
+  for (const [inventoryItemId, data] of consumptionMap.entries()) {
+    if (data.qty <= 0) continue;
+
+    let bal = await tx.inventoryBalance.findFirst({
+      where: {
+        tenantId,
+        storageLocationId: storageLoc.id,
+        inventoryItemId,
+      },
+    });
+
+    const balanceBefore = Number(bal?.quantityOnHand || 0);
+    const balanceAfter = balanceBefore - data.qty;
+
+    if (bal) {
+      await tx.inventoryBalance.update({
+        where: { id: bal.id },
+        data: { quantityOnHand: balanceAfter },
+      });
+    } else {
+      await tx.inventoryBalance.create({
+        data: {
+          tenantId,
+          storageLocationId: storageLoc.id,
+          inventoryItemId,
+          quantityOnHand: balanceAfter,
+          quantityReserved: 0,
+        },
+      });
+    }
+
+    await tx.inventoryLedger.create({
+      data: {
+        tenantId,
+        storageLocationId: storageLoc.id,
+        inventoryItemId,
+        quantityDelta: -data.qty,
+        balanceBefore,
+        balanceAfter,
+        unitCost: data.avgCost,
+        movementType: 'PRODUCTION_CONSUMPTION',
+        referenceType: 'ORDER',
+        referenceId: detail.orderId,
+        actorType: userId ? 'USER' : 'SYSTEM',
+        actorUserId: userId || null,
+        notes: `Auto-BoM Bahan Cuci (${data.qty} ${data.uom}) Nota #${invoiceNumber || detail.orderId} [${data.serviceNames.join(', ')}]`,
+      },
+    });
+  }
+
+  // 6. Tandai detail bahwa BoM sudah dipotong
+  await tx.laundryOrderDetail.update({
+    where: { id: detail.id },
+    data: {
+      isBomDeducted: true,
+      bomDeductedAt: new Date(),
+    },
+  });
+
+  return { deducted: true, itemsCount: consumptionMap.size };
+}
+
+/**
  * Memajukan pengerjaan cucian ke tahapan berikutnya dari alur produksi riil (mendukung tahapan kustom toko)
  */
 export const advanceLaundryStage = async (req: Request, res: Response) => {
@@ -1877,6 +2284,19 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
           where: { id: detail.id },
           data: { rackCode: null },
         });
+      }
+
+      // 4. Auto-BoM Deduction jika cucian masuk tahap cuci (atau lebih lanjut) dan belum dipotong
+      const isWashOrBeyond =
+        nextStage === 'WASHING' ||
+        nextStage === 'CUCI' ||
+        stageConfig.macroStatus === 'WASHING_DRYING' ||
+        stageConfig.macroStatus === 'IRONING_PACKING' ||
+        stageConfig.macroStatus === 'READY_FOR_PICKUP' ||
+        stageConfig.macroStatus === 'COMPLETED';
+
+      if (isWashOrBeyond && !detail.isBomDeducted) {
+        await deductLaundryOrderBom(tx, detail, tenantId, effectiveOperatorId || userId);
       }
 
       return { updatedDetail, stageLog };

@@ -10,12 +10,13 @@ const stockChangeSchema = z
   .object({
     productId: z.string().uuid('ID Produk tidak valid').optional(),
     inventoryItemId: z.string().uuid('ID Bahan Baku tidak valid').optional(),
-    quantity: z.number().int().positive('Jumlah harus berupa angka bulat positif'),
+    quantity: z.number().positive('Jumlah harus berupa angka positif'),
     notes: z.string().optional(),
     outletId: z.string().uuid().optional(),
     poNumber: z.string().optional(),
     supplierName: z.string().optional(),
     newCostPrice: z.number().min(0).optional(),
+    usePurchaseUom: z.boolean().optional(),
   })
   .refine((data) => data.productId || data.inventoryItemId, {
     message: 'Wajib menyertakan productId atau inventoryItemId',
@@ -56,6 +57,7 @@ const bulkStockInItemSchema = z
     inventoryItemId: z.string().uuid('ID Bahan Baku tidak valid').optional(),
     quantity: z.number().positive('Jumlah masuk harus berupa angka positif'),
     newCostPrice: z.number().min(0).optional(),
+    usePurchaseUom: z.boolean().optional(),
     notes: z.string().optional(),
   })
   .refine((data) => data.productId || data.inventoryItemId, {
@@ -138,7 +140,7 @@ export const recordStockIn = async (req: Request, res: Response) => {
       });
     }
 
-    const { productId, inventoryItemId, quantity, notes, outletId, poNumber, supplierName, newCostPrice } = parseResult.data;
+    const { productId, inventoryItemId, quantity, notes, outletId, poNumber, supplierName, newCostPrice, usePurchaseUom } = parseResult.data;
 
     let tenantId = req.user?.tenantId || req.tenantId;
     let targetOutletId = outletId || req.user?.outletId;
@@ -213,8 +215,15 @@ export const recordStockIn = async (req: Request, res: Response) => {
           },
         });
 
+        const factor = Number(invItem.purchaseConversionFactor || 1);
+        const isConvert = !!usePurchaseUom && factor > 1;
+        const effectiveQty = isConvert ? quantity * factor : quantity;
+        const effectiveCostPrice = (newCostPrice !== undefined && newCostPrice > 0)
+          ? (isConvert ? newCostPrice / factor : newCostPrice)
+          : undefined;
+
         const balanceBefore = Number(bal?.quantityOnHand || 0);
-        const balanceAfter = balanceBefore + quantity;
+        const balanceAfter = balanceBefore + effectiveQty;
 
         if (bal) {
           await tx.inventoryBalance.update({
@@ -233,28 +242,33 @@ export const recordStockIn = async (req: Request, res: Response) => {
           });
         }
 
-        if (newCostPrice !== undefined && newCostPrice > 0) {
+        if (effectiveCostPrice !== undefined) {
           await tx.inventoryItem.update({
             where: { id: invItem.id },
-            data: { averageCost: newCostPrice },
+            data: { averageCost: effectiveCostPrice },
           });
         }
+
+        const conversionNote = isConvert
+          ? ` (Input: ${quantity} ${invItem.purchaseUom || 'Satuan Beli'} = ${effectiveQty.toLocaleString('id-ID')} ${invItem.canonicalUom})`
+          : '';
+        const ledgerNotes = `${finalNotes}${conversionNote}`;
 
         const ledger = await tx.inventoryLedger.create({
           data: {
             tenantId: tenantId!,
             storageLocationId: storageLoc!.id,
             inventoryItemId: invItem.id,
-            quantityDelta: quantity,
+            quantityDelta: effectiveQty,
             balanceBefore,
             balanceAfter,
-            unitCost: newCostPrice !== undefined ? newCostPrice : invItem.averageCost,
+            unitCost: effectiveCostPrice !== undefined ? effectiveCostPrice : invItem.averageCost,
             movementType: 'PURCHASE',
             referenceType: 'MANUAL',
             referenceId: poNumber || invItem.id,
             actorType: 'USER',
             actorUserId: userId,
-            notes: finalNotes,
+            notes: ledgerNotes,
           },
         });
 
@@ -1354,8 +1368,15 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
             },
           });
 
+          const factor = Number(invItem.purchaseConversionFactor || 1);
+          const isConvert = !!item.usePurchaseUom && factor > 1;
+          const effectiveQty = isConvert ? item.quantity * factor : item.quantity;
+          const effectiveCostPrice = (item.newCostPrice !== undefined && item.newCostPrice > 0)
+            ? (isConvert ? item.newCostPrice / factor : item.newCostPrice)
+            : undefined;
+
           const balanceBefore = Number(bal?.quantityOnHand || 0);
-          const balanceAfter = balanceBefore + item.quantity;
+          const balanceAfter = balanceBefore + effectiveQty;
 
           if (bal) {
             await tx.inventoryBalance.update({
@@ -1374,10 +1395,10 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
             });
           }
 
-          if (item.newCostPrice !== undefined && item.newCostPrice > 0) {
+          if (effectiveCostPrice !== undefined) {
             await tx.inventoryItem.update({
               where: { id: invItem.id },
-              data: { averageCost: item.newCostPrice },
+              data: { averageCost: effectiveCostPrice },
             });
           }
 
@@ -1386,6 +1407,9 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
           if (supplierName) noteParts.push(`Supplier: ${supplierName}`);
           if (item.notes) noteParts.push(item.notes);
           if (generalNotes) noteParts.push(generalNotes);
+          if (isConvert) {
+            noteParts.push(`Input: ${item.quantity} ${invItem.purchaseUom || 'Satuan Beli'} = ${effectiveQty.toLocaleString('id-ID')} ${invItem.canonicalUom}`);
+          }
           const finalNote = noteParts.length > 0 ? noteParts.join(' | ') : 'Penerimaan stok masuk massal';
 
           await tx.inventoryLedger.create({
@@ -1393,10 +1417,10 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
               tenantId: tenantId!,
               storageLocationId: storageLoc!.id,
               inventoryItemId: invItem.id,
-              quantityDelta: item.quantity,
+              quantityDelta: effectiveQty,
               balanceBefore,
               balanceAfter,
-              unitCost: item.newCostPrice !== undefined && item.newCostPrice > 0 ? item.newCostPrice : invItem.averageCost,
+              unitCost: effectiveCostPrice !== undefined ? effectiveCostPrice : invItem.averageCost,
               movementType: 'PURCHASE',
               referenceType: 'MANUAL',
               referenceId: poNumber || batchSessionId,
@@ -1410,7 +1434,7 @@ export const recordBulkStockIn = async (req: Request, res: Response) => {
             id: invItem.id,
             type: 'INGREDIENT',
             name: invItem.name,
-            quantity: item.quantity,
+            quantity: effectiveQty,
             newStock: balanceAfter,
           });
         } else if (item.productId) {

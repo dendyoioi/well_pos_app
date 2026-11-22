@@ -16,6 +16,8 @@ interface StockMovementModalProps {
     itemCode?: string;
     name: string;
     canonicalUom: string;
+    purchaseUom?: string | null;
+    purchaseConversionFactor?: number;
     averageCost?: number;
     stock?: number;
   } | null;
@@ -41,6 +43,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   const [poNumber, setPoNumber] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [newCostPrice, setNewCostPrice] = useState<string>('');
+  const [usePurchaseUom, setUsePurchaseUom] = useState(false);
 
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [targetOutletId, setTargetOutletId] = useState<string>(outletId || '');
@@ -58,6 +61,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     if (defaultIngredient) {
       setActualStock(defaultIngredient.stock || 0);
       setNewCostPrice(String(defaultIngredient.averageCost || ''));
+      setUsePurchaseUom(Number(defaultIngredient.purchaseConversionFactor || 1) > 1);
     } else if (defaultProduct) {
       setSelectedProductId(defaultProduct.id);
       setActualStock(defaultProduct.stock);
@@ -117,6 +121,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             poNumber: poNumber.trim() || undefined,
             supplierName: supplierName.trim() || undefined,
             newCostPrice: newCostPrice ? Number(newCostPrice) : undefined,
+            usePurchaseUom: !!usePurchaseUom,
             outletId: targetOutletId || outletId,
           });
           if (res.status === 'success') {
@@ -405,14 +410,68 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
+              {defaultIngredient && Number(defaultIngredient.purchaseConversionFactor || 1) > 1 && type === 'IN' && (
+                <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-blue-900">
+                      Pilihan Satuan Belanja Supplier:
+                    </span>
+                    <span className="text-[10px] text-blue-700 font-semibold">
+                      1 {defaultIngredient.purchaseUom || 'Satuan Beli'} = {Number(defaultIngredient.purchaseConversionFactor).toLocaleString('id-ID')} {defaultIngredient.canonicalUom}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-white rounded-xl border border-blue-200">
+                    <button
+                      type="button"
+                      onClick={() => setUsePurchaseUom(true)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        usePurchaseUom
+                          ? 'bg-blue-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Satuan Beli ({defaultIngredient.purchaseUom || 'Kemasan'})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUsePurchaseUom(false)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !usePurchaseUom
+                          ? 'bg-blue-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Satuan Dasar ({defaultIngredient.canonicalUom})
+                    </button>
+                  </div>
+                  {usePurchaseUom && (
+                    <div className="text-[11px] font-bold text-blue-900 bg-white p-2 rounded-xl border border-blue-100 flex items-center justify-between">
+                      <span>Stok masuk ke sistem:</span>
+                      <span className="font-mono text-emerald-700 font-black">
+                        +{(Number(quantity || 0) * Number(defaultIngredient.purchaseConversionFactor)).toLocaleString('id-ID')} {defaultIngredient.canonicalUom}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {type === 'IN' ? 'Jumlah Stok Masuk (+)' : 'Jumlah Stok Keluar / Rusak (-)'} *
+                  {type === 'IN'
+                    ? `Jumlah Stok Masuk (${
+                        defaultIngredient
+                          ? usePurchaseUom && Number(defaultIngredient.purchaseConversionFactor || 1) > 1
+                            ? defaultIngredient.purchaseUom || 'Satuan Beli'
+                            : defaultIngredient.canonicalUom
+                          : currentProduct?.unit || 'Satuan'
+                      }) *`
+                    : `Jumlah Stok Keluar / Rusak (${defaultIngredient?.canonicalUom || currentProduct?.unit || 'Satuan'}) *`}
                 </label>
                 <input
                   type="number"
+                  step="any"
                   required
-                  min={1}
+                  min={0.001}
                   max={type === 'OUT' && currentProduct ? currentProduct.stock : undefined}
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}

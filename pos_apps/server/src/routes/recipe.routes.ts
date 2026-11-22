@@ -5,6 +5,7 @@ import {
   getRecipeByVariantId,
   getInventoryItemsForRecipe,
   createInventoryItem,
+  updateInventoryItem,
   upsertRecipe,
   deleteRecipe,
 } from '../controllers/recipe.controller';
@@ -15,6 +16,7 @@ export const recipeRouter = Router();
 recipeRouter.get('/', authenticate, getRecipes);
 recipeRouter.get('/inventory-items', authenticate, getInventoryItemsForRecipe);
 recipeRouter.post('/inventory-items', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), createInventoryItem);
+recipeRouter.put('/inventory-items/:id', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), updateInventoryItem);
 recipeRouter.get('/variant/:variantId', authenticate, getRecipeByVariantId);
 recipeRouter.post('/', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), upsertRecipe);
 recipeRouter.delete('/:id', authenticate, authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.WAREHOUSE), deleteRecipe);

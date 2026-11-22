@@ -5,6 +5,8 @@ import {
   createLaundryService,
   updateLaundryService,
   deleteLaundryService,
+  getLaundryServiceBom,
+  saveLaundryServiceBom,
   getLaundryRacks,
   createLaundryRack,
   getLaundryOrders,
@@ -51,6 +53,8 @@ router.post('/stage-settings/reset', resetLaundryStageSettings);
 // --- Master Layanan & Tarif Laundry ---
 router.get('/services', getLaundryServices);
 router.post('/services', createLaundryService);
+router.get('/services/:id/bom', getLaundryServiceBom);
+router.put('/services/:id/bom', saveLaundryServiceBom);
 router.put('/services/:id', updateLaundryService);
 router.delete('/services/:id', deleteLaundryService);
 

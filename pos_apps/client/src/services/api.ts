@@ -588,6 +588,7 @@ export const api = {
     poNumber?: string;
     supplierName?: string;
     newCostPrice?: number;
+    usePurchaseUom?: boolean;
     outletId?: string;
   }): Promise<any> => {
     const res = await fetch('/api/inventory/stock-in', {
@@ -2259,6 +2260,8 @@ export const api = {
     name: string;
     itemCode?: string;
     canonicalUom: string;
+    purchaseUom?: string | null;
+    purchaseConversionFactor?: number;
     averageCost?: number;
     reorderPoint?: number;
     initialStock?: number;
@@ -2266,6 +2269,26 @@ export const api = {
   }): Promise<{ status: string; data?: RecipeInventoryItem; message?: string }> => {
     const res = await fetch('/api/recipes/inventory-items', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateInventoryItem: async (
+    id: string,
+    data: {
+      name?: string;
+      itemCode?: string;
+      canonicalUom?: string;
+      purchaseUom?: string | null;
+      purchaseConversionFactor?: number;
+      averageCost?: number;
+      reorderPoint?: number;
+    }
+  ): Promise<{ status: string; data?: RecipeInventoryItem; message?: string }> => {
+    const res = await fetch(`/api/recipes/inventory-items/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify(data),
     });
@@ -2584,6 +2607,30 @@ export const api = {
     const res = await fetch(`/api/laundry/services/${id}`, {
       method: 'DELETE',
       headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getLaundryServiceBom: async (serviceId: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/services/${serviceId}/bom`, { headers: authHeader() });
+    return res.json();
+  },
+
+  saveLaundryServiceBom: async (
+    serviceId: string,
+    data: {
+      bomItems: Array<{
+        inventoryItemId: string;
+        quantityPerUnit: number;
+        consumptionBasis: 'PER_UNIT' | 'PER_ORDER';
+        notes?: string;
+      }>;
+    }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/services/${serviceId}/bom`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
     });
     return res.json();
   },

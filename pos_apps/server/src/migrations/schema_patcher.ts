@@ -549,6 +549,30 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "laundry_order_details_tenant_outlet_delivery_idx" ON "laundry_order_details"("tenant_id", "outlet_id", "delivery_type", "delivery_status");
     `,
   },
+  {
+    id: '20261122_02_laundry_uom_conversion_and_bom_system',
+    description: 'Menambahkan purchase_conversion_factor pada inventory_items, is_bom_deducted & bom_deducted_at pada laundry_order_details, dan tabel laundry_service_bom_items',
+    sql: `
+      ALTER TABLE "inventory_items" ADD COLUMN IF NOT EXISTS "purchase_conversion_factor" DECIMAL(12, 4) NOT NULL DEFAULT 1;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "is_bom_deducted" BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "bom_deducted_at" TIMESTAMP(3);
+
+      CREATE TABLE IF NOT EXISTS "laundry_service_bom_items" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "laundry_service_id" TEXT NOT NULL REFERENCES "laundry_services"("id") ON DELETE CASCADE,
+        "inventory_item_id" TEXT NOT NULL REFERENCES "inventory_items"("id") ON DELETE RESTRICT,
+        "quantity_per_unit" DECIMAL(12, 3) NOT NULL,
+        "consumption_basis" VARCHAR(20) NOT NULL DEFAULT 'PER_UNIT',
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_service_bom_items_service_item_idx" ON "laundry_service_bom_items"("laundry_service_id", "inventory_item_id");
+      CREATE INDEX IF NOT EXISTS "laundry_service_bom_items_tenant_service_idx" ON "laundry_service_bom_items"("tenant_id", "laundry_service_id");
+    `,
+  },
 ];
 
 /**

@@ -3,6 +3,8 @@ export interface RecipeInventoryItem {
   itemCode?: string;
   name: string;
   canonicalUom: string;
+  purchaseUom?: string | null;
+  purchaseConversionFactor?: number;
   averageCost?: number;
   stock?: number;
   warehouseStock?: number;

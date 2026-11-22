@@ -262,17 +262,21 @@ export class PurchasingService {
           },
         });
 
+        const factor = Number(invItem.purchaseConversionFactor || 1);
+        const receivedQty = Number(receivedItem.quantityReceived);
+        const receivedQtyInBase = factor > 1 ? receivedQty * factor : receivedQty;
+        const effectiveUnitCostInBase = factor > 1 ? effectiveUnitCost / factor : effectiveUnitCost;
+
         const currentTotalStock = Number(totalOnHandAgg._sum.quantityOnHand || 0);
         const currentAvgCost = Number(invItem.averageCost || 0);
-        const receivedQty = Number(receivedItem.quantityReceived);
 
-        // Moving Average Cost Formula:
-        // newAvgCost = ( (currentTotalStock * currentAvgCost) + (receivedQty * effectiveUnitCost) ) / (currentTotalStock + receivedQty)
-        let newAvgCost = effectiveUnitCost;
-        if (currentTotalStock + receivedQty > 0) {
+        // Moving Average Cost Formula (dalam Base / Canonical Unit):
+        // newAvgCost = ( (currentTotalStock * currentAvgCost) + (receivedQtyInBase * effectiveUnitCostInBase) ) / (currentTotalStock + receivedQtyInBase)
+        let newAvgCost = effectiveUnitCostInBase;
+        if (currentTotalStock + receivedQtyInBase > 0) {
           const totalValueBefore = Math.max(0, currentTotalStock) * currentAvgCost;
-          const incomingValue = receivedQty * effectiveUnitCost;
-          newAvgCost = (totalValueBefore + incomingValue) / (Math.max(0, currentTotalStock) + receivedQty);
+          const incomingValue = receivedQtyInBase * effectiveUnitCostInBase;
+          newAvgCost = (totalValueBefore + incomingValue) / (Math.max(0, currentTotalStock) + receivedQtyInBase);
         }
 
         // Update Moving Average Cost on inventory_items
@@ -342,7 +346,7 @@ export class PurchasingService {
         );
 
         const balanceBefore = Number(lockedBalance[0]?.quantity_on_hand || balance.quantityOnHand);
-        const balanceAfter = balanceBefore + receivedQty;
+        const balanceAfter = balanceBefore + receivedQtyInBase;
 
         await tx.inventoryBalance.update({
           where: { id: balance.id },
@@ -353,23 +357,28 @@ export class PurchasingService {
         });
 
         // 5. Append immutable audit ledger
+        const uomNote = factor > 1
+          ? ` (Input: ${receivedQty} ${invItem.purchaseUom || 'Satuan Beli'} = ${receivedQtyInBase.toLocaleString('id-ID')} ${invItem.canonicalUom})`
+          : '';
+        const ledgerNotes = `Penerimaan Barang PO: ${po.poNumber}${batchId ? ` [Batch: ${receivedItem.batchNumber}]` : ''}${uomNote}`;
+
         await tx.inventoryLedger.create({
           data: {
             tenantId: input.tenantId,
             inventoryItemId: invItem.id,
             storageLocationId: po.storageLocationId,
             inventoryBatchId: batchId,
-            quantityDelta: receivedQty,
+            quantityDelta: receivedQtyInBase,
             balanceBefore,
             balanceAfter,
-            unitCost: effectiveUnitCost,
+            unitCost: effectiveUnitCostInBase,
             movementType: 'PURCHASE',
             referenceType: 'PURCHASE_ORDER',
             referenceId: po.id,
             actorType: input.actorUserId ? 'USER' : 'SYSTEM',
             actorUserId: input.actorUserId || null,
             isNegativeBalance: balanceAfter < 0,
-            notes: `Penerimaan Barang PO: ${po.poNumber}${batchId ? ` [Batch: ${receivedItem.batchNumber}]` : ''}`,
+            notes: ledgerNotes,
           },
         });
 

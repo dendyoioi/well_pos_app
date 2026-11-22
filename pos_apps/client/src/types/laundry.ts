@@ -88,6 +88,8 @@ export interface LaundryService {
   expressMultiplier: number;
   description?: string | null;
   stages?: string[];
+  bomItemsCount?: number;
+  estimatedBomCost?: number;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

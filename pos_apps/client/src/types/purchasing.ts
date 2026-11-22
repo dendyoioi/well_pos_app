@@ -18,6 +18,8 @@ export interface PurchaseOrderItem {
     name: string;
     itemCode?: string;
     canonicalUom?: string;
+    purchaseUom?: string | null;
+    purchaseConversionFactor?: number;
   };
 }
 
@@ -103,6 +105,8 @@ export interface StockTransferItem {
     name: string;
     itemCode?: string;
     canonicalUom?: string;
+    purchaseUom?: string | null;
+    purchaseConversionFactor?: number;
   };
   inventoryBatch?: {
     id: string;

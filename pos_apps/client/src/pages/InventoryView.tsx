@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Barcode,
   Sparkles,
+  Pencil,
 } from 'lucide-react';
 import type { Product, StockMovement, Category } from '../types/product';
 import type { Outlet } from '../types/outlet';
@@ -63,6 +64,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [ingredientStatusFilter, setIngredientStatusFilter] = useState<'ALL' | 'CRITICAL' | 'SAFE' | 'OUT'>('ALL');
   const [ingredientScope, setIngredientScope] = useState<'outlet' | 'all'>('outlet');
   const [createIngredientModalOpen, setCreateIngredientModalOpen] = useState(false);
+  const [editingIngredient, setEditingIngredient] = useState<RecipeInventoryItem | null>(null);
   const [selectedIngredient, setSelectedIngredient] = useState<RecipeInventoryItem | null>(null);
 
   // Pagination State for Raw Materials (Bahan Baku Mentah F&B)
@@ -791,13 +793,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               <span className="font-extrabold text-slate-900 text-xs sm:text-sm block">
                                 {ing.name}
                               </span>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                                   {ing.itemCode || 'RAW'}
                                 </span>
                                 <span className="text-[11px] font-extrabold text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                                   {ing.canonicalUom}
                                 </span>
+                                {ing.purchaseConversionFactor && Number(ing.purchaseConversionFactor) > 1 && (
+                                  <span className="text-[10px] font-bold text-indigo-800 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                                    1 {ing.purchaseUom || 'Kemasan'} = {Number(ing.purchaseConversionFactor).toLocaleString('id-ID')} {ing.canonicalUom}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -824,6 +831,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                                 </span>
                               )}
                             </div>
+                            {ing.purchaseConversionFactor && Number(ing.purchaseConversionFactor) > 1 && (
+                              <div className="text-[11px] font-bold text-blue-900 font-mono mt-0.5 pl-4">
+                                ≈ {(stockVal / Number(ing.purchaseConversionFactor)).toFixed(2)} {ing.purchaseUom || 'Satuan Beli'}
+                              </div>
+                            )}
                           </td>
 
                           {/* Gudang Pasokan */}
@@ -867,6 +879,26 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                           {/* Aksi Cepat */}
                           <td className="px-5 py-3.5 text-right whitespace-nowrap">
                             <div className="inline-flex items-center p-1 bg-slate-100/80 border border-slate-200/80 rounded-xl gap-1 justify-end">
+                              {/* Edit Master Bahan & Konversi UoM */}
+                              <div className="relative group flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingIngredient(ing);
+                                    setCreateIngredientModalOpen(true);
+                                  }}
+                                  className="p-1.5 rounded-lg text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-all cursor-pointer"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                                  <span className="px-2 py-1 rounded bg-slate-900 text-[10px] font-bold text-white whitespace-nowrap shadow-xl border border-slate-700">
+                                    Edit Master &amp; Konversi
+                                  </span>
+                                  <div className="w-1.5 h-1 border-solid border-t-slate-900 border-t-4 border-x-transparent border-x-4 border-b-0" />
+                                </div>
+                              </div>
+
                               {/* Stok Masuk */}
                               <div className="relative group flex items-center">
                                 <button
@@ -1767,7 +1799,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* ========================================================================= */}
       <CreateIngredientModal
         isOpen={createIngredientModalOpen}
-        onClose={() => setCreateIngredientModalOpen(false)}
+        onClose={() => {
+          setCreateIngredientModalOpen(false);
+          setEditingIngredient(null);
+        }}
+        initialData={editingIngredient}
         outletId={activeOutlet?.id}
         isLaundryMode={isLaundryMode}
         onSuccess={() => {

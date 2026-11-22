@@ -348,6 +348,8 @@ export const getInventoryItemsForRecipe = async (req: Request, res: Response) =>
         itemCode: true,
         name: true,
         canonicalUom: true,
+        purchaseUom: true,
+        purchaseConversionFactor: true,
         averageCost: true,
         reorderPoint: true,
       },
@@ -477,6 +479,8 @@ export const getInventoryItemsForRecipe = async (req: Request, res: Response) =>
         itemCode: it.itemCode,
         name: it.name,
         canonicalUom: it.canonicalUom,
+        purchaseUom: it.purchaseUom,
+        purchaseConversionFactor: Number(it.purchaseConversionFactor || 1),
         averageCost: Number(it.averageCost || 0),
         reorderPoint: Number((it as any).reorderPoint || 0),
         stock: balancesMap.get(it.id) ?? 0,
@@ -501,10 +505,22 @@ const createInventoryItemSchema = z.object({
   name: z.string().min(2, 'Nama bahan baku minimal 2 karakter'),
   itemCode: z.string().optional(),
   canonicalUom: z.string().min(1, 'Satuan ukur wajib diisi'),
+  purchaseUom: z.string().optional().nullable(),
+  purchaseConversionFactor: z.number().min(0.0001, 'Faktor konversi minimal 0.0001').default(1),
   averageCost: z.number().min(0).default(0),
   reorderPoint: z.number().min(0).default(0),
   initialStock: z.number().min(0).default(0),
   outletId: z.string().uuid().optional(),
+});
+
+const updateInventoryItemSchema = z.object({
+  name: z.string().min(2, 'Nama bahan baku minimal 2 karakter').optional(),
+  itemCode: z.string().optional(),
+  canonicalUom: z.string().min(1).optional(),
+  purchaseUom: z.string().optional().nullable(),
+  purchaseConversionFactor: z.number().min(0.0001).optional(),
+  averageCost: z.number().min(0).optional(),
+  reorderPoint: z.number().min(0).optional(),
 });
 
 /**
@@ -529,7 +545,7 @@ export const createInventoryItem = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, canonicalUom, averageCost, reorderPoint, initialStock, outletId } = parseResult.data;
+    const { name, canonicalUom, purchaseUom, purchaseConversionFactor, averageCost, reorderPoint, initialStock, outletId } = parseResult.data;
 
     let itemCode = parseResult.data.itemCode?.trim();
     if (!itemCode) {
@@ -542,7 +558,9 @@ export const createInventoryItem = async (req: Request, res: Response) => {
         tenantId,
         itemCode,
         name,
-        canonicalUom: canonicalUom.toUpperCase(),
+        canonicalUom: canonicalUom.toUpperCase().trim(),
+        purchaseUom: purchaseUom ? purchaseUom.toUpperCase().trim() : null,
+        purchaseConversionFactor: purchaseConversionFactor || 1,
         averageCost,
         reorderPoint,
         isActive: true,
@@ -602,6 +620,8 @@ export const createInventoryItem = async (req: Request, res: Response) => {
         itemCode: newItem.itemCode,
         name: newItem.name,
         canonicalUom: newItem.canonicalUom,
+        purchaseUom: newItem.purchaseUom,
+        purchaseConversionFactor: Number(newItem.purchaseConversionFactor),
         averageCost: Number(newItem.averageCost),
         reorderPoint: Number(newItem.reorderPoint),
         stock: initialStock,
@@ -611,5 +631,73 @@ export const createInventoryItem = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error saat membuat master bahan baku:', error);
     return res.status(500).json({ status: 'error', message: error.message || 'Gagal mendaftarkan bahan baku' });
+  }
+};
+
+/**
+ * Memperbarui master bahan baku
+ * @route PUT /api/recipes/inventory-items/:id
+ */
+export const updateInventoryItem = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = user?.tenantId;
+    const { id } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Konteks tenant tidak ditemukan' });
+    }
+
+    const parseResult = updateInventoryItemSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi input gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const existing = await prisma.inventoryItem.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Bahan baku tidak ditemukan' });
+    }
+
+    const updateData: any = {};
+    if (parseResult.data.name !== undefined) updateData.name = parseResult.data.name.trim();
+    if (parseResult.data.itemCode !== undefined) updateData.itemCode = parseResult.data.itemCode.trim();
+    if (parseResult.data.canonicalUom !== undefined) updateData.canonicalUom = parseResult.data.canonicalUom.toUpperCase().trim();
+    if (parseResult.data.purchaseUom !== undefined) {
+      updateData.purchaseUom = parseResult.data.purchaseUom ? parseResult.data.purchaseUom.toUpperCase().trim() : null;
+    }
+    if (parseResult.data.purchaseConversionFactor !== undefined) {
+      updateData.purchaseConversionFactor = parseResult.data.purchaseConversionFactor;
+    }
+    if (parseResult.data.averageCost !== undefined) updateData.averageCost = parseResult.data.averageCost;
+    if (parseResult.data.reorderPoint !== undefined) updateData.reorderPoint = parseResult.data.reorderPoint;
+
+    const updated = await prisma.inventoryItem.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        id: updated.id,
+        itemCode: updated.itemCode,
+        name: updated.name,
+        canonicalUom: updated.canonicalUom,
+        purchaseUom: updated.purchaseUom,
+        purchaseConversionFactor: Number(updated.purchaseConversionFactor),
+        averageCost: Number(updated.averageCost),
+        reorderPoint: Number(updated.reorderPoint),
+      },
+      message: 'Bahan baku berhasil diperbarui',
+    });
+  } catch (error: any) {
+    console.error('Error saat memperbarui bahan baku:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal memperbarui bahan baku' });
   }
 };

@@ -84,6 +84,9 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       purchaseOrderItemId: string;
       itemName: string;
       uom: string;
+      canonicalUom?: string;
+      purchaseUom?: string | null;
+      purchaseConversionFactor?: number;
       ordered: number;
       alreadyReceived: number;
       remaining: number;
@@ -375,10 +378,16 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       const ordered = item.quantityOrdered;
       const alreadyReceived = item.quantityReceived;
       const remaining = Math.max(0, ordered - alreadyReceived);
+      const inv = item.inventoryItem;
+      const factor = Number(inv?.purchaseConversionFactor || 1);
+      const purchaseUom = factor > 1 && inv?.purchaseUom ? inv.purchaseUom : null;
       return {
         purchaseOrderItemId: item.id,
-        itemName: item.inventoryItem?.name || 'Bahan Baku',
-        uom: item.inventoryItem?.canonicalUom || 'Satuan',
+        itemName: inv?.name || 'Bahan Baku',
+        uom: purchaseUom || inv?.canonicalUom || 'Satuan',
+        canonicalUom: inv?.canonicalUom || 'Satuan',
+        purchaseUom,
+        purchaseConversionFactor: factor,
         ordered,
         alreadyReceived,
         remaining,
@@ -922,11 +931,17 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                                 onChange={(e) => handleUpdateItemField(idx, 'inventoryItemId', e.target.value)}
                                 className="w-full h-10 pl-3 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 appearance-none cursor-pointer"
                               >
-                                {inventoryItems.map((it) => (
-                                  <option key={it.id} value={it.id}>
-                                    {it.name} ({it.canonicalUom})
-                                  </option>
-                                ))}
+                                {inventoryItems.map((it) => {
+                                  const factor = Number(it.purchaseConversionFactor || 1);
+                                  const uomLabel = factor > 1 && it.purchaseUom
+                                    ? `1 ${it.purchaseUom} = ${factor.toLocaleString('id-ID')} ${it.canonicalUom}`
+                                    : it.canonicalUom;
+                                  return (
+                                    <option key={it.id} value={it.id}>
+                                      {it.name} ({uomLabel})
+                                    </option>
+                                  );
+                                })}
                               </select>
                               <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
@@ -934,7 +949,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
 
                           <div className="sm:col-span-2">
                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                              Kuantitas ({selectedItem?.canonicalUom || 'Satuan'})
+                              Kuantitas ({Number(selectedItem?.purchaseConversionFactor || 1) > 1 && selectedItem?.purchaseUom ? selectedItem.purchaseUom : (selectedItem?.canonicalUom || 'Satuan')})
                             </label>
                             <input
                               type="number"
@@ -1122,7 +1137,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                             </span>
                           </td>
                           <td className="py-3 px-3 text-right font-bold text-slate-800">
-                            {item.quantityOrdered} {item.inventoryItem?.canonicalUom || ''}
+                            <div>
+                              {item.quantityOrdered} {Number(item.inventoryItem?.purchaseConversionFactor || 1) > 1 && item.inventoryItem?.purchaseUom ? item.inventoryItem.purchaseUom : (item.inventoryItem?.canonicalUom || '')}
+                            </div>
+                            {Number(item.inventoryItem?.purchaseConversionFactor || 1) > 1 && (
+                              <span className="text-[10px] text-slate-400 font-mono block">
+                                ({(Number(item.quantityOrdered) * Number(item.inventoryItem?.purchaseConversionFactor)).toLocaleString('id-ID')} {item.inventoryItem?.canonicalUom})
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-3 text-right">
                             <span
@@ -1134,8 +1156,13 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                                   : 'text-slate-400'
                               }`}
                             >
-                              {item.quantityReceived} {item.inventoryItem?.canonicalUom || ''}
+                              {item.quantityReceived} {Number(item.inventoryItem?.purchaseConversionFactor || 1) > 1 && item.inventoryItem?.purchaseUom ? item.inventoryItem.purchaseUom : (item.inventoryItem?.canonicalUom || '')}
                             </span>
+                            {Number(item.inventoryItem?.purchaseConversionFactor || 1) > 1 && Number(item.quantityReceived) > 0 && (
+                              <span className="text-[10px] text-emerald-600 font-mono block">
+                                ({(Number(item.quantityReceived) * Number(item.inventoryItem?.purchaseConversionFactor)).toLocaleString('id-ID')} {item.inventoryItem?.canonicalUom})
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-3 text-right text-slate-600">
                             {formatRupiah(item.unitCost)}
@@ -1263,6 +1290,11 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                           | Sisa Belum Tiba:{' '}
                           <span className="font-bold text-amber-700">{item.remaining} {item.uom}</span>
                         </div>
+                        {item.purchaseConversionFactor && item.purchaseConversionFactor > 1 && (
+                          <div className="text-[11px] font-bold text-blue-900 mt-1.5 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 inline-block">
+                            💡 Konversi Otomatis Gudang: 1 {item.uom} = {item.purchaseConversionFactor.toLocaleString('id-ID')} {item.canonicalUom} (Masuk Stok: +{(Number(item.quantityReceived || 0) * item.purchaseConversionFactor).toLocaleString('id-ID')} {item.canonicalUom})
+                          </div>
+                        )}
                       </div>
                     </div>
 

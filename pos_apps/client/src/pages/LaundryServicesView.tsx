@@ -17,6 +17,7 @@ import {
     AlertCircle,
     Tag,
     Sliders,
+    FlaskConical,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -24,6 +25,7 @@ import type { LaundryService, ProductionStageDefinition } from '../types/laundry
 import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 import { TablePagination } from '../components/TablePagination';
 import { LaundryStageSettingsModal } from '../components/LaundryStageSettingsModal';
+import { LaundryServiceBomModal } from '../components/laundry/LaundryServiceBomModal';
 
 interface LaundryServicesViewProps {
     activeOutlet: Outlet | null;
@@ -229,6 +231,15 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     // Modal Setting Tahapan Toko
     const [showStageSettingsModal, setShowStageSettingsModal] = useState(false);
     const [storeStages, setStoreStages] = useState<ProductionStageDefinition[]>(DEFAULT_PRODUCTION_STAGES);
+
+    // Modal BoM (Takaran Bahan Cuci)
+    const [selectedBomService, setSelectedBomService] = useState<LaundryService | null>(null);
+    const [showBomModal, setShowBomModal] = useState(false);
+
+    const handleOpenBomModal = (service: LaundryService) => {
+        setSelectedBomService(service);
+        setShowBomModal(true);
+    };
 
     // Toast feedback
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -819,6 +830,30 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                                         </span>
                                                     </div>
                                                 )}
+
+                                                {/* Badge & Tombol Takaran Bahan (BoM) */}
+                                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <FlaskConical className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+                                                        {service.bomItemsCount && service.bomItemsCount > 0 ? (
+                                                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 truncate">
+                                                                {service.bomItemsCount} Bahan (HPP: Rp {service.estimatedBomCost?.toLocaleString('id-ID')})
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+                                                                Belum Ada BoM
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenBomModal(service)}
+                                                        className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                                                        title="Atur takaran bahan cuci otomatis (BoM)"
+                                                    >
+                                                        <span>Takaran BoM</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -1502,6 +1537,21 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 onSaved={(updatedStages) => {
                     setStoreStages(updatedStages);
                     showToast('Pengaturan tahapan produksi toko berhasil diperbarui!');
+                }}
+            />
+
+            {/* Modal Takaran Bahan Cuci Otomatis (BoM) */}
+            <LaundryServiceBomModal
+                isOpen={showBomModal}
+                onClose={() => {
+                    setShowBomModal(false);
+                    setSelectedBomService(null);
+                }}
+                service={selectedBomService}
+                outletId={activeOutlet?.id}
+                onSuccess={() => {
+                    fetchServices();
+                    showToast('Takaran bahan cuci (BoM) berhasil disimpan!');
                 }}
             />
 

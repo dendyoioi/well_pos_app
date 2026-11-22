@@ -99,6 +99,7 @@ model Tenant {
   laundryStageLogs      LaundryStageLog[]
   customerLaundryWallets CustomerLaundryWallet[]
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
+  laundryServiceBomItems LaundryServiceBomItem[]
 
   @@map("tenants")
 }
@@ -581,9 +582,10 @@ model InventoryItem {
   itemCode           String   @map("item_code")
   name               String
   description        String?
-  canonicalUom       String   @map("canonical_uom") // KG, GRAM, LITER, ML, PCS
-  purchaseUom        String?  @map("purchase_uom") // CARTON, SACK, CAN
-  reorderPoint       Decimal  @default(0) @map("reorder_point") @db.Decimal(12, 3)
+  canonicalUom             String   @map("canonical_uom") // KG, GRAM, LITER, ML, PCS
+  purchaseUom              String?  @map("purchase_uom") // CARTON, SACK, CAN, JERIGEN, BOTOL, PACK
+  purchaseConversionFactor Decimal  @default(1) @map("purchase_conversion_factor") @db.Decimal(12, 4)
+  reorderPoint             Decimal  @default(0) @map("reorder_point") @db.Decimal(12, 3)
   targetLevel        Decimal  @default(0) @map("target_level") @db.Decimal(12, 3)
   averageCost        Decimal  @default(0) @map("average_cost") @db.Decimal(15, 4)
   allowNegativeStock Boolean? @map("allow_negative_stock") // Nullable override
@@ -601,6 +603,7 @@ model InventoryItem {
   modifierRecipeEffects ModifierRecipeEffect[]
   purchaseOrderItems    PurchaseOrderItem[]
   stockTransferItems    StockTransferItem[]
+  laundryBomItems       LaundryServiceBomItem[]
 
   @@unique([tenantId, itemCode])
   @@index([tenantId, isActive])
@@ -1525,6 +1528,7 @@ model LaundryService {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  bomItems LaundryServiceBomItem[]
 
   @@index([tenantId, category, isActive])
   @@map("laundry_services")
@@ -1587,6 +1591,8 @@ model LaundryOrderDetail {
   courierPhone          String?   @map("courier_phone")
   deliveredAt           DateTime? @map("delivered_at")
   deliveryProofPhotoUrl String?   @map("delivery_proof_photo_url")
+  isBomDeducted         Boolean   @default(false) @map("is_bom_deducted")
+  bomDeductedAt         DateTime? @map("bom_deducted_at")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -1728,6 +1734,26 @@ model CustomerLaundryWalletLedger {
   @@index([tenantId, shiftId])
   @@index([tenantId, createdAt])
   @@map("customer_laundry_wallet_ledgers")
+}
+
+model LaundryServiceBomItem {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  laundryServiceId String   @map("laundry_service_id")
+  inventoryItemId  String   @map("inventory_item_id")
+  quantityPerUnit  Decimal  @map("quantity_per_unit") @db.Decimal(12, 3) // Base Unit: ML, GRAM, PCS
+  consumptionBasis String   @default("PER_UNIT") @map("consumption_basis") // 'PER_UNIT' | 'PER_ORDER'
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  laundryService LaundryService @relation(fields: [laundryServiceId], references: [id], onDelete: Cascade)
+  inventoryItem  InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@unique([laundryServiceId, inventoryItemId])
+  @@index([tenantId, laundryServiceId])
+  @@map("laundry_service_bom_items")
 }
 
 model SchemaPatch {
