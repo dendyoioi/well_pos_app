@@ -33,6 +33,10 @@ const DEFAULT_UNITS = [
   'Pcs', 'Cup', 'Botol', 'Porsi', 'Box', 'Kg', 'Gram', 'Liter', 'Sachet', 'Paket', 'Mangkok', 'Piring', 'Gelas', 'Bungkus', 'Loyang', 'Potong', 'Set',
 ];
 
+const LAUNDRY_UNITS = [
+  'Pcs', 'Botol', 'Pack', 'Liter', 'Ml', 'Kg', 'Gram', 'Sachet', 'Set', 'Box', 'Roll', 'Lembar',
+];
+
 type ModalTab = 'info' | 'photo' | 'bundling' | 'fnb';
 
 export const ProductModal: React.FC<ProductModalProps> = ({
@@ -76,10 +80,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
 
   // Unit & Category list state
-  const [unitList, setUnitList] = useState<string[]>(DEFAULT_UNITS);
+  const [unitList, setUnitList] = useState<string[]>(isLaundryMode ? LAUNDRY_UNITS : DEFAULT_UNITS);
   const [categoryList, setCategoryList] = useState<Category[]>(categories);
   const [showQuickCategory, setShowQuickCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+
+  useEffect(() => {
+    setUnitList(isLaundryMode ? LAUNDRY_UNITS : DEFAULT_UNITS);
+  }, [isLaundryMode]);
 
   // Modifiers
   const [availableModifierGroups, setAvailableModifierGroups] = useState<ModifierGroup[]>([]);
@@ -558,6 +566,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 setMinStockAlert={setMinStockAlert}
                 description={description}
                 setDescription={setDescription}
+                isLaundryMode={isLaundryMode}
               />
             )}
 

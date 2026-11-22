@@ -19,6 +19,7 @@ import type { Outlet } from '../types/outlet';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
 import { Button } from '../components/ui/Button';
+import { checkIsLaundry } from '../utils/businessType';
 
 interface CategoriesViewProps {
   activeOutlet?: Outlet | null;
@@ -29,6 +30,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   activeOutlet,
   onNavigateToProductsWithCategory,
 }) => {
+  const isLaundryMode = checkIsLaundry(activeOutlet);
   const dialog = useDialog();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,12 +227,14 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ name: e.target.value })}
-                placeholder="Contoh: Signature Coffee, Non-Coffee, Makanan Utama, Pastry"
+                placeholder={isLaundryMode ? "Contoh: Cuci Kiloan, Dry Clean Satuan, Express, Parfum & Treatment" : "Contoh: Signature Coffee, Non-Coffee, Makanan Utama, Pastry"}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 font-medium text-sm transition-all"
                 required
               />
               <p className="text-xs text-slate-500 mt-1.5">
-                Nama ini akan tampil sebagai tab kategori di layar kasir POS dan filter pada buku menu digital tamu.
+                {isLaundryMode
+                  ? 'Nama ini akan tampil sebagai tab kategori layanan di layar kasir POS dan filter katalog.'
+                  : 'Nama ini akan tampil sebagai tab kategori di layar kasir POS dan filter pada buku menu digital tamu.'}
               </p>
             </div>
 
@@ -249,9 +253,11 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl flex gap-3 text-xs text-blue-800">
               <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold mb-0.5">Tips Tata Letak Kategori F&B:</p>
+                <p className="font-bold mb-0.5">{isLaundryMode ? 'Tips Tata Letak Kategori Laundry:' : 'Tips Tata Letak Kategori F&B:'}</p>
                 <p>
-                  Urutkan penamaan sesuai alur santap pelanggan (misal: <em>Minuman Pembuka ➔ Makanan Berat ➔ Snack &amp; Cemilan ➔ Penutup</em>) agar kasir dapat memesankan menu dengan lebih cepat.
+                  {isLaundryMode
+                    ? 'Urutkan penamaan sesuai tipe layanan (misal: Cuci Kiloan Reguler ➔ Dry Clean Satuan ➔ Sepatu & Tas ➔ Treatment Khusus) agar kasir dapat memilih layanan dengan cepat.'
+                    : 'Urutkan penamaan sesuai alur santap pelanggan (misal: Minuman Pembuka ➔ Makanan Berat ➔ Snack & Cemilan ➔ Penutup) agar kasir dapat memesankan menu dengan lebih cepat.'}
                 </p>
               </div>
             </div>
@@ -288,13 +294,15 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            <span>Menu &amp; Produk</span>
+            <span>{isLaundryMode ? 'Layanan & Operasional' : 'Menu & Produk'}</span>
             <span>•</span>
-            <span className="text-blue-600">Katalog F&amp;B</span>
+            <span className="text-blue-600">{isLaundryMode ? 'Katalog Laundry' : 'Katalog F&B'}</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Kategori Menu</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{isLaundryMode ? 'Kategori Layanan' : 'Kategori Menu'}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Kelompokkan sajian makanan &amp; minuman agar kasir POS dan tamu pemesan QR meja dapat menemukan hidangan dengan instan.
+            {isLaundryMode
+              ? 'Kelompokkan layanan cuci kiloan, dry clean, sepatu & tas agar kasir POS dapat melayani pelanggan dengan cepat.'
+              : 'Kelompokkan sajian makanan & minuman agar kasir POS dan tamu pemesan QR meja dapat menemukan hidangan dengan instan.'}
           </p>
         </div>
 
@@ -414,12 +422,14 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl">
           <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <h3 className="text-base font-bold text-slate-800">
-            {searchTerm ? 'Kategori tidak ditemukan' : 'Belum Ada Kategori Menu'}
+            {searchTerm ? 'Kategori tidak ditemukan' : (isLaundryMode ? 'Belum Ada Kategori Layanan' : 'Belum Ada Kategori Menu')}
           </h3>
           <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
             {searchTerm
               ? `Tidak ada kategori yang cocok dengan pencarian "${searchTerm}".`
-              : 'Mulai buat kategori pertama Anda seperti Minuman Kopi, Makanan Utama, atau Aneka Snack.'}
+              : (isLaundryMode
+                  ? 'Mulai buat kategori pertama Anda seperti Cuci Kiloan, Dry Clean Satuan, Express, atau Perlengkapan.'
+                  : 'Mulai buat kategori pertama Anda seperti Minuman Kopi, Makanan Utama, atau Aneka Snack.')}
           </p>
           {!searchTerm && (
             <div className="mt-4 flex justify-center">

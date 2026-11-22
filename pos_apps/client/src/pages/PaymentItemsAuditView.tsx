@@ -996,7 +996,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
         <div className="p-4 sm:px-6 sm:py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
           <div>
             <span className="text-xs font-black text-slate-800 uppercase tracking-wider block">
-              Daftar Menu Terjual via{' '}
+              {isLaundryMode ? 'Daftar Layanan Terjual via ' : 'Daftar Menu Terjual via '}
               <span className="text-blue-900">
                 {itemAggregationByMethod[activeMethodKey]?.label || activeMethodKey}
               </span>
@@ -1006,7 +1006,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               <strong className="text-emerald-700">
                 Rp {currentMethodTotalRevenue.toLocaleString('id-ID')}
               </strong>{' '}
-              ({currentItemsList.length} varian menu)
+              ({currentItemsList.length} {isLaundryMode ? 'varian layanan' : 'varian menu'})
             </span>
           </div>
 
@@ -1018,7 +1018,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Cari menu / kategori..."
+                placeholder={isLaundryMode ? "Cari layanan / kategori..." : "Cari menu / kategori..."}
                 className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-xs font-medium focus:border-blue-900 outline-none transition-all"
               />
             </div>

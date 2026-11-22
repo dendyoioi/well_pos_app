@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   RotateCcw,
   ChefHat,
+  Shirt,
   SlidersHorizontal,
 } from 'lucide-react';
 import { api, authStorage } from '../services/api';
@@ -255,7 +256,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
       return {
         label: isLaundryMode ? 'Pemakaian Cuci & Workshop' : 'Resep Dapur (BOM)',
         color: 'bg-purple-50 text-purple-800 border-purple-200',
-        icon: <ChefHat className="w-3 h-3 shrink-0" />,
+        icon: isLaundryMode ? <Shirt className="w-3 h-3 shrink-0" /> : <ChefHat className="w-3 h-3 shrink-0" />,
       };
     }
     if (t.includes('VOID') || t.includes('RETURN')) {

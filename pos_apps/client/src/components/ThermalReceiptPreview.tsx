@@ -31,6 +31,7 @@ export interface ThermalReceiptPreviewProps {
   footerText?: string;
   showWatermark?: boolean;
   showControls?: boolean;
+  isLaundryMode?: boolean;
 }
 
 export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
@@ -45,7 +46,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   showQueueNumber = true,
   invoiceNumber = 'INV-20261002-0042',
   cashierName = 'Rian Kasir',
-  tableNumber = 'Meja 05',
+  tableNumber,
   timestamp = '02 Okt 2026, 14:32',
   items,
   subtotal,
@@ -55,9 +56,22 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   paymentMethod = 'QRIS STATIS LUNAS',
   footerText = 'Terima kasih atas kunjungan Anda!',
   showControls = true,
+  isLaundryMode = false,
 }) => {
   // Sample default items if not provided
-  const sampleItems: ThermalReceiptItem[] = items || [
+  const sampleItems: ThermalReceiptItem[] = items || (isLaundryMode ? [
+    {
+      name: 'Cuci Kering Setrika (3 Kg)',
+      quantity: 3,
+      price: 9000,
+      modifiers: ['Parfum Lavender', 'Pisah Pakaian Putih'],
+    },
+    {
+      name: 'Hanger Jas',
+      quantity: 2,
+      price: 5000,
+    },
+  ] : [
     {
       name: 'Kopi Susu Aren Spesial',
       quantity: 2,
@@ -69,15 +83,18 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
       quantity: 1,
       price: 28000,
     },
-  ];
+  ]);
 
-  const calculatedSubtotal = subtotal !== undefined ? subtotal : 72000;
+  const defaultSubtotal = isLaundryMode ? 37000 : 72000;
+  const calculatedSubtotal = subtotal !== undefined ? subtotal : defaultSubtotal;
   const calculatedTax = taxAmount !== undefined ? taxAmount : Math.round(calculatedSubtotal * 0.1);
-  const calculatedService = serviceCharge !== undefined ? serviceCharge : 3500;
+  const calculatedService = serviceCharge !== undefined ? serviceCharge : (isLaundryMode ? 0 : 3500);
   const calculatedGrandTotal =
     grandTotal !== undefined
       ? grandTotal
       : calculatedSubtotal + calculatedTax + calculatedService;
+
+  const displayTable = tableNumber !== undefined ? tableNumber : (isLaundryMode ? null : 'Meja 05');
 
   const is58mm = paperSize === '58mm';
 
@@ -177,7 +194,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
             </div>
             <div className="flex justify-between">
               <span>Kasir: {cashierName}</span>
-              {tableNumber && <span>{tableNumber}</span>}
+              {displayTable && <span>{displayTable}</span>}
             </div>
           </div>
 

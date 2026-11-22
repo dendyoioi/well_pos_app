@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Sparkles,
   Crown,
+  Shirt,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
@@ -333,7 +334,7 @@ export const SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK: PermissionDefinition[] = [
   // 3. Layanan, Tarif & Add-on Laundry
   {
     id: 'menu_view',
-    label: 'Lihat Daftar Layanan & Tarif',
+    label: 'Lihat Daftar Layanan & Tarif Laundry',
     description: 'Melihat katalog layanan aktif toko (Kiloan, Satuan, Express) tanpa hak mengedit',
     category: 'CATALOG_RECIPES',
   },
@@ -351,8 +352,8 @@ export const SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK: PermissionDefinition[] = [
   },
   {
     id: 'menu_modifiers',
-    label: 'Kelola Pilihan Parfum & Add-on Laundry',
-    description: 'Mengatur varian aroma parfum (Lavender, Ocean Fresh, Akasia) dan layanan tambahan (Anti Bakteri, Hanger, Plastik Klip)',
+    label: 'Kelola Add-on & Takaran Bahan (BoM)',
+    description: 'Mengatur pilihan parfum, add-on perlakuan noda, dan takaran bahan cuci (BoM)',
     category: 'CATALOG_RECIPES',
   },
   {
@@ -484,9 +485,9 @@ const CATEGORY_META_LAUNDRY: Record<
     headerBg: 'from-indigo-50/60 to-transparent',
   },
   CATALOG_RECIPES: {
-    title: 'Layanan, Tarif & Add-on Laundry',
-    subtitle: 'Katalog kiloan/satuan/express, durasi jam pengerjaan, aroma parfum, dan cetak tag baju anti-air',
-    icon: Sliders,
+    title: 'Layanan, Tarif & Takaran Bahan (BoM)',
+    subtitle: 'Katalog kiloan/satuan/express, durasi jam pengerjaan, takaran BoM bahan cuci, dan cetak tag baju anti-air',
+    icon: Shirt,
     badgeStyle: 'bg-amber-50 text-amber-800 border-amber-200',
     headerBg: 'from-amber-50/60 to-transparent',
   },
@@ -1522,7 +1523,12 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                                     isChecked ? 'text-blue-950 font-black' : 'text-slate-800'
                                   }`}
                                 >
-                                  {perm.label}
+                                  {isLaundryMode ? (
+                                    perm.id === 'menu_view' ? 'Lihat Daftar Layanan & Tarif Laundry' :
+                                    perm.id === 'menu_modifiers' ? 'Kelola Add-on & Takaran Bahan (BoM)' :
+                                    perm.id === 'report_sales' ? 'Laporan Penjualan & Layanan Terlaris' :
+                                    perm.label
+                                  ) : perm.label}
                                 </p>
                                 <p className="text-[11px] text-slate-500 leading-snug">
                                   {perm.description}
@@ -1729,10 +1735,14 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                       ? 'text-amber-950 group-hover:text-amber-900'
                       : 'text-slate-900 group-hover:text-blue-900'
                   }`}>
-                    {role.name}
+                    {isLaundryMode && (role.name.includes('Barista') || role.id === 'role-barista')
+                      ? 'Operator Workshop & Produksi (Cuci/Setrika)'
+                      : role.name}
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                    {role.description || 'Tidak ada deskripsi operasional.'}
+                    {isLaundryMode && (role.name.includes('Barista') || role.id === 'role-barista')
+                      ? 'Memproses tahapan mesin cuci, pengering dryer, setrika uap rapi, hingga packing dan penataan rak'
+                      : (role.description || 'Tidak ada deskripsi operasional.')}
                   </p>
                 </div>
 

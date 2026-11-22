@@ -993,6 +993,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             <ThermalReceiptPreview
               paperSize={paperSize}
               onPaperSizeChange={setPaperSize}
+              isLaundryMode={isLaundryMode}
               brandName={(activeOutlet as any)?.tenant?.name || (isLaundryMode ? 'WELL POS LAUNDRY' : 'WELL POS CAFE')}
               storeName={activeOutlet?.name || (isLaundryMode ? 'Outlet Laundry' : 'Outlet Kemang')}
               address={activeOutlet?.address || 'Jl. Kemang Raya No. 10, Jakarta Selatan'}

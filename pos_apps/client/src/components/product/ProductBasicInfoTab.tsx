@@ -39,6 +39,7 @@ interface ProductBasicInfoTabProps {
   setMinStockAlert: (val: number) => void;
   description: string;
   setDescription: (val: string) => void;
+  isLaundryMode?: boolean;
 }
 
 export const ProductBasicInfoTab: React.FC<ProductBasicInfoTabProps> = ({
@@ -77,6 +78,7 @@ export const ProductBasicInfoTab: React.FC<ProductBasicInfoTabProps> = ({
   setMinStockAlert,
   description,
   setDescription,
+  isLaundryMode = false,
 }) => {
   const [categorySearch, setCategorySearch] = useState('');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -114,7 +116,7 @@ export const ProductBasicInfoTab: React.FC<ProductBasicInfoTabProps> = ({
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="misal: Kopi Susu Aren Spesial"
+            placeholder={isLaundryMode ? "misal: Parfum Laundry Sakura 250ml / Hanger Jas" : "misal: Kopi Susu Aren Spesial"}
             className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm transition-all outline-none"
           />
         </div>
@@ -368,7 +370,7 @@ export const ProductBasicInfoTab: React.FC<ProductBasicInfoTabProps> = ({
             required
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            placeholder="misal: DRK-001"
+            placeholder={isLaundryMode ? "misal: LND-001" : "misal: DRK-001"}
             className="w-full bg-white border border-slate-300 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 text-slate-900 rounded-xl px-3.5 py-2.5 text-sm font-mono transition-all outline-none"
           />
         </div>

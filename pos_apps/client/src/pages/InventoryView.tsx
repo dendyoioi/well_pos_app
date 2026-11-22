@@ -396,7 +396,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     <div className="space-y-6">
       {/* Tab Navigation Header: Terintegrasi Bahan Baku F&B, Produk Jadi Retail, & Gudang */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 sm:mx-0 sm:px-0 flex-nowrap">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 sm:mx-0 sm:px-0 flex-nowrap sm:flex-wrap">
           <button
             onClick={() => {
               setActiveTab('INGREDIENTS');
@@ -409,7 +409,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             }`}
           >
             <Package className="w-4 h-4 shrink-0" />
-            <span>{isLaundryMode ? 'Bahan Cuci & Parfum (Operasional)' : 'Bahan Baku Mentah (Resep F&B)'}</span>
+            <span>{isLaundryMode ? 'Bahan Cuci & Parfum' : 'Bahan Baku Mentah (Resep F&B)'}</span>
             {ingredients.length > 0 && (
               <span
                 className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
@@ -435,7 +435,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             }`}
           >
             <Boxes className="w-4 h-4 shrink-0" />
-            <span>{isLaundryMode ? 'Produk Retail & Perlengkapan' : 'Produk Jadi (Retail)'}</span>
+            <span>{isLaundryMode ? 'Produk Retail' : 'Produk Jadi (Retail)'}</span>
             {products.length > 0 && (
               <span
                 className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
@@ -1308,7 +1308,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                             </p>
                             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                               {products.length === 0
-                                ? 'Silakan tambahkan produk baru melalui menu "Katalog & Menu" atau lakukan penerimaan stok masuk pertama.'
+                                ? isLaundryMode
+                                  ? 'Belum ada perlengkapan/produk retail terdaftar. Klik "+ Tambah Produk Baru" di atas untuk menambahkan barang siap jual (hanger, plastik, parfum eceran).'
+                                  : 'Silakan tambahkan produk baru melalui menu "Katalog & Menu" atau lakukan penerimaan stok masuk pertama.'
                                 : 'Coba ubah kata kunci pencarian atau atur ulang filter status stok.'}
                             </p>
                             {products.length > 0 && (
@@ -1823,6 +1825,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         }}
         categories={categories}
         outletId={activeOutlet?.id}
+        isLaundryMode={isLaundryMode}
       />
 
 
