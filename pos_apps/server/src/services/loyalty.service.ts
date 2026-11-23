@@ -17,6 +17,13 @@ export interface RedeemPointsInput {
   subtotal: number;
 }
 
+export interface OutletLoyaltyConfig {
+  isActive?: boolean;
+  pointsPerSpend?: number;
+  pointValueIdr?: number;
+  minPointsToRedeem?: number;
+}
+
 export class LoyaltyService {
   // 1 Point = Rp 100
   static readonly POINT_VALUE_IDR = 100;
@@ -57,9 +64,14 @@ export class LoyaltyService {
   /**
    * Calculate points earned from spend amount and tier
    */
-  calculatePointsEarned(spendAmount: number, tier: CustomerTier = CustomerTier.BRONZE): number {
+  calculatePointsEarned(
+    spendAmount: number,
+    tier: CustomerTier = CustomerTier.BRONZE,
+    pointsPerSpend?: number
+  ): number {
     if (spendAmount <= 0) return 0;
-    const basePoints = Math.floor(spendAmount / LoyaltyService.SPEND_PER_POINT);
+    const spendBase = pointsPerSpend && pointsPerSpend > 0 ? pointsPerSpend : LoyaltyService.SPEND_PER_POINT;
+    const basePoints = Math.floor(spendAmount / spendBase);
     const multiplier = LoyaltyService.TIER_MULTIPLIERS[tier] || 1.0;
     return Math.floor(basePoints * multiplier);
   }
@@ -67,19 +79,24 @@ export class LoyaltyService {
   /**
    * Calculate maximum redeemable points given an order subtotal
    */
-  calculateMaxRedeemable(subtotal: number, availablePoints: number): { maxPoints: number; maxDiscount: number } {
+  calculateMaxRedeemable(
+    subtotal: number,
+    availablePoints: number,
+    pointValueIdr?: number
+  ): { maxPoints: number; maxDiscount: number } {
+    const valueIdr = pointValueIdr && pointValueIdr > 0 ? pointValueIdr : LoyaltyService.POINT_VALUE_IDR;
     // Max discount is 50% of subtotal
     const maxDiscountAllowed = Math.floor(subtotal * 0.5);
-    const maxPointsAllowed = Math.floor(maxDiscountAllowed / LoyaltyService.POINT_VALUE_IDR);
+    const maxPointsAllowed = Math.floor(maxDiscountAllowed / valueIdr);
     const maxPoints = Math.min(availablePoints, maxPointsAllowed);
-    const maxDiscount = maxPoints * LoyaltyService.POINT_VALUE_IDR;
+    const maxDiscount = maxPoints * valueIdr;
     return { maxPoints, maxDiscount };
   }
 
   /**
    * Award points on completed order (inside existing transaction or standalone)
    */
-  async awardPoints(input: AwardPointsInput, txClient?: any) {
+  async awardPoints(input: AwardPointsInput, txClient?: any, outletLoyaltyConfig?: OutletLoyaltyConfig) {
     const db = txClient || prisma;
 
     const customer = await db.customer.findFirst({
@@ -93,10 +110,10 @@ export class LoyaltyService {
     const currentSpent = Number(customer.totalSpent || 0) + input.spendAmount;
     const currentVisits = Number(customer.visitCount || 0) + 1;
     const newTier = this.resolveTier(currentSpent);
-    const pointsEarned = this.calculatePointsEarned(input.spendAmount, customer.tier);
+    const pointsEarned = this.calculatePointsEarned(input.spendAmount, customer.tier, outletLoyaltyConfig?.pointsPerSpend);
 
     if (pointsEarned <= 0) {
-      // Just update spend and visits if spend is below 10.000
+      // Just update spend and visits if spend is below pointsPerSpend
       const updated = await db.customer.update({
         where: { id: customer.id },
         data: {
@@ -144,7 +161,7 @@ export class LoyaltyService {
   /**
    * Redeem customer points for cash discount
    */
-  async redeemPoints(input: RedeemPointsInput, txClient?: any) {
+  async redeemPoints(input: RedeemPointsInput, txClient?: any, outletLoyaltyConfig?: OutletLoyaltyConfig) {
     const db = txClient || prisma;
 
     if (input.pointsToRedeem <= 0) {
@@ -164,12 +181,16 @@ export class LoyaltyService {
       throw new Error(`Poin loyalitas tidak mencukupi. Tersedia: ${availablePoints}, diminta: ${input.pointsToRedeem}`);
     }
 
-    const { maxPoints } = this.calculateMaxRedeemable(input.subtotal, availablePoints);
+    const valueIdr = outletLoyaltyConfig?.pointValueIdr && outletLoyaltyConfig.pointValueIdr > 0
+      ? outletLoyaltyConfig.pointValueIdr
+      : LoyaltyService.POINT_VALUE_IDR;
+
+    const { maxPoints } = this.calculateMaxRedeemable(input.subtotal, availablePoints, valueIdr);
     if (input.pointsToRedeem > maxPoints) {
       throw new Error(`Maksimal penukaran poin untuk transaksi ini adalah ${maxPoints} poin (50% dari subtotal)`);
     }
 
-    const discountAmount = input.pointsToRedeem * LoyaltyService.POINT_VALUE_IDR;
+    const discountAmount = input.pointsToRedeem * valueIdr;
     const balanceBefore = availablePoints;
     const balanceAfter = balanceBefore - input.pointsToRedeem;
 

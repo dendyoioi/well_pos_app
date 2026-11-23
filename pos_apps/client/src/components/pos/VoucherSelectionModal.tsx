@@ -49,7 +49,7 @@ export const VoucherSelectionModal: React.FC<VoucherSelectionModalProps> = ({
       const res = await api.getPromotions({ isActive: true });
       if (res.status === 'success' && res.data) {
         const list = Array.isArray(res.data) ? res.data : (res.data as any).promotions || [];
-        setPromotions(list.filter((p: Promotion) => p.isActive));
+        setPromotions(list.filter((p: Promotion) => p.isActive && (p.scope || 'ORDER') === 'ORDER'));
       }
     } catch (err: any) {
       console.error('Gagal memuat promosi:', err);
@@ -143,7 +143,7 @@ export const VoucherSelectionModal: React.FC<VoucherSelectionModalProps> = ({
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Contoh: KOPIASIK10 atau HEMAT5RB..."
+                placeholder="Contoh: HEMAT10 atau DISKON5RB..."
                 value={couponCodeInput}
                 onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomCode()}

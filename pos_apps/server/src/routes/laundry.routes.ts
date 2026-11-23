@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
+import { Role } from '@prisma/client';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
 import {
   getLaundryServices,
   createLaundryService,
@@ -38,6 +39,7 @@ import {
   getLaundryCommissionConfig,
   updateLaundryCommissionConfig,
   getLaundryCommissions,
+  payoutLaundryCommission,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -103,5 +105,6 @@ router.patch('/workshops/:id/toggle', toggleOutletWorkshopMode);
 router.get('/commission-config', getLaundryCommissionConfig);
 router.put('/commission-config', updateLaundryCommissionConfig);
 router.get('/commissions', getLaundryCommissions);
+router.post('/commissions/payout', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), payoutLaundryCommission);
 
 export { router as laundryRouter };

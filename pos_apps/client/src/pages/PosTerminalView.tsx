@@ -665,7 +665,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
   const refreshOfflineQueueCount = useCallback(async () => {
     try {
-      const stats = await getOfflineQueueCount(activeOutlet?.id);
+      const stats = await getOfflineQueueCount(activeOutlet?.id, 'POS');
       setPendingOfflineCount(stats.pending);
     } catch {
       // Ignored
@@ -864,7 +864,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     if (isSyncingQueue || !navigator.onLine) return;
     setIsSyncingQueue(true);
     try {
-      const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id);
+      const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'POS');
       if (pendingOrders.length === 0) {
         await refreshOfflineQueueCount();
         setIsSyncingQueue(false);
@@ -929,7 +929,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     const syncInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       if (navigator.onLine) {
-        getOfflineQueueCount(activeOutlet?.id).then((stats) => {
+        getOfflineQueueCount(activeOutlet?.id, 'POS').then((stats) => {
           setPendingOfflineCount(stats.pending);
           if (stats.pending > 0 && !isSyncingQueue) {
             handleSyncOfflineQueue();
@@ -1816,6 +1816,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
         await saveOfflineOrder({
           offlineId: offlineRefId,
+          orderKind: 'POS',
           clientRequestId: clientUuid,
           createdAt: now.toISOString(),
           outletId: activeOutlet?.id,

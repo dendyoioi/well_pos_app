@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Shirt,
   Search,
@@ -32,6 +32,15 @@ import {
   ShoppingCart,
   ChevronRight,
   ChevronDown,
+  Play,
+  Square,
+  FileText,
+  ArrowUpRight,
+  UserCheck,
+  Ticket,
+  Star,
+  CloudUpload,
+  RefreshCw,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import type {
@@ -41,10 +50,27 @@ import type {
   LaundryDeliveryConfig,
   LaundryDeliveryType,
 } from '../types/laundry';
-import { api, customerApi } from '../services/api';
+import type { Shift } from '../types/shift';
+import type { Promotion } from '../types/promotion';
+import { api, customerApi, attendanceApi } from '../services/api';
 import { WhatsAppInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
-import { generateIdempotencyKey } from '../utils/offlineQueue';
+import { StartShiftModal } from '../components/StartShiftModal';
+import { CloseShiftModal } from '../components/CloseShiftModal';
+import { XReportModal } from '../components/XReportModal';
+import { CashExpenseModal } from '../components/CashExpenseModal';
+import { VoucherSelectionModal } from '../components/pos/VoucherSelectionModal';
+import { StaffAttendanceModal } from '../components/pos/StaffAttendanceModal';
+import {
+  generateIdempotencyKey,
+  saveOfflineOrder,
+  getPendingOfflineOrders,
+  getOfflineQueueCount,
+  markOfflineOrderSyncing,
+  markOfflineOrderSuccess,
+  markOfflineOrderFailed,
+  clearSyncedOfflineOrders,
+} from '../utils/offlineQueue';
 
 interface LaundryPosTerminalViewProps {
   activeOutlet: Outlet | null;
@@ -100,28 +126,22 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   activeOutlet,
   currentUser,
   onNavigateTab,
+  onLogout,
 }) => {
   const [services, setServices] = useState<LaundryService[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  // Offline-First PWA Sync State
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const [offlineQueueCount, setOfflineQueueCount] = useState<{ pending: number; total: number }>({ pending: 0, total: 0 });
+  const [isSyncingOffline, setIsSyncingOffline] = useState<boolean>(false);
 
   // Pelanggan & CRM
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [customersList, setCustomersList] = useState<any[]>([]);
 
   // Layanan yang tertunda (diklik saat kasir belum input nama pelanggan)
@@ -175,6 +195,46 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('FIXED');
   const [discountValue, setDiscountValue] = useState('0');
 
+  // Voucher Terkelola (Pilar 2)
+  const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
+  const [voucherModalOpen, setVoucherModalOpen] = useState(false);
+
+  // Program Loyalitas & Poin Member (Pilar 3)
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+  const outletLoyaltyConfig = (activeOutlet as any)?.loyaltyConfig as any | undefined;
+  const isLoyaltyActive = Boolean(outletLoyaltyConfig?.isActive);
+  const pointValueIdr = outletLoyaltyConfig?.pointValueIdr ? Number(outletLoyaltyConfig.pointValueIdr) : 100;
+  const minPointsToRedeem = outletLoyaltyConfig?.minPointsToRedeem ? Number(outletLoyaltyConfig.minPointsToRedeem) : 10;
+
+  // Konfigurasi QRIS Statis Toko (Pilar 1 - Gelombang 2)
+  const qrisConfig = activeOutlet?.paymentConfig?.qris;
+  const isQrisActive = qrisConfig ? qrisConfig.isActive !== false : true;
+  const qrisImageUrl = qrisConfig?.imageUrl || null;
+
+  // Fallback otomatis jika metode QRIS dipilih padahal QRIS dinonaktifkan di pengaturan
+  useEffect(() => {
+    if (!isQrisActive && paymentMethod === 'QRIS') {
+      setPaymentMethod('CASH');
+    }
+    if (!isQrisActive && topupPaymentMethod === 'QRIS') {
+      setTopupPaymentMethod('CASH');
+    }
+  }, [isQrisActive, paymentMethod, topupPaymentMethod]);
+
+  // Siklus Shift Kasir (Pilar 1)
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
+  const [closeShiftModalOpen, setCloseShiftModalOpen] = useState(false);
+  const [xReportModalOpen, setXReportModalOpen] = useState(false);
+  const [cashExpenseModalOpen, setCashExpenseModalOpen] = useState(false);
+  const canCashOut = Boolean(
+    currentUser &&
+      (['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role) || currentUser.canCashOut === true)
+  );
+
+  // Absensi Staf Kasir (Pilar 4)
+  const [staffAttendanceModalOpen, setStaffAttendanceModalOpen] = useState(false);
+
   // Transaksi Processing & Modal Struk
   const [processingOrder, setProcessingOrder] = useState(false);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
@@ -210,16 +270,141 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       const res = await customerApi.getCustomers({ limit: 100 });
       if (res.status === 'success' && Array.isArray(res.data)) {
         setCustomersList(res.data);
+        if (selectedCustomerId) {
+          const fresh = res.data.find((c: any) => c.id === selectedCustomerId);
+          if (fresh) setSelectedCustomer(fresh);
+        }
       }
     } catch {
       // Abaikan jika CRM error
     }
   };
 
+  // Muat status shift kasir berjalan
+  const loadCurrentShift = async () => {
+    try {
+      const res = await api.getCurrentShift();
+      if (res.status === 'success' && res.data) {
+        setCurrentShift(res.data);
+      } else {
+        setCurrentShift(null);
+      }
+    } catch {
+      setCurrentShift(null);
+    }
+  };
+
+  // Buka dialog tutup shift kasir dengan refresh data shift terbaru
+  const handleOpenCloseShift = () => {
+    loadCurrentShift();
+    setCloseShiftModalOpen(true);
+  };
+
+  // Helper pembaruan jumlah antrean offline kasir laundry
+  const refreshOfflineQueueCount = useCallback(async () => {
+    try {
+      const stats = await getOfflineQueueCount(activeOutlet?.id, 'LAUNDRY');
+      setOfflineQueueCount(stats);
+    } catch {
+      // Ignored
+    }
+  }, [activeOutlet?.id]);
+
+  // Handler sinkronisasi transaksi offline kasir laundry
+  const syncOfflineLaundryOrders = useCallback(async () => {
+    if (isSyncingOffline || !navigator.onLine) return;
+    setIsSyncingOffline(true);
+    try {
+      const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'LAUNDRY');
+      if (pendingOrders.length === 0) {
+        await refreshOfflineQueueCount();
+        setIsSyncingOffline(false);
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const offlineOrder of pendingOrders) {
+        try {
+          await markOfflineOrderSyncing(offlineOrder.offlineId);
+          const idempotencyKey = offlineOrder.clientRequestId || offlineOrder.offlineId;
+          const res = await api.createLaundryOrder(offlineOrder.payload, { idempotencyKey });
+          if (res.status === 'success' && res.data) {
+            await markOfflineOrderSuccess(offlineOrder.offlineId, res.data);
+            successCount++;
+          } else {
+            await markOfflineOrderFailed(offlineOrder.offlineId, res.message || 'Gagal sinkron');
+            failCount++;
+          }
+        } catch (syncErr: any) {
+          await markOfflineOrderFailed(offlineOrder.offlineId, syncErr.message || 'Network error');
+          failCount++;
+        }
+      }
+
+      await clearSyncedOfflineOrders();
+      await refreshOfflineQueueCount();
+
+      if (successCount > 0) {
+        setFeedbackToast({
+          message: `${successCount} transaksi laundry offline berhasil disinkronkan ke server!`,
+          type: 'success',
+        });
+        setTimeout(() => setFeedbackToast(null), 4000);
+        fetchCustomers();
+        loadCurrentShift();
+      }
+      if (failCount > 0) {
+        setFeedbackToast({
+          message: `${failCount} transaksi laundry offline gagal disinkronkan. Akan dicoba lagi otomatis.`,
+          type: 'error',
+        });
+        setTimeout(() => setFeedbackToast(null), 5000);
+      }
+    } catch (err: any) {
+      console.error('Error saat menyinkronkan antrean laundry offline:', err);
+    } finally {
+      setIsSyncingOffline(false);
+    }
+  }, [isSyncingOffline, activeOutlet?.id, refreshOfflineQueueCount]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      refreshOfflineQueueCount();
+      syncOfflineLaundryOrders();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    refreshOfflineQueueCount();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [refreshOfflineQueueCount, syncOfflineLaundryOrders]);
+
   useEffect(() => {
     fetchServices();
     fetchCustomers();
+    loadCurrentShift();
     if (activeOutlet?.id) {
+      try {
+        const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (clientTz && clientTz !== activeOutlet.timezone) {
+          attendanceApi
+            .autoSyncTimezone({
+              outletId: activeOutlet.id,
+              clientTimezone: clientTz,
+            })
+            .catch(() => {});
+        }
+      } catch {}
       api
         .getLaundryDeliveryConfig(activeOutlet.id)
         .then((res) => {
@@ -238,6 +423,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setCustomerName(cust.name || '');
     setCustomerPhone(cust.phone ? cust.phone.replace(/^\+?62/, '') : '');
     setSelectedCustomerId(cust.id);
+    setSelectedCustomer(cust);
+    setPointsToRedeem(0);
     if (cust.address && !deliveryAddress) {
       setDeliveryAddress(cust.address);
     }
@@ -257,6 +444,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setCustomerName(name.trim());
     setCustomerPhone('');
     setSelectedCustomerId(null);
+    setSelectedCustomer(null);
+    setPointsToRedeem(0);
+    setAppliedPromotion(null);
     setCustomerSearchModalOpen(false);
     setFeedbackToast({
       message: `✅ Pelanggan "${name.trim()}" terpilih.`,
@@ -272,7 +462,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setCustomerName('');
     setCustomerPhone('');
     setSelectedCustomerId(null);
+    setSelectedCustomer(null);
     setCustomerWallet(null);
+    setPointsToRedeem(0);
+    setAppliedPromotion(null);
     setPendingService(null);
     if (paymentMethod === 'CUSTOMER_DEPOSIT' || paymentMethod === 'LAUNDRY_QUOTA') {
       setPaymentMethod('CASH');
@@ -346,6 +539,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   // Handler Proses Top-up Saldo Deposit atau Kuota Kiloan
   const handleProcessTopup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentShift) {
+      alert('Buka shift kasir terlebih dahulu untuk mencatat transaksi kasir / top-up!');
+      setStartShiftModalOpen(true);
+      return;
+    }
     if (!selectedCustomerId || !activeOutlet) {
       alert('Pelanggan dan outlet aktif wajib tersedia');
       return;
@@ -371,11 +569,12 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       });
 
       if (res.status === 'success') {
-        // Refresh wallet
+        // Refresh wallet & update cash drawer position
         const walletRes = await api.getCustomerLaundryWallet(selectedCustomerId);
         if (walletRes.status === 'success' && walletRes.data) {
           setCustomerWallet(walletRes.data);
         }
+        loadCurrentShift();
         setTopupModalOpen(false);
         setFeedbackToast({
           message: res.message || '🎉 Top-up berhasil dicatat!',
@@ -455,6 +654,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   }, [services, activeCategory, searchQuery]);
 
   const openServiceModal = (srv: LaundryService) => {
+    if (!currentShift) {
+      setFeedbackToast({
+        message: '⚠️ Buka shift kasir terlebih dahulu untuk mulai melayani transaksi cucian!',
+        type: 'error',
+      });
+      setStartShiftModalOpen(true);
+      return;
+    }
     setSelectedService(srv);
     const unitUpper = (srv.unit || '').toUpperCase();
     const isWeightOrArea = ['KG', 'M2', 'M²', 'METER'].includes(unitUpper);
@@ -470,6 +677,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
   // Klik kartu layanan: jika pelanggan belum diisi, buka modal input pelanggan terlebih dahulu
   const handleSelectService = (srv: LaundryService) => {
+    if (!currentShift) {
+      setFeedbackToast({
+        message: '⚠️ Buka shift kasir terlebih dahulu untuk mulai melayani transaksi cucian!',
+        type: 'error',
+      });
+      setStartShiftModalOpen(true);
+      return;
+    }
     if (!isCustomerFilled) {
       setPendingService(srv);
       setCustomerSearchModalOpen(true);
@@ -600,11 +815,39 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
     const readyDate = new Date(Date.now() + maxHours * 3600 * 1000);
 
+    // 1. Diskon Voucher Terkelola (Pilar 2)
+    let promoDiscount = 0;
+    if (appliedPromotion) {
+      if (appliedPromotion.discountType === 'PERCENTAGE') {
+        promoDiscount = Math.floor((subtotal * Number(appliedPromotion.discountValue)) / 100);
+        if (appliedPromotion.maxDiscountAmount) {
+          promoDiscount = Math.min(promoDiscount, Number(appliedPromotion.maxDiscountAmount));
+        }
+      } else if (appliedPromotion.discountType === 'FIXED_AMOUNT') {
+        promoDiscount = Math.min(subtotal, Number(appliedPromotion.discountValue));
+      }
+    }
+
+    // 2. Diskon Manual Kasir
     const numDisc = parseFloat(discountValue.replace(/[^0-9]/g, '')) || 0;
-    const calculatedDiscount =
+    const manualDiscount =
       discountType === 'PERCENT'
         ? Math.round((subtotal * Math.min(100, numDisc)) / 100)
         : Math.min(subtotal, numDisc);
+
+    // 3. Diskon Tukar Poin Member (Pilar 3) - Maksimal 50% Subtotal & tidak melebihi sisa tagihan
+    const availablePoints = Number(selectedCustomer?.loyaltyPoints || 0);
+    const maxRedeemablePoints = Math.min(
+      availablePoints,
+      Math.floor((subtotal * 0.5) / pointValueIdr),
+      Math.floor(Math.max(0, subtotal - promoDiscount - manualDiscount) / pointValueIdr)
+    );
+    const safePointsToRedeem = Math.min(Math.max(0, pointsToRedeem), maxRedeemablePoints);
+    const pointDiscount = safePointsToRedeem * pointValueIdr;
+
+    // Total Diskon Gabungan (Maksimal sebesar Subtotal)
+    const combinedDiscountRaw = promoDiscount + manualDiscount + pointDiscount;
+    const calculatedDiscount = Math.min(subtotal, combinedDiscountRaw);
 
     let effectiveDeliveryFee = 0;
     let isFreeDelivery = false;
@@ -637,6 +880,12 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       deliveryFee: effectiveDeliveryFee,
       isFreeDelivery,
       freeDeliveryReason,
+      promoDiscount,
+      manualDiscount,
+      pointDiscount,
+      safePointsToRedeem,
+      availablePoints,
+      maxRedeemablePoints,
       discountAmount: calculatedDiscount,
       grandTotal,
       totalKg: Number(totalKg.toFixed(2)),
@@ -644,7 +893,18 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       maxHours,
       readyDate,
     };
-  }, [cartItems, discountType, discountValue, deliveryType, deliveryZoneId, deliveryConfig]);
+  }, [
+    cartItems,
+    discountType,
+    discountValue,
+    deliveryType,
+    deliveryZoneId,
+    deliveryConfig,
+    appliedPromotion,
+    pointsToRedeem,
+    selectedCustomer,
+    pointValueIdr,
+  ]);
 
   // Transaksi Baru (Reset Form & Keranjang)
   const handleNewTransaction = () => {
@@ -659,12 +919,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setPaymentMethod('CASH');
     setDiscountValue('0');
     setShowDiscountInput(false);
+    setAppliedPromotion(null);
+    setPointsToRedeem(0);
     setDeliveryType('NONE');
     setDeliveryAddress('');
     setDeliveryNotes('');
   };
 
-  // Listener Shortcut Keyboard Kasir (F1: Transaksi Baru, F2: Cari Member / Selesaikan Transaksi, Esc: Tutup Modal)
+  // Listener Shortcut Keyboard Kasir (F1: Transaksi Baru, F2: Cari Member / Selesaikan Transaksi, F8: X-Report, F9: Tutup Shift, Esc: Tutup Modal)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F1') {
@@ -677,10 +939,32 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         } else {
           handleProcessOrder();
         }
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        if (currentShift) {
+          setXReportModalOpen(true);
+        } else {
+          setFeedbackToast({ message: '⚠️ Buka shift kasir terlebih dahulu untuk melihat X-Report.', type: 'error' });
+          setStartShiftModalOpen(true);
+        }
+      } else if (e.key === 'F9') {
+        e.preventDefault();
+        if (currentShift) {
+          handleOpenCloseShift();
+        } else {
+          setFeedbackToast({ message: '⚠️ Tidak ada shift aktif untuk ditutup.', type: 'error' });
+        }
       } else if (e.key === 'Escape') {
         if (customerSearchModalOpen) setCustomerSearchModalOpen(false);
         else if (quickAddModalOpen) setQuickAddModalOpen(false);
         else if (modalOpen) setModalOpen(false);
+        else if (topupModalOpen) setTopupModalOpen(false);
+        else if (startShiftModalOpen) setStartShiftModalOpen(false);
+        else if (closeShiftModalOpen) setCloseShiftModalOpen(false);
+        else if (xReportModalOpen) setXReportModalOpen(false);
+        else if (cashExpenseModalOpen) setCashExpenseModalOpen(false);
+        else if (voucherModalOpen) setVoucherModalOpen(false);
+        else if (staffAttendanceModalOpen) setStaffAttendanceModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -697,6 +981,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     isCustomerFilled,
     customerSearchModalOpen,
     quickAddModalOpen,
+    currentShift,
+    topupModalOpen,
+    startShiftModalOpen,
+    closeShiftModalOpen,
+    xReportModalOpen,
+    cashExpenseModalOpen,
+    voucherModalOpen,
+    staffAttendanceModalOpen,
   ]);
 
   // Nilai Uang Diterima & Kembalian
@@ -712,6 +1004,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
   // Eksekusi Pembuatan Transaksi Laundry
   const handleProcessOrder = async () => {
+    if (!currentShift) {
+      alert('Buka shift kasir terlebih dahulu untuk mulai melayani transaksi cucian!');
+      setStartShiftModalOpen(true);
+      return;
+    }
     if (cartItems.length === 0) {
       alert('Pilih minimal satu layanan laundry ke keranjang!');
       return;
@@ -726,47 +1023,155 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       return;
     }
 
+    const isDigitalOrWallet = paymentChoice !== 'UNPAID' && (
+      paymentMethod === 'QRIS' ||
+      paymentMethod === 'TRANSFER' ||
+      paymentMethod === 'CUSTOMER_DEPOSIT' ||
+      paymentMethod === 'LAUNDRY_QUOTA'
+    );
+
+    if (!navigator.onLine && isDigitalOrWallet) {
+      alert('Pembayaran digital/wallet memerlukan koneksi internet aktif. Gunakan metode Tunai atau Bayar Nanti saat offline.');
+      return;
+    }
+
     setProcessingOrder(true);
-    try {
-      const fullNotes = cartItems.map((i) => i.notes).filter(Boolean).join('; ');
+    const clientUuid = generateIdempotencyKey();
 
-      const zones = deliveryConfig?.zones || [];
-      const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
+    const fullNotes = cartItems.map((i) => i.notes).filter(Boolean).join('; ');
+    const zones = deliveryConfig?.zones || [];
+    const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
 
-      const payload = {
-        outletId: activeOutlet.id,
-        customerId: selectedCustomerId || undefined,
+    const payload = {
+      outletId: activeOutlet.id,
+      customerId: selectedCustomerId || undefined,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone ? `+62${customerPhone.replace(/^0+/, '')}` : undefined,
+      deliveryType: deliveryType,
+      deliveryDistanceKm: 0,
+      deliveryFeePerKm: 0,
+      deliveryFee: cartTotals.deliveryFee,
+      deliveryZoneName: deliveryType !== 'NONE' ? selectedZone?.name : undefined,
+      deliveryAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() : undefined,
+      deliveryNotes: deliveryType !== 'NONE' ? deliveryNotes.trim() : undefined,
+      items: cartItems.map((item) => ({
+        serviceId: item.serviceId,
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        addons: item.addons || [],
+        notes: item.isUnderMinimum
+          ? `${item.notes ? `${item.notes}; ` : ''}(Timbangan fisik: ${item.actualQuantity.toFixed(2)} Kg, min order ${item.minOrderQty} Kg)`
+          : item.notes || undefined,
+      })),
+      totalPieces: cartTotals.totalPcs,
+      perfumeVariant: cartItems[0]?.perfumeVariant || 'Lavender',
+      estimatedReadyHours: cartTotals.maxHours,
+      depositAmount: paymentChoice === 'PAID' ? cartTotals.grandTotal : paymentChoice === 'PARTIAL' ? numDeposit : 0,
+      discountAmount: cartTotals.discountAmount,
+      manualDiscountAmount: cartTotals.manualDiscount > 0 ? cartTotals.manualDiscount : undefined,
+      promotionId: appliedPromotion?.id,
+      promoCode: appliedPromotion?.code,
+      pointsToRedeem: cartTotals.safePointsToRedeem > 0 ? cartTotals.safePointsToRedeem : undefined,
+      paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
+      customerNotes: fullNotes || undefined,
+    };
+
+    const completeOfflineLaundryOrder = async () => {
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const tempInvoice = `LD-OFFLINE-${dateStr}-${randomSuffix}`;
+      const offlineRefId = `offline-laundry-${Date.now()}-${randomSuffix}`;
+
+      const tempOrderData: LaundryQueueOrder = {
+        id: offlineRefId,
+        orderId: offlineRefId,
+        invoiceNumber: tempInvoice,
         customerName: customerName.trim(),
-        customerPhone: customerPhone ? `+62${customerPhone.replace(/^0+/, '')}` : undefined,
+        customerPhone: customerPhone.trim() ? `+62${customerPhone.replace(/^0+/, '')}` : null,
+        customerAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() || null : null,
         deliveryType: deliveryType,
         deliveryDistanceKm: 0,
-        deliveryFeePerKm: 0,
         deliveryFee: cartTotals.deliveryFee,
-        deliveryZoneName: deliveryType !== 'NONE' ? selectedZone?.name : undefined,
-        deliveryAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() : undefined,
-        deliveryNotes: deliveryType !== 'NONE' ? deliveryNotes.trim() : undefined,
-        items: cartItems.map((item) => ({
-          serviceId: item.serviceId,
-          name: item.name,
-          category: item.category,
-          quantity: item.quantity,
-          unit: item.unit,
-          unitPrice: item.unitPrice,
-          addons: item.addons || [],
-          notes: item.isUnderMinimum
-            ? `${item.notes ? `${item.notes}; ` : ''}(Timbangan fisik: ${item.actualQuantity.toFixed(2)} Kg, min order ${item.minOrderQty} Kg)`
-            : item.notes || undefined,
-        })),
+        status: 'RECEIVED',
+        currentStage: 'DROP_OFF',
+        serviceName: cartItems[0]?.name || 'Layanan Laundry',
+        totalWeightKg: cartTotals.totalKg,
         totalPieces: cartTotals.totalPcs,
         perfumeVariant: cartItems[0]?.perfumeVariant || 'Lavender',
-        estimatedReadyHours: cartTotals.maxHours,
-        depositAmount: paymentChoice === 'PAID' ? cartTotals.grandTotal : paymentChoice === 'PARTIAL' ? numDeposit : 0,
-        discountAmount: cartTotals.discountAmount,
-        paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
-        customerNotes: fullNotes || undefined,
+        rackCode: null,
+        grandTotal: cartTotals.grandTotal,
+        paidAmount: paymentChoice === 'PAID' ? cartTotals.grandTotal : paymentChoice === 'PARTIAL' ? numDeposit : 0,
+        paymentStatus: paymentChoice === 'PAID' ? 'PAID' : paymentChoice === 'PARTIAL' ? 'PARTIALLY_PAID' : 'UNPAID',
+        createdAt: now.toISOString(),
+        estimatedReadyAt: cartTotals.readyDate.toISOString(),
+        customerNotes: fullNotes || null,
+        items: cartItems.map((c) => ({
+          name: c.name,
+          quantity: c.quantity,
+          unit: c.unit,
+          unitPrice: c.unitPrice,
+          subtotal: c.subtotal,
+          notes: c.notes,
+          addons: c.addons,
+        })),
       };
 
-      const clientUuid = generateIdempotencyKey();
+      await saveOfflineOrder({
+        offlineId: offlineRefId,
+        orderKind: 'LAUNDRY',
+        clientRequestId: clientUuid,
+        createdAt: now.toISOString(),
+        outletId: activeOutlet?.id,
+        shiftId: currentShift?.id,
+        cashierName: currentUser?.name || 'Kasir Laundry',
+        payload: {
+          ...payload,
+          offlineReferenceId: offlineRefId,
+          clientRequestId: clientUuid,
+        },
+        tempOrder: tempOrderData,
+        status: 'PENDING',
+        retryCount: 0,
+      });
+
+      setCompletedOrder(tempOrderData);
+      setReceiptModalOpen(true);
+      setMobileCartSheetOpen(false);
+
+      // Reset keranjang untuk transaksi berikutnya
+      setCartItems([]);
+      handleResetCustomer();
+      setCashReceived('');
+      setDepositAmount('0');
+      setPaymentChoice('PAID');
+      setDiscountValue('0');
+      setShowDiscountInput(false);
+      setAppliedPromotion(null);
+      setPointsToRedeem(0);
+      setDeliveryType('NONE');
+      setDeliveryAddress('');
+      setDeliveryNotes('');
+
+      await refreshOfflineQueueCount();
+
+      setFeedbackToast({
+        message: `Faktur #${tempInvoice} tersimpan di antrean offline. Struk & label siap dicetak!`,
+        type: 'success',
+      });
+      setTimeout(() => setFeedbackToast(null), 4000);
+    };
+
+    if (!navigator.onLine) {
+      await completeOfflineLaundryOrder();
+      setProcessingOrder(false);
+      return;
+    }
+
+    try {
       const res = await api.createLaundryOrder(
         { ...payload, clientRequestId: clientUuid },
         { idempotencyKey: clientUuid }
@@ -820,12 +1225,15 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         setPaymentChoice('PAID');
         setDiscountValue('0');
         setShowDiscountInput(false);
+        setAppliedPromotion(null);
+        setPointsToRedeem(0);
         setDeliveryType('NONE');
         setDeliveryAddress('');
         setDeliveryNotes('');
 
-        // Refresh CRM list
+        // Refresh CRM list & Shift status
         fetchCustomers();
+        loadCurrentShift();
 
         setFeedbackToast({
           message: `Nota ${newQueueOrder.invoiceNumber} berhasil dicatat & masuk antrean!`,
@@ -836,7 +1244,21 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         alert(res.message || 'Gagal memproses transaksi laundry');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+      const isNetworkFailure =
+        !navigator.onLine ||
+        err?.name === 'TypeError' ||
+        String(err?.message || '').toLowerCase().includes('fetch') ||
+        String(err?.message || '').toLowerCase().includes('network');
+
+      if (isNetworkFailure && !isDigitalOrWallet) {
+        try {
+          await completeOfflineLaundryOrder();
+        } catch {
+          alert(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+        }
+      } else {
+        alert(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+      }
     } finally {
       setProcessingOrder(false);
     }
@@ -864,6 +1286,13 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   {selectedCustomerId && (
                     <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                       Member CRM
+                    </span>
+                  )}
+                  {selectedCustomerId && selectedCustomer && isLoyaltyActive && (
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5 shrink-0">
+                      <Star className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                      <span>{Number(selectedCustomer.loyaltyPoints || 0).toLocaleString('id-ID')} Poin</span>
+                      {selectedCustomer.tier && <span className="opacity-75">({selectedCustomer.tier})</span>}
                     </span>
                   )}
                 </div>
@@ -1182,7 +1611,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     { key: 'CASH', label: 'Tunai', isCash: true },
                     { key: 'QRIS', label: 'QRIS', icon: QrCode },
                     { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
-                  ].map((m) => {
+                  ]
+                    .filter((m) => m.key !== 'QRIS' || isQrisActive)
+                    .map((m) => {
                     const Icon = (m as any).icon;
                     return (
                       <button
@@ -1264,6 +1695,58 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         {Number(customerWallet.quotaKg)} Kg
                       </span>
                     </button>
+                  </div>
+                )}
+
+                {/* Kartu Pratinjau QRIS Statis (Pilar 1 - Gelombang 2) */}
+                {paymentMethod === 'QRIS' && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-fadeIn text-center">
+                    {qrisImageUrl ? (
+                      <div className="flex flex-col items-center">
+                        <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs inline-block">
+                          <img
+                            src={qrisImageUrl}
+                            alt="Barcode QRIS Toko"
+                            className="w-36 h-36 max-h-[180px] object-contain rounded-lg"
+                          />
+                        </div>
+                        <div className="mt-1.5 space-y-0.5">
+                          {qrisConfig?.merchantName && (
+                            <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                              {qrisConfig.merchantName}
+                            </p>
+                          )}
+                          {qrisConfig?.nmid && (
+                            <p className="text-[10px] font-mono text-slate-500 font-bold">
+                              NMID: {qrisConfig.nmid}
+                            </p>
+                          )}
+                          <p className="text-xs font-black text-blue-900 pt-0.5">
+                            Tagihan: Rp {targetPayAmount.toLocaleString('id-ID')}
+                          </p>
+                        </div>
+                        <p className="text-[10.5px] text-slate-500 font-medium mt-1 leading-tight">
+                          Minta pelanggan scan QRIS lalu pastikan dana masuk sebelum konfirmasi.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col items-center gap-1.5 text-center">
+                        <QrCode className="w-8 h-8 text-amber-500" />
+                        <p className="text-xs font-bold text-amber-900">
+                          Barcode QRIS Belum Dikonfigurasi
+                        </p>
+                        <p className="text-[10.5px] text-amber-700 leading-tight">
+                          Unggah foto/gambar QRIS toko pada menu Pengaturan Pembayaran agar pelanggan bisa scan QRIS di kasir.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('settings_payment')}
+                          className="mt-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Buka Pengaturan Pembayaran
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1362,7 +1845,110 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               </div>
             )}
 
-            {/* Diskon / Kupon Promo Input Toggle */}
+            {/* 1. Voucher Promo Terkelola (Pilar 2) */}
+            <div className="space-y-1.5 pt-1 border-t border-slate-100">
+              <label className="block text-[11px] font-bold text-slate-700">
+                Voucher &amp; Promo
+              </label>
+              {appliedPromotion ? (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs animate-fadeIn">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Ticket className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="font-black text-emerald-950 block truncate">
+                        {appliedPromotion.name} ({appliedPromotion.code})
+                      </span>
+                      <span className="text-[10.5px] text-emerald-700 font-bold">
+                        Hemat Rp {cartTotals.promoDiscount.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAppliedPromotion(null)}
+                    className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-800 cursor-pointer transition-colors"
+                    title="Hapus Voucher"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setVoucherModalOpen(true)}
+                  className="w-full py-2 px-3 rounded-xl border border-dashed border-blue-400 bg-blue-50/60 hover:bg-blue-100/60 text-blue-900 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Ticket className="w-4 h-4 text-blue-700" />
+                    <span>Pilih / Pakai Voucher Promo</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-blue-700" />
+                </button>
+              )}
+            </div>
+
+            {/* 2. Tukar Poin Loyalitas Member (Pilar 3) */}
+            {isLoyaltyActive && selectedCustomerId && selectedCustomer && cartItems.length > 0 && cartTotals.availablePoints >= minPointsToRedeem && (
+              <div className="space-y-1.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs animate-fadeIn">
+                <div className="flex items-center justify-between font-bold text-amber-950">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                    <span>Tukar Poin Member</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold border border-amber-300">
+                    Tersedia: {cartTotals.availablePoints.toLocaleString('id-ID')} Poin
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max={cartTotals.maxRedeemablePoints}
+                    value={pointsToRedeem || ''}
+                    placeholder="0"
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10) || 0;
+                      setPointsToRedeem(Math.min(val, cartTotals.maxRedeemablePoints));
+                    }}
+                    className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white font-extrabold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPointsToRedeem(cartTotals.maxRedeemablePoints);
+                    }}
+                    className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-400 cursor-pointer transition-colors"
+                  >
+                    Pakai Maksimal
+                  </button>
+                  {pointsToRedeem > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPointsToRedeem(0)}
+                      className="px-1.5 py-1 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500">
+                  <span>Maksimal tukar: {cartTotals.maxRedeemablePoints.toLocaleString('id-ID')} Poin (maks. 50% subtotal)</span>
+                </div>
+
+                {cartTotals.pointDiscount > 0 && (
+                  <div className="flex items-center justify-between text-[10.5px] text-amber-900 font-bold pt-0.5">
+                    <span>Potongan Tagihan Poin:</span>
+                    <span className="text-emerald-700 font-black">
+                      -Rp {cartTotals.pointDiscount.toLocaleString('id-ID')} ({cartTotals.safePointsToRedeem} Poin)
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. Diskon Manual Kasir */}
             <div className="pt-1 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <button
@@ -1371,11 +1957,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   className="text-[11px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                 >
                   <Tag className="w-3 h-3" />
-                  <span>{showDiscountInput ? 'Sembunyikan Diskon' : '+ Tambah Diskon / Promo'}</span>
+                  <span>{showDiscountInput ? 'Sembunyikan Diskon Manual' : '+ Tambah Diskon Manual'}</span>
                 </button>
-                {cartTotals.discountAmount > 0 && (
+                {cartTotals.manualDiscount > 0 && (
                   <span className="text-xs font-bold text-rose-600">
-                    -Rp {cartTotals.discountAmount.toLocaleString('id-ID')}
+                    -Rp {cartTotals.manualDiscount.toLocaleString('id-ID')}
                   </span>
                 )}
               </div>
@@ -1432,10 +2018,22 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   </span>
                 </div>
               )}
-              {cartTotals.discountAmount > 0 && (
+              {cartTotals.promoDiscount > 0 && (
+                <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+                  <span>Voucher ({appliedPromotion?.code}):</span>
+                  <span>-Rp {cartTotals.promoDiscount.toLocaleString('id-ID')}</span>
+                </div>
+              )}
+              {cartTotals.manualDiscount > 0 && (
                 <div className="flex items-center justify-between text-xs text-rose-600 font-bold">
-                  <span>Diskon Promo:</span>
-                  <span>-Rp {cartTotals.discountAmount.toLocaleString('id-ID')}</span>
+                  <span>Diskon Manual:</span>
+                  <span>-Rp {cartTotals.manualDiscount.toLocaleString('id-ID')}</span>
+                </div>
+              )}
+              {cartTotals.pointDiscount > 0 && (
+                <div className="flex items-center justify-between text-xs text-amber-700 font-bold">
+                  <span>Tukar Poin ({cartTotals.safePointsToRedeem} Poin):</span>
+                  <span>-Rp {cartTotals.pointDiscount.toLocaleString('id-ID')}</span>
                 </div>
               )}
               <div className="flex items-baseline justify-between pt-1 border-t border-slate-100">
@@ -1492,6 +2090,69 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
         {/* Action Buttons Toolbar */}
         <div className="flex items-center gap-1.5 flex-wrap w-full lg:w-auto shrink-0">
+          {/* Shift Controls (Pilar 1) */}
+          {!currentShift ? (
+            <button
+              type="button"
+              onClick={() => setStartShiftModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 animate-pulse"
+              title="Buka Shift Kasir Baru"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Buka Shift</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Shift Aktif</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setXReportModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                title="X-Report Laporan Berjalan Kasir (F8)"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-700" />
+                <span className="hidden sm:inline">X-Report (F8)</span>
+                <span className="sm:hidden">X-Rep</span>
+              </button>
+              {canCashOut && (
+                <button
+                  type="button"
+                  onClick={() => setCashExpenseModalOpen(true)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  title="Catat Kas Keluar / Kas Masuk Operasional"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-700" />
+                  <span className="hidden sm:inline">Kas Keluar</span>
+                  <span className="sm:hidden">Kas</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleOpenCloseShift}
+                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                title="Tutup Shift Kasir & Cetak Z-Report (F9)"
+              >
+                <Square className="w-3.5 h-3.5 text-rose-700" />
+                <span className="hidden sm:inline">Tutup Shift (F9)</span>
+                <span className="sm:hidden">Tutup</span>
+              </button>
+            </div>
+          )}
+
+          {/* Absensi Staf Kasir (Pilar 4) */}
+          <button
+            type="button"
+            onClick={() => setStaffAttendanceModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Absensi Staf Kasir (Clock-In / Clock-Out)"
+          >
+            <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="hidden sm:inline">Absensi</span>
+          </button>
+
           {/* Tombol Transaksi Baru F1 */}
           <button
             type="button"
@@ -1538,13 +2199,49 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         </div>
       </header>
 
-      {/* Banner Non-intrusif Status Jaringan Offline */}
-      {!isOnline && (
-        <div className="bg-amber-50 border-b border-amber-300 px-4 py-2 flex items-center justify-between text-xs text-amber-900 shrink-0">
-          <div className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
-            <span className="font-extrabold">Mode Offline Terdeteksi:</span>
-            <span>Koneksi internet terputus. Pastikan internet terhubung kembali untuk sinkronisasi data operasional.</span>
+      {/* Banner Status Offline / Pending Sync */}
+      {(!isOnline || offlineQueueCount.pending > 0) && (
+        <div
+          className={`px-4 py-2.5 border-b flex items-center justify-between gap-3 text-xs shrink-0 transition-colors ${
+            !isOnline
+              ? 'bg-amber-50 border-amber-200 text-amber-950'
+              : 'bg-blue-50 border-blue-200 text-blue-950'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {!isOnline ? (
+              <WifiOff className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+            ) : (
+              <CloudUpload className="w-4 h-4 text-blue-600 shrink-0" />
+            )}
+            <div className="truncate">
+              <span className="font-extrabold">
+                {!isOnline ? 'Mode Offline Aktif' : 'Penyelarasan Data Lokal PWA'}
+              </span>
+              <span className="ml-2 font-medium">
+                {!isOnline
+                  ? 'Transaksi tersimpan lokal di browser. Struk & label fisik tetap dapat dicetak.'
+                  : `Ada ${offlineQueueCount.pending} transaksi offline yang siap disinkronkan ke server.`}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {offlineQueueCount.pending > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-amber-200 text-amber-900">
+                {offlineQueueCount.pending} antrean offline
+              </span>
+            )}
+            {isOnline && offlineQueueCount.pending > 0 && (
+              <button
+                type="button"
+                onClick={syncOfflineLaundryOrders}
+                disabled={isSyncingOffline}
+                className="px-3 py-1 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingOffline ? 'animate-spin' : ''}`} />
+                <span>{isSyncingOffline ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -2693,7 +3390,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                       { key: 'CASH', label: 'Tunai', isCash: true },
                       { key: 'QRIS', label: 'QRIS', icon: QrCode },
                       { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
-                    ].map((m) => {
+                    ]
+                      .filter((m) => m.key !== 'QRIS' || isQrisActive)
+                      .map((m) => {
                       const Icon = (m as any).icon;
                       return (
                         <button
@@ -2756,6 +3455,79 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal Buka Shift (Pilar 1) */}
+      <StartShiftModal
+        isOpen={startShiftModalOpen}
+        onClose={() => setStartShiftModalOpen(false)}
+        onShiftStarted={(s) => {
+          setCurrentShift(s);
+          setStartShiftModalOpen(false);
+          setFeedbackToast({ message: '🎉 Shift kasir berhasil dibuka!', type: 'success' });
+        }}
+        outletName={activeOutlet?.name}
+      />
+
+      {/* Modal Terikat Shift Aktif (Pilar 1) */}
+      {currentShift && (
+        <>
+          {/* Modal Tutup Shift / Z-Report (Pilar 1) */}
+          <CloseShiftModal
+            isOpen={closeShiftModalOpen}
+            onClose={() => setCloseShiftModalOpen(false)}
+            onShiftClosed={() => {
+              setCurrentShift(null);
+              setCloseShiftModalOpen(false);
+              setFeedbackToast({ message: '✅ Shift kasir berhasil ditutup!', type: 'success' });
+              if (onLogout && currentUser?.role === 'CASHIER') {
+                setTimeout(() => onLogout(), 1500);
+              }
+            }}
+            currentShift={currentShift}
+          />
+
+          {/* Modal X-Report Laporan Berjalan Shift (Pilar 1) */}
+          <XReportModal
+            isOpen={xReportModalOpen}
+            onClose={() => setXReportModalOpen(false)}
+          />
+
+          {/* Modal Kas Keluar / Kas Masuk Operasional (Pilar 1) */}
+          <CashExpenseModal
+            isOpen={cashExpenseModalOpen}
+            onClose={() => setCashExpenseModalOpen(false)}
+            onExpenseRecorded={() => {
+              loadCurrentShift();
+              setFeedbackToast({ message: '✅ Mutasi kas drawer berhasil dicatat!', type: 'success' });
+            }}
+            currentShift={currentShift}
+          />
+        </>
+      )}
+
+      {/* Modal Pemilihan Voucher Promo (Pilar 2) */}
+      <VoucherSelectionModal
+        isOpen={voucherModalOpen}
+        onClose={() => setVoucherModalOpen(false)}
+        subtotal={cartTotals.subtotal}
+        appliedPromotion={appliedPromotion}
+        onApplyPromotion={(promo) => {
+          setAppliedPromotion(promo);
+          setVoucherModalOpen(false);
+          setFeedbackToast({ message: `🎟️ Voucher "${promo.name}" berhasil diterapkan!`, type: 'success' });
+        }}
+        onRemovePromotion={() => {
+          setAppliedPromotion(null);
+          setVoucherModalOpen(false);
+        }}
+      />
+
+      {/* Modal Absensi Staf Kasir (Pilar 4) */}
+      <StaffAttendanceModal
+        isOpen={staffAttendanceModalOpen}
+        onClose={() => setStaffAttendanceModalOpen(false)}
+        activeOutlet={activeOutlet}
+      />
 
       {/* 6. Modal Struk Thermal Laundry Penerimaan */}
       <LaundryReceiptModal

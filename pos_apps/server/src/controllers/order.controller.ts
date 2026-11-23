@@ -2620,6 +2620,124 @@ export const voidOrder = async (req: Request, res: Response) => {
           where: { tenantId: order.tenantId, orderId: order.id },
         });
       }
+
+      // H. Batalkan Piutang Pelanggan (CustomerDebt) untuk order ini (berlaku untuk Laundry maupun F&B)
+      await tx.customerDebt.updateMany({
+        where: { tenantId: order.tenantId, orderId: order.id, status: { in: ['UNPAID', 'PARTIAL'] } },
+        data: {
+          status: 'CANCELLED',
+          remainingAmount: 0,
+          notes: `Dibatalkan otomatis karena transaksi VOID (${order.invoiceNumber})`,
+        },
+      });
+
+      // I. Penanganan Khusus Nota Laundry (Rak, Status Antrean/Delivery, Audit Log, & Saldo/Kuota Dompet)
+      const laundryDetail = await tx.laundryOrderDetail.findUnique({
+        where: { orderId: order.id },
+      });
+
+      if (laundryDetail) {
+        // 1) Kosongkan rak penyimpanan dan ubah status laundry ke CANCELLED
+        await tx.laundryOrderDetail.update({
+          where: { id: laundryDetail.id },
+          data: {
+            rackCode: null,
+            status: 'CANCELLED',
+            currentStage: 'CANCELLED',
+            ...(laundryDetail.deliveryStatus ? { deliveryStatus: 'CANCELLED' } : {}),
+          },
+        });
+
+        // 2) Catat ke LaundryStageLog agar riwayat audit tracking lengkap
+        await tx.laundryStageLog.create({
+          data: {
+            tenantId: order.tenantId,
+            orderId: order.id,
+            laundryDetailId: laundryDetail.id,
+            stage: 'VOIDED',
+            operatorId: approvedByUser?.id || null,
+            operatorName: approverLabel,
+            completedAt: new Date(),
+            durationMinutes: 0,
+            notes: `Transaksi dibatalkan (VOID): ${reason.trim()}`,
+          },
+        });
+
+        // 3) Reversal / Pengembalian Saldo Deposit & Kuota Kiloan jika order ini menggunakan saldo/kuota
+        const usedLedgers = await tx.customerLaundryWalletLedger.findMany({
+          where: {
+            tenantId: order.tenantId,
+            orderId: order.id,
+            ledgerType: { in: ['USE_BALANCE', 'USE_QUOTA_KG'] },
+          },
+        });
+
+        for (const ul of usedLedgers) {
+          if (ul.ledgerType === 'USE_BALANCE') {
+            const refundBal = Math.abs(Number(ul.deltaAmount));
+            if (refundBal > 0) {
+              const currentWallet = await tx.customerLaundryWallet.findUnique({
+                where: { id: ul.walletId },
+              });
+              if (currentWallet) {
+                const before = Number(currentWallet.balanceAmount || 0);
+                const after = before + refundBal;
+                await tx.customerLaundryWallet.update({
+                  where: { id: currentWallet.id },
+                  data: { balanceAmount: after },
+                });
+                await tx.customerLaundryWalletLedger.create({
+                  data: {
+                    tenantId: order.tenantId,
+                    outletId: order.outletId,
+                    walletId: currentWallet.id,
+                    orderId: order.id,
+                    ledgerType: 'REFUND_BALANCE',
+                    deltaAmount: refundBal,
+                    balanceBefore: before,
+                    balanceAfter: after,
+                    deltaKg: 0,
+                    kgBefore: Number(currentWallet.quotaKg || 0),
+                    kgAfter: Number(currentWallet.quotaKg || 0),
+                    notes: `Pengembalian saldo deposit karena void nota ${order.invoiceNumber}`,
+                  },
+                });
+              }
+            }
+          } else if (ul.ledgerType === 'USE_QUOTA_KG') {
+            const refundKg = Math.abs(Number(ul.deltaKg));
+            if (refundKg > 0) {
+              const currentWallet = await tx.customerLaundryWallet.findUnique({
+                where: { id: ul.walletId },
+              });
+              if (currentWallet) {
+                const beforeKg = Number(currentWallet.quotaKg || 0);
+                const afterKg = beforeKg + refundKg;
+                await tx.customerLaundryWallet.update({
+                  where: { id: currentWallet.id },
+                  data: { quotaKg: afterKg },
+                });
+                await tx.customerLaundryWalletLedger.create({
+                  data: {
+                    tenantId: order.tenantId,
+                    outletId: order.outletId,
+                    walletId: currentWallet.id,
+                    orderId: order.id,
+                    ledgerType: 'REFUND_QUOTA_KG',
+                    deltaAmount: 0,
+                    deltaKg: refundKg,
+                    balanceBefore: Number(currentWallet.balanceAmount || 0),
+                    balanceAfter: Number(currentWallet.balanceAmount || 0),
+                    kgBefore: beforeKg,
+                    kgAfter: afterKg,
+                    notes: `Pengembalian kuota kiloan karena void nota ${order.invoiceNumber}`,
+                  },
+                });
+              }
+            }
+          }
+        }
+      }
     });
 
     // 4. Meja: Lepaskan meja jika sebelumnya terikat pada pesanan ini

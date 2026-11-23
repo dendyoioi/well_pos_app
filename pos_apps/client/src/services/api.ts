@@ -3007,6 +3007,28 @@ export const api = {
     });
     return res.json();
   },
+
+  recordLaundryCommissionPayout: async (payload: {
+    outletId: string;
+    staffName: string;
+    amount: number;
+    periodLabel?: string;
+    notes?: string;
+  }): Promise<{
+    status: string;
+    message: string;
+    data?: any;
+  }> => {
+    const res = await fetch('/api/laundry/commissions/payout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
 };
 
 // ----------------------------------------------------

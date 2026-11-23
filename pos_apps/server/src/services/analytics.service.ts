@@ -162,6 +162,7 @@ export class AnalyticsService {
       FROM "orders" o
       WHERE o.tenant_id = $1
         AND o.payment_status = 'PAID'
+        AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
         AND o.created_at >= ($2 AT TIME ZONE 'UTC')
         AND o.created_at <= ($3 AT TIME ZONE 'UTC')
         ${outletClause}
@@ -458,24 +459,30 @@ export class AnalyticsService {
 
     const sql = `
       SELECT 
-        p.id as "productId",
-        p.name as "productName",
-        COALESCE(pv.sku, 'NO-SKU') as "sku",
-        COALESCE(c.name, 'Uncategorized') as "categoryName",
+        COALESCE(p.id, ls.id, oi.product_name) as "productId",
+        COALESCE(p.name, oi.product_name) as "productName",
+        COALESCE(pv.sku, ls.category, 'LAYANAN') as "sku",
+        COALESCE(c.name, ls.category, 'Layanan Laundry') as "categoryName",
         SUM(oi.quantity)::int as "quantitySold",
         SUM(oi.subtotal)::numeric as "revenue",
-        SUM(oi.cost_price * oi.quantity)::numeric as "cogs"
+        SUM(COALESCE(oi.cost_price, 0) * oi.quantity)::numeric as "cogs"
       FROM "order_items" oi
       JOIN "orders" o ON o.id = oi.order_id
-      JOIN "product_variants" pv ON pv.id = oi.product_variant_id
-      JOIN "products" p ON p.id = pv.product_id
+      LEFT JOIN "product_variants" pv ON pv.id = oi.product_variant_id
+      LEFT JOIN "products" p ON p.id = pv.product_id
       LEFT JOIN "categories" c ON c.id = p.category_id
+      LEFT JOIN "laundry_services" ls ON ls.tenant_id = o.tenant_id AND ls.name = oi.product_name
       WHERE o.tenant_id = $1
         AND o.payment_status = 'PAID'
+        AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
         AND o.created_at >= ($2 AT TIME ZONE 'UTC')
         AND o.created_at <= ($3 AT TIME ZONE 'UTC')
         ${outletClause}
-      GROUP BY p.id, p.name, pv.sku, c.name;
+      GROUP BY 
+        COALESCE(p.id, ls.id, oi.product_name),
+        COALESCE(p.name, oi.product_name),
+        COALESCE(pv.sku, ls.category, 'LAYANAN'),
+        COALESCE(c.name, ls.category, 'Layanan Laundry');
     `;
 
     const rawRows: any[] = await prisma.$queryRawUnsafe(sql, ...params);

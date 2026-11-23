@@ -6,6 +6,7 @@
 
 export interface OfflineOrderEntry {
   offlineId: string;
+  orderKind?: 'POS' | 'LAUNDRY';
   clientRequestId?: string;
   createdAt: string;
   outletId?: string;
@@ -71,7 +72,11 @@ export const saveOfflineOrder = async (order: OfflineOrderEntry): Promise<void> 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const req = store.put(order);
+    const entryToSave: OfflineOrderEntry = {
+      ...order,
+      orderKind: order.orderKind || 'POS',
+    };
+    const req = store.put(entryToSave);
 
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
@@ -81,7 +86,10 @@ export const saveOfflineOrder = async (order: OfflineOrderEntry): Promise<void> 
 /**
  * Mengambil seluruh pesanan offline yang belum berhasil disinkronkan
  */
-export const getPendingOfflineOrders = async (outletId?: string): Promise<OfflineOrderEntry[]> => {
+export const getPendingOfflineOrders = async (
+  outletId?: string,
+  orderKind?: 'POS' | 'LAUNDRY'
+): Promise<OfflineOrderEntry[]> => {
   const db = await openOfflineDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
@@ -95,6 +103,9 @@ export const getPendingOfflineOrders = async (outletId?: string): Promise<Offlin
       if (outletId) {
         results = results.filter((item) => !item.outletId || item.outletId === outletId);
       }
+      if (orderKind) {
+        results = results.filter((item) => (item.orderKind || 'POS') === orderKind);
+      }
       // Urutkan FIFO berdasarkan waktu pembuatan
       results.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       resolve(results);
@@ -106,7 +117,10 @@ export const getPendingOfflineOrders = async (outletId?: string): Promise<Offlin
 /**
  * Mengambil ringkasan jumlah antrean offline
  */
-export const getOfflineQueueCount = async (outletId?: string): Promise<{ pending: number; total: number }> => {
+export const getOfflineQueueCount = async (
+  outletId?: string,
+  orderKind?: 'POS' | 'LAUNDRY'
+): Promise<{ pending: number; total: number }> => {
   try {
     const db = await openOfflineDatabase();
     return new Promise((resolve, reject) => {
@@ -115,10 +129,15 @@ export const getOfflineQueueCount = async (outletId?: string): Promise<{ pending
       const req = store.getAll();
 
       req.onsuccess = () => {
-        const all: OfflineOrderEntry[] = req.result || [];
-        const relevant = outletId ? all.filter((o) => !o.outletId || o.outletId === outletId) : all;
-        const pending = relevant.filter((o) => o.status === 'PENDING' || o.status === 'FAILED').length;
-        resolve({ pending, total: relevant.length });
+        let all: OfflineOrderEntry[] = req.result || [];
+        if (outletId) {
+          all = all.filter((o) => !o.outletId || o.outletId === outletId);
+        }
+        if (orderKind) {
+          all = all.filter((o) => (o.orderKind || 'POS') === orderKind);
+        }
+        const pending = all.filter((o) => o.status === 'PENDING' || o.status === 'FAILED').length;
+        resolve({ pending, total: all.length });
       };
       req.onerror = () => reject(req.error);
     });

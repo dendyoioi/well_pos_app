@@ -19,6 +19,7 @@ import {
   Loader2,
   Truck,
   ChevronDown,
+  Wallet,
 } from 'lucide-react';
 import type { Outlet } from '../../types/outlet';
 import type {
@@ -31,6 +32,8 @@ import type {
 import { api, customerApi } from '../../services/api';
 import { WhatsAppInput, CurrencyInput } from '../ui';
 import { generateIdempotencyKey } from '../../utils/offlineQueue';
+import { StartShiftModal } from '../StartShiftModal';
+import type { Shift } from '../../types/shift';
 
 interface LaundryQuickDropoffModalProps {
   isOpen: boolean;
@@ -92,10 +95,25 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
 
   // Payment Options
   const [paymentChoice, setPaymentChoice] = useState<'PAID' | 'UNPAID' | 'PARTIAL'>('PAID');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER' | 'CUSTOMER_DEPOSIT' | 'LAUNDRY_QUOTA'>('CASH');
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // QRIS Config Toko (Pilar 1 - Gelombang 2)
+  const qrisConfig = activeOutlet?.paymentConfig?.qris;
+  const isQrisActive = qrisConfig ? qrisConfig.isActive !== false : true;
+  const qrisImageUrl = qrisConfig?.imageUrl || null;
+
+  useEffect(() => {
+    if (!isQrisActive && paymentMethod === 'QRIS') {
+      setPaymentMethod('CASH');
+    }
+  }, [isQrisActive, paymentMethod]);
+
+  // Shift Kasir State
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
 
   // Delivery & Antar-Jemput
   const [deliveryConfig, setDeliveryConfig] = useState<LaundryDeliveryConfig | null>(null);
@@ -116,13 +134,27 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     return `/${unit}`;
   };
 
-  // Fetch Services & Initial Customers when modal opens
+  // Fetch Services & Initial Customers & Shift when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
     let mounted = true;
     setLoadingServices(true);
     setErrorMsg(null);
+
+    // Cek shift kasir aktif
+    api.getCurrentShift()
+      .then((res) => {
+        if (!mounted) return;
+        if (res.status === 'success') {
+          setCurrentShift(res.data);
+        } else {
+          setCurrentShift(null);
+        }
+      })
+      .catch(() => {
+        if (mounted) setCurrentShift(null);
+      });
 
     Promise.all([
       api.getLaundryServices().catch(() => ({ status: 'error', data: [] })),
@@ -242,6 +274,9 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     setDeliveryAddress('');
     setDeliveryNotes('');
     setDeliveryType('NONE');
+    if (paymentMethod === 'CUSTOMER_DEPOSIT' || paymentMethod === 'LAUNDRY_QUOTA') {
+      setPaymentMethod('CASH');
+    }
   };
 
   // Toggle Spotting Notes
@@ -319,6 +354,11 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   // Submission Handler
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentShift) {
+      setErrorMsg('Shift kasir belum dibuka. Buka shift terlebih dahulu agar pencatatan kas laci akurat.');
+      setStartShiftModalOpen(true);
+      return;
+    }
     if (!customerName.trim()) {
       setErrorMsg('Nama pelanggan wajib diisi untuk menyimpan pesanan');
       customerInputRef.current?.focus();
@@ -331,6 +371,24 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     if (!activeOutlet?.id) {
       setErrorMsg('Toko / Outlet aktif tidak ditemukan');
       return;
+    }
+    if (paymentChoice === 'PARTIAL' && Number(depositAmount) <= 0) {
+      setErrorMsg('Masukkan nominal uang muka (DP) yang valid');
+      return;
+    }
+    if (paymentChoice !== 'UNPAID' && paymentMethod === 'CUSTOMER_DEPOSIT') {
+      const targetPay = paymentChoice === 'PAID' ? grandTotal : depositAmount;
+      if (Number(customerWallet?.balanceAmount || 0) < targetPay) {
+        setErrorMsg(`Saldo deposit pelanggan tidak mencukupi (Tersedia: Rp ${Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')})`);
+        return;
+      }
+    }
+    if (paymentChoice !== 'UNPAID' && paymentMethod === 'LAUNDRY_QUOTA') {
+      const requiredKg = weightKg > 0 ? weightKg : 1;
+      if (Number(customerWallet?.quotaKg || 0) < requiredKg) {
+        setErrorMsg(`Kuota kiloan pelanggan tidak mencukupi bobot cucian (Tersedia: ${Number(customerWallet?.quotaKg || 0)} Kg, Dibutuhkan: ${requiredKg} Kg)`);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -505,6 +563,22 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           onSubmit={handleSubmitOrder}
           className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5"
         >
+          {!currentShift && (
+            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-xs animate-in fade-in">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span className="font-bold truncate">Shift kasir belum dibuka. Buka shift agar pencatatan kas akurat.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStartShiftModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all"
+              >
+                Buka Shift Sekarang
+              </button>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2.5 text-rose-800 text-xs font-bold">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -1022,34 +1096,6 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               ))}
             </div>
 
-            {/* Payment Method Sub-selection if PAID */}
-            {paymentChoice === 'PAID' && (
-              <div className="flex items-center gap-2 pt-1">
-                {[
-                  { id: 'CASH', label: 'Tunai', icon: Banknote },
-                  { id: 'QRIS', label: 'QRIS', icon: QrCode },
-                  { id: 'TRANSFER', label: 'Transfer', icon: CreditCard },
-                ].map((m) => {
-                  const Icon = m.icon;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setPaymentMethod(m.id as any)}
-                      className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        paymentMethod === m.id
-                          ? 'bg-blue-50 border-blue-900 text-blue-950 font-black'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{m.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
             {/* Deposit Input if PARTIAL */}
             {paymentChoice === 'PARTIAL' && (
               <div className="pt-1">
@@ -1059,6 +1105,142 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                   onChange={(num) => setDepositAmount(num)}
                   placeholder="0"
                 />
+              </div>
+            )}
+
+            {/* Opsi Metode Pembayaran (Lunas atau DP) */}
+            {(paymentChoice === 'PAID' || paymentChoice === 'PARTIAL') && (
+              <div className="space-y-2 pt-1 animate-fadeIn">
+                <div className="flex items-center gap-1.5">
+                  {[
+                    { id: 'CASH', label: 'Tunai', icon: Banknote },
+                    { id: 'QRIS', label: 'QRIS', icon: QrCode },
+                    { id: 'TRANSFER', label: 'Transfer', icon: CreditCard },
+                  ]
+                    .filter((m) => m.id !== 'QRIS' || isQrisActive)
+                    .map((m) => {
+                      const Icon = m.icon;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setPaymentMethod(m.id as any)}
+                          className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            paymentMethod === m.id
+                              ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          <span>{m.label}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                {/* Opsi Dompet: Saldo Deposit & Kuota Kiloan (jika pelanggan terdaftar) */}
+                {selectedCustomer && customerWallet && (
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    {/* Tombol Saldo Deposit */}
+                    <button
+                      type="button"
+                      disabled={Number(customerWallet.balanceAmount) <= 0}
+                      onClick={() => setPaymentMethod('CUSTOMER_DEPOSIT')}
+                      className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
+                        paymentMethod === 'CUSTOMER_DEPOSIT'
+                          ? 'bg-blue-950 border-blue-950 text-white shadow-xs'
+                          : Number(customerWallet.balanceAmount) > 0
+                          ? 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'
+                          : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                      }`}
+                      title={
+                        Number(customerWallet.balanceAmount) <= 0
+                          ? 'Saldo deposit kosong'
+                          : `Gunakan Saldo (Tersedia: Rp ${Number(customerWallet.balanceAmount).toLocaleString('id-ID')})`
+                      }
+                    >
+                      <span className="flex items-center gap-1 truncate">
+                        <Wallet className="w-3.5 h-3.5 shrink-0" />
+                        <span>Saldo Deposit</span>
+                      </span>
+                      <span className="font-extrabold text-[10px] shrink-0">
+                        Rp {Math.floor(Number(customerWallet.balanceAmount)).toLocaleString('id-ID')}
+                      </span>
+                    </button>
+
+                    {/* Tombol Kuota Kiloan */}
+                    <button
+                      type="button"
+                      disabled={Number(customerWallet.quotaKg) <= 0}
+                      onClick={() => setPaymentMethod('LAUNDRY_QUOTA')}
+                      className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
+                        paymentMethod === 'LAUNDRY_QUOTA'
+                          ? 'bg-purple-950 border-purple-950 text-white shadow-xs'
+                          : Number(customerWallet.quotaKg) > 0
+                          ? 'bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100'
+                          : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                      }`}
+                      title={
+                        Number(customerWallet.quotaKg) <= 0
+                          ? 'Kuota kiloan kosong'
+                          : `Gunakan Kuota (Tersedia: ${Number(customerWallet.quotaKg)} Kg)`
+                      }
+                    >
+                      <span className="flex items-center gap-1 truncate">
+                        <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                        <span>Kuota Kiloan</span>
+                      </span>
+                      <span className="font-extrabold text-[10px] shrink-0">
+                        {Number(customerWallet.quotaKg)} Kg
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Kartu Pratinjau QRIS Statis */}
+                {paymentMethod === 'QRIS' && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-fadeIn text-center">
+                    {qrisImageUrl ? (
+                      <div className="flex flex-col items-center">
+                        <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs inline-block">
+                          <img
+                            src={qrisImageUrl}
+                            alt="Barcode QRIS Toko"
+                            className="w-36 h-36 max-h-[180px] object-contain rounded-lg"
+                          />
+                        </div>
+                        <div className="mt-1.5 space-y-0.5">
+                          {qrisConfig?.merchantName && (
+                            <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                              {qrisConfig.merchantName}
+                            </p>
+                          )}
+                          {qrisConfig?.nmid && (
+                            <p className="text-[10px] font-mono text-slate-500 font-bold">
+                              NMID: {qrisConfig.nmid}
+                            </p>
+                          )}
+                          <p className="text-xs font-black text-blue-900 pt-0.5">
+                            Nominal Bayar: Rp {(paymentChoice === 'PAID' ? grandTotal : depositAmount).toLocaleString('id-ID')}
+                          </p>
+                        </div>
+                        <p className="text-[10.5px] text-slate-500 font-medium mt-1 leading-tight">
+                          Minta pelanggan scan QRIS lalu pastikan dana masuk sebelum konfirmasi.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col items-center gap-1.5 text-center">
+                        <QrCode className="w-8 h-8 text-amber-500" />
+                        <p className="text-xs font-bold text-amber-900">
+                          Barcode QRIS Belum Dikonfigurasi
+                        </p>
+                        <p className="text-[10.5px] text-amber-700 leading-tight">
+                          Unggah foto/gambar QRIS toko pada menu Pengaturan Pembayaran agar pelanggan bisa scan QRIS di kasir.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1125,6 +1307,17 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           </div>
         </div>
       </div>
+
+      {/* Modal Buka Shift Kasir */}
+      <StartShiftModal
+        isOpen={startShiftModalOpen}
+        onClose={() => setStartShiftModalOpen(false)}
+        onShiftStarted={(newShift) => {
+          setCurrentShift(newShift);
+          setStartShiftModalOpen(false);
+          setErrorMsg(null);
+        }}
+      />
     </div>
   );
 };

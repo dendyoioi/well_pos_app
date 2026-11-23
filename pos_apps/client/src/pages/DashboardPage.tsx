@@ -30,6 +30,11 @@ import {
   Ticket,
   FileText,
   ArrowLeftRight,
+  Layers,
+  Shirt,
+  Archive,
+  Tag,
+  Truck,
 } from 'lucide-react';
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
@@ -568,7 +573,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       'qr_settings',
       'qr_orders',
       'qr_guest_menu',
-      'settings_taxes',
     ];
 
     if (user.role === 'KITCHEN') {
@@ -966,7 +970,98 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                     }`}
                   >
                     <CreditCard className="w-4 h-4" />
-                    <span>Mesin Kasir (POS)</span>
+                    <span>{isLaundryMode ? 'Kasir Laundry' : 'Mesin Kasir (POS)'}</span>
+                  </button>
+                )}
+
+                {/* Tab Navigasi Khusus Laundry di Mobile Drawer */}
+                {isLaundryMode && allowedTabs.includes('laundry_queue') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('laundry_queue');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'laundry_queue'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>Antrean Cucian</span>
+                  </button>
+                )}
+
+                {isLaundryMode && allowedTabs.includes('laundry_production') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('laundry_production');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'laundry_production'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Shirt className="w-4 h-4" />
+                    <span>Workshop Produksi</span>
+                  </button>
+                )}
+
+                {isLaundryMode && allowedTabs.includes('laundry_racks') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('laundry_racks');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'laundry_racks'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Archive className="w-4 h-4" />
+                    <span>Rak Simpan</span>
+                  </button>
+                )}
+
+                {isLaundryMode && allowedTabs.includes('laundry_services') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('laundry_services');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'laundry_services'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Tag className="w-4 h-4" />
+                    <span>Layanan &amp; Tarif</span>
+                  </button>
+                )}
+
+                {isLaundryMode && allowedTabs.includes('laundry_transfers') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('laundry_transfers');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
+                      activeTab === 'laundry_transfers'
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4" />
+                    <span>Delivery / Drop-point</span>
                   </button>
                 )}
 
@@ -1375,7 +1470,78 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               }`}
             >
               <CreditCard className="w-4 h-4" />
-              <span>Mesin Kasir (POS)</span>
+              <span>{isLaundryMode ? 'Kasir Laundry' : 'Mesin Kasir (POS)'}</span>
+            </button>
+          )}
+
+          {/* Tab Navigasi Khusus Laundry di Desktop Subnav */}
+          {isLaundryMode && allowedTabs.includes('laundry_queue') && (
+            <button
+              onClick={() => setActiveTab('laundry_queue')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'laundry_queue'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Antrean Cucian</span>
+            </button>
+          )}
+
+          {isLaundryMode && allowedTabs.includes('laundry_production') && (
+            <button
+              onClick={() => setActiveTab('laundry_production')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'laundry_production'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <Shirt className="w-4 h-4" />
+              <span>Workshop</span>
+            </button>
+          )}
+
+          {isLaundryMode && allowedTabs.includes('laundry_racks') && (
+            <button
+              onClick={() => setActiveTab('laundry_racks')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'laundry_racks'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <Archive className="w-4 h-4" />
+              <span>Rak Simpan</span>
+            </button>
+          )}
+
+          {isLaundryMode && allowedTabs.includes('laundry_services') && (
+            <button
+              onClick={() => setActiveTab('laundry_services')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'laundry_services'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              <span>Layanan &amp; Tarif</span>
+            </button>
+          )}
+
+          {isLaundryMode && allowedTabs.includes('laundry_transfers') && (
+            <button
+              onClick={() => setActiveTab('laundry_transfers')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'laundry_transfers'
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+              }`}
+            >
+              <Truck className="w-4 h-4" />
+              <span>Delivery</span>
             </button>
           )}
 

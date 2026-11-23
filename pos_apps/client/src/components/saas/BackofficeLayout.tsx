@@ -41,6 +41,7 @@ import {
   ClipboardList,
   UserCog,
   TicketPercent,
+  Percent,
   FileText,
   Printer,
   Award,
@@ -55,6 +56,7 @@ import { WellPosLogo } from '../ui/WellPosLogo';
 import { checkIsLaundry } from '../../utils/businessType';
 import { LaundryQuickDropoffModal } from '../laundry/LaundryQuickDropoffModal';
 import { LaundryReceiptModal } from '../laundry/LaundryReceiptModal';
+import { StaffAttendanceModal } from '../pos/StaffAttendanceModal';
 
 export const TAB_TO_GROUP_MAP: Record<string, string> = {
   // Operasional Laundry & Dry Clean
@@ -180,6 +182,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   // Quick Drop-off Modal & Receipt Modal Khusus Laundry
   const [quickDropoffOpen, setQuickDropoffOpen] = useState(false);
   const [receiptModalOrder, setReceiptModalOrder] = useState<LaundryQueueOrder | null>(null);
+  const [staffAttendanceModalOpen, setStaffAttendanceModalOpen] = useState(false);
 
   // Global listener untuk memicu Quick Drop-off dari Beranda Bento / Tile lainnya
   useEffect(() => {
@@ -379,6 +382,17 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               >
                 <Archive className="w-4 h-4 shrink-0" />
                 <span>Rak Simpan &amp; Serah Ambil</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStaffAttendanceModalOpen(true);
+                  onItemClick?.();
+                }}
+                className="w-full text-left px-3 py-2.5 rounded-xl font-bold flex items-center gap-2.5 transition-all cursor-pointer text-slate-700 hover:bg-blue-50/60"
+              >
+                <Clock className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>Absensi Staf (Clock In/Out)</span>
               </button>
             </div>
 
@@ -1563,18 +1577,24 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   <span className={isRail ? 'hidden lg:inline' : 'inline'}>Metode Pembayaran &amp; QRIS</span>
                 </span>
               </button>
-              {!isLaundryMode && (
-                <button
-                  onClick={() => handleSelectTab('settings_taxes')}
-                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                    activeTab === 'settings_taxes'
-                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                  }`}
-                >
-                  <span>Pajak (PB1) &amp; Biaya Layanan</span>
-                </button>
-              )}
+              <button
+                onClick={() => handleSelectTab('settings_taxes')}
+                className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                  isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                } ${
+                  activeTab === 'settings_taxes'
+                    ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                }`}
+                title={isLaundryMode ? 'Pajak (PPN) & Biaya Layanan' : 'Pajak (PB1) & Biaya Layanan'}
+              >
+                <span className="flex items-center gap-2">
+                  <Percent className="w-4 h-4 shrink-0 lg:hidden" />
+                  <span className={isRail ? 'hidden lg:inline' : 'inline'}>
+                    {isLaundryMode ? 'Pajak (PPN) & Biaya Layanan' : 'Pajak (PB1) & Biaya Layanan'}
+                  </span>
+                </span>
+              </button>
               {!isLaundryMode && (
                 <button
                   onClick={() => handleSelectTab('settings_channels')}
@@ -2512,6 +2532,13 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             />
           </>
         )}
+
+        {/* Modal Absensi Staf Khusus Workshop Laundry */}
+        <StaffAttendanceModal
+          isOpen={staffAttendanceModalOpen}
+          onClose={() => setStaffAttendanceModalOpen(false)}
+          activeOutlet={activeOutlet}
+        />
       </div>
     </div>
   );

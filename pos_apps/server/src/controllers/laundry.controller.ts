@@ -7,6 +7,8 @@ import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus
 import { whatsAppService, LaundryNotificationData } from '../services/whatsapp.service';
 import { idempotencyService } from '../services/idempotency.service';
 import { storageService } from '../services/storage.service';
+import { promotionService } from '../services/promotion.service';
+import { loyaltyService } from '../services/loyalty.service';
 
 // ==========================================
 // 1. SCHEMAS
@@ -77,6 +79,10 @@ const createLaundryOrderSchema = z.object({
   estimatedReadyHours: z.number().int().default(48),
   depositAmount: z.number().min(0).default(0),
   discountAmount: z.number().min(0).default(0),
+  manualDiscountAmount: z.number().min(0).optional().default(0),
+  promotionId: z.string().uuid().optional().nullable(),
+  promoCode: z.string().optional().nullable(),
+  pointsToRedeem: z.number().int().min(0).optional().default(0),
   paymentMethod: z.enum(['CASH', 'QRIS', 'TRANSFER', 'UNPAID', 'CUSTOMER_DEPOSIT', 'LAUNDRY_QUOTA']).default('UNPAID'),
   customerNotes: z.string().optional(),
 });
@@ -562,7 +568,8 @@ export const getLaundryRacks = async (req: Request, res: Response) => {
       where: {
         tenantId,
         rackCode: { in: rackCodes },
-        status: { not: 'COMPLETED' },
+        status: { notIn: ['COMPLETED', 'CANCELLED'] },
+        order: { orderStatus: { notIn: [OrderStatus.VOIDED, OrderStatus.CANCELLED] } },
       },
       include: {
         order: {
@@ -734,7 +741,8 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
       id: detail.id,
       orderId: detail.orderId,
       invoiceNumber: detail.order.invoiceNumber,
-      status: detail.status,
+      orderStatus: detail.order.orderStatus,
+      status: (detail.order.orderStatus === OrderStatus.VOIDED || detail.order.orderStatus === OrderStatus.CANCELLED || detail.status === 'CANCELLED') ? 'CANCELLED' : detail.status,
       customerName: detail.order.customer?.name || 'Pelanggan Walk-In',
       customerPhone: detail.order.customer?.phone || null,
       customerAddress: detail.order.customer?.address || null,
@@ -788,6 +796,48 @@ class BusinessValidationError extends Error {
     this.name = 'BusinessValidationError';
     this.statusCode = 400;
   }
+}
+
+/**
+ * Helper Idempoten: Berikan poin belanja reward pada nota laundry yang telah lunas
+ */
+async function awardLaundryOrderPointsIfEligible(
+  tx: any,
+  tenantId: string,
+  outletId: string,
+  customerId: string | null | undefined,
+  orderId: string,
+  spendAmount: number
+) {
+  if (!customerId || spendAmount <= 0) return;
+
+  const outlet = await tx.outlet.findFirst({
+    where: { id: outletId, tenantId },
+    select: { loyaltyConfig: true },
+  });
+  const loyaltyConfig = outlet?.loyaltyConfig as any;
+  if (!loyaltyConfig || !loyaltyConfig.isActive) return;
+
+  // Idempotency check: apakah poin EARNED_PURCHASE sudah pernah diberikan untuk nota ini
+  const existingLedger = await tx.customerPointLedger.findFirst({
+    where: {
+      tenantId,
+      orderId,
+      type: 'EARNED_PURCHASE',
+    },
+  });
+  if (existingLedger) return;
+
+  await loyaltyService.awardPoints(
+    {
+      tenantId,
+      customerId,
+      orderId,
+      spendAmount,
+    },
+    tx,
+    loyaltyConfig
+  );
 }
 
 export const createLaundryOrder = async (req: Request, res: Response) => {
@@ -844,6 +894,10 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       estimatedReadyHours,
       depositAmount,
       discountAmount,
+      manualDiscountAmount,
+      promotionId,
+      promoCode,
+      pointsToRedeem,
       paymentMethod,
       customerNotes,
     } = parseResult.data;
@@ -937,7 +991,101 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
 
     // Ongkos Kirim Antar-Jemput
     const effectiveDeliveryFee = isDelivery ? Number(deliveryFee || 0) : 0;
-    const effectiveDiscount = discountAmount ? Math.min(subtotal + effectiveDeliveryFee, discountAmount) : 0;
+
+    // Ambil konfigurasi loyalitas outlet
+    const outletRecord = await prisma.outlet.findFirst({
+      where: { id: outletId, tenantId },
+      select: { id: true, loyaltyConfig: true },
+    });
+    const loyaltyConfig = (outletRecord?.loyaltyConfig as any) || undefined;
+    const isLoyaltyActive = Boolean(loyaltyConfig?.isActive);
+
+    // 1. Validasi Kode Promo / Voucher Terkelola
+    let promoDiscount = 0;
+    let validPromotion: any = null;
+    const rawPromoCode = promoCode?.trim().toUpperCase();
+    let resolvedPromoCode = rawPromoCode;
+
+    if (!resolvedPromoCode && promotionId) {
+      const promoDb = await prisma.promotion.findFirst({
+        where: { id: promotionId, tenantId },
+      });
+      if (promoDb) {
+        resolvedPromoCode = promoDb.code;
+      }
+    }
+
+    if (resolvedPromoCode) {
+      const promoValidation = await promotionService.validatePromotion(
+        tenantId,
+        resolvedPromoCode,
+        subtotal,
+        effectiveCustomerId
+      );
+      if (!promoValidation.valid) {
+        return res.status(400).json({
+          status: 'error',
+          message: promoValidation.message || 'Kode promo tidak valid atau tidak dapat digunakan',
+        });
+      }
+      promoDiscount = promoValidation.discountAmount;
+      validPromotion = promoValidation.promotion;
+    }
+
+    // 2. Validasi Penukaran Poin Member (Loyalty Points Redeem)
+    let pointDiscount = 0;
+    const requestedPointsToRedeem = Number(pointsToRedeem || 0);
+
+    if (requestedPointsToRedeem > 0) {
+      if (!isLoyaltyActive) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Program loyalitas dan poin member sedang tidak aktif di outlet ini',
+        });
+      }
+      if (!effectiveCustomerId) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Pelanggan harus dipilih untuk dapat menukarkan poin loyalitas',
+        });
+      }
+      const customerRecord = await prisma.customer.findUnique({
+        where: { id: effectiveCustomerId },
+      });
+      const currentPoints = Number(customerRecord?.loyaltyPoints || 0);
+      if (currentPoints < requestedPointsToRedeem) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Poin tidak mencukupi. Tersedia: ${currentPoints} poin, diminta: ${requestedPointsToRedeem} poin`,
+        });
+      }
+      const minPoints = Number(loyaltyConfig?.minPointsToRedeem || 10);
+      if (requestedPointsToRedeem < minPoints) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Minimal penukaran poin adalah ${minPoints} poin`,
+        });
+      }
+      const ptValue = Number(loyaltyConfig?.pointValueIdr || 100);
+      const { maxPoints } = loyaltyService.calculateMaxRedeemable(subtotal, currentPoints, ptValue);
+      if (requestedPointsToRedeem > maxPoints) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Maksimal penukaran poin untuk transaksi ini adalah ${maxPoints} poin`,
+        });
+      }
+      pointDiscount = requestedPointsToRedeem * ptValue;
+    }
+
+    // 3. Kalkulasi Diskon Gabungan Bersih (Voucher + Manual + Poin)
+    const manualDiscount = Math.max(
+      0,
+      Number(manualDiscountAmount || (discountAmount && !validPromotion ? discountAmount : 0))
+    );
+    const effectiveDiscount = Math.min(
+      subtotal + effectiveDeliveryFee,
+      promoDiscount + manualDiscount + pointDiscount
+    );
     const grandTotal = Math.max(0, subtotal + effectiveDeliveryFee - effectiveDiscount);
     const paidAmount = paymentMethod === 'UNPAID' ? 0 : Math.min(grandTotal, depositAmount || grandTotal);
 
@@ -966,6 +1114,13 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       formattedNotes = formattedNotes ? `${deliveryHeader} | Catatan: ${formattedNotes}` : deliveryHeader;
     } else {
       formattedNotes = formattedNotes ? `🧺 [Ambil di Toko] ${formattedNotes}` : '🧺 [Ambil di Toko]';
+    }
+
+    if (validPromotion && promoDiscount > 0) {
+      formattedNotes += ` | [Voucher: ${validPromotion.code} -Rp ${promoDiscount.toLocaleString('id-ID')}]`;
+    }
+    if (pointDiscount > 0) {
+      formattedNotes += ` | [Tukar ${requestedPointsToRedeem} Poin -Rp ${pointDiscount.toLocaleString('id-ID')}]`;
     }
 
     // Tentukan paymentStatus: Lunas vs DP vs Belum Bayar
@@ -1059,6 +1214,45 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
           courierPhone: courierPhone || null,
         },
       });
+
+      // 1. Catat penggunaan promo jika ada voucher aktif
+      if (validPromotion && promoDiscount > 0) {
+        await promotionService.recordUsage(
+          tx,
+          tenantId,
+          validPromotion.id,
+          order.id,
+          promoDiscount,
+          effectiveCustomerId
+        );
+      }
+
+      // 2. Potong poin pelanggan jika melakukan penukaran poin belanja
+      if (requestedPointsToRedeem > 0 && effectiveCustomerId) {
+        await loyaltyService.redeemPoints(
+          {
+            tenantId,
+            customerId: effectiveCustomerId,
+            orderId: order.id,
+            pointsToRedeem: requestedPointsToRedeem,
+            subtotal,
+          },
+          tx,
+          loyaltyConfig
+        );
+      }
+
+      // 3. Berikan reward poin jika pesanan langsung lunas di kasir
+      if (paymentStatus === PaymentStatus.PAID) {
+        await awardLaundryOrderPointsIfEligible(
+          tx,
+          tenantId,
+          outletId,
+          effectiveCustomerId,
+          order.id,
+          grandTotal
+        );
+      }
 
       // Catat log stage awal (1. DROP_OFF) untuk audit trail produksi & KPI kasir
       await tx.laundryStageLog.create({
@@ -1348,6 +1542,18 @@ export const updateLaundryStatus = async (req: Request, res: Response) => {
           where: { id: detail.id },
           data: { rackCode: null },
         });
+
+        // Berikan reward poin jika pesanan berstatus PAID
+        if (orderDataToUpdate.paymentStatus === PaymentStatus.PAID || detail.order.paymentStatus === PaymentStatus.PAID) {
+          await awardLaundryOrderPointsIfEligible(
+            tx,
+            tenantId,
+            detail.outletId,
+            detail.order.customerId,
+            detail.order.id,
+            Number(detail.order.totalAmount)
+          );
+        }
       }
 
       // Auto-BoM Deduction jika cucian masuk status WASHING_DRYING atau lebih lanjut dan belum dipotong
@@ -2325,6 +2531,18 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
           where: { id: detail.id },
           data: { rackCode: null },
         });
+
+        // Berikan reward poin jika pesanan berstatus PAID
+        if (orderDataToUpdate.paymentStatus === PaymentStatus.PAID || detail.order.paymentStatus === PaymentStatus.PAID) {
+          await awardLaundryOrderPointsIfEligible(
+            tx,
+            tenantId,
+            detail.outletId,
+            detail.order.customerId,
+            detail.order.id,
+            Number(detail.order.totalAmount)
+          );
+        }
       }
 
       // 4. Auto-BoM Deduction jika cucian masuk tahap cuci (atau lebih lanjut) dan belum dipotong
@@ -3238,9 +3456,14 @@ export const getLaundryDeliveries = async (req: Request, res: Response) => {
         tenantId,
         ...(outletId ? { outletId } : {}),
         deliveryType: { notIn: ['NONE'] },
+        deliveryStatus: { not: 'CANCELLED' },
+        status: { not: 'CANCELLED' },
+        order: {
+          orderStatus: { notIn: [OrderStatus.VOIDED, OrderStatus.CANCELLED] },
+        },
       },
       include: {
-        order: { select: { totalAmount: true, paidAmount: true, paymentStatus: true } },
+        order: { select: { totalAmount: true, paidAmount: true, paymentStatus: true, orderStatus: true } },
       },
     });
 
@@ -3475,6 +3698,18 @@ export const updateLaundryDeliveryStatus = async (req: Request, res: Response) =
           where: { id: detail.order.id },
           data: orderDataToUpdate,
         });
+
+        // Berikan reward poin jika pesanan berstatus PAID
+        if (orderDataToUpdate.paymentStatus === PaymentStatus.PAID || detail.order.paymentStatus === PaymentStatus.PAID) {
+          await awardLaundryOrderPointsIfEligible(
+            tx,
+            tenantId,
+            detail.outletId,
+            detail.order.customerId,
+            detail.order.id,
+            Number(detail.order.totalAmount)
+          );
+        }
 
         await tx.laundryStageLog.create({
           data: {
@@ -3786,11 +4021,14 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
           gte: start,
           lte: end,
         },
-        ...(outletId ? { order: { outletId: String(outletId) } } : {}),
+        order: {
+          ...(outletId ? { outletId: String(outletId) } : {}),
+          orderStatus: { notIn: [OrderStatus.VOIDED, OrderStatus.CANCELLED] },
+        },
       },
       include: {
         order: {
-          select: { id: true, invoiceNumber: true, outletId: true },
+          select: { id: true, invoiceNumber: true, outletId: true, orderStatus: true },
         },
       },
       orderBy: { completedAt: 'asc' },
@@ -3801,15 +4039,19 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
       where: {
         tenantId,
         deliveryStatus: 'DELIVERED',
+        status: { not: 'CANCELLED' },
         ...(outletId ? { outletId: String(outletId) } : {}),
         deliveredAt: {
           gte: start,
           lte: end,
         },
+        order: {
+          orderStatus: { notIn: [OrderStatus.VOIDED, OrderStatus.CANCELLED] },
+        },
       },
       include: {
         order: {
-          select: { id: true, invoiceNumber: true, outletId: true },
+          select: { id: true, invoiceNumber: true, outletId: true, orderStatus: true },
         },
       },
     });
@@ -3987,5 +4229,98 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error getLaundryCommissions:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mengambil laporan komisi staf & kurir' });
+  }
+};
+
+/**
+ * Controller: Pencatatan Pencairan Kas Komisi Staf/Kurir (STAFF_COMMISSION)
+ * @route POST /api/laundry/commissions/payout
+ */
+export const payoutLaundryCommission = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    const { outletId, staffName, amount, periodLabel, notes } = req.body;
+
+    if (!outletId || typeof outletId !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Outlet ID wajib diisi' });
+    }
+    if (!staffName || typeof staffName !== 'string' || !staffName.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Nama staf/kurir wajib diisi' });
+    }
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Nominal pencairan komisi harus lebih dari Rp 0' });
+    }
+
+    // 1. Validasi kepemilikan outlet
+    const outlet = await prisma.outlet.findFirst({
+      where: { id: outletId, tenantId },
+    });
+    if (!outlet) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Outlet tidak ditemukan atau tidak sesuai dengan akses akun Anda.',
+      });
+    }
+
+    // 2. Cari shift yang benar-benar sedang terbuka
+    const activeShift = await prisma.shift.findFirst({
+      where: {
+        outletId,
+        status: ShiftStatus.OPEN,
+      },
+      orderBy: { startTime: 'desc' },
+    });
+
+    if (!activeShift) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Shift kasir belum dibuka. Buka shift kasir terlebih dahulu sebelum mencatat pencairan komisi dari kas laci.',
+      });
+    }
+
+    const shiftId = activeShift.id;
+
+    const movementNotes = `Pencairan Komisi Staf/Kurir: ${staffName.trim()}${
+      periodLabel ? ` (${periodLabel})` : ''
+    }${notes ? ` - ${notes.trim()}` : ''}`;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const movement = await tx.cashMovement.create({
+        data: {
+          tenantId,
+          outletId,
+          shiftId,
+          userId,
+          type: 'CASH_OUT',
+          category: 'STAFF_COMMISSION',
+          amount: numAmount,
+          notes: movementNotes,
+        },
+      });
+
+      await tx.shift.update({
+        where: { id: activeShift.id },
+        data: {
+          expectedEnding: { decrement: numAmount },
+        },
+      });
+
+      return movement;
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: `Pencairan komisi Rp ${numAmount.toLocaleString('id-ID')} untuk ${staffName} berhasil dicatat ke Kas Keluar`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error in payoutLaundryCommission:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mencatat pencairan komisi', error: error?.message });
   }
 };
