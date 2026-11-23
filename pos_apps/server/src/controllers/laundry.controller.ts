@@ -219,6 +219,11 @@ export const createLaundryService = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat membuat layanan laundry' });
+    }
+
     const parseResult = createLaundryServiceSchema.safeParse(req.body);
     if (!parseResult.success) {
       return res.status(400).json({
@@ -250,6 +255,14 @@ export const updateLaundryService = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah layanan laundry' });
+    }
 
     const existing = await prisma.laundryService.findFirst({
       where: { id, tenantId },
@@ -287,6 +300,14 @@ export const deleteLaundryService = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menghapus layanan laundry' });
+    }
 
     const existing = await prisma.laundryService.findFirst({
       where: { id, tenantId },
@@ -417,6 +438,11 @@ export const saveLaundryServiceBom = async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId || req.tenantId;
     if (!tenantId) {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah takaran bahan (BoM)' });
     }
 
     const service = await prisma.laundryService.findFirst({
@@ -595,6 +621,11 @@ export const createLaundryRack = async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId || req.tenantId;
     if (!tenantId) {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menambah rak penyimpanan' });
     }
     const parseResult = createLaundryRackSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -1857,6 +1888,15 @@ export const toggleOutletWorkshopMode = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah mode workshop' });
+    }
+
     const { isWorkshop } = req.body;
 
     const existing = await prisma.outlet.findFirst({
@@ -2498,6 +2538,11 @@ export const updateLaundryStageSettings = async (req: Request, res: Response) =>
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah tahapan produksi' });
+    }
+
     const { stages } = req.body;
     if (!Array.isArray(stages)) {
       return res.status(400).json({ status: 'error', message: 'Daftar tahapan harus berupa array' });
@@ -2524,6 +2569,11 @@ export const resetLaundryStageSettings = async (req: Request, res: Response) => 
     const tenantId = req.user?.tenantId || req.tenantId;
     if (!tenantId) {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mereset tahapan produksi' });
     }
 
     await prisma.tenant.update({
