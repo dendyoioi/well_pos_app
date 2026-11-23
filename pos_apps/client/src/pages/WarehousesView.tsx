@@ -203,13 +203,13 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
       {/* =========================================================================
           TOP HEADER: Judul & Aksi Tambah Gudang (Kanonikal Navy Blue Well POS)
           ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs">
-        <div className="space-y-1 min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs">
+        <div className="space-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-900 shrink-0">
               <Warehouse className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 Kelola Gudang Logistik
               </h1>
@@ -222,7 +222,7 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-950/20 transition-all cursor-pointer shrink-0 w-full sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-950/20 transition-all cursor-pointer shrink-0 w-full lg:w-auto"
         >
           <Plus className="w-4 h-4 shrink-0" />
           <span>Tambah Gudang Baru</span>

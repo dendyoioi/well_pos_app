@@ -1144,7 +1144,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
     return (
       <div className="max-w-7xl mx-auto space-y-6 pb-28 sm:pb-16 font-sans">
         {/* Navigation Breadcrumb Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsEditing(false)}
@@ -1423,8 +1423,8 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             {/* ============================================================= */}
             <div className="lg:col-span-8 space-y-6">
               {/* Toolbar & Filter */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-black text-slate-900">
                       Cakupan Wewenang Fungsional
@@ -1438,7 +1438,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                   </p>
                 </div>
 
-                <div className="relative w-full sm:w-64">
+                <div className="relative w-full lg:w-64 shrink-0">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="text"
@@ -1590,8 +1590,8 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
     <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* Top Banner & Stats */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Akses &amp; Peran Staf
             </h1>

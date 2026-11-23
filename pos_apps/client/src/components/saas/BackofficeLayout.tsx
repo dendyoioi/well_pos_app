@@ -384,7 +384,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
             {/* Akses Cepat PWA di Workshop */}
             <div className="pt-3 mt-3 border-t border-slate-200">
-              <PwaInstallButton className="w-full justify-center" />
+              <PwaInstallButton className={isRail ? 'hidden lg:flex w-full justify-center' : 'w-full justify-center'} />
             </div>
           </div>
         );
@@ -443,7 +443,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
           {/* Akses Cepat PWA di Dapur */}
           <div className="pt-3 mt-3 border-t border-amber-200/80">
-            <PwaInstallButton className="w-full justify-center" />
+            <PwaInstallButton className={isRail ? 'hidden lg:flex w-full justify-center' : 'w-full justify-center'} />
           </div>
         </div>
       );
@@ -623,7 +623,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
           {/* Akses Cepat Pasang PWA di Sidebar Gudang */}
           <div className="pt-3 mt-3 border-t border-indigo-200/80">
-            <PwaInstallButton className="w-full justify-center" />
+            <PwaInstallButton className={isRail ? 'hidden lg:flex w-full justify-center' : 'w-full justify-center'} />
           </div>
         </div>
       );
@@ -739,7 +739,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           </div>
 
           <div className="pt-3 mt-3 border-t border-slate-200">
-            <PwaInstallButton className="w-full justify-center" />
+            <PwaInstallButton className={isRail ? 'hidden lg:flex w-full justify-center' : 'w-full justify-center'} />
           </div>
         </div>
       );
@@ -1625,7 +1625,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
         {/* Akses Cepat Pasang PWA di Sidebar */}
         <div className="pt-3 mt-3 border-t border-slate-200">
-          <PwaInstallButton className="w-full justify-center" />
+          <PwaInstallButton className={isRail ? 'hidden lg:flex w-full justify-center' : 'w-full justify-center'} />
         </div>
       </div>
     );

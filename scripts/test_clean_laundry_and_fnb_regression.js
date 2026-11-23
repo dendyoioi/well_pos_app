@@ -14,9 +14,9 @@ async function run() {
   // 1. LAUNDRY INVENTORY: VERIFIKASI HANYA BAHAN CUCI & PARFUM
   // -------------------------------------------------------------------------
   console.log('▶️ 1. Memeriksa Inventori Mode Laundry (owner.laundry@wellpos.id)...');
-  await page.goto('http://127.0.0.1:5173/#login', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/#login', { waitUntil: 'networkidle' });
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
-  await page.goto('http://127.0.0.1:5173/#login', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/#login', { waitUntil: 'networkidle' });
 
   await page.locator('button:has-text("Portal Pemilik")').first().click();
   await page.locator('input[type="email"]').first().fill('owner.laundry@wellpos.id');
@@ -24,7 +24,7 @@ async function run() {
   await page.locator('button:has-text("Masuk ke Portal Pemilik")').first().click();
   await page.waitForTimeout(3000);
 
-  await page.goto('http://127.0.0.1:5173/?tab=inventory', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/?tab=inventory', { waitUntil: 'networkidle' });
   await page.waitForTimeout(2000);
 
   const laundryBody = await page.locator('body').innerText();
@@ -51,7 +51,7 @@ async function run() {
   // 2. LAUNDRY RECEIPT SETTINGS: TAG PRODUKSI KERANJANG
   // -------------------------------------------------------------------------
   console.log('▶️ 2. Memeriksa Pratinjau Tag Produksi di Pengaturan Struk Laundry...');
-  await page.goto('http://127.0.0.1:5173/?tab=settings_receipt', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/?tab=settings_receipt', { waitUntil: 'networkidle' });
   await page.waitForTimeout(2000);
 
   const checkboxes = page.locator('input[type="checkbox"]');
@@ -82,7 +82,7 @@ async function run() {
   // -------------------------------------------------------------------------
   console.log('▶️ 3. Memeriksa Mode F&B / Retail (Anti-Regresi: owner@uracoffee.id)...');
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
-  await page.goto('http://127.0.0.1:5173/#login', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/#login', { waitUntil: 'networkidle' });
 
   await page.locator('button:has-text("Portal Pemilik")').first().click();
   await page.locator('input[type="email"]').first().fill('owner@uracoffee.id');
@@ -90,7 +90,7 @@ async function run() {
   await page.locator('button:has-text("Masuk ke Portal Pemilik")').first().click();
   await page.waitForTimeout(3000);
 
-  await page.goto('http://127.0.0.1:5173/?tab=inventory', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/?tab=inventory', { waitUntil: 'networkidle' });
   await page.waitForTimeout(2000);
 
   const fnbBody = await page.locator('body').innerText();

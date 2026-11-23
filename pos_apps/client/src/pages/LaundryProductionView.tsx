@@ -204,30 +204,30 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Header View */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-3.5">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs">
+        <div className="flex items-start gap-3.5 min-w-0 flex-1">
           <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
             <Sparkles className="w-6 h-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900">Stasiun Produksi &amp; Pabrikasi</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-black text-slate-900">Stasiun Produksi &amp; Pabrikasi</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 whitespace-nowrap self-start shrink-0">
                 Mode Operator Stasiun
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               Antarmuka khusus tim pengerjaan cuci, kering, setrika, sortir, dan pengemasan (terisolasi dari transaksi uang kasir)
             </p>
           </div>
         </div>
 
         {/* Action Controls in Header: Fast Scan & Search */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2.5 w-full xl:w-auto flex-wrap sm:flex-nowrap shrink-0">
           <button
             type="button"
             onClick={() => setScannerOpen(true)}
-            className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-blue-900 hover:bg-blue-850 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap"
             title="Pindai QR / Barcode Nota dengan Scanner USB atau Kamera"
           >
             <QrCode className="w-4 h-4 text-blue-200" />
@@ -241,7 +241,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
               placeholder="Cari nota, pelanggan, layanan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-3 h-10 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs"
+              className="w-full pl-10 pr-3 h-10 text-[13px] sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs"
             />
           </div>
         </div>
@@ -334,7 +334,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
       <div className="space-y-3 border-b border-slate-200 pb-3">
         {/* Row 1: Station Tabs */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 max-w-full">
             {[
               { key: 'ALL', label: 'Semua Stasiun', count: stats.total },
               { key: 'SORTING', label: '1. Sortir & QC', count: stats.sortingCount },
@@ -346,7 +346,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveStation(tab.key as any)}
-                className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   activeStation === tab.key
                     ? 'bg-blue-900 text-white shadow-2xs'
                     : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -370,7 +370,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
         </div>
 
         {/* Row 2: SLA Instant Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-1">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1 pb-1">
           <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0">
             <Clock className="w-3.5 h-3.5" />
             <span>Filter SLA:</span>
@@ -379,7 +379,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
           <button
             type="button"
             onClick={() => setSlaFilter('ALL')}
-            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               slaFilter === 'ALL'
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -394,7 +394,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
           <button
             type="button"
             onClick={() => setSlaFilter('DUE_TODAY')}
-            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               slaFilter === 'DUE_TODAY'
                 ? 'bg-amber-500 text-white shadow-sm'
                 : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
@@ -414,7 +414,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
           <button
             type="button"
             onClick={() => setSlaFilter('OVERDUE')}
-            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               slaFilter === 'OVERDUE'
                 ? 'bg-rose-600 text-white shadow-sm'
                 : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'

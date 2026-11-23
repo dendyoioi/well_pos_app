@@ -244,8 +244,8 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       {/* =========================================================================
           HEADER BANNER
           ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
-        <div className="min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 min-w-0 flex-wrap">
             <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shrink-0">
               <Store className="w-4 h-4 shrink-0" />
@@ -264,7 +264,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
           <button
             type="button"
             onClick={handleOpenAdd}
@@ -279,7 +279,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       {/* =========================================================================
           KONEKSI MESIN KASIR POS (DEVICE PAIRING)
           ========================================================================= */}
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-5 sm:p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-5 sm:p-6 text-white shadow-md flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider">
@@ -374,7 +374,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
       {/* =========================================================================
           FILTER & PENCARIAN
           ========================================================================= */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         {/* Filter Status Aktif */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 overflow-x-auto">
           <button

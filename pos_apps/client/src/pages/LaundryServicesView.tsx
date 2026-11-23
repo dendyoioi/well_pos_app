@@ -538,8 +538,8 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     return (
         <div className="space-y-6 pb-28 sm:pb-16 font-sans animate-fadeIn text-slate-800">
             {/* 1. Header Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
-                <div className="min-w-0">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
+                <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 min-w-0 flex-wrap">
                         <div className="w-8 h-8 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
                             <Sparkles className="w-4 h-4 shrink-0" />
@@ -556,7 +556,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap sm:flex-nowrap shrink-0">
                     {activeMainTab === 'SERVICES' ? (
                         <>
                             <button
@@ -653,7 +653,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         </div>
 
                         {/* Baris Bawah: Search, Status & Sorting */}
-                        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
+                        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
                             <div className="relative flex-1">
                                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                                 <input

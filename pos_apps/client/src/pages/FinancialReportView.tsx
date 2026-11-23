@@ -233,12 +233,12 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
       ) : (
         <>
           {/* Header Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
-            <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
               <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
                 <TrendingUp className="w-6 h-6 stroke-[2.5] shrink-0" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">
                     Laporan Penjualan &amp; Finansial
@@ -256,7 +256,7 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
               <button
                 onClick={() => {
                   if (isLocked) {

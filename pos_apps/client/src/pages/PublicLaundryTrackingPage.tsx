@@ -114,7 +114,7 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 placeholder="Masukkan Nomor Nota (cth: INV-20261120-001)..."
                 value={invoiceInput}
                 onChange={(e) => setInvoiceInput(e.target.value)}
-                className="w-full pl-10 pr-3 py-2.5 text-xs font-bold rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs font-mono uppercase"
+                className="w-full pl-10 pr-3 py-2.5 text-[13px] sm:text-sm font-bold rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs font-mono uppercase"
               />
             </div>
             <button
@@ -149,21 +149,21 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
           <div className="space-y-4 animate-fadeIn">
             {/* Status Hero Card */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="min-w-0">
                   <span className="font-mono text-xs font-black text-blue-900 block">
                     {data.invoiceNumber}
                   </span>
-                  <h2 className="text-base font-black text-slate-900">{data.customerName}</h2>
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 truncate">{data.customerName}</h2>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Toko: <strong>{data.outlet?.name || data.tenantName}</strong>
                   </p>
                 </div>
 
                 {/* Macro Status Badge */}
-                <div className="text-right">
+                <div className="self-start sm:text-right shrink-0">
                   <span
-                    className={`inline-block px-3 py-1 rounded-full text-xs font-black tracking-wide border ${
+                    className={`inline-block px-3 py-1 rounded-full text-xs font-black tracking-wide border whitespace-nowrap shrink-0 ${
                       data.status === 'COMPLETED'
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         : data.status === 'READY_FOR_PICKUP'
@@ -182,7 +182,7 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                       : '🧺 DITERIMA DI KASIR'}
                   </span>
                   {data.rackCode && data.status === 'READY_FOR_PICKUP' && (
-                    <div className="font-mono text-[11px] font-black text-purple-900 mt-1">
+                    <div className="font-mono text-[11px] font-black text-purple-900 mt-1 sm:text-right">
                       Lokasi Rak: {data.rackCode}
                     </div>
                   )}

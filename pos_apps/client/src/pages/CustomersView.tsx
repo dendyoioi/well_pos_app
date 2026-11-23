@@ -422,8 +422,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
       ) : (
         <>
           {/* 1. Header Section */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div className="min-w-0">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
               <Users className="w-5 h-5 shrink-0" />
@@ -441,7 +441,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow transition-all active:scale-95 shrink-0 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow transition-all active:scale-95 w-full lg:w-auto shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Pelanggan Baru</span>
@@ -514,7 +514,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
       </div>
 
       {/* 3. Toolbar & Filters */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input

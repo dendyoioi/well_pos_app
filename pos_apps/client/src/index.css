@@ -35,19 +35,11 @@ html, body {
   text-size-adjust: 100%;
 }
 
-/* Mencegah iOS Safari & Mobile Browser auto-zoom liar saat field input/select/textarea diketuk atau difokuskan */
-@media screen and (max-width: 1024px), (hover: none) and (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-  select,
-  textarea {
-    font-size: 16px !important;
-  }
-
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
-  select:focus,
-  textarea:focus {
-    font-size: 16px !important;
-  }
+/* Form input typography & native browser enhancements */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea {
+  font-family: inherit;
 }
 
 /* Custom modern scrollbars */

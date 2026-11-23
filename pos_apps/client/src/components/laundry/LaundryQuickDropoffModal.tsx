@@ -545,7 +545,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                     }}
                     onFocus={() => setShowCustomerDropdown(true)}
                     placeholder="Ketik nama atau cari pelanggan member..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-[13px] sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
                   />
                 </div>
 
@@ -920,7 +920,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             </div>
 
             {/* Segmented Tipe Delivery */}
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { key: 'NONE', label: 'Ambil Sendiri' },
                 { key: 'PICKUP_ONLY', label: 'Jemput Saja' },
@@ -931,7 +931,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                   key={dt.key}
                   type="button"
                   onClick={() => setDeliveryType(dt.key as any)}
-                  className={`py-1.5 px-1 rounded-xl text-[10px] font-bold border transition-all text-center leading-tight cursor-pointer ${
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all text-center leading-tight cursor-pointer ${
                     deliveryType === dt.key
                       ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
@@ -947,12 +947,12 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               <div className="pt-2 border-t border-slate-200/80 space-y-2 animate-fadeIn">
                 {deliveryConfig?.zones && deliveryConfig.zones.length > 0 && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600">Pilih Zona / Tarif Antar</label>
+                    <label className="text-xs font-bold text-slate-700">Pilih Zona / Tarif Antar</label>
                     <div className="relative">
                       <select
                         value={deliveryZoneId}
                         onChange={(e) => setDeliveryZoneId(e.target.value)}
-                        className="w-full appearance-none pr-10 pl-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-900"
+                        className="w-full appearance-none pr-10 pl-3 py-2 bg-white border border-slate-300 rounded-xl text-[13px] sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-blue-900"
                       >
                         {deliveryConfig.zones.map((z) => (
                           <option key={z.id} value={z.id}>
@@ -966,24 +966,24 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600">Alamat Lengkap Pengantaran / Penjemputan</label>
+                  <label className="text-xs font-bold text-slate-700">Alamat Lengkap Pengantaran / Penjemputan</label>
                   <textarea
                     rows={2}
                     placeholder="Masukkan alamat lengkap (jalan, nomor, patokan rumah)..."
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900 resize-none"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-[13px] sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-900 resize-none"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600">Catatan Khusus Kurir (Opsional)</label>
+                  <label className="text-xs font-bold text-slate-700">Catatan Khusus Kurir (Opsional)</label>
                   <input
                     type="text"
                     placeholder="Contoh: Titip satpam komplek / jemput sore"
                     value={deliveryNotes}
                     onChange={(e) => setDeliveryNotes(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-[13px] sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-900"
                   />
                 </div>
               </div>
@@ -1066,24 +1066,28 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
 
         {/* ── 3. STICKY ACTION FOOTER (IPHONE SAFE AREA COMPLIANT) ─────────── */}
         <div
-          className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-between gap-4"
+          className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
         >
-          <div>
-            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-              Total Tagihan
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-blue-950 font-mono">
-              Rp {grandTotal.toLocaleString('id-ID')}
+          <div className="flex items-center justify-between sm:block w-full sm:w-auto">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                Total Tagihan
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-blue-950 font-mono">
+                Rp {grandTotal.toLocaleString('id-ID')}
+              </div>
             </div>
             {deliveryType !== 'NONE' && (
-              <div className="text-[10px] font-semibold text-slate-500">
-                {deliveryFee === 0 ? '✓ Bebas Ongkir' : `Termasuk Ongkir Rp ${deliveryFee.toLocaleString('id-ID')}`}
-              </div>
+              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                deliveryFee === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-900'
+              }`}>
+                {deliveryFee === 0 ? '✓ Bebas Ongkir' : `+ Ongkir Rp ${deliveryFee.toLocaleString('id-ID')}`}
+              </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             {!customerName.trim() && (
               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -1103,7 +1107,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               form="quick-dropoff-form"
               onClick={handleSubmitOrder}
               disabled={submitting || !currentService}
-              className="py-2.5 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-none py-2.5 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
               title={!customerName.trim() ? 'Isi nama pelanggan untuk menyimpan' : 'Simpan transaksi dan cetak tag thermal'}
             >
               {submitting ? (

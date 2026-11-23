@@ -483,13 +483,13 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-fadeIn">
       {/* Header Halaman Utama */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
               <Truck className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">
                 Delivery &amp; Antar-Jemput
               </h1>
@@ -500,7 +500,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full lg:w-auto justify-end shrink-0">
           {activeOutlet && (
             <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-bold text-slate-700">
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
@@ -635,7 +635,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
           </div>
 
           {/* Filter Toolbar & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
             {/* Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
               {[
@@ -895,7 +895,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
       {activeMainTab === 'WORKSHOP' && hasMultipleOutletsOrManifests && (
         <div className="space-y-6 animate-fadeIn">
           {/* Toolbar Pencarian & Tab Filter Workshop */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl">
               <button
                 type="button"

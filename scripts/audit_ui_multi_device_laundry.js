@@ -107,6 +107,42 @@ async function checkPageHygiene(page, pageName, viewportKey) {
       }
     }
 
+    // 6. Check Flex-Squeeze on Header Cards (Heading / Description squeezed on Tablet/Laptop due to row layout)
+    if (viewportKey !== 'mobile') {
+      const allHeaders = document.querySelectorAll('header, [class*="rounded-3xl"], [class*="rounded-2xl"]');
+      for (const hdr of allHeaders) {
+        if (hdr.offsetParent === null) continue;
+        const heading = hdr.querySelector('h1, h2');
+        const desc = hdr.querySelector('p');
+        const hasActions = hdr.querySelector('button, input, a[class*="button"], a[class*="btn"]');
+        if (heading && desc && hasActions && heading.offsetParent !== null && desc.offsetParent !== null) {
+          const hdrStyle = window.getComputedStyle(hdr);
+          const isRow = hdrStyle.flexDirection === 'row';
+          const textContainer = heading.closest('.min-w-0, [class*="flex-1"]') || heading.parentElement;
+          const tcRect = textContainer.getBoundingClientRect();
+          const hdrRect = hdr.getBoundingClientRect();
+
+          // If header is rendered in a flex-row and the text container is squeezed < 240px while overall header is wide (> 500px)
+          if (isRow && hdrRect.width > 500 && tcRect.width < 240) {
+            issues.push({
+              type: 'FLEX_SQUEEZE_HEADER_ROW',
+              detail: `Header card "${heading.innerText.trim().slice(0, 35)}" in ${pageName} is in flex-row and squeezed to ${Math.round(tcRect.width)}px (< 240px) on ${viewportKey}`
+            });
+          }
+
+          // Also detect if heading text has wrapped into multiple lines due to tight container
+          const hRect = heading.getBoundingClientRect();
+          const hLineHeight = parseFloat(window.getComputedStyle(heading).lineHeight) || 24;
+          if (isRow && hdrRect.width > 500 && hRect.height > hLineHeight * 1.8 && tcRect.width < 280) {
+            issues.push({
+              type: 'FLEX_SQUEEZE_HEADING_WRAPPED',
+              detail: `Heading "${heading.innerText.trim().slice(0, 35)}" in ${pageName} is awkwardly wrapped (${Math.round(hRect.height)}px height, ${Math.round(tcRect.width)}px container) on ${viewportKey}`
+            });
+          }
+        }
+      }
+    }
+
     return issues;
   }, { pageName, viewportKey, fnbPattern: FNB_REGEX.source });
 }
@@ -150,9 +186,9 @@ async function checkModalHygiene(page, modalSelector, modalName, viewportKey) {
 }
 
 async function loginLaundry(page) {
-  await page.goto('http://127.0.0.1:5173/#login', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/#login', { waitUntil: 'networkidle' });
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
-  await page.goto('http://127.0.0.1:5173/#login', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:5173/#login', { waitUntil: 'networkidle' });
   await page.locator('button:has-text("Portal Pemilik")').first().click();
   await page.locator('input[type="email"]').first().fill('owner.laundry@wellpos.id');
   await page.locator('input[type="password"]').first().fill('pastiwell789');
@@ -221,7 +257,7 @@ async function runAudit() {
 
     // 2. Ringkasan Bisnis Laundry (?tab=overview)
     console.log(`  [2] Ringkasan Bisnis (?tab=overview)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=overview', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=overview', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     let issues = await checkPageHygiene(page, 'overview', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'overview', viewport: vp.key })));
@@ -258,7 +294,7 @@ async function runAudit() {
 
     // 3. Kasir Laundry POS (?tab=pos)
     console.log(`  [3] Kasir Laundry POS (?tab=pos)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=pos', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=pos', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
     issues = await checkPageHygiene(page, 'pos', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'pos', viewport: vp.key })));
@@ -266,7 +302,7 @@ async function runAudit() {
 
     // 4. Antrean & Status Cucian (?tab=laundry_queue)
     console.log(`  [4] Antrean & Status Cucian (?tab=laundry_queue)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=laundry_queue', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=laundry_queue', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'laundry_queue', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'laundry_queue', viewport: vp.key })));
@@ -314,7 +350,7 @@ async function runAudit() {
 
     // 5. Stasiun Produksi Workshop (?tab=laundry_production)
     console.log(`  [5] Stasiun Produksi Workshop (?tab=laundry_production)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=laundry_production', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=laundry_production', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'laundry_production', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'laundry_production', viewport: vp.key })));
@@ -342,7 +378,7 @@ async function runAudit() {
 
     // 6. Layanan & Tarif Laundry (?tab=laundry_services)
     console.log(`  [6] Layanan & Tarif Laundry (?tab=laundry_services)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=laundry_services', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=laundry_services', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'laundry_services', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'laundry_services', viewport: vp.key })));
@@ -370,7 +406,7 @@ async function runAudit() {
 
     // 7. Manajemen Rak & Simpan (?tab=laundry_racks)
     console.log(`  [7] Manajemen Rak & Simpan (?tab=laundry_racks)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=laundry_racks', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=laundry_racks', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'laundry_racks', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'laundry_racks', viewport: vp.key })));
@@ -378,7 +414,7 @@ async function runAudit() {
 
     // 8. Delivery / Antar-Jemput (?tab=laundry_transfers)
     console.log(`  [8] Delivery & Kurir (?tab=laundry_transfers)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=laundry_transfers', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=laundry_transfers', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'laundry_transfers', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'laundry_transfers', viewport: vp.key })));
@@ -406,7 +442,7 @@ async function runAudit() {
 
     // 9. Bahan Cuci & Perlengkapan (?tab=inventory)
     console.log(`  [9] Bahan Cuci & Inventori (?tab=inventory)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=inventory', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=inventory', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'inventory', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'inventory', viewport: vp.key })));
@@ -434,21 +470,21 @@ async function runAudit() {
 
     // 9b. Pengadaan Bahan (PO), Mutasi, Vendor
     console.log(`  [9b] Purchase Orders (?tab=purchase_orders)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=purchase_orders', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=purchase_orders', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'purchase_orders', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'purchase_orders', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_purchase_orders.png`) });
 
     console.log(`  [9c] Stock Movements (?tab=stock_movements)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=stock_movements', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=stock_movements', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'stock_movements', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'stock_movements', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_stock_movements.png`) });
 
     console.log(`  [9d] Suppliers (?tab=suppliers)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=suppliers', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=suppliers', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'suppliers', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'suppliers', viewport: vp.key })));
@@ -456,7 +492,7 @@ async function runAudit() {
 
     // 10. Riwayat Transaksi & Laporan Keuangan
     console.log(`  [10] Orders & Detail Nota (?tab=orders)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=orders', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=orders', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'orders', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'orders', viewport: vp.key })));
@@ -482,21 +518,21 @@ async function runAudit() {
     }
 
     console.log(`  [10b] Reports (?tab=reports)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=reports', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=reports', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'reports', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'reports', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_reports.png`) });
 
     console.log(`  [10c] Shifts (?tab=shifts)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=shifts', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=shifts', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'shifts', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'shifts', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_shifts.png`) });
 
     console.log(`  [10d] Product Analytics (?tab=product_analytics)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=product_analytics', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=product_analytics', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'product_analytics', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'product_analytics', viewport: vp.key })));
@@ -504,21 +540,21 @@ async function runAudit() {
 
     // 11. Staf, Peran & Komisi
     console.log(`  [11] Staff Users (?tab=staff_users)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=staff_users', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=staff_users', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'staff_users', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'staff_users', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_staff_users.png`) });
 
     console.log(`  [11b] Staff Roles (?tab=staff_roles)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=staff_roles', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=staff_roles', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'staff_roles', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'staff_roles', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_staff_roles.png`) });
 
     console.log(`  [11c] Laundry Commissions (?tab=laundry_commissions)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=laundry_commissions', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=laundry_commissions', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'laundry_commissions', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'laundry_commissions', viewport: vp.key })));
@@ -545,28 +581,28 @@ async function runAudit() {
 
     // 12. Pengaturan Toko
     console.log(`  [12] Settings Receipt (?tab=settings_receipt)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=settings_receipt', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=settings_receipt', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'settings_receipt', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'settings_receipt', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_settings_receipt.png`) });
 
     console.log(`  [12b] Settings Payment (?tab=settings_payment)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=settings_payment', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=settings_payment', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'settings_payment', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'settings_payment', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_settings_payment.png`) });
 
     console.log(`  [12c] Settings Loyalty (?tab=settings_loyalty)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=settings_loyalty', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=settings_loyalty', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'settings_loyalty', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'settings_loyalty', viewport: vp.key })));
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `audit_${vp.key}_settings_loyalty.png`) });
 
     console.log(`  [12d] Outlets (?tab=outlets)...`);
-    await page.goto('http://127.0.0.1:5173/?tab=outlets', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/?tab=outlets', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     issues = await checkPageHygiene(page, 'outlets', vp.key);
     allFindings.push(...issues.map(i => ({ ...i, page: 'outlets', viewport: vp.key })));
@@ -580,7 +616,7 @@ async function runAudit() {
         deviceScaleFactor: 2
       });
       const pubPage = await pubContext.newPage();
-      await pubPage.goto('http://127.0.0.1:5173/track/TEST-DEP-1795240399205', { waitUntil: 'networkidle' });
+      await pubPage.goto('http://localhost:5173/track/TEST-DEP-1795240399205', { waitUntil: 'networkidle' });
       await pubPage.waitForTimeout(1000);
       issues = await checkPageHygiene(pubPage, 'public_tracking', vp.key);
       allFindings.push(...issues.map(i => ({ ...i, page: 'public_tracking', viewport: vp.key })));

@@ -489,8 +489,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {activeTab === 'INGREDIENTS' && (
         <div className="space-y-6">
           {/* Action Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
+            <div className="min-w-0 flex-1">
               <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-900 shrink-0" />
                 <span>{isLaundryMode ? 'Stok Bahan Cuci & Parfum Laundry' : 'Stok Bahan Baku Dapur & Racikan'}</span>
@@ -502,7 +502,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1588,7 +1588,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           {productSubView === 'MOVEMENTS' && (
             <div className="space-y-4">
               {/* Search & Filter Toolbar */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div>
                   <h4 className="font-extrabold text-slate-900 text-sm">
                     Audit Trail Mutasi Stok Produk

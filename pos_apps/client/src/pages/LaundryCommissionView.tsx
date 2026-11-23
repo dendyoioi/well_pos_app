@@ -233,8 +233,8 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* 1. Header View */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Komisi Staf Produksi &amp; Kurir
@@ -249,12 +249,12 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         </div>
 
         {/* Action Buttons Top Bar */}
-        <div className="flex items-center flex-wrap gap-2">
+        <div className="flex items-center flex-wrap gap-2 w-full lg:w-auto shrink-0">
           {isSupervisorOrAbove && (
             <button
               type="button"
               onClick={() => setShowConfigModal(true)}
-              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
             >
               <Settings className="w-4 h-4 text-slate-600" />
               <span>Atur Tarif Komisi</span>
@@ -265,7 +265,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             type="button"
             onClick={handleExportCsv}
             disabled={loading || !report?.staff?.length}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
           >
             <Download className="w-4 h-4 text-slate-600" />
             <span>Export CSV</span>
@@ -275,7 +275,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             type="button"
             onClick={() => window.print()}
             disabled={loading || !report?.staff?.length}
-            className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
           >
             <Printer className="w-4 h-4" />
             <span>Cetak Rekap</span>

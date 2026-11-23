@@ -595,8 +595,8 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header & Stats Cards */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <h2 className="text-xl sm:text-2xl font-black text-blue-950 flex items-center gap-2.5">
             <Receipt className="w-6 h-6 text-blue-900" />
             <span>Riwayat Transaksi Penjualan</span>
@@ -608,7 +608,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
 
         {/* Action Buttons: Khusus untuk Sub-Tab Faktur Penjualan */}
         {activeSubTab === 'invoices' && (
-          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap sm:flex-nowrap shrink-0">
+          <div className="flex items-center gap-2 self-start lg:self-auto flex-wrap sm:flex-nowrap w-full lg:w-auto shrink-0">
             {/* Tombol Ringkasan WhatsApp */}
             <button
               type="button"
@@ -700,8 +700,8 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
       </div>
 
       {/* Global Toolbar Filters (Saluran, Kasir, Rentang Tanggal) - Bersama untuk Kedua Sub-Tab */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto min-w-0">
           {/* Dropdown Filter Saluran Pesanan */}
           <div className="relative flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 w-full sm:w-auto max-w-full min-w-0 shadow-2xs">
             <Filter className="w-4 h-4 text-blue-900 shrink-0" />
