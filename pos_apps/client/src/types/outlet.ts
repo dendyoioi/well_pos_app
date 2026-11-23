@@ -163,6 +163,7 @@ export interface ReceiptConfig {
   showWatermark?: boolean; // Default true: Tampilkan watermark "Powered by Well POS"
   whatsappConfig?: WhatsAppConfig;
   cupLabelConfig?: CupLabelConfig;
+  laundryTerms?: string;
 }
 
 export interface SalesChannelConfig {

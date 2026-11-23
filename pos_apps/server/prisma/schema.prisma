@@ -271,6 +271,7 @@ model Outlet {
   laundryStages Json?     @map("laundry_stages")
   laundryDeliveryConfig Json? @map("laundry_delivery_config")
   laundryCommissionConfig Json? @map("laundry_commission_config")
+  laundryDepositConfig Json? @map("laundry_deposit_config")
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -1666,6 +1667,7 @@ model LaundryStageLog {
   stage           String    // DROP_OFF, TAGGING, SORTING, SPOTTING, WASHING, DRYING, IRONING, FOLDING, PACKING, RACK_STORAGE, HANDOVER
   operatorId      String?   @map("operator_id")
   operatorName    String?   @map("operator_name")
+  machineName     String?   @map("machine_name")
   weightKg        Decimal?  @map("weight_kg") @db.Decimal(10, 3)
   piecesCount     Int?      @default(0) @map("pieces_count")
   startedAt       DateTime  @default(now()) @map("started_at")

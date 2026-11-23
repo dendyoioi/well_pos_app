@@ -12,6 +12,7 @@ import {
   Search,
   Camera,
   Truck,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -458,6 +459,26 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                   <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                   <span>{data.outlet.address}</span>
                 </div>
+              )}
+            </div>
+
+            {/* Kebijakan Garansi & Syarat Layanan */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-2.5 text-xs">
+              <h3 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-blue-900" />
+                <span>Ketentuan Layanan &amp; Klausa Garansi</span>
+              </h3>
+              {data.laundryTerms ? (
+                <div className="text-[11.5px] text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  {data.laundryTerms}
+                </div>
+              ) : (
+                <ol className="list-decimal pl-4 space-y-1 text-[11.5px] text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <li>Pengambilan cucian wajib membawa struk / bukti WhatsApp resmi.</li>
+                  <li>Komplain maksimal 1x24 jam setelah cucian diambil dengan membawa nota dan pakaian belum dicuci ulang.</li>
+                  <li>Pakaian yang tidak diambil dalam tempo 30 hari di luar tanggung jawab pihak laundry.</li>
+                  <li>Ganti rugi maksimal 5x biaya cuci untuk pakaian rusak/hilang sesuai investigasi tim laundry.</li>
+                </ol>
               )}
             </div>
           </div>

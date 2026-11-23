@@ -18,6 +18,11 @@ import {
     Tag,
     Sliders,
     FlaskConical,
+    Wallet,
+    Coins,
+    Calendar,
+    ShieldCheck,
+    Check,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -193,8 +198,174 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     const [services, setServices] = useState<LaundryService[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Tab Utama: Layanan Utama vs Layanan Tambahan (Add-ons)
-    const [activeMainTab, setActiveMainTab] = useState<'SERVICES' | 'ADDONS'>('SERVICES');
+    // Tab Utama: Layanan Utama vs Layanan Tambahan (Add-ons) vs Paket Deposit
+    const [activeMainTab, setActiveMainTab] = useState<'SERVICES' | 'ADDONS' | 'DEPOSIT_PACKAGES'>('SERVICES');
+
+    // Konfigurasi Paket Deposit & Kuota (Bagian B.6)
+    const [depositConfig, setDepositConfig] = useState<{
+        packages: any[];
+        expiryPolicy: 'ACCUMULATE' | 'EXPIRE';
+    }>({
+        packages: [],
+        expiryPolicy: 'ACCUMULATE',
+    });
+    const [loadingDepositConfig, setLoadingDepositConfig] = useState(false);
+    const [savingDepositConfig, setSavingDepositConfig] = useState(false);
+    const [depositToast, setDepositToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    // Modal Form Paket Deposit
+    const [showPackageModal, setShowPackageModal] = useState(false);
+    const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+    const [pkgName, setPkgName] = useState('');
+    const [pkgType, setPkgType] = useState<'QUOTA_KG' | 'BALANCE'>('QUOTA_KG');
+    const [pkgPrice, setPkgPrice] = useState('175000');
+    const [pkgQuotaKg, setPkgQuotaKg] = useState('25');
+    const [pkgQuotaBonusKg, setPkgQuotaBonusKg] = useState('0');
+    const [pkgBalanceAmount, setPkgBalanceAmount] = useState('100000');
+    const [pkgBonusAmount, setPkgBonusAmount] = useState('10000');
+    const [pkgValidityDays, setPkgValidityDays] = useState('30');
+    const [pkgDescription, setPkgDescription] = useState('');
+
+    const fetchDepositConfig = async () => {
+        try {
+            setLoadingDepositConfig(true);
+            const res = await api.getLaundryDepositConfig(activeOutlet?.id);
+            if (res.status === 'success' && res.data?.config) {
+                setDepositConfig(res.data.config);
+            }
+        } catch (err) {
+            console.error('Gagal memuat konfigurasi paket deposit:', err);
+        } finally {
+            setLoadingDepositConfig(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeMainTab === 'DEPOSIT_PACKAGES') {
+            fetchDepositConfig();
+        }
+    }, [activeMainTab, activeOutlet?.id]);
+
+    const handleSaveDepositPolicy = async (policy: 'ACCUMULATE' | 'EXPIRE') => {
+        try {
+            setSavingDepositConfig(true);
+            const newConfig = { ...depositConfig, expiryPolicy: policy };
+            setDepositConfig(newConfig);
+            const res = await api.updateLaundryDepositConfig({
+                outletId: activeOutlet?.id,
+                packages: newConfig.packages,
+                expiryPolicy: policy,
+            });
+            if (res.status === 'success') {
+                setDepositToast({ message: 'Kebijakan masa aktif berhasil diperbarui!', type: 'success' });
+                setTimeout(() => setDepositToast(null), 3000);
+            }
+        } catch {
+            setDepositToast({ message: 'Gagal memperbarui kebijakan masa aktif', type: 'error' });
+            setTimeout(() => setDepositToast(null), 3000);
+        } finally {
+            setSavingDepositConfig(false);
+        }
+    };
+
+    const handleOpenAddPackage = () => {
+        setEditingPackageId(null);
+        setPkgName('');
+        setPkgType('QUOTA_KG');
+        setPkgPrice('175000');
+        setPkgQuotaKg('25');
+        setPkgQuotaBonusKg('0');
+        setPkgBalanceAmount('100000');
+        setPkgBonusAmount('10000');
+        setPkgValidityDays('30');
+        setPkgDescription('');
+        setShowPackageModal(true);
+    };
+
+    const handleOpenEditPackage = (pkg: any) => {
+        setEditingPackageId(pkg.id);
+        setPkgName(pkg.name || '');
+        setPkgType(pkg.type || 'QUOTA_KG');
+        setPkgPrice(String(pkg.price || 0));
+        setPkgQuotaKg(String(pkg.quotaKg || 0));
+        setPkgQuotaBonusKg(String(pkg.quotaBonusKg || 0));
+        setPkgBalanceAmount(String(pkg.balanceAmount || pkg.price || 0));
+        setPkgBonusAmount(String(pkg.bonusAmount || 0));
+        setPkgValidityDays(String(pkg.validityDays || 30));
+        setPkgDescription(pkg.description || '');
+        setShowPackageModal(true);
+    };
+
+    const handleDeletePackage = async (packageId: string) => {
+        if (!confirm('Yakin ingin menghapus paket deposit ini dari katalog kasir?')) return;
+        try {
+            const updatedPackages = depositConfig.packages.filter((p) => p.id !== packageId);
+            const newConfig = { ...depositConfig, packages: updatedPackages };
+            setDepositConfig(newConfig);
+            await api.updateLaundryDepositConfig({
+                outletId: activeOutlet?.id,
+                packages: updatedPackages,
+                expiryPolicy: depositConfig.expiryPolicy,
+            });
+            setDepositToast({ message: 'Paket berhasil dihapus!', type: 'success' });
+            setTimeout(() => setDepositToast(null), 3000);
+        } catch {
+            setDepositToast({ message: 'Gagal menghapus paket', type: 'error' });
+            setTimeout(() => setDepositToast(null), 3000);
+        }
+    };
+
+    const handleSavePackageSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setSavingDepositConfig(true);
+            const priceNum = Math.max(0, parseInt(pkgPrice.replace(/\D/g, ''), 10) || 0);
+            const validityNum = Math.max(1, parseInt(pkgValidityDays, 10) || 30);
+
+            const pkgData: any = {
+                id: editingPackageId || `pkg-${Date.now()}`,
+                name: pkgName.trim() || 'Paket Deposit',
+                type: pkgType,
+                price: priceNum,
+                validityDays: validityNum,
+                description: pkgDescription.trim() || undefined,
+            };
+
+            if (pkgType === 'QUOTA_KG') {
+                pkgData.quotaKg = Math.max(1, parseFloat(pkgQuotaKg) || 1);
+                pkgData.quotaBonusKg = Math.max(0, parseFloat(pkgQuotaBonusKg) || 0);
+            } else {
+                pkgData.balanceAmount = Math.max(1000, parseInt(pkgBalanceAmount.replace(/\D/g, ''), 10) || priceNum);
+                pkgData.bonusAmount = Math.max(0, parseInt(pkgBonusAmount.replace(/\D/g, ''), 10) || 0);
+            }
+
+            let updatedPackages: any[];
+            if (editingPackageId) {
+                updatedPackages = depositConfig.packages.map((p) => (p.id === editingPackageId ? pkgData : p));
+            } else {
+                updatedPackages = [...depositConfig.packages, pkgData];
+            }
+
+            const newConfig = { ...depositConfig, packages: updatedPackages };
+            setDepositConfig(newConfig);
+
+            const res = await api.updateLaundryDepositConfig({
+                outletId: activeOutlet?.id,
+                packages: updatedPackages,
+                expiryPolicy: depositConfig.expiryPolicy,
+            });
+
+            if (res.status === 'success') {
+                setShowPackageModal(false);
+                setDepositToast({ message: 'Paket deposit berhasil disimpan!', type: 'success' });
+                setTimeout(() => setDepositToast(null), 3000);
+            }
+        } catch {
+            alert('Gagal menyimpan paket deposit');
+        } finally {
+            setSavingDepositConfig(false);
+        }
+    };
 
     // Filter & Search Layanan Utama
     const [activeCategory, setActiveCategory] = useState<string>('ALL');
@@ -621,6 +792,21 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                     <Tag className="w-4 h-4 text-purple-600" />
                     <span>Layanan Tambahan &amp; Treatment ({addonServices.length})</span>
                 </button>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActiveMainTab('DEPOSIT_PACKAGES');
+                        setSearchQuery('');
+                    }}
+                    className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === 'DEPOSIT_PACKAGES'
+                        ? 'bg-white text-blue-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                >
+                    <Coins className="w-4 h-4 text-amber-500" />
+                    <span>Paket Deposit &amp; Kuota</span>
+                </button>
             </div>
 
             {/* 3. WORKSPACE KONTEN UTAMA */}
@@ -877,7 +1063,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         </div>
                     )}
                 </div>
-            ) : (
+            ) : activeMainTab === 'ADDONS' ? (
                 /* ================= TAB 2: LAYANAN TAMBAHAN (ADD-ONS) ================= */
                 <div className="space-y-4">
                     {/* Banner Penjelasan Add-on */}
@@ -1007,6 +1193,427 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                             })}
                         </div>
                     )}
+                </div>
+            ) : (
+                /* ================= TAB 3: PAKET DEPOSIT & MASA AKTIF ================= */
+                <div className="space-y-4">
+                    {/* Feedback Toast */}
+                    {depositToast && (
+                        <div
+                            className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 ${
+                                depositToast.type === 'success'
+                                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-900 border border-rose-200'
+                            }`}
+                        >
+                            {depositToast.type === 'success' ? (
+                                <Check className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                                <AlertCircle className="w-4 h-4 text-rose-600" />
+                            )}
+                            <span>{depositToast.message}</span>
+                        </div>
+                    )}
+
+                    {/* Banner & Kebijakan Masa Aktif */}
+                    <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-900 text-white flex items-center justify-center font-bold shrink-0">
+                                    <Wallet className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="font-extrabold text-sm text-slate-900">
+                                        Paket Deposit Saldo &amp; Kuota Kiloan
+                                    </h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed">
+                                        Atur paket hemat saldo dan kuota kilogram yang dapat dibeli pelanggan di kasir saat transaksi atau top-up.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleOpenAddPackage}
+                                className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Tambah Paket Baru</span>
+                            </button>
+                        </div>
+
+                        {/* Aturan Akumulasi vs Reset Masa Aktif */}
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                                    <ShieldCheck className="w-4 h-4 text-blue-900" />
+                                    <span>Aturan Perpanjangan Masa Aktif Kuota</span>
+                                </span>
+                                {savingDepositConfig && (
+                                    <span className="text-[10px] text-blue-800 font-bold animate-pulse">Menyimpan...</span>
+                                )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 leading-relaxed">
+                                Bagaimana masa aktif kuota diperlakukan saat pelanggan melakukan top-up paket baru sementara paket lama masih aktif:
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSaveDepositPolicy('ACCUMULATE')}
+                                    className={`p-3 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                        depositConfig.expiryPolicy === 'ACCUMULATE'
+                                            ? 'bg-blue-50 border-blue-900 ring-2 ring-blue-900/20 text-blue-950 font-bold'
+                                            : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5 font-black text-xs mb-0.5">
+                                        <CheckCircle2 className={`w-3.5 h-3.5 ${depositConfig.expiryPolicy === 'ACCUMULATE' ? 'text-blue-900' : 'text-slate-400'}`} />
+                                        <span>Akumulasi Masa Aktif (Rekomendasi)</span>
+                                    </div>
+                                    <p className="text-[10.5px] text-slate-500 font-normal">
+                                        Sisa hari aktif lama ditambah hari dari paket baru. Pelanggan tidak kehilangan sisa hari aktif kuotanya.
+                                    </p>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleSaveDepositPolicy('EXPIRE')}
+                                    className={`p-3 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                        depositConfig.expiryPolicy === 'EXPIRE'
+                                            ? 'bg-blue-50 border-blue-900 ring-2 ring-blue-900/20 text-blue-950 font-bold'
+                                            : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-1.5 font-black text-xs mb-0.5">
+                                        <CheckCircle2 className={`w-3.5 h-3.5 ${depositConfig.expiryPolicy === 'EXPIRE' ? 'text-blue-900' : 'text-slate-400'}`} />
+                                        <span>Mulai Baru dari Tanggal Top-up</span>
+                                    </div>
+                                    <p className="text-[10.5px] text-slate-500 font-normal">
+                                        Masa aktif dihitung ulang dari tanggal transaksi top-up terbaru sesuai durasi paket baru.
+                                    </p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Grid Daftar Paket */}
+                    {loadingDepositConfig ? (
+                        <div className="p-16 text-center text-slate-400 text-xs font-semibold animate-pulse">
+                            Memuat daftar paket deposit...
+                        </div>
+                    ) : depositConfig.packages.length === 0 ? (
+                        <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-3">
+                            <Wallet className="w-10 h-10 text-slate-300 mx-auto" />
+                            <h4 className="font-extrabold text-sm text-slate-800">Belum Ada Paket Deposit</h4>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                Tambahkan paket kiloan (misal: 25 Kg, 50 Kg) atau paket saldo untuk memudahkan kasir menawarkan promo deposit ke pelanggan.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleOpenAddPackage}
+                                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                                Buat Paket Pertama
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {depositConfig.packages.map((pkg: any) => {
+                                const isQuota = pkg.type === 'QUOTA_KG';
+                                return (
+                                    <div
+                                        key={pkg.id}
+                                        className="bg-white rounded-3xl border border-slate-200 p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                                    >
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide ${
+                                                        isQuota ? 'bg-purple-100 text-purple-900' : 'bg-blue-100 text-blue-900'
+                                                    }`}
+                                                >
+                                                    {isQuota ? 'KUOTA KILOAN' : 'DEPOSIT SALDO'}
+                                                </span>
+                                                <span className="text-[10.5px] font-bold text-slate-500 flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3 text-slate-400" />
+                                                    <span>{pkg.validityDays || 30} Hari</span>
+                                                </span>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="font-extrabold text-slate-900 text-sm leading-snug">
+                                                    {pkg.name}
+                                                </h4>
+                                                {pkg.description && (
+                                                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                                                        {pkg.description}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase">
+                                                    Manfaat Paket
+                                                </div>
+                                                {isQuota ? (
+                                                    <div className="text-base font-black text-purple-900 flex items-baseline gap-1.5">
+                                                        <span>{pkg.quotaKg} Kg</span>
+                                                        {Number(pkg.quotaBonusKg || 0) > 0 && (
+                                                            <span className="text-xs font-bold text-emerald-600">
+                                                                (+Bonus {pkg.quotaBonusKg} Kg)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-base font-black text-blue-900 flex items-baseline gap-1.5">
+                                                        <span>Rp {Number(pkg.balanceAmount || pkg.price).toLocaleString('id-ID')}</span>
+                                                        {Number(pkg.bonusAmount || 0) > 0 && (
+                                                            <span className="text-xs font-bold text-emerald-600">
+                                                                (+Bonus Rp {Number(pkg.bonusAmount).toLocaleString('id-ID')})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                                            <div>
+                                                <div className="text-[10px] text-slate-400 font-bold uppercase">Harga Beli</div>
+                                                <div className="text-base font-black text-slate-900">
+                                                    Rp {Number(pkg.price).toLocaleString('id-ID')}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenEditPackage(pkg)}
+                                                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                                                    title="Edit Paket"
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeletePackage(pkg.id)}
+                                                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                                                    title="Hapus Paket"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modal Form Tambah / Edit Paket Deposit */}
+            {showPackageModal && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
+                    <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-fadeIn">
+                        {/* Modal Header */}
+                        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs">
+                                    <Wallet className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-slate-900 text-sm">
+                                        {editingPackageId ? 'Edit Paket Deposit' : 'Tambah Paket Deposit Baru'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        Konfigurasi harga, kuota/saldo, dan masa aktif
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPackageModal(false)}
+                                className="text-slate-400 hover:text-slate-600 text-base font-bold p-1 cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <form onSubmit={handleSavePackageSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                            <div className="p-4 sm:p-6 space-y-3.5 overflow-y-auto overscroll-contain flex-1 text-xs">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Jenis Paket <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPkgType('QUOTA_KG')}
+                                            className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                pkgType === 'QUOTA_KG'
+                                                    ? 'bg-purple-900 text-white border-purple-900'
+                                                    : 'bg-slate-50 text-slate-700 border-slate-200'
+                                            }`}
+                                        >
+                                            <Sparkles className="w-3.5 h-3.5" />
+                                            <span>Kuota (Kg)</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPkgType('BALANCE')}
+                                            className={`p-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                pkgType === 'BALANCE'
+                                                    ? 'bg-blue-900 text-white border-blue-900'
+                                                    : 'bg-slate-50 text-slate-700 border-slate-200'
+                                            }`}
+                                        >
+                                            <Coins className="w-3.5 h-3.5" />
+                                            <span>Deposit Saldo</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Nama Paket <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Contoh: Paket Hemat 25 Kg"
+                                        value={pkgName}
+                                        onChange={(e) => setPkgName(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Harga Beli Pelanggan (Rp) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min={1000}
+                                        step={1000}
+                                        value={pkgPrice}
+                                        onChange={(e) => setPkgPrice(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                    />
+                                </div>
+
+                                {pkgType === 'QUOTA_KG' ? (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                Kuota Pokok (Kg) <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                required
+                                                min={1}
+                                                value={pkgQuotaKg}
+                                                onChange={(e) => setPkgQuotaKg(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                Bonus Kuota (Kg)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                value={pkgQuotaBonusKg}
+                                                onChange={(e) => setPkgQuotaBonusKg(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                Saldo Pokok (Rp) <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                required
+                                                min={1000}
+                                                step={1000}
+                                                value={pkgBalanceAmount}
+                                                onChange={(e) => setPkgBalanceAmount(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                Bonus Saldo (Rp)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                step={1000}
+                                                value={pkgBonusAmount}
+                                                onChange={(e) => setPkgBonusAmount(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Masa Aktif Paket (Hari) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min={1}
+                                        value={pkgValidityDays}
+                                        onChange={(e) => setPkgValidityDays(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                        Contoh: 30 untuk 1 bulan, 60 untuk 2 bulan, 90 untuk 3 bulan.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Deskripsi / Catatan Paket (Opsional)
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="Keterangan singkat paket..."
+                                        value={pkgDescription}
+                                        onChange={(e) => setPkgDescription(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Sticky Action Footer */}
+                            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPackageModal(false)}
+                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={savingDepositConfig}
+                                    className="px-5 py-2 text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white rounded-xl shadow-xs disabled:opacity-50 cursor-pointer"
+                                >
+                                    {savingDepositConfig ? 'Menyimpan...' : 'Simpan Paket'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 

@@ -29,6 +29,7 @@ export interface ThermalReceiptPreviewProps {
   grandTotal?: number;
   paymentMethod?: string;
   footerText?: string;
+  laundryTerms?: string;
   showWatermark?: boolean;
   showControls?: boolean;
   isLaundryMode?: boolean;
@@ -55,6 +56,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   grandTotal,
   paymentMethod = 'QRIS STATIS LUNAS',
   footerText = 'Terima kasih atas kunjungan Anda!',
+  laundryTerms,
   showControls = true,
   isLaundryMode = false,
 }) => {
@@ -260,6 +262,16 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
 
           {/* Dotted Divider */}
           <div className="border-b border-dashed border-slate-400 my-2" />
+
+          {/* Klausa Garansi & Syarat Laundry Preview */}
+          {isLaundryMode && laundryTerms && (
+            <div className="text-[8px] text-slate-500 leading-tight space-y-0.5 text-left mb-2 px-1">
+              <p className="font-bold text-slate-700">Syarat &amp; Ketentuan:</p>
+              <div className="whitespace-pre-line text-[7.5px] text-slate-600 pl-0.5">
+                {laundryTerms}
+              </div>
+            </div>
+          )}
 
           {/* Footer Text Note */}
           {footerText && (

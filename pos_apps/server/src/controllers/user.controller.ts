@@ -702,6 +702,14 @@ export const revokeUserSession = async (req: Request, res: Response) => {
       });
     }
 
+    const requesterRole = (req.user?.role || '').toUpperCase();
+    if (targetUser.role === 'OWNER' && !['OWNER', 'SUPERADMIN'].includes(requesterRole)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Hanya Pemilik Usaha (Owner) yang berhak mencabut sesi sesama Pemilik Usaha',
+      });
+    }
+
     await prisma.$transaction(async (tx) => {
       await userDualWriteService.revokeUserSession(tx, id, tenantId);
     });

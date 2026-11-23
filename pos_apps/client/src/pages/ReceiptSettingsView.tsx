@@ -34,6 +34,11 @@ interface ReceiptSettingsViewProps {
   onOutletUpdated?: (updatedOutlet: Outlet) => void;
 }
 
+export const DEFAULT_LAUNDRY_TERMS = `1. Pengambilan cucian wajib membawa struk / bukti WhatsApp resmi.
+2. Komplain maksimal 1x24 jam setelah cucian diambil dengan membawa nota dan pakaian belum dicuci ulang.
+3. Pakaian yang tidak diambil dalam tempo 30 hari di luar tanggung jawab pihak laundry.
+4. Ganti rugi maksimal 5x biaya cuci untuk pakaian rusak/hilang sesuai investigasi tim laundry.`;
+
 export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   activeOutlet,
   onOutletUpdated,
@@ -49,6 +54,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   const [kickingBt, setKickingBt] = useState(false);
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
   const [footerText, setFooterText] = useState('Terima kasih atas kunjungan Anda!');
+  const [laundryTerms, setLaundryTerms] = useState(DEFAULT_LAUNDRY_TERMS);
   const [showQueueNumber, setShowQueueNumber] = useState(true);
   const [showWatermark, setShowWatermark] = useState(true);
 
@@ -82,6 +88,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
       }
       if (activeOutlet.receiptConfig.footerText !== undefined) {
         setFooterText(activeOutlet.receiptConfig.footerText);
+      }
+      if (activeOutlet.receiptConfig.laundryTerms !== undefined) {
+        setLaundryTerms(activeOutlet.receiptConfig.laundryTerms);
+      } else {
+        setLaundryTerms(DEFAULT_LAUNDRY_TERMS);
       }
       if (activeOutlet.receiptConfig.showQueueNumber !== undefined) {
         setShowQueueNumber(activeOutlet.receiptConfig.showQueueNumber);
@@ -141,6 +152,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
         receiptConfig: {
           paperSize,
           footerText: footerText.trim(),
+          laundryTerms: laundryTerms.trim(),
           showQueueNumber,
           showWatermark,
           whatsappConfig: {
@@ -582,6 +594,34 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             />
           </div>
 
+          {/* Khusus Mode Laundry: Ketentuan Layanan & Klausa Garansi */}
+          {isLaundryMode && (
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Klausa Garansi &amp; Syarat Laundry (Struk &amp; Tracking Live)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setLaundryTerms(DEFAULT_LAUNDRY_TERMS)}
+                  className="text-[11px] font-bold text-blue-900 hover:underline cursor-pointer"
+                >
+                  Reset Standar 4 Poin
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Klausa ini otomatis dicetak di bagian bawah tanda terima thermal dan ditampilkan di halaman pelacakan live QR pelanggan untuk perlindungan hukum toko terhadap klaim komplain.
+              </p>
+              <textarea
+                rows={4}
+                value={laundryTerms}
+                onChange={(e) => setLaundryTerms(e.target.value)}
+                placeholder={DEFAULT_LAUNDRY_TERMS}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-hidden font-mono leading-relaxed"
+              />
+            </div>
+          )}
+
           {/* 6. Watermark Struk Kasir ("Powered by Well POS - wellpos.id") */}
           <div className="pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between gap-4">
@@ -1001,6 +1041,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
               showQueueNumber={showQueueNumber}
               showWatermark={showWatermark}
               footerText={footerText}
+              laundryTerms={laundryTerms}
               showControls={false}
             />
           ) : (

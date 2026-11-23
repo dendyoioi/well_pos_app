@@ -31,6 +31,8 @@ import {
   uploadLaundryConditionPhoto,
   getCustomerLaundryWallet,
   topupCustomerLaundryWallet,
+  getLaundryDepositConfig,
+  updateLaundryDepositConfig,
   getLaundryDeliveryConfig,
   updateLaundryDeliveryConfig,
   getLaundryDeliveries,
@@ -81,6 +83,8 @@ router.post('/orders/:id/sort', saveLaundrySortingData);
 // --- Dompet Laundry Pelanggan (Deposit Saldo & Kuota Kiloan) ---
 router.get('/customers/:customerId/wallet', getCustomerLaundryWallet);
 router.post('/customers/:customerId/wallet/topup', topupCustomerLaundryWallet);
+router.get('/deposit-config', getLaundryDepositConfig);
+router.put('/deposit-config', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryDepositConfig);
 
 // --- Modul Delivery Pelanggan & Ongkir Otomatis ---
 router.get('/delivery-config', getLaundryDeliveryConfig);

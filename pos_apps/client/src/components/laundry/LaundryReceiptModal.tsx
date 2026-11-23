@@ -613,14 +613,21 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
             <div className="border-b border-dashed border-slate-400 my-2" />
 
-            {/* Syarat & Ketentuan Laundry */}
-            <div className="text-[8.5px] text-slate-500 leading-tight space-y-1">
+            {/* Syarat & Ketentuan Laundry & Klausa Garansi */}
+            <div className="text-[8.5px] text-slate-500 leading-tight space-y-1 text-left">
               <p className="font-bold text-slate-700">Syarat &amp; Ketentuan:</p>
-              <ol className="list-decimal pl-3 space-y-0.5">
-                <li>Pengambilan pakaian wajib menunjukkan nota / bukti WA ini.</li>
-                <li>Komplain luntur / rusak maksimal 1x24 jam setelah cucian diambil.</li>
-                <li>Cucian yang tidak diambil lebih dari 30 hari di luar tanggung jawab toko.</li>
-              </ol>
+              {outlet?.receiptConfig?.laundryTerms ? (
+                <div className="whitespace-pre-line text-[8px] pl-1 text-slate-600">
+                  {outlet.receiptConfig.laundryTerms}
+                </div>
+              ) : (
+                <ol className="list-decimal pl-3 space-y-0.5">
+                  <li>Pengambilan pakaian wajib menunjukkan nota / bukti WA ini.</li>
+                  <li>Komplain maksimal 1x24 jam setelah cucian diambil dengan membawa nota dan pakaian belum dicuci ulang.</li>
+                  <li>Pakaian yang tidak diambil dalam tempo 30 hari di luar tanggung jawab pihak laundry.</li>
+                  <li>Ganti rugi maksimal 5x biaya cuci untuk pakaian rusak/hilang sesuai investigasi tim laundry.</li>
+                </ol>
+              )}
             </div>
 
             <div className="text-center text-[9px] text-slate-500 pt-2 border-t border-slate-200">

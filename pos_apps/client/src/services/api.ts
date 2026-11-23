@@ -1261,6 +1261,14 @@ export const api = {
     return res.json();
   },
 
+  forceLogoutUser: async (userId: string): Promise<{ status: string; message: string; data?: any }> => {
+    const res = await fetch(`/api/users/${userId}/force-logout`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
   revokeAllSessions: async (excludeCurrent: boolean = true): Promise<{ status: string; message: string; data?: any }> => {
     const res = await fetch('/api/users/revoke-all-sessions', {
       method: 'POST',
@@ -2687,7 +2695,7 @@ export const api = {
     return res.json();
   },
 
-  updateLaundryOrderStatus: async (id: string, data: { status: string; rackCode?: string | null; pickedUpBy?: string | null }): Promise<any> => {
+  updateLaundryOrderStatus: async (id: string, data: { status: string; rackCode?: string | null; pickedUpBy?: string | null; paymentMethod?: 'CASH' | 'QRIS' | 'TRANSFER' }): Promise<any> => {
     const res = await fetch(`/api/laundry/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -2780,10 +2788,27 @@ export const api = {
       notes?: string;
       rackCode?: string;
       pickedUpBy?: string;
+      paymentMethod?: 'CASH' | 'QRIS' | 'TRANSFER';
+      machineName?: string;
     }
   ): Promise<any> => {
     const res = await fetch(`/api/laundry/orders/${id}/advance-stage`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getLaundryDepositConfig: async (outletId?: string): Promise<any> => {
+    const query = outletId ? `?outletId=${encodeURIComponent(outletId)}` : '';
+    const res = await fetch(`/api/laundry/deposit-config${query}`, { headers: authHeader() });
+    return res.json();
+  },
+
+  updateLaundryDepositConfig: async (data: { outletId?: string; packages: any[]; expiryPolicy: 'ACCUMULATE' | 'EXPIRE' }): Promise<any> => {
+    const res = await fetch('/api/laundry/deposit-config', {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify(data),
     });

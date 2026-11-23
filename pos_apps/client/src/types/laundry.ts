@@ -262,6 +262,7 @@ export interface LaundryStageLog {
   startedAt?: string;
   completedAt?: string | null;
   durationMinutes?: number | null;
+  machineName?: string | null;
   notes?: string | null;
   createdAt: string;
 }

@@ -14,6 +14,7 @@ import {
   QrCode,
   AlertOctagon,
   RotateCcw,
+  Archive,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -171,6 +172,11 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   // Fungsi Cepat Maju ke Tahap Berikutnya
   const handleQuickAdvance = async (order: LaundryQueueOrder) => {
     const current = (order.currentStage || 'DROP_OFF').toUpperCase();
+    if (current === 'RACK_STORAGE' || order.status === 'READY_FOR_PICKUP' || order.status === 'COMPLETED') {
+      showToast('Cucian sudah siap di rak kasir outlet dan tidak dapat dimajukan lagi dari workshop', 'error');
+      return;
+    }
+
     let nextStage = 'WASHING';
 
     if (current === 'DROP_OFF' || current === 'TAGGING' || current === 'LABEL') nextStage = 'SORTING';
@@ -180,7 +186,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
     else if (current === 'IRONING' || current === 'SETRIKA') nextStage = 'FOLDING';
     else if (current === 'FOLDING' || current === 'LIPAT') nextStage = 'PACKING';
     else if (current === 'PACKING' || current === 'PENGEMASAN') nextStage = 'RACK_STORAGE';
-    else if (current === 'RACK_STORAGE') nextStage = 'HANDOVER';
+    else return;
 
     try {
       setAdvancingId(order.id);
@@ -603,6 +609,11 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                       <Filter className="w-4 h-4" />
                       <span>Buka Form Sortir &amp; QC</span>
                     </button>
+                  ) : order.currentStage === 'RACK_STORAGE' || order.status === 'READY_FOR_PICKUP' ? (
+                    <div className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 px-3">
+                      <Archive className="w-4 h-4 text-blue-900" />
+                      <span>Siap Diambil di Kasir (Rak: {order.rackCode || 'RAK-A1'})</span>
+                    </div>
                   ) : (
                     <button
                       type="button"

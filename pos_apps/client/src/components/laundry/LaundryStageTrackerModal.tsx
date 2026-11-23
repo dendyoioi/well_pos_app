@@ -4,7 +4,6 @@ import {
   Clock,
   User,
   Archive,
-  Coins,
   Send,
   Sparkles,
   FileText,
@@ -17,6 +16,7 @@ import {
   Layers,
   Package,
   Scale,
+  ChevronDown,
 } from 'lucide-react';
 import type { LaundryQueueOrder, LaundryStageLog, LaundryProductionStageKey } from '../../types/laundry';
 import { LAUNDRY_11_STAGES } from '../../types/laundry';
@@ -41,6 +41,8 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
   const [stageNotes, setStageNotes] = useState('');
   const [targetRackCode, setTargetRackCode] = useState('RAK-A1');
   const [pickedUpByName, setPickedUpByName] = useState('');
+  const [handoverPaymentMethod, setHandoverPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [machineName, setMachineName] = useState('');
   const [advancing, setAdvancing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -100,14 +102,24 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
         payload.rackCode = targetRackCode.trim() || 'RAK-A1';
       }
 
+      if (nextStage.key === 'WASHING' || nextStage.key === 'DRYING') {
+        if (machineName.trim()) {
+          payload.machineName = machineName.trim().toUpperCase();
+        }
+      }
+
       if (nextStage.key === 'HANDOVER') {
         payload.pickedUpBy = pickedUpByName.trim() || order.customerName;
+        if (needPayment) {
+          payload.paymentMethod = handoverPaymentMethod;
+        }
       }
 
       const res = await api.advanceLaundryStage(order.orderId, payload);
       if (res.status === 'success') {
         setOperatorName('');
         setStageNotes('');
+        setMachineName('');
         onStageUpdated();
         fetchStageLogs();
         if (nextStage.key === 'HANDOVER') {
@@ -304,6 +316,41 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                   </div>
                 )}
 
+                {/* Khusus Tahap Cuci & Pengering: Pemilihan / Input Nomor Mesin */}
+                {(nextStage.key === 'WASHING' || nextStage.key === 'DRYING') && (
+                  <div className="sm:col-span-2 p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-blue-950">
+                        {nextStage.key === 'WASHING' ? 'Nomor Mesin Cuci (Washer)' : 'Nomor Mesin Pengering (Dryer)'}
+                      </label>
+                      <span className="text-[10px] text-blue-700 font-semibold">Pilih cepat atau ketik manual</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {(nextStage.key === 'WASHING' ? ['W1', 'W2', 'W3', 'W4'] : ['D1', 'D2', 'D3', 'D4']).map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => setMachineName(chip)}
+                          className={`px-3 py-1 text-xs font-black rounded-lg border transition-all cursor-pointer ${
+                            machineName === chip
+                              ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                              : 'bg-white text-blue-900 border-blue-200 hover:bg-blue-100'
+                          }`}
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={nextStage.key === 'WASHING' ? 'Contoh: W1 atau Washer-02' : 'Contoh: D1 atau Dryer-03'}
+                      value={machineName}
+                      onChange={(e) => setMachineName(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-blue-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-mono font-bold uppercase"
+                    />
+                  </div>
+                )}
+
                 {/* Khusus Tahap Penyerahan (Stage 11): Nama Pengambil */}
                 {nextStage.key === 'HANDOVER' && (
                   <div>
@@ -335,18 +382,34 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                 </div>
               </div>
 
-              {/* Notifikasi Khusus Handover: Sisa Tagihan Kasir */}
+              {/* Notifikasi Khusus Handover: Sisa Tagihan Kasir & Pemilihan Metode Bayar */}
               {nextStage.key === 'HANDOVER' && needPayment && (
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-amber-700" />
-                    <span className="font-bold text-amber-950">
-                      Sisa Tagihan yang Wajib Dilunasi: Rp {remainingAmount.toLocaleString('id-ID')}
+                <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-rose-900 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Sisa Tagihan Wajib Dilunasi:
+                    </span>
+                    <span className="font-black text-sm text-rose-700">
+                      Rp {remainingAmount.toLocaleString('id-ID')}
                     </span>
                   </div>
-                  <span className="text-[10px] font-semibold text-amber-800">
-                    Otomatis lunas &amp; tercatat di kas saat diserahkan
-                  </span>
+                  <div className="pt-2 border-t border-rose-200/80">
+                    <label className="block text-[11px] font-bold text-rose-900 mb-1">
+                      Metode Pembayaran Pelunasan
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={handoverPaymentMethod}
+                        onChange={(e) => setHandoverPaymentMethod(e.target.value as any)}
+                        className="w-full px-3 py-1.5 pr-10 text-xs rounded-xl border border-rose-300 bg-white text-slate-800 font-semibold focus:outline-none appearance-none cursor-pointer"
+                      >
+                        <option value="CASH">Tunai (Cash)</option>
+                        <option value="QRIS">QRIS Statis / Dinamis</option>
+                        <option value="TRANSFER">Transfer Bank</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -401,7 +464,12 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                       return (
                         <tr key={lg.id} className="hover:bg-slate-50/50">
                           <td className="py-2 px-3 font-bold text-slate-900">
-                            {stg ? stg.label : lg.stage}
+                            <div>{stg ? stg.label : lg.stage}</div>
+                            {lg.machineName && (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 text-[9.5px] font-mono font-bold mt-0.5">
+                                Mesin: {lg.machineName}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2 px-3 font-semibold text-blue-950">
                             {lg.operatorName || 'Staf Kasir'}

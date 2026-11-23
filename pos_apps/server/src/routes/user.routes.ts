@@ -23,6 +23,7 @@ router.use(authenticate);
 // Pencabutan Sesi Perangkat / Force Logout Kasir (Harus sebelum /:id)
 router.post('/revoke-all-sessions', authorize(Role.OWNER, Role.ADMIN), revokeAllSessions);
 router.post('/:id/revoke-session', authorize(Role.OWNER, Role.ADMIN), revokeUserSession);
+router.post('/:id/force-logout', authorize(Role.OWNER, Role.ADMIN), revokeUserSession);
 
 // Role & Permission Management (Harus sebelum /:id)
 router.get('/roles/permissions', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getSystemPermissions);

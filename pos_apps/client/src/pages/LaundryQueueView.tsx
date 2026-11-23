@@ -65,7 +65,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   // State Modal Penyerahan Cucian (Handover & Pelunasan)
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
   const [targetOrderForHandover, setTargetOrderForHandover] = useState<LaundryQueueOrder | null>(null);
-  const [handoverPayMethod, setHandoverPayMethod] = useState<'CASH' | 'QRIS'>('CASH');
+  const [handoverPayMethod, setHandoverPayMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
   const [pickedUpByName, setPickedUpByName] = useState('');
   const [processingHandover, setProcessingHandover] = useState(false);
 
@@ -194,6 +194,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       await api.updateLaundryOrderStatus(targetOrderForHandover.orderId, {
         status: 'COMPLETED',
         pickedUpBy: pickedUpByName.trim() || targetOrderForHandover.customerName,
+        paymentMethod: handoverPayMethod,
       });
       setHandoverModalOpen(false);
       setTargetOrderForHandover(null);
@@ -806,6 +807,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                       >
                         <option value="CASH">Tunai (Cash)</option>
                         <option value="QRIS">QRIS Statis / Dinamis</option>
+                        <option value="TRANSFER">Transfer Bank</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                     </div>

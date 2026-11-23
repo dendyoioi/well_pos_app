@@ -580,6 +580,20 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "laundry_commission_config" JSONB;
     `,
   },
+  {
+    id: '20261124_01_laundry_stage_logs_machine_name',
+    description: 'Menambahkan kolom machine_name pada tabel laundry_stage_logs untuk pencatatan nomor mesin cuci/kering fisik',
+    sql: `
+      ALTER TABLE "laundry_stage_logs" ADD COLUMN IF NOT EXISTS "machine_name" VARCHAR(100);
+    `,
+  },
+  {
+    id: '20261124_02_outlets_laundry_deposit_config',
+    description: 'Menambahkan kolom laundry_deposit_config pada tabel outlets untuk Master Paket Deposit & Aturan Expired',
+    sql: `
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "laundry_deposit_config" JSONB;
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

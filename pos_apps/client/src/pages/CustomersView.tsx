@@ -26,7 +26,7 @@ import {
   Clock,
   ChevronDown,
 } from 'lucide-react';
-import { customerApi } from '../services/api';
+import { customerApi, api } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
 import type { Outlet } from '../types/outlet';
 import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
@@ -105,6 +105,79 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
   const [adjustDelta, setAdjustDelta] = useState<number>(0);
   const [adjustNotes, setAdjustNotes] = useState<string>('');
   const [savingAdjust, setSavingAdjust] = useState<boolean>(false);
+
+  // Modal Top-up Saldo/Kuota Laundry Pelanggan (Bagian B.6)
+  const [showLaundryTopupModal, setShowLaundryTopupModal] = useState(false);
+  const [topupType, setTopupType] = useState<'BALANCE' | 'QUOTA_KG'>('BALANCE');
+  const [topupAmount, setTopupAmount] = useState('100000');
+  const [topupBonusAmount, setTopupBonusAmount] = useState('0');
+  const [topupKg, setTopupKg] = useState('10');
+  const [topupQuotaBonusKg, setTopupQuotaBonusKg] = useState('0');
+  const [topupPricePaid, setTopupPricePaid] = useState('70000');
+  const [topupPaymentMethod, setTopupPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [topupValidityDays, setTopupValidityDays] = useState<'30' | '60' | '90' | 'UNLIMITED'>('30');
+  const [submittingTopup, setSubmittingTopup] = useState(false);
+  const [depositConfig, setDepositConfig] = useState<{ packages: any[]; expiryPolicy: 'ACCUMULATE' | 'EXPIRE' }>({
+    packages: [],
+    expiryPolicy: 'ACCUMULATE',
+  });
+
+  const handleOpenTopupModal = async () => {
+    setShowLaundryTopupModal(true);
+    try {
+      const res = await api.getLaundryDepositConfig(activeOutlet?.id);
+      if (res.status === 'success' && res.data?.config) {
+        setDepositConfig(res.data.config);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleProcessTopupCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+    try {
+      setSubmittingTopup(true);
+      let expiresAt: string | undefined = undefined;
+      if (topupType === 'QUOTA_KG' && topupValidityDays !== 'UNLIMITED') {
+        const d = new Date();
+        d.setDate(d.getDate() + Number(topupValidityDays));
+        expiresAt = d.toISOString();
+      }
+
+      const res = await api.topupCustomerLaundryWallet(selectedCustomer.id, {
+        type: topupType,
+        amount: topupType === 'BALANCE' ? Number(topupAmount) : undefined,
+        bonusAmount: topupType === 'BALANCE' && Number(topupBonusAmount) > 0 ? Number(topupBonusAmount) : undefined,
+        kg: topupType === 'QUOTA_KG' ? Number(topupKg) : undefined,
+        quotaBonusKg: topupType === 'QUOTA_KG' && Number(topupQuotaBonusKg) > 0 ? Number(topupQuotaBonusKg) : undefined,
+        pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupAmount),
+        paymentMethod: topupPaymentMethod,
+        outletId: activeOutlet?.id,
+        validityDays: topupValidityDays !== 'UNLIMITED' ? Number(topupValidityDays) : undefined,
+        expiryPolicy: depositConfig.expiryPolicy,
+        quotaExpiresAt: expiresAt,
+        notes: `Top-up Backoffice ${activeOutlet?.name || 'Toko'}`,
+      });
+
+      if (res.status === 'success') {
+        dialog.toast(res.message || 'Top-up saldo laundry berhasil dicatat!', 'success');
+        setShowLaundryTopupModal(false);
+        const resDetail = await customerApi.getCustomerById(selectedCustomer.id);
+        if (resDetail.status === 'success' && resDetail.data) {
+          setSelectedCustomer(resDetail.data);
+        }
+        fetchCustomers();
+      } else {
+        dialog.alert({ title: 'Gagal Top-up', message: res.message || 'Gagal memproses top-up', variant: 'danger' });
+      }
+    } catch (err: any) {
+      dialog.alert({ title: 'Kesalahan Sistem', message: err.message || 'Terjadi gangguan saat memproses top-up', variant: 'danger' });
+    } finally {
+      setSubmittingTopup(false);
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState<CustomerFormData>({
@@ -1391,6 +1464,18 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
               {/* Tab Content 3: Saldo & Kuota Laundry Pelanggan */}
               {activeDetailTab === 'laundry_wallet' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-bold text-slate-700">Ringkasan Dompet Laundry</span>
+                    <button
+                      type="button"
+                      onClick={handleOpenTopupModal}
+                      className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Top-up Saldo / Kuota</span>
+                    </button>
+                  </div>
+
                   {/* Kartu Ringkasan Saldo & Kuota */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-900 to-indigo-950 text-white shadow-xs">
@@ -1548,6 +1633,279 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Top-up Saldo & Kuota Laundry Pelanggan (Bagian B.6) */}
+      {showLaundryTopupModal && selectedCustomer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 sm:px-6 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white">
+                    Top-up Saldo &amp; Kuota Laundry
+                  </h3>
+                  <p className="text-[11px] text-blue-200">
+                    Pelanggan: <span className="font-bold text-white">{selectedCustomer.name}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLaundryTopupModal(false)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleProcessTopupCustomer} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs">
+                {/* Status Saldo & Kuota Saat Ini */}
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Saldo Deposit Saat Ini</span>
+                    <span className="text-sm font-black text-slate-900">
+                      Rp {Number(selectedCustomer.laundryWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Kuota Kiloan Saat Ini</span>
+                    <span className="text-sm font-black text-purple-900">
+                      {Number(selectedCustomer.laundryWallet?.quotaKg || 0)} Kg
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pilih Tipe Top-up */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Jenis Pengisian
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTopupType('BALANCE')}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        topupType === 'BALANCE'
+                          ? 'border-blue-900 bg-blue-50/80 ring-2 ring-blue-900/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-blue-950 text-xs mb-0.5">
+                        <Wallet className="w-4 h-4 text-blue-700" />
+                        <span>Deposit Saldo</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Saldo rupiah fleksibel untuk seluruh layanan
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTopupType('QUOTA_KG')}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        topupType === 'QUOTA_KG'
+                          ? 'border-purple-900 bg-purple-50/80 ring-2 ring-purple-900/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-purple-950 text-xs mb-0.5">
+                        <Sparkles className="w-4 h-4 text-purple-700" />
+                        <span>Paket Kuota (Kg)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Paket kuota kiloan hemat dengan masa aktif
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Input Sesuai Jenis */}
+                {topupType === 'BALANCE' ? (
+                  <div className="space-y-2.5">
+                    {depositConfig.packages.filter((p) => p.type === 'BALANCE').length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10.5px] font-bold text-slate-600 block">
+                          Pilihan Paket Saldo Deposit:
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {depositConfig.packages
+                            .filter((p) => p.type === 'BALANCE')
+                            .map((pkg) => (
+                              <button
+                                key={pkg.id}
+                                type="button"
+                                onClick={() => {
+                                  setTopupAmount(String(pkg.balanceAmount || pkg.price));
+                                  setTopupBonusAmount(String(pkg.bonusAmount || 0));
+                                  if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
+                                }}
+                                className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                  topupAmount === String(pkg.balanceAmount || pkg.price)
+                                    ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                                }`}
+                              >
+                                <div className="font-extrabold text-xs">{pkg.name}</div>
+                                <div className="text-[11px] font-bold">
+                                  Rp {Number(pkg.price).toLocaleString('id-ID')}
+                                </div>
+                                {Number(pkg.bonusAmount || 0) > 0 && (
+                                  <div className={`text-[9.5px] font-bold ${topupAmount === String(pkg.balanceAmount || pkg.price) ? 'text-amber-300' : 'text-emerald-600'}`}>
+                                    +Bonus Saldo Rp {Number(pkg.bonusAmount).toLocaleString('id-ID')}
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <label className="block text-xs font-bold text-slate-700">
+                      Nominal Top-up Saldo (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1000}
+                      step={1000}
+                      value={topupAmount}
+                      onChange={(e) => setTopupAmount(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Pilihan Paket Kuota Kiloan
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(depositConfig.packages.filter((p) => p.type === 'QUOTA_KG').length > 0
+                          ? depositConfig.packages.filter((p) => p.type === 'QUOTA_KG')
+                          : [
+                              { id: '1', quotaKg: 5, price: 35000, name: '5 Kg' },
+                              { id: '2', quotaKg: 10, price: 70000, name: '10 Kg' },
+                              { id: '3', quotaKg: 20, price: 130000, name: '20 Kg' },
+                              { id: '4', quotaKg: 50, price: 300000, name: '50 Kg' },
+                            ]
+                        ).map((pkg) => (
+                          <button
+                            key={pkg.id || pkg.quotaKg}
+                            type="button"
+                            onClick={() => {
+                              setTopupKg(String(pkg.quotaKg));
+                              setTopupQuotaBonusKg(String(pkg.quotaBonusKg || 0));
+                              setTopupPricePaid(String(pkg.price));
+                              if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
+                            }}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                              topupKg === String(pkg.quotaKg) && topupPricePaid === String(pkg.price)
+                                ? 'bg-purple-900 text-white border-purple-900'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="font-black text-sm flex items-center justify-between">
+                              <span>{pkg.quotaKg} Kg</span>
+                              {pkg.validityDays && (
+                                <span className="text-[9.5px] opacity-75 font-normal">
+                                  {pkg.validityDays} Hari
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10.5px] opacity-90">Rp {Number(pkg.price).toLocaleString('id-ID')}</div>
+                            {Number(pkg.quotaBonusKg || 0) > 0 && (
+                              <div className={`text-[9.5px] font-bold ${topupKg === String(pkg.quotaKg) && topupPricePaid === String(pkg.price) ? 'text-amber-300' : 'text-emerald-600'}`}>
+                                +Bonus {pkg.quotaBonusKg} Kg
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Jumlah Kuota (Kg)
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          step={0.5}
+                          value={topupKg}
+                          onChange={(e) => setTopupKg(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-900 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Harga Paket Dibayar (Rp)
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min={1000}
+                          step={1000}
+                          value={topupPricePaid}
+                          onChange={(e) => setTopupPricePaid(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-900 text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Metode Pembayaran */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Metode Pembayaran
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['CASH', 'QRIS', 'TRANSFER'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setTopupPaymentMethod(m)}
+                        className={`py-2 px-2 rounded-xl border text-center text-xs font-extrabold transition-all cursor-pointer ${
+                          topupPaymentMethod === m
+                            ? 'bg-blue-900 text-white border-blue-900'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m === 'CASH' ? 'Tunai' : m === 'QRIS' ? 'QRIS' : 'Transfer'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky Action Footer */}
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLaundryTopupModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingTopup}
+                  className="px-5 py-2 text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white rounded-xl shadow-xs disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingTopup ? 'Memproses...' : 'Proses Top-up'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

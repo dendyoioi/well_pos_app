@@ -1529,6 +1529,34 @@ export const updateLaundryStatus = async (req: Request, res: Response) => {
                 status: PaymentTxStatus.CAPTURED,
               },
             });
+
+            // Sinkronkan pelunasan piutang (CustomerDebt) dan buat riwayat CustomerDebtPayment
+            const existingDebt = await tx.customerDebt.findFirst({
+              where: { tenantId, orderId: detail.orderId },
+            });
+            if (existingDebt) {
+              await tx.customerDebt.update({
+                where: { id: existingDebt.id },
+                data: {
+                  paidAmount: total,
+                  remainingAmount: 0,
+                  status: 'PAID',
+                },
+              });
+
+              await tx.customerDebtPayment.create({
+                data: {
+                  tenantId,
+                  debtId: existingDebt.id,
+                  outletId: detail.outletId,
+                  cashierId: userId || null,
+                  shiftId: handoverShift?.id || null,
+                  amount: remaining,
+                  paymentMethod: handoverMethod,
+                  notes: 'Pelunasan saat serah terima pakaian di outlet',
+                },
+              });
+            }
           }
         }
 
@@ -2364,7 +2392,7 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
-    const { nextStage, operatorId, operatorName, notes, rackCode, pickedUpBy, paymentMethod } = req.body;
+    const { nextStage, operatorId, operatorName, notes, rackCode, pickedUpBy, paymentMethod, machineName } = req.body;
     if (!nextStage) {
       return res.status(400).json({ status: 'error', message: 'Tahapan produksi (nextStage) wajib dipilih' });
     }
@@ -2445,6 +2473,20 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
     }
 
     if (nextStage === 'HANDOVER') {
+      const currentPaid = Number(detail.order.paidAmount || 0);
+      const total = Number(detail.order.totalAmount);
+      const remaining = Math.max(0, total - currentPaid);
+
+      if (remaining > 0) {
+        const userRole = (req.user?.role || '').toUpperCase();
+        if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'CASHIER', 'SUPERADMIN'].includes(userRole)) {
+          return res.status(403).json({
+            status: 'error',
+            message: 'Penyerahan pakaian yang belum lunas hanya dapat diproses oleh Kasir di Outlet',
+          });
+        }
+      }
+
       detailUpdate.pickedUpAt = now;
       if (pickedUpBy) detailUpdate.pickedUpBy = pickedUpBy.trim();
     }
@@ -2467,6 +2509,7 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
           operatorName: effectiveOperatorName,
           weightKg: detail.totalWeightKg,
           piecesCount: detail.totalPieces,
+          machineName: machineName?.trim() || null,
           completedAt: now,
           durationMinutes,
           notes: notes?.trim() || null,
@@ -2519,6 +2562,34 @@ export const advanceLaundryStage = async (req: Request, res: Response) => {
                 status: PaymentTxStatus.CAPTURED,
               },
             });
+
+            // Sinkronkan pelunasan piutang (CustomerDebt) dan buat riwayat CustomerDebtPayment
+            const existingDebt = await tx.customerDebt.findFirst({
+              where: { tenantId, orderId: detail.orderId },
+            });
+            if (existingDebt) {
+              await tx.customerDebt.update({
+                where: { id: existingDebt.id },
+                data: {
+                  paidAmount: total,
+                  remainingAmount: 0,
+                  status: 'PAID',
+                },
+              });
+
+              await tx.customerDebtPayment.create({
+                data: {
+                  tenantId,
+                  debtId: existingDebt.id,
+                  outletId: detail.outletId,
+                  cashierId: userId || null,
+                  shiftId: handoverShift?.id || null,
+                  amount: remaining,
+                  paymentMethod: handoverMethod,
+                  notes: 'Pelunasan saat serah terima pakaian di outlet',
+                },
+              });
+            }
           }
         }
 
@@ -2922,6 +2993,7 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
             name: true,
             phone: true,
             address: true,
+            receiptConfig: true,
           },
         },
         items: true,
@@ -3000,7 +3072,9 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
           stage: log.stage,
           completedAt: log.completedAt || log.startedAt,
           notes: log.notes,
+          machineName: log.machineName || null,
         })),
+        laundryTerms: (order.outlet as any)?.receiptConfig?.laundryTerms || null,
       },
     });
   } catch (error: any) {
@@ -3172,13 +3246,17 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
     const {
       type, // 'BALANCE' | 'QUOTA_KG'
       amount, // nominal saldo jika type BALANCE
+      bonusAmount, // bonus saldo tambahan (opsional dari paket deposit)
       kg, // kuota kg jika type QUOTA_KG
+      quotaBonusKg, // bonus kuota kg tambahan (opsional dari paket deposit)
       pricePaid, // uang yang dibayar pelanggan
       paymentMethod = 'CASH', // 'CASH' | 'QRIS' | 'BANK_TRANSFER' | 'TRANSFER'
       shiftId,
       outletId,
       notes,
       quotaExpiresAt,
+      validityDays,
+      expiryPolicy,
     } = req.body;
 
     if (!type || !['BALANCE', 'QUOTA_KG'].includes(type)) {
@@ -3246,13 +3324,29 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
       let ledgerType = 'TOPUP_BALANCE';
 
       if (type === 'BALANCE') {
-        deltaAmount = Number(amount);
+        deltaAmount = Number(amount) + Number(bonusAmount || 0);
         balanceAfter = balanceBefore + deltaAmount;
         ledgerType = 'TOPUP_BALANCE';
       } else {
-        deltaKg = Number(kg);
+        deltaKg = Number(kg) + Number(quotaBonusKg || 0);
         kgAfter = kgBefore + deltaKg;
         ledgerType = 'TOPUP_QUOTA_KG';
+      }
+
+      let resolvedExpiry: Date | null = null;
+      if (quotaExpiresAt) {
+        resolvedExpiry = new Date(quotaExpiresAt);
+      } else if (validityDays && Number(validityDays) > 0) {
+        const days = Number(validityDays);
+        const policy = expiryPolicy || 'ACCUMULATE';
+        const now = new Date();
+        if (policy === 'ACCUMULATE' && wallet.quotaExpiresAt && new Date(wallet.quotaExpiresAt) > now) {
+          resolvedExpiry = new Date(wallet.quotaExpiresAt);
+          resolvedExpiry.setDate(resolvedExpiry.getDate() + days);
+        } else {
+          resolvedExpiry = new Date(now);
+          resolvedExpiry.setDate(resolvedExpiry.getDate() + days);
+        }
       }
 
       // Update wallet
@@ -3261,7 +3355,7 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
         data: {
           balanceAmount: balanceAfter,
           quotaKg: kgAfter,
-          ...(quotaExpiresAt ? { quotaExpiresAt: new Date(quotaExpiresAt) } : {}),
+          ...(resolvedExpiry ? { quotaExpiresAt: resolvedExpiry } : {}),
         },
       });
 
@@ -3321,6 +3415,144 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
   } catch (error: any) {
     console.error('Error topupCustomerLaundryWallet:', error);
     return res.status(500).json({ status: 'error', message: error.message || 'Gagal memproses top-up saldo laundry' });
+  }
+};
+
+export const DEFAULT_LAUNDRY_DEPOSIT_CONFIG = {
+  packages: [
+    {
+      id: 'pkg-kiloan-25',
+      name: 'Paket Kiloan Hemat 25 Kg',
+      type: 'QUOTA_KG',
+      price: 175000,
+      quotaKg: 25,
+      quotaBonusKg: 0,
+      validityDays: 30,
+      description: '25 Kg kuota cuci komplit, masa aktif 30 hari',
+    },
+    {
+      id: 'pkg-kiloan-50',
+      name: 'Paket Kiloan Jumbo 50 Kg',
+      type: 'QUOTA_KG',
+      price: 325000,
+      quotaKg: 50,
+      quotaBonusKg: 5,
+      validityDays: 60,
+      description: '50 Kg + Bonus 5 Kg, masa aktif 60 hari',
+    },
+    {
+      id: 'pkg-deposit-100',
+      name: 'Deposit Saldo Rp 100.000',
+      type: 'BALANCE',
+      price: 100000,
+      balanceAmount: 100000,
+      bonusAmount: 10000,
+      validityDays: 90,
+      description: 'Saldo Rp 100.000 + Bonus Rp 10.000 (Masa Aktif 90 Hari)',
+    },
+    {
+      id: 'pkg-deposit-200',
+      name: 'Deposit Saldo Rp 200.000',
+      type: 'BALANCE',
+      price: 200000,
+      balanceAmount: 200000,
+      bonusAmount: 25000,
+      validityDays: 90,
+      description: 'Saldo Rp 200.000 + Bonus Rp 25.000 (Masa Aktif 90 Hari)',
+    },
+  ],
+  expiryPolicy: 'ACCUMULATE' as 'ACCUMULATE' | 'EXPIRE',
+};
+
+export const getLaundryDepositConfig = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { outletId } = req.query;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const effectiveOutletId = (typeof outletId === 'string' && outletId) || (req.user as any)?.outletId;
+    let outlet = null;
+    if (effectiveOutletId) {
+      outlet = await prisma.outlet.findFirst({
+        where: { id: effectiveOutletId, tenantId },
+        select: { id: true, name: true, laundryDepositConfig: true },
+      });
+    }
+    if (!outlet) {
+      outlet = await prisma.outlet.findFirst({
+        where: { tenantId, isActive: true },
+        select: { id: true, name: true, laundryDepositConfig: true },
+      });
+    }
+
+    const config = (outlet?.laundryDepositConfig as any) || DEFAULT_LAUNDRY_DEPOSIT_CONFIG;
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        outletId: outlet?.id || null,
+        outletName: outlet?.name || null,
+        config,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryDepositConfig:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat konfigurasi paket deposit' });
+  }
+};
+
+export const updateLaundryDepositConfig = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(userRole)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner/Admin yang berhak mengubah paket deposit' });
+    }
+
+    const { outletId, packages, expiryPolicy } = req.body;
+    const effectiveOutletId = outletId || (req.user as any)?.outletId;
+    let targetOutlet = null;
+    if (effectiveOutletId) {
+      targetOutlet = await prisma.outlet.findFirst({
+        where: { id: effectiveOutletId, tenantId },
+      });
+    }
+    if (!targetOutlet) {
+      targetOutlet = await prisma.outlet.findFirst({
+        where: { tenantId, isActive: true },
+      });
+    }
+
+    if (!targetOutlet) {
+      return res.status(404).json({ status: 'error', message: 'Outlet tidak ditemukan' });
+    }
+
+    const newConfig = {
+      packages: Array.isArray(packages) ? packages : DEFAULT_LAUNDRY_DEPOSIT_CONFIG.packages,
+      expiryPolicy: expiryPolicy === 'EXPIRE' ? 'EXPIRE' : 'ACCUMULATE',
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedOutlet = await prisma.outlet.update({
+      where: { id: targetOutlet.id },
+      data: { laundryDepositConfig: newConfig },
+      select: { id: true, name: true, laundryDepositConfig: true },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Konfigurasi paket deposit dan masa aktif berhasil disimpan',
+      data: updatedOutlet,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryDepositConfig:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui konfigurasi paket deposit' });
   }
 };
 
@@ -3682,14 +3914,31 @@ export const updateLaundryDeliveryStatus = async (req: Request, res: Response) =
             },
           });
 
-          await tx.customerDebt.updateMany({
+          const existingDebt = await tx.customerDebt.findFirst({
             where: { tenantId, orderId: detail.order.id },
-            data: {
-              paidAmount: total,
-              remainingAmount: 0,
-              status: 'PAID',
-            },
           });
+          if (existingDebt) {
+            await tx.customerDebt.update({
+              where: { id: existingDebt.id },
+              data: {
+                paidAmount: total,
+                remainingAmount: 0,
+                status: 'PAID',
+              },
+            });
+            await tx.customerDebtPayment.create({
+              data: {
+                tenantId,
+                debtId: existingDebt.id,
+                outletId: detail.outletId,
+                cashierId: userId || null,
+                shiftId: activeShift?.id || null,
+                amount: remaining,
+                paymentMethod: method,
+                notes: 'Pelunasan COD oleh Kurir saat pengantaran selesai',
+              },
+            });
+          }
         } else if (remaining === 0) {
           orderDataToUpdate.paymentStatus = PaymentStatus.PAID;
         }

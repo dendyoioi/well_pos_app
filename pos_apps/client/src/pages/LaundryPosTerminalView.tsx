@@ -188,6 +188,12 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [topupPricePaid, setTopupPricePaid] = useState('70000');
   const [topupPaymentMethod, setTopupPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
   const [topupValidityDays, setTopupValidityDays] = useState<'30' | '60' | '90' | 'UNLIMITED'>('30');
+  const [topupBonusAmount, setTopupBonusAmount] = useState('0');
+  const [topupQuotaBonusKg, setTopupQuotaBonusKg] = useState('0');
+  const [depositConfig, setDepositConfig] = useState<{ packages: any[]; expiryPolicy: 'ACCUMULATE' | 'EXPIRE' }>({
+    packages: [],
+    expiryPolicy: 'ACCUMULATE',
+  });
   const [processingTopup, setProcessingTopup] = useState(false);
 
   // Diskon / Kupon Promo
@@ -537,6 +543,17 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   };
 
   // Handler Proses Top-up Saldo Deposit atau Kuota Kiloan
+  // Load deposit packages saat modal dibuka
+  useEffect(() => {
+    if (topupModalOpen && activeOutlet) {
+      api.getLaundryDepositConfig(activeOutlet.id).then((res) => {
+        if (res.status === 'success' && res.data?.config) {
+          setDepositConfig(res.data.config);
+        }
+      }).catch(() => {});
+    }
+  }, [topupModalOpen, activeOutlet?.id]);
+
   const handleProcessTopup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentShift) {
@@ -560,10 +577,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       const res = await api.topupCustomerLaundryWallet(selectedCustomerId, {
         type: topupType,
         amount: topupType === 'BALANCE' ? Number(topupAmount) : undefined,
+        bonusAmount: topupType === 'BALANCE' && Number(topupBonusAmount) > 0 ? Number(topupBonusAmount) : undefined,
         kg: topupType === 'QUOTA_KG' ? Number(topupKg) : undefined,
+        quotaBonusKg: topupType === 'QUOTA_KG' && Number(topupQuotaBonusKg) > 0 ? Number(topupQuotaBonusKg) : undefined,
         pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupAmount),
         paymentMethod: topupPaymentMethod,
         outletId: activeOutlet.id,
+        validityDays: topupValidityDays !== 'UNLIMITED' ? Number(topupValidityDays) : undefined,
+        expiryPolicy: depositConfig.expiryPolicy,
         quotaExpiresAt: expiresAt,
         notes: `Top-up kasir ${activeOutlet.name}`,
       });
@@ -3258,6 +3279,44 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 {/* Form Input Sesuai Jenis */}
                 {topupType === 'BALANCE' ? (
                   <div className="space-y-2.5">
+                    {depositConfig.packages.filter((p) => p.type === 'BALANCE').length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10.5px] font-bold text-slate-600 block">
+                          Pilihan Paket Saldo Deposit:
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {depositConfig.packages
+                            .filter((p) => p.type === 'BALANCE')
+                            .map((pkg) => (
+                              <button
+                                key={pkg.id}
+                                type="button"
+                                onClick={() => {
+                                  setTopupAmount(String(pkg.balanceAmount || pkg.price));
+                                  setTopupBonusAmount(String(pkg.bonusAmount || 0));
+                                  if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
+                                }}
+                                className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                  topupAmount === String(pkg.balanceAmount || pkg.price)
+                                    ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                                }`}
+                              >
+                                <div className="font-extrabold text-xs">{pkg.name}</div>
+                                <div className="text-[11px] font-bold">
+                                  Rp {Number(pkg.price).toLocaleString('id-ID')}
+                                </div>
+                                {Number(pkg.bonusAmount || 0) > 0 && (
+                                  <div className={`text-[9.5px] font-bold ${topupAmount === String(pkg.balanceAmount || pkg.price) ? 'text-amber-300' : 'text-emerald-600'}`}>
+                                    +Bonus Saldo Rp {Number(pkg.bonusAmount).toLocaleString('id-ID')}
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
                     <label className="block text-xs font-bold text-slate-700">
                       Nominal Top-up Saldo (Rp)
                     </label>
@@ -3275,7 +3334,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         <button
                           key={amt}
                           type="button"
-                          onClick={() => setTopupAmount(String(amt))}
+                          onClick={() => {
+                            setTopupAmount(String(amt));
+                            setTopupBonusAmount('0');
+                          }}
                           className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${
                             topupAmount === String(amt)
                               ? 'bg-blue-900 text-white border-blue-900'
@@ -3294,27 +3356,44 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         Pilihan Paket Kuota Kiloan
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { kg: 5, price: 35000, label: '5 Kg - Rp 35rb' },
-                          { kg: 10, price: 70000, label: '10 Kg - Rp 70rb' },
-                          { kg: 20, price: 130000, label: '20 Kg - Rp 130rb' },
-                          { kg: 50, price: 300000, label: '50 Kg - Rp 300rb' },
-                        ].map((pkg) => (
+                        {(depositConfig.packages.filter((p) => p.type === 'QUOTA_KG').length > 0
+                          ? depositConfig.packages.filter((p) => p.type === 'QUOTA_KG')
+                          : [
+                              { id: '1', quotaKg: 5, price: 35000, name: '5 Kg' },
+                              { id: '2', quotaKg: 10, price: 70000, name: '10 Kg' },
+                              { id: '3', quotaKg: 20, price: 130000, name: '20 Kg' },
+                              { id: '4', quotaKg: 50, price: 300000, name: '50 Kg' },
+                            ]
+                        ).map((pkg) => (
                           <button
-                            key={pkg.kg}
+                            key={pkg.id || pkg.quotaKg}
                             type="button"
                             onClick={() => {
-                              setTopupKg(String(pkg.kg));
+                              setTopupKg(String(pkg.quotaKg));
+                              setTopupQuotaBonusKg(String(pkg.quotaBonusKg || 0));
                               setTopupPricePaid(String(pkg.price));
+                              if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
                             }}
                             className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
-                              topupKg === String(pkg.kg) && topupPricePaid === String(pkg.price)
+                              topupKg === String(pkg.quotaKg) && topupPricePaid === String(pkg.price)
                                 ? 'bg-purple-900 text-white border-purple-900'
                                 : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                             }`}
                           >
-                            <div className="font-black text-sm">{pkg.kg} Kg</div>
-                            <div className="text-[10.5px] opacity-90">Rp {pkg.price.toLocaleString('id-ID')}</div>
+                            <div className="font-black text-sm flex items-center justify-between">
+                              <span>{pkg.quotaKg} Kg</span>
+                              {pkg.validityDays && (
+                                <span className="text-[9.5px] opacity-75 font-normal">
+                                  {pkg.validityDays} Hari
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10.5px] opacity-90">Rp {Number(pkg.price).toLocaleString('id-ID')}</div>
+                            {Number(pkg.quotaBonusKg || 0) > 0 && (
+                              <div className={`text-[9.5px] font-bold ${topupKg === String(pkg.quotaKg) && topupPricePaid === String(pkg.price) ? 'text-amber-300' : 'text-emerald-600'}`}>
+                                +Bonus {pkg.quotaBonusKg} Kg
+                              </div>
+                            )}
                           </button>
                         ))}
                       </div>
