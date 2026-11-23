@@ -582,9 +582,11 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
   },
 ];
 
+const SCHEMA_PATCHER_LOCK_KEY = 88442211;
+
 /**
- * Menjalankan auto-patcher skema secara non-blocking dan idempotent.
- * Memastikan tabel pelacak `_schema_patches` tersedia sebelum mengeksekusi patch yang belum pernah dijalankan.
+ * Menjalankan auto-patcher skema secara non-blocking, idempotent, dan aman dari race condition multi-instance.
+ * Menggunakan PostgreSQL advisory lock untuk memastikan hanya satu instance yang mengeksekusi DDL saat startup.
  */
 export async function runAutoSchemaPatcher(prisma: PrismaClient): Promise<{
   applied: string[];
@@ -597,7 +599,23 @@ export async function runAutoSchemaPatcher(prisma: PrismaClient): Promise<{
     failed: [] as { id: string; error: string }[],
   };
 
+  let hasLock = false;
+
   try {
+    // 0. Ambil PostgreSQL advisory lock agar instance lain tidak mengeksekusi patch bersamaan (zero-downtime deploy)
+    try {
+      const lockRows = await prisma.$queryRawUnsafe<{ locked: boolean }[]>(
+        `SELECT pg_try_advisory_lock(${SCHEMA_PATCHER_LOCK_KEY}) AS locked;`
+      );
+      hasLock = Boolean(lockRows?.[0]?.locked);
+      if (!hasLock) {
+        console.log('[SchemaPatcher] ℹ️ Instance lain sedang menjalankan migrasi skema, melewati siklus ini.');
+        return result;
+      }
+    } catch (lockErr: any) {
+      console.warn('[SchemaPatcher] ⚠️ Gagal memperoleh advisory lock, melanjutkan dengan fallback:', lockErr?.message);
+    }
+
     // 1. Buat tabel pelacak patch jika belum ada
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "_schema_patches" (
@@ -658,7 +676,52 @@ export async function runAutoSchemaPatcher(prisma: PrismaClient): Promise<{
     }
   } catch (err: any) {
     console.warn('[SchemaPatcher] ⚠️ Tidak dapat memeriksa tabel _schema_patches:', err.message);
+  } finally {
+    if (hasLock) {
+      try {
+        await prisma.$executeRawUnsafe(`SELECT pg_advisory_unlock(${SCHEMA_PATCHER_LOCK_KEY});`);
+      } catch (unlockErr: any) {
+        console.warn('[SchemaPatcher] ⚠️ Gagal melepaskan advisory lock:', unlockErr?.message);
+      }
+    }
   }
 
   return result;
+}
+
+/**
+ * Menjalankan auto-patcher skema menggunakan DIRECT_URL (Port 5432) jika tersedia,
+ * agar eksekusi DDL dan advisory lock tidak terblokir oleh PgBouncer Transaction Pooler (Port 6543).
+ * Jika DIRECT_URL tidak diset, fallback menggunakan instance Prisma yang diberikan.
+ */
+export async function runAutoSchemaPatcherWithDirectUrl(fallbackPrisma: PrismaClient): Promise<{
+  applied: string[];
+  skipped: string[];
+  failed: { id: string; error: string }[];
+}> {
+  const directUrl = process.env.DIRECT_URL?.trim();
+
+  if (directUrl) {
+    const directPrisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: directUrl,
+        },
+      },
+      log: ['error'],
+    });
+
+    try {
+      console.log('[SchemaPatcher] 🔌 Menjalankan migrasi skema via DIRECT_URL (Direct Port 5432)');
+      return await runAutoSchemaPatcher(directPrisma);
+    } finally {
+      try {
+        await directPrisma.$disconnect();
+      } catch (discErr: any) {
+        console.warn('[SchemaPatcher] ⚠️ Gagal disconnect direct Prisma instance:', discErr?.message);
+      }
+    }
+  }
+
+  return runAutoSchemaPatcher(fallbackPrisma);
 }

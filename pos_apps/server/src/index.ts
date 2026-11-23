@@ -161,14 +161,14 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-import { runAutoSchemaPatcher } from './migrations/schema_patcher';
+import { runAutoSchemaPatcherWithDirectUrl } from './migrations/schema_patcher';
 import { initBackupScheduler } from './services/backupScheduler';
 
 // Jalankan Server jika dieksekusi secara langsung (bukan di-import oleh test suite)
 let server: any = null;
 if (process.env.NODE_ENV !== 'test' && require.main === module) {
-  // Non-blocking auto-schema patcher pada saat server boot
-  runAutoSchemaPatcher(prisma)
+  // Non-blocking auto-schema patcher pada saat server boot (mengutamakan DIRECT_URL jika tersedia)
+  runAutoSchemaPatcherWithDirectUrl(prisma)
     .then((res) => {
       if (res.applied.length > 0) {
         console.log(`[Boot] ✅ Schema patches diterapkan: ${res.applied.join(', ')}`);
