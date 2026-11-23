@@ -564,7 +564,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
       </div>
 
       {/* Mobile Sticky Action Footer (Rule 10 Kanonikal) */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg flex items-center justify-between gap-3">
+      <div className="sm:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-between gap-3">
         <div className="flex flex-col min-w-0">
           <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Pengaturan Pembayaran</span>
           <span className="text-xs font-black text-slate-800 truncate">

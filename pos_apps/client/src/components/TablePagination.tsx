@@ -71,7 +71,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-xl pl-2.5 pr-7 py-1 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-900/20 cursor-pointer shadow-2xs hover:border-slate-300 transition-all appearance-none"
+              className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-xl pl-2.5 pr-10 py-1 sm:py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-900/20 cursor-pointer shadow-2xs hover:border-slate-300 transition-all appearance-none"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -79,7 +79,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 

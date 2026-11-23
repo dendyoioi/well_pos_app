@@ -432,7 +432,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all"
+            className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 rounded-xl text-xs font-medium outline-none transition-all"
           />
         </div>
       </div>

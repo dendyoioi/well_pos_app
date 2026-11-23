@@ -1400,7 +1400,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             </div>
 
             {/* Mobile Sticky Action Footer (PWA Ergonomics) */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center justify-end gap-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg">
+            <div className="lg:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center justify-end gap-3 shadow-lg">
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
@@ -1445,7 +1445,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
                     placeholder="Cari izin fitur..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-hidden focus:bg-white focus:border-blue-900 transition-all shadow-2xs"
+                    className="w-full pl-10 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-hidden focus:bg-white focus:border-blue-900 transition-all shadow-2xs"
                   />
                 </div>
               </div>
@@ -1613,7 +1613,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
               value={rolesSearch}
               onChange={(e) => setRolesSearch(e.target.value)}
               placeholder="Cari nama peran..."
-              className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-hidden focus:bg-white focus:border-blue-900 transition-all shadow-2xs"
+              className="w-full h-10 pl-10 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-hidden focus:bg-white focus:border-blue-900 transition-all shadow-2xs"
             />
           </div>
 

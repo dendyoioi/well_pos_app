@@ -279,7 +279,7 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                       placeholder="Contoh: Pak Joko (Setrika)"
                       value={operatorName}
                       onChange={(e) => setOperatorName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-medium"
+                      className="w-full pl-10 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-medium"
                     />
                   </div>
                 </div>
@@ -298,7 +298,7 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                         placeholder="Contoh: RAK-A1 atau HGR-02"
                         value={targetRackCode}
                         onChange={(e) => setTargetRackCode(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-mono font-bold uppercase"
+                        className="w-full pl-10 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-mono font-bold uppercase"
                       />
                     </div>
                   </div>

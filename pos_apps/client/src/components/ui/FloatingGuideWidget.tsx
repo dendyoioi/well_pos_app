@@ -296,6 +296,8 @@ export const FloatingGuideWidget: React.FC<FloatingGuideWidgetProps> = ({
       className={`fixed ${
         activeTab === 'pos'
           ? 'bottom-[max(1rem,env(safe-area-inset-bottom,0px))] md:bottom-6'
+          : ['settings_receipt', 'settings_payment', 'settings_loyalty', 'staff_roles'].includes(activeTab)
+          ? 'bottom-[calc(8.25rem+env(safe-area-inset-bottom,0px))] md:bottom-6'
           : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6'
       } right-3 sm:right-6 z-30 transition-all duration-200`}
     >

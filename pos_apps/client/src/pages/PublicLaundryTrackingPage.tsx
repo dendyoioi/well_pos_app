@@ -114,7 +114,7 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 placeholder="Masukkan Nomor Nota (cth: INV-20261120-001)..."
                 value={invoiceInput}
                 onChange={(e) => setInvoiceInput(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 text-xs font-bold rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs font-mono uppercase"
+                className="w-full pl-10 pr-3 py-2.5 text-xs font-bold rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs font-mono uppercase"
               />
             </div>
             <button

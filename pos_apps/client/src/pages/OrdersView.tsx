@@ -713,7 +713,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 setSelectedChannel(val);
                 loadOrders(val);
               }}
-              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-6 min-w-0 flex-1 sm:flex-initial truncate appearance-none"
+              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-10 min-w-0 flex-1 sm:flex-initial truncate appearance-none"
             >
               <option value="ALL">Semua Saluran</option>
               {channelOptions.map((ch) => (
@@ -722,7 +722,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+            <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
           </div>
 
           {/* Filter Kasir: Smart Default untuk Kasir (Akun Saya) atau Pilihan Semua Kasir di Toko Ini */}
@@ -735,7 +735,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 setSelectedCashier(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-6 min-w-0 flex-1 truncate appearance-none"
+              className="bg-transparent text-xs font-bold text-blue-950 outline-none cursor-pointer pr-10 min-w-0 flex-1 truncate appearance-none"
             >
               <option value="ALL">👤 Semua Kasir di Toko Ini</option>
               {cashierOptions.map((name) => {
@@ -747,7 +747,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 );
               })}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+            <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
             {isCashierRole && selectedCashier === currentUser?.name && (
               <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0 mr-4">
                 Akun Saya

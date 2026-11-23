@@ -16,6 +16,7 @@ import {
   UtensilsCrossed,
   FileText,
   Shirt,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Outlet } from '../types/outlet';
@@ -463,7 +464,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                 setSelectedCashier(e.target.value);
                 setCurrentPage(1);
               }}
-              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer pr-1 min-w-0 flex-1 sm:flex-initial truncate"
+              className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer pr-8 min-w-0 flex-1 sm:flex-initial truncate appearance-none"
               title="Filter Shift Berdasarkan Nama Kasir"
             >
               <option value="ALL">Semua Kasir di Toko Ini</option>
@@ -476,8 +477,9 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                 );
               })}
             </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
             {isCashierRole && selectedCashier === currentUser?.name && (
-              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0">
+              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black shrink-0 whitespace-nowrap ml-auto sm:ml-0 mr-4">
                 Akun Saya
               </span>
             )}

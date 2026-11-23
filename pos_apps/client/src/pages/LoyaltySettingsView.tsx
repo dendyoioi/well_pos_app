@@ -305,7 +305,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
         </div>
 
         {/* Mobile Sticky Action Footer (Rule 10 AGENTS.md) */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg flex items-center justify-end">
+        <div className="sm:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-end">
           <button
             type="submit"
             disabled={saving}

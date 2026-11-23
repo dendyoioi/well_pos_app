@@ -241,7 +241,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
               placeholder="Cari nota, pelanggan, layanan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 h-10 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs"
+              className="w-full pl-10 pr-3 h-10 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-900 focus:outline-none transition-all shadow-2xs"
             />
           </div>
         </div>

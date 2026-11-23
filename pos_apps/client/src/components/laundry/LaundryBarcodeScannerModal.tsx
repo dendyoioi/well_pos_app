@@ -261,7 +261,7 @@ export const LaundryBarcodeScannerModal: React.FC<LaundryBarcodeScannerModalProp
                   placeholder="Contoh: INV-20261121-0001..."
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-800/90 border border-slate-700 focus:border-blue-500 focus:bg-slate-800 rounded-xl text-xs font-mono text-white outline-none transition-all placeholder:text-slate-500"
+                  className="w-full pl-10 pr-3 py-2.5 bg-slate-800/90 border border-slate-700 focus:border-blue-500 focus:bg-slate-800 rounded-xl text-xs font-mono text-white outline-none transition-all placeholder:text-slate-500"
                 />
               </div>
               <button
