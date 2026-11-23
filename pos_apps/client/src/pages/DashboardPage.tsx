@@ -81,6 +81,7 @@ const LaundryQueueView = React.lazy(() => import('./LaundryQueueView').then((m) 
 const LaundryProductionView = React.lazy(() => import('./LaundryProductionView').then((m) => ({ default: m.LaundryProductionView })));
 const LaundryRacksView = React.lazy(() => import('./LaundryRacksView').then((m) => ({ default: m.LaundryRacksView })));
 const LaundryTransfersView = React.lazy(() => import('./LaundryTransfersView').then((m) => ({ default: m.LaundryTransfersView })));
+const LaundryCommissionView = React.lazy(() => import('./LaundryCommissionView').then((m) => ({ default: m.LaundryCommissionView })));
 const LaundryPosTerminalView = React.lazy(() => import('./LaundryPosTerminalView').then((m) => ({ default: m.LaundryPosTerminalView })));
 const LaundryBusinessSummaryView = React.lazy(() => import('../components/saas/LaundryBusinessSummaryView').then((m) => ({ default: m.LaundryBusinessSummaryView })));
 
@@ -146,7 +147,8 @@ type TabKey =
   | 'laundry_queue'
   | 'laundry_production'
   | 'laundry_racks'
-  | 'laundry_transfers';
+  | 'laundry_transfers'
+  | 'laundry_commissions';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
   CASHIER: ['pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders', 'laundry_queue', 'laundry_production', 'laundry_services', 'laundry_racks', 'laundry_transfers'],
@@ -196,6 +198,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'laundry_services',
     'laundry_racks',
     'laundry_transfers',
+    'laundry_commissions',
   ],
   ADMIN: [
     'overview',
@@ -237,6 +240,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'laundry_services',
     'laundry_racks',
     'laundry_transfers',
+    'laundry_commissions',
   ],
   OWNER: [
     'overview',
@@ -278,6 +282,7 @@ const ROLE_TABS: Record<UserRole, TabKey[]> = {
     'laundry_services',
     'laundry_racks',
     'laundry_transfers',
+    'laundry_commissions',
   ],
   KITCHEN: ['qr_orders', 'recipes', 'overview', 'laundry_production', 'laundry_queue'],
   WAITER: ['pos', 'orders', 'qr_orders'],
@@ -394,6 +399,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         'laundry_production',
         'laundry_racks',
         'laundry_transfers',
+        'laundry_commissions',
       ];
       const fnbOnlyTabs: TabKey[] = [
         'qr_tables',
@@ -870,6 +876,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           <LaundryRacksView activeOutlet={activeOutlet} />
         ) : activeTab === 'laundry_transfers' ? (
           <LaundryTransfersView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_commissions' ? (
+          <LaundryCommissionView activeOutlet={activeOutlet} currentUser={user} />
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}
@@ -2267,6 +2275,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           <LaundryRacksView activeOutlet={activeOutlet} />
         ) : activeTab === 'laundry_transfers' ? (
           <LaundryTransfersView activeOutlet={activeOutlet} />
+        ) : activeTab === 'laundry_commissions' ? (
+          <LaundryCommissionView activeOutlet={activeOutlet} currentUser={user} />
         ) : (
           <InventoryView activeOutlet={activeOutlet} />
         )}

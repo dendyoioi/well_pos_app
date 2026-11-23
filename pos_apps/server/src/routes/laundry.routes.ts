@@ -35,6 +35,9 @@ import {
   getLaundryDeliveries,
   updateLaundryDeliveryStatus,
   rewashLaundryOrder,
+  getLaundryCommissionConfig,
+  updateLaundryCommissionConfig,
+  getLaundryCommissions,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -95,5 +98,10 @@ router.post('/manifests/:id/receive', receiveLaundryManifest);
 router.get('/manifests/available-orders', getAvailableOrdersForManifest);
 router.get('/workshops', getLaundryWorkshops);
 router.patch('/workshops/:id/toggle', toggleOutletWorkshopMode);
+
+// --- Modul Komisi Otomatis Staf Produksi & Kurir ---
+router.get('/commission-config', getLaundryCommissionConfig);
+router.put('/commission-config', updateLaundryCommissionConfig);
+router.get('/commissions', getLaundryCommissions);
 
 export { router as laundryRouter };

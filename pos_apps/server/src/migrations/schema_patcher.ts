@@ -573,6 +573,13 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "laundry_service_bom_items_tenant_service_idx" ON "laundry_service_bom_items"("tenant_id", "laundry_service_id");
     `,
   },
+  {
+    id: '20261122_03_laundry_commission_config',
+    description: 'Menambahkan kolom laundry_commission_config pada tabel outlets untuk komisi staf & kurir laundry',
+    sql: `
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "laundry_commission_config" JSONB;
+    `,
+  },
 ];
 
 /**

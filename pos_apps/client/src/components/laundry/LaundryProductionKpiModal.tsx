@@ -233,13 +233,32 @@ export const LaundryProductionKpiModal: React.FC<LaundryProductionKpiModalProps>
             <span>Cetak Rekap Kinerja</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
-          >
-            Tutup
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('tab', 'laundry_commissions');
+                  window.history.pushState({}, '', url.toString());
+                  window.dispatchEvent(new Event('popstate'));
+                }
+              }}
+              className="px-4 py-2 text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Buka Rekap Komisi Lengkap</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
     </div>

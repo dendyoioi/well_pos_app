@@ -16,6 +16,7 @@ import type {
   CreateStockTransferInput,
   ExpiryAlertBatch,
 } from '../types/purchasing';
+import type { LaundryCommissionConfig, LaundryCommissionReport } from '../types/laundry';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -2953,6 +2954,56 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeader() },
       body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // MODUL KOMISI OTOMATIS STAF PRODUKSI & KURIR
+  // ----------------------------------------------------
+  getLaundryCommissionConfig: async (outletId?: string): Promise<{
+    status: string;
+    data: { outletId?: string; outletName?: string; config: LaundryCommissionConfig };
+    message?: string;
+  }> => {
+    const params = outletId ? `?outletId=${encodeURIComponent(outletId)}` : '';
+    const res = await fetch(`/api/laundry/commission-config${params}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateLaundryCommissionConfig: async (data: {
+    outletId?: string;
+    config: Partial<LaundryCommissionConfig>;
+  }): Promise<{ status: string; message: string; data?: LaundryCommissionConfig }> => {
+    const res = await fetch('/api/laundry/commission-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getLaundryCommissions: async (params?: {
+    outletId?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }): Promise<{
+    status: string;
+    data: LaundryCommissionReport;
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.search) query.append('search', params.search);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const res = await fetch(`/api/laundry/commissions${queryString}`, {
+      headers: authHeader(),
     });
     return res.json();
   },

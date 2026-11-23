@@ -2443,10 +2443,11 @@ export const getProductionKpiReport = async (req: Request, res: Response) => {
       op.stagesCount[log.stage] = (op.stagesCount[log.stage] || 0) + 1;
 
       const kg = Number(log.weightKg || 0);
-      if (log.stage === 'WASHING') op.totalWashingKg += kg;
-      if (log.stage === 'DRYING') op.totalDryingKg += kg;
-      if (log.stage === 'IRONING') op.totalIroningKg += kg;
-      if (log.stage === 'PACKING') op.totalPackingOrders += 1;
+      const stageUpper = String(log.stage || '').toUpperCase();
+      if (['WASHING', 'CUCI'].includes(stageUpper)) op.totalWashingKg += kg;
+      if (['DRYING', 'KERING'].includes(stageUpper)) op.totalDryingKg += kg;
+      if (['IRONING', 'SETRIKA', 'EXTRA_SETRIKA'].includes(stageUpper)) op.totalIroningKg += kg;
+      if (['PACKING', 'PENGEMASAN'].includes(stageUpper)) op.totalPackingOrders += 1;
     });
 
     return res.status(200).json({
@@ -3546,5 +3547,395 @@ export const rewashLaundryOrder = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error rewashLaundryOrder:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal memproses garansi cuci ulang' });
+  }
+};
+
+// ==========================================
+// 14. SISTEM KOMISI OTOMATIS STAF PRODUKSI & KURIR
+// ==========================================
+
+export const DEFAULT_COMMISSION_CONFIG = {
+  enabled: true,
+  washingPerKg: 300,
+  dryingPerKg: 200,
+  ironingPerKg: 500,
+  packingPerOrder: 500,
+  deliveryPerTrip: 3000,
+  pickupPerTrip: 2000,
+  rewashPenaltyPerCase: 0,
+};
+
+export const getLaundryCommissionConfig = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const { outletId } = req.query;
+
+    let outlet = null;
+    if (outletId && typeof outletId === 'string') {
+      outlet = await prisma.outlet.findFirst({
+        where: { id: outletId, tenantId },
+        select: { id: true, name: true, laundryCommissionConfig: true },
+      });
+    }
+
+    if (!outlet) {
+      outlet = await prisma.outlet.findFirst({
+        where: { tenantId, isActive: true },
+        select: { id: true, name: true, laundryCommissionConfig: true },
+      });
+    }
+
+    const rawConfig = outlet?.laundryCommissionConfig;
+    const config = {
+      ...DEFAULT_COMMISSION_CONFIG,
+      ...(typeof rawConfig === 'object' && rawConfig !== null ? rawConfig : {}),
+    };
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        outletId: outlet?.id,
+        outletName: outlet?.name,
+        config,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryCommissionConfig:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil konfigurasi komisi' });
+  }
+};
+
+export const updateLaundryCommissionConfig = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah tarif komisi' });
+    }
+
+    const { outletId, config } = req.body;
+
+    let targetOutletId = outletId;
+    if (!targetOutletId) {
+      const firstOutlet = await prisma.outlet.findFirst({
+        where: { tenantId, isActive: true },
+        select: { id: true },
+      });
+      targetOutletId = firstOutlet?.id;
+    }
+
+    if (!targetOutletId) {
+      return res.status(404).json({ status: 'error', message: 'Toko/Outlet tidak ditemukan' });
+    }
+
+    const outlet = await prisma.outlet.findFirst({
+      where: { id: targetOutletId, tenantId },
+    });
+    if (!outlet) {
+      return res.status(404).json({ status: 'error', message: 'Outlet tidak ditemukan atau akses ditolak' });
+    }
+
+    const cleanConfig = {
+      enabled: config?.enabled !== false,
+      washingPerKg: Math.max(0, Math.round(Number(config?.washingPerKg || 0))),
+      dryingPerKg: Math.max(0, Math.round(Number(config?.dryingPerKg || 0))),
+      ironingPerKg: Math.max(0, Math.round(Number(config?.ironingPerKg || 0))),
+      packingPerOrder: Math.max(0, Math.round(Number(config?.packingPerOrder || 0))),
+      deliveryPerTrip: Math.max(0, Math.round(Number(config?.deliveryPerTrip || 0))),
+      pickupPerTrip: Math.max(0, Math.round(Number(config?.pickupPerTrip || 0))),
+      rewashPenaltyPerCase: Math.max(0, Math.round(Number(config?.rewashPenaltyPerCase || 0))),
+    };
+
+    const updated = await prisma.outlet.update({
+      where: { id: targetOutletId },
+      data: {
+        laundryCommissionConfig: cleanConfig,
+      },
+      select: {
+        id: true,
+        name: true,
+        laundryCommissionConfig: true,
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Konfigurasi komisi staf & kurir berhasil disimpan',
+      data: updated.laundryCommissionConfig,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryCommissionConfig:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui konfigurasi komisi' });
+  }
+};
+
+export const getLaundryCommissions = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const { outletId, startDate, endDate, search } = req.query;
+
+    // 1. Ambil config outlet aktif
+    let targetOutlet = null;
+    if (outletId && typeof outletId === 'string') {
+      targetOutlet = await prisma.outlet.findFirst({
+        where: { id: outletId, tenantId },
+        select: { id: true, name: true, laundryCommissionConfig: true },
+      });
+    }
+    if (!targetOutlet) {
+      targetOutlet = await prisma.outlet.findFirst({
+        where: { tenantId, isActive: true },
+        select: { id: true, name: true, laundryCommissionConfig: true },
+      });
+    }
+
+    const rawConfig = targetOutlet?.laundryCommissionConfig;
+    const config = {
+      ...DEFAULT_COMMISSION_CONFIG,
+      ...(typeof rawConfig === 'object' && rawConfig !== null ? rawConfig : {}),
+    };
+
+    // 2. Tentukan rentang tanggal
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    if (startDate && typeof startDate === 'string') {
+      start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      // Default: Awal bulan berjalan
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    }
+
+    if (endDate && typeof endDate === 'string') {
+      end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    // 3. Ambil data LaundryStageLog dalam rentang tanggal
+    const stageLogs = await prisma.laundryStageLog.findMany({
+      where: {
+        tenantId,
+        completedAt: {
+          gte: start,
+          lte: end,
+        },
+        ...(outletId ? { order: { outletId: String(outletId) } } : {}),
+      },
+      include: {
+        order: {
+          select: { id: true, invoiceNumber: true, outletId: true },
+        },
+      },
+      orderBy: { completedAt: 'asc' },
+    });
+
+    // 4. Ambil data LaundryOrderDetail dengan deliveryStatus = 'DELIVERED'
+    const deliveries = await prisma.laundryOrderDetail.findMany({
+      where: {
+        tenantId,
+        deliveryStatus: 'DELIVERED',
+        ...(outletId ? { outletId: String(outletId) } : {}),
+        deliveredAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        order: {
+          select: { id: true, invoiceNumber: true, outletId: true },
+        },
+      },
+    });
+
+    // 5. Akumulasi data per staf / kurir
+    const staffMap: Record<string, {
+      staffId?: string;
+      name: string;
+      roleType: 'OPERATOR' | 'COURIER' | 'BOTH';
+      washingKg: number;
+      dryingKg: number;
+      ironingKg: number;
+      packingOrders: number;
+      rewashCount: number;
+      pickupTrips: number;
+      deliveryTrips: number;
+      washingCommission: number;
+      dryingCommission: number;
+      ironingCommission: number;
+      packingCommission: number;
+      deliveryCommission: number;
+      rewashPenalty: number;
+      productionCommission: number;
+      totalCommission: number;
+    }> = {};
+
+    const getOrCreateStaff = (name: string, staffId?: string | null) => {
+      const cleanName = (name || 'Staf Laundry').trim();
+      const key = cleanName.toLowerCase();
+      if (!staffMap[key]) {
+        staffMap[key] = {
+          staffId: staffId || undefined,
+          name: cleanName,
+          roleType: 'OPERATOR',
+          washingKg: 0,
+          dryingKg: 0,
+          ironingKg: 0,
+          packingOrders: 0,
+          rewashCount: 0,
+          pickupTrips: 0,
+          deliveryTrips: 0,
+          washingCommission: 0,
+          dryingCommission: 0,
+          ironingCommission: 0,
+          packingCommission: 0,
+          deliveryCommission: 0,
+          rewashPenalty: 0,
+          productionCommission: 0,
+          totalCommission: 0,
+        };
+      }
+      return staffMap[key];
+    };
+
+    // Akumulasi Stage Logs (Produksi)
+    for (const log of stageLogs) {
+      const staff = getOrCreateStaff(log.operatorName || 'Operator Produksi', log.operatorId);
+      const stage = String(log.stage || '').toUpperCase();
+      const kg = Number(log.weightKg || 0);
+
+      if (['WASHING', 'CUCI'].includes(stage)) {
+        staff.washingKg += kg;
+      } else if (['DRYING', 'KERING'].includes(stage)) {
+        staff.dryingKg += kg;
+      } else if (['IRONING', 'SETRIKA', 'EXTRA_SETRIKA'].includes(stage)) {
+        staff.ironingKg += kg;
+      } else if (['PACKING', 'PENGEMASAN'].includes(stage)) {
+        staff.packingOrders += 1;
+      } else if (['REWASH'].includes(stage)) {
+        staff.rewashCount += 1;
+      }
+    }
+
+    // Akumulasi Deliveries (Kurir)
+    for (const d of deliveries) {
+      const courierName = d.courierName || 'Kurir Delivery';
+      const staff = getOrCreateStaff(courierName);
+
+      const type = String(d.deliveryType || 'NONE').toUpperCase();
+      if (type === 'DELIVERY_ONLY') {
+        staff.deliveryTrips += 1;
+      } else if (type === 'PICKUP_ONLY') {
+        staff.pickupTrips += 1;
+      } else if (type === 'PICKUP_AND_DELIVERY') {
+        staff.pickupTrips += 1;
+        staff.deliveryTrips += 1;
+      }
+    }
+
+    // 6. Hitung komisi dan tentukan roleType
+    let totalProductionCommission = 0;
+    let totalDeliveryCommission = 0;
+    let totalPenalty = 0;
+    let grandTotalCommission = 0;
+    let totalWashingKg = 0;
+    let totalDryingKg = 0;
+    let totalIroningKg = 0;
+    let totalTripsCompleted = 0;
+
+    const staffList = Object.values(staffMap).map(s => {
+      // Pembulatan angka tonase
+      s.washingKg = Math.round(s.washingKg * 100) / 100;
+      s.dryingKg = Math.round(s.dryingKg * 100) / 100;
+      s.ironingKg = Math.round(s.ironingKg * 100) / 100;
+
+      s.washingCommission = Math.round(s.washingKg * config.washingPerKg);
+      s.dryingCommission = Math.round(s.dryingKg * config.dryingPerKg);
+      s.ironingCommission = Math.round(s.ironingKg * config.ironingPerKg);
+      s.packingCommission = s.packingOrders * config.packingPerOrder;
+
+      s.deliveryCommission =
+        s.deliveryTrips * config.deliveryPerTrip + s.pickupTrips * config.pickupPerTrip;
+
+      s.rewashPenalty = s.rewashCount * (config.rewashPenaltyPerCase || 0);
+
+      s.productionCommission =
+        s.washingCommission + s.dryingCommission + s.ironingCommission + s.packingCommission;
+
+      s.totalCommission = Math.max(0, s.productionCommission + s.deliveryCommission - s.rewashPenalty);
+
+      // Tentukan peran
+      const hasProd = s.washingKg > 0 || s.dryingKg > 0 || s.ironingKg > 0 || s.packingOrders > 0;
+      const hasCourier = s.deliveryTrips > 0 || s.pickupTrips > 0;
+      if (hasProd && hasCourier) {
+        s.roleType = 'BOTH';
+      } else if (hasCourier) {
+        s.roleType = 'COURIER';
+      } else {
+        s.roleType = 'OPERATOR';
+      }
+
+      // Akumulasi ringkasan
+      totalProductionCommission += s.productionCommission;
+      totalDeliveryCommission += s.deliveryCommission;
+      totalPenalty += s.rewashPenalty;
+      grandTotalCommission += s.totalCommission;
+      totalWashingKg += s.washingKg;
+      totalDryingKg += s.dryingKg;
+      totalIroningKg += s.ironingKg;
+      totalTripsCompleted += s.deliveryTrips + s.pickupTrips;
+
+      return s;
+    });
+
+    // Urutkan staf berdasarkan total komisi tertinggi
+    staffList.sort((a, b) => b.totalCommission - a.totalCommission);
+
+    // Filter search jika ada
+    let filteredStaff = staffList;
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const q = search.trim().toLowerCase();
+      filteredStaff = staffList.filter(s => s.name.toLowerCase().includes(q));
+    }
+
+    const summary = {
+      totalStaff: filteredStaff.length,
+      totalProductionCommission,
+      totalDeliveryCommission,
+      totalPenalty,
+      grandTotalCommission,
+      totalKgProcessed: Math.round((totalWashingKg + totalDryingKg + totalIroningKg) * 100) / 100,
+      totalTripsCompleted,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    };
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        config,
+        summary,
+        staff: filteredStaff,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryCommissions:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil laporan komisi staf & kurir' });
   }
 };

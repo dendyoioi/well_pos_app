@@ -409,3 +409,53 @@ export interface LaundryDeliveryKpi {
   deliveredToday: number;
   totalCodRemaining: number;
 }
+
+export interface LaundryCommissionConfig {
+  enabled: boolean;
+  washingPerKg: number;
+  dryingPerKg: number;
+  ironingPerKg: number;
+  packingPerOrder: number;
+  deliveryPerTrip: number;
+  pickupPerTrip: number;
+  rewashPenaltyPerCase: number;
+}
+
+export interface LaundryStaffCommissionRow {
+  staffId?: string;
+  name: string;
+  roleType: 'OPERATOR' | 'COURIER' | 'BOTH';
+  washingKg: number;
+  dryingKg: number;
+  ironingKg: number;
+  packingOrders: number;
+  rewashCount: number;
+  pickupTrips: number;
+  deliveryTrips: number;
+  washingCommission: number;
+  dryingCommission: number;
+  ironingCommission: number;
+  packingCommission: number;
+  deliveryCommission: number;
+  rewashPenalty: number;
+  productionCommission: number;
+  totalCommission: number;
+}
+
+export interface LaundryCommissionSummary {
+  totalStaff: number;
+  totalProductionCommission: number;
+  totalDeliveryCommission: number;
+  totalPenalty: number;
+  grandTotalCommission: number;
+  totalKgProcessed: number;
+  totalTripsCompleted: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface LaundryCommissionReport {
+  config: LaundryCommissionConfig;
+  summary: LaundryCommissionSummary;
+  staff: LaundryStaffCommissionRow[];
+}

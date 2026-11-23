@@ -316,8 +316,12 @@ export const CustomerDebtsTab: React.FC<CustomerDebtsTabProps> = ({ activeOutlet
       {/* 3. Table Data */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-6">
-            <TableSkeleton rows={5} columns={6} />
+          <div className="overflow-x-auto p-4">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <tbody className="divide-y divide-slate-100">
+                <TableSkeleton rows={5} columns={6} />
+              </tbody>
+            </table>
           </div>
         ) : debts.length === 0 ? (
           <div className="p-8">

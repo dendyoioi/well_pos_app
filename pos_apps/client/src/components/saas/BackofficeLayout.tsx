@@ -43,6 +43,7 @@ import {
   TicketPercent,
   FileText,
   Printer,
+  Award,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
@@ -98,6 +99,7 @@ export const TAB_TO_GROUP_MAP: Record<string, string> = {
   staff_users: 'staf',
   staff_roles: 'staf',
   users: 'staf',
+  laundry_commissions: 'staf',
 
   // Pengaturan Resto & Outlet
   settings_receipt: 'pengaturan',
@@ -1473,6 +1475,25 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   <span className={isRail ? 'hidden lg:inline' : 'inline'}>{isLaundryMode ? 'Akses & Peran Operator' : 'Akses & Peran'}</span>
                 </span>
               </button>
+
+              {isLaundryMode && (
+                <button
+                  onClick={() => handleSelectTab('laundry_commissions')}
+                  className={`w-full text-left py-1.5 px-2 lg:px-2.5 rounded-lg text-xs transition-colors flex items-center ${
+                    isRail ? 'justify-center lg:justify-between' : 'justify-between'
+                  } ${
+                    activeTab === 'laundry_commissions'
+                      ? 'bg-blue-900 text-white font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                  }`}
+                  title="Komisi Staf &amp; Kurir"
+                >
+                  <span className="flex items-center gap-2">
+                    <Award className="w-4 h-4 shrink-0 lg:hidden text-amber-500" />
+                    <span className={isRail ? 'hidden lg:inline' : 'inline'}>Komisi Staf &amp; Kurir</span>
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </div>

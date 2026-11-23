@@ -6,6 +6,7 @@ export interface TableSkeletonProps {
   className?: string;
   avatarCol?: boolean;
   actionCol?: boolean;
+  wrapTbody?: boolean;
 }
 
 export const TableSkeleton: React.FC<TableSkeletonProps> = ({
@@ -14,11 +15,12 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({
   className = '',
   avatarCol = false,
   actionCol = true,
+  wrapTbody = false,
 }) => {
-  return (
-    <tbody className={`divide-y divide-slate-100 ${className}`}>
+  const content = (
+    <>
       {Array.from({ length: rows }).map((_, rIdx) => (
-        <tr key={rIdx} className="animate-pulse">
+        <tr key={rIdx} className={`animate-pulse ${className}`}>
           {avatarCol && (
             <td className="py-3.5 px-4 w-12">
               <div className="w-8 h-8 rounded-xl bg-slate-200/80" />
@@ -44,6 +46,12 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({
           )}
         </tr>
       ))}
-    </tbody>
+    </>
   );
+
+  if (wrapTbody) {
+    return <tbody className={`divide-y divide-slate-100 ${className}`}>{content}</tbody>;
+  }
+
+  return content;
 };
