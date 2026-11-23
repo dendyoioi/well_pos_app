@@ -481,21 +481,23 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             {imageUrl && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('bundling')}
-            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-              activeTab === 'bundling'
-                ? 'border-blue-900 text-blue-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Boxes className="w-4 h-4" />
-            <span>Varian & Bundling</span>
-            {(bundleItems.length > 0 || priceTiers.length > 0) && (
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-            )}
-          </button>
+          {!isLaundryMode && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('bundling')}
+              className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                activeTab === 'bundling'
+                  ? 'border-blue-900 text-blue-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Boxes className="w-4 h-4" />
+              <span>Varian & Bundling</span>
+              {(bundleItems.length > 0 || priceTiers.length > 0) && (
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+              )}
+            </button>
+          )}
 
           {/* Tab Khusus F&B — Disembunyikan total jika dalam mode Laundry */}
           {!isLaundryMode && (
@@ -577,10 +579,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 isCompressingImage={isCompressingImage}
                 setIsCompressingImage={setIsCompressingImage}
                 onError={setError}
+                isLaundryMode={isLaundryMode}
               />
             )}
 
-            {activeTab === 'bundling' && (
+            {activeTab === 'bundling' && !isLaundryMode && (
               <ProductBundlingTab
                 productMode={productMode}
                 setProductMode={setProductMode}

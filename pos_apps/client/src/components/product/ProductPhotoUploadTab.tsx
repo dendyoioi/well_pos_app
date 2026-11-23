@@ -19,6 +19,7 @@ interface ProductPhotoUploadTabProps {
   isCompressingImage: boolean;
   setIsCompressingImage: (val: boolean) => void;
   onError: (msg: string | null) => void;
+  isLaundryMode?: boolean;
 }
 
 export const ProductPhotoUploadTab: React.FC<ProductPhotoUploadTabProps> = ({
@@ -27,6 +28,7 @@ export const ProductPhotoUploadTab: React.FC<ProductPhotoUploadTabProps> = ({
   isCompressingImage,
   setIsCompressingImage,
   onError,
+  isLaundryMode = false,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,28 +141,30 @@ export const ProductPhotoUploadTab: React.FC<ProductPhotoUploadTabProps> = ({
             </button>
           </div>
 
-          {/* Preset Chips */}
-          <div>
-            <div className="text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
-              Foto Cepat (Klik untuk memilih):
+          {/* Preset Chips (Khusus F&B — Disembunyikan pada Mode Laundry) */}
+          {!isLaundryMode && (
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                Foto Cepat (Klik untuk memilih):
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_IMAGES.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setImageUrl(preset.url)}
+                    className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      imageUrl === preset.url
+                        ? 'bg-blue-900 text-white border-blue-900 font-bold shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {PRESET_IMAGES.map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setImageUrl(preset.url)}
-                  className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                    imageUrl === preset.url
-                      ? 'bg-blue-900 text-white border-blue-900 font-bold shadow-sm'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

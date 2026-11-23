@@ -55,7 +55,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     return checkIsLaundry(activeOutlet, currentUser);
   }, [activeOutlet]);
   // Tab State: 'INGREDIENTS' (Bahan Baku Mentah F&B) | 'PRODUCTS' (Produk Jadi Retail)
-  const [activeTab, setActiveTab] = useState<'INGREDIENTS' | 'PRODUCTS'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'INGREDIENTS' | 'PRODUCTS'>(isLaundryMode ? 'INGREDIENTS' : initialTab);
+
+  // Kunci activeTab selalu ke 'INGREDIENTS' saat di Mode Laundry (Kasir Laundry 100% menggunakan LaundryService)
+  useEffect(() => {
+    if (isLaundryMode && activeTab !== 'INGREDIENTS') {
+      setActiveTab('INGREDIENTS');
+    }
+  }, [isLaundryMode, activeTab]);
 
   // Raw Materials State
   const [ingredients, setIngredients] = useState<RecipeInventoryItem[]>([]);
@@ -423,31 +430,33 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             )}
           </button>
 
-          <button
-            onClick={() => {
-              setActiveTab('PRODUCTS');
-              fetchInventory();
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-              activeTab === 'PRODUCTS'
-                ? 'bg-blue-900 text-white shadow-md shadow-blue-950/20'
-                : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            <Boxes className="w-4 h-4 shrink-0" />
-            <span>{isLaundryMode ? 'Produk Retail' : 'Produk Jadi (Retail)'}</span>
-            {products.length > 0 && (
-              <span
-                className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
-                  activeTab === 'PRODUCTS'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                {products.length}
-              </span>
-            )}
-          </button>
+          {!isLaundryMode && (
+            <button
+              onClick={() => {
+                setActiveTab('PRODUCTS');
+                fetchInventory();
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                activeTab === 'PRODUCTS'
+                  ? 'bg-blue-900 text-white shadow-md shadow-blue-950/20'
+                  : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <Boxes className="w-4 h-4 shrink-0" />
+              <span>Produk Jadi (Retail)</span>
+              {products.length > 0 && (
+                <span
+                  className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${
+                    activeTab === 'PRODUCTS'
+                      ? 'bg-white/25 text-white'
+                      : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {products.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Global Logistics Architecture Indicator */}
@@ -995,9 +1004,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: PRODUK JADI (RETAIL & SIAP JUAL) */}
+      {/* TAB 2: PRODUK JADI (RETAIL & SIAP JUAL) — HANYA MODE F&B / RETAIL */}
       {/* ========================================================================= */}
-      {activeTab === 'PRODUCTS' && (
+      {activeTab === 'PRODUCTS' && !isLaundryMode && (
         <div className="space-y-6">
           {/* Action Header & Context */}
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
@@ -1815,18 +1824,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       />
 
       {/* ========================================================================= */}
-      {/* MODAL: TAMBAH MASTER PRODUK JADI BARU */}
+      {/* MODAL: TAMBAH MASTER PRODUK JADI BARU (HANYA F&B / RETAIL) */}
       {/* ========================================================================= */}
-      <ProductModal
-        isOpen={createProductModalOpen}
-        onClose={() => setCreateProductModalOpen(false)}
-        onSuccess={() => {
-          fetchInventory();
-        }}
-        categories={categories}
-        outletId={activeOutlet?.id}
-        isLaundryMode={isLaundryMode}
-      />
+      {!isLaundryMode && (
+        <ProductModal
+          isOpen={createProductModalOpen}
+          onClose={() => setCreateProductModalOpen(false)}
+          onSuccess={() => {
+            fetchInventory();
+          }}
+          categories={categories}
+          outletId={activeOutlet?.id}
+          isLaundryMode={isLaundryMode}
+        />
+      )}
 
 
       {/* Modal: Detail Batch Kadaluarsa */}

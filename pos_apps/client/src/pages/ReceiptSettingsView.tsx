@@ -1014,8 +1014,9 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 showCustomerName: cupLabelShowCustomerName,
                 showModifiers: cupLabelShowModifiers,
               }}
-              brandName={(activeOutlet as any)?.tenant?.name || 'WELL POS COFFEE'}
-              storeName={activeOutlet?.name || 'Outlet Kemang'}
+              brandName={(activeOutlet as any)?.tenant?.name || (isLaundryMode ? 'WELL POS LAUNDRY' : 'WELL POS COFFEE')}
+              storeName={activeOutlet?.name || (isLaundryMode ? 'Outlet Laundry' : 'Outlet Kemang')}
+              isLaundryMode={isLaundryMode}
             />
           )}
         </div>

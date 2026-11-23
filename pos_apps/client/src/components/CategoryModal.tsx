@@ -8,6 +8,7 @@ interface CategoryModalProps {
   onClose: () => void;
   categories: Category[];
   onRefresh: () => void;
+  isLaundryMode?: boolean;
 }
 
 export const CategoryModal: React.FC<CategoryModalProps> = ({
@@ -15,6 +16,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
   onClose,
   categories,
   onRefresh,
+  isLaundryMode = false,
 }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -152,7 +154,11 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                 type="text"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="misal: Makanan Penutup, Kopi Dingin, Paket Hemat"
+                placeholder={
+                  isLaundryMode
+                    ? "misal: Kiloan Reguler, Satuan Jas, Perlengkapan"
+                    : "misal: Makanan Penutup, Kopi Dingin, Paket Hemat"
+                }
                 className="flex-1 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
               />
               <button

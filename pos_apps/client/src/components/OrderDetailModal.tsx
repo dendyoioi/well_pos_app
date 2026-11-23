@@ -50,9 +50,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     order.notes?.includes('TAMBAHAN') ||
     order.customerName?.includes('Susulan');
 
-  const channelKey = (order.channel || 'DINE_IN') as OrderChannel;
+  const channelKey = (order.channel || (isOrderLaundry ? 'TAKEAWAY' : 'DINE_IN')) as OrderChannel;
   const channelInfo = ORDER_CHANNEL_LABELS[channelKey] || {
-    label: order.channel || 'Dine In',
+    label: order.channel || (isOrderLaundry ? 'Drop-off Toko' : 'Dine In'),
     color: '#1e3a8a',
     bg: '#dbeafe',
   };
