@@ -28,7 +28,7 @@ export interface MetricWithAvailability {
   diff: number;
   percentChange: number;
   direction: 'UP' | 'DOWN' | 'NEUTRAL';
-  availability: 'PARTIAL' | 'CALCULATED' | 'EMPTY';
+  availability: 'READY' | 'PARTIAL' | 'CALCULATED' | 'EMPTY';
 }
 
 export interface AlertItem {
@@ -58,6 +58,12 @@ export interface HealthScoreResult {
 export interface ExecutiveOverviewResult {
   meta: AnalyticsMeta;
   healthScore: HealthScoreResult;
+  targetSummary?: {
+    targetRevenue: number;
+    actualRevenue: number;
+    revenueAchievementPercent: number;
+    availability: 'READY' | 'EMPTY';
+  };
   financialPulse?: {
     netRevenue: FinancialMetricComparison;
     realCashIn: FinancialMetricComparison;
@@ -130,11 +136,11 @@ export interface FinancialAnalyticsResult {
     pettyCashOut: FinancialMetricComparison;
     pettyCashByCategory: Array<{ category: string; amount: number }>;
     incidentExpense: FinancialMetricComparison;
-    fixedOpex: {
-      current: null;
-      availability: 'MISSING';
-      note: string;
+    fixedOpex: FinancialMetricComparison & {
+      availability: 'READY';
+      note?: string;
     };
+    fixedOpexByCategory: Array<{ category: string; amount: number }>;
     recordedOpex: MetricWithAvailability;
   };
   profitability: {
@@ -432,6 +438,10 @@ export interface MachineUtilizationItem {
   operatingHours: number;
   utilizationPercent: number;
   maintenanceDue: boolean;
+  downtimeMinutes: number;
+  maintenanceCount: number;
+  maintenanceCost: number;
+  lastMaintenanceDate: string | null;
 }
 
 export interface MachineTypeAggregation {
@@ -445,7 +455,7 @@ export interface MachineTypeAggregation {
 export interface MachinesAnalyticsResult {
   meta: AnalyticsMeta & {
     dataSourceNote: string;
-    availability: 'PARTIAL';
+    availability: 'READY' | 'PARTIAL';
   };
   summary: {
     totalMachines: number;
@@ -456,14 +466,21 @@ export interface MachinesAnalyticsResult {
     totalOperatingHours: number;
     overallUtilizationPercent: number;
     downtimeLogs: {
-      current: null;
-      availability: 'MISSING';
-      note: string;
+      totalLogs: number;
+      totalDowntimeMinutes: number;
+      totalDowntimeHours: number;
+      totalMaintenanceCost?: number;
+      availability: 'READY';
+      note?: string;
     };
     costPerCycle: {
-      current: null;
-      availability: 'MISSING';
-      note: string;
+      current: number;
+      totalCycles: number;
+      totalMachineExpense?: number;
+      utilityOpex?: number;
+      maintenanceCost?: number;
+      availability: 'READY' | 'EMPTY';
+      note?: string;
     };
   };
   byType: MachineTypeAggregation[];
@@ -532,6 +549,15 @@ export interface BenchmarkOutletItem {
   incidentRate: number;
   healthScore: number;
   healthGrade: string;
+  target?: {
+    targetRevenue: number;
+    targetProfit: number;
+    targetWeightKg: number;
+    targetOrdersCount: number;
+    targetNewCustomers: number;
+    revenueAchievementPercent: number;
+    weightAchievementPercent: number;
+  } | null;
 }
 
 export interface BenchmarkAnalyticsResult {
@@ -562,8 +588,14 @@ export interface BenchmarkAnalyticsResult {
     avgTransferLagHours: number;
   };
   targets: {
-    availability: 'MISSING';
-    note: string;
+    availability: 'READY' | 'EMPTY';
+    periodYear: number;
+    periodMonth: number;
+    totalTargetRevenue: number;
+    totalTargetWeightKg: number;
+    revenueAchievementPercent: number;
+    weightAchievementPercent: number;
+    note?: string;
   };
   outlets: BenchmarkOutletItem[];
 }
@@ -682,4 +714,182 @@ export interface AnalyticsQueryParams {
   outletId?: string;
   timezone?: string;
   signal?: AbortSignal;
+}
+
+// =========================================================================
+// WAVE 2: OPERATIONAL EXPENSES, TARGETS & MACHINE MAINTENANCE TYPES
+// =========================================================================
+
+export type ExpenseCategory =
+  | 'ELECTRICITY'
+  | 'WATER'
+  | 'RENT'
+  | 'SALARY'
+  | 'MARKETING'
+  | 'MAINTENANCE'
+  | 'SUPPLIES'
+  | 'OTHER';
+
+export interface OperationalExpenseItem {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  expenseDate: string;
+  category: ExpenseCategory;
+  amount: number;
+  paymentMethod: string;
+  notes?: string | null;
+  receiptPhotoUrl?: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  outlet?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+  createdBy?: {
+    id: string;
+    name: string;
+    userCode?: string;
+  };
+}
+
+export interface OperationalExpensesResult {
+  items: OperationalExpenseItem[];
+  totalAmount: number;
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export interface CreateOperationalExpensePayload {
+  outletId: string;
+  category: ExpenseCategory;
+  amount: number;
+  expenseDate: string;
+  paymentMethod?: string;
+  notes?: string;
+  receiptPhotoUrl?: string;
+}
+
+export interface UpdateOperationalExpensePayload {
+  outletId?: string;
+  category?: ExpenseCategory;
+  amount?: number;
+  expenseDate?: string;
+  paymentMethod?: string;
+  notes?: string;
+  receiptPhotoUrl?: string;
+}
+
+export interface OutletBusinessTargetItem {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  periodYear: number;
+  periodMonth: number;
+  targetRevenue: number;
+  targetProfit: number;
+  targetWeightKg: number;
+  targetOrdersCount: number;
+  targetNewCustomers: number;
+  notes?: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  outlet?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+  createdBy?: {
+    id: string;
+    name: string;
+    userCode?: string;
+  };
+}
+
+export interface UpsertOutletTargetPayload {
+  outletId: string;
+  periodYear: number;
+  periodMonth: number;
+  targetRevenue: number;
+  targetProfit: number;
+  targetWeightKg: number;
+  targetOrdersCount: number;
+  targetNewCustomers: number;
+  notes?: string;
+}
+
+export interface LaundryMachineMaintenanceLogItem {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  machineId: string;
+  serviceType: 'ROUTINE' | 'REPAIR' | 'EMERGENCY' | string;
+  startDate: string;
+  endDate?: string | null;
+  downtimeMinutes: number;
+  technicianName?: string | null;
+  cost?: number; // Sembunyi/dihapus untuk SUPERVISOR
+  notes?: string | null;
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | string;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  machine?: {
+    id: string;
+    name: string;
+    code: string;
+    machineType: string;
+    status: string;
+  };
+  outlet?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+  createdBy?: {
+    id: string;
+    name: string;
+    userCode?: string;
+  };
+}
+
+export interface MachineMaintenanceResult {
+  items: LaundryMachineMaintenanceLogItem[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export interface CreateMachineMaintenancePayload {
+  outletId?: string;
+  machineId: string;
+  serviceType: 'ROUTINE' | 'REPAIR' | 'EMERGENCY' | string;
+  startDate: string;
+  endDate?: string | null;
+  downtimeMinutes?: number;
+  technicianName?: string;
+  cost?: number;
+  notes?: string;
+  status?: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | string;
+}
+
+export interface UpdateMachineMaintenancePayload {
+  serviceType?: 'ROUTINE' | 'REPAIR' | 'EMERGENCY' | string;
+  startDate?: string;
+  endDate?: string | null;
+  downtimeMinutes?: number;
+  technicianName?: string;
+  cost?: number;
+  notes?: string;
+  status?: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | string;
 }

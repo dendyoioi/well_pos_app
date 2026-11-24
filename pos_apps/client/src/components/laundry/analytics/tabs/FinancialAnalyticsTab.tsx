@@ -17,6 +17,7 @@ import {
 import type { FinancialAnalyticsResult, DrilldownType } from '../../../../types/laundryAnalytics';
 import { fetchLaundryFinancial } from '../../../../services/laundryAnalyticsApi';
 import { formatRupiah } from '../../../../utils/currency';
+import { OperationalExpenseModal } from '../modals/OperationalExpenseModal';
 
 interface FinancialAnalyticsTabProps {
   preset: string;
@@ -26,6 +27,7 @@ interface FinancialAnalyticsTabProps {
   isOwner?: boolean;
   userRole?: string;
   onOpenDrilldown: (type: DrilldownType, context?: any) => void;
+  onDataMutated?: () => void;
 }
 
 export const FinancialAnalyticsTab: React.FC<FinancialAnalyticsTabProps> = ({
@@ -36,12 +38,14 @@ export const FinancialAnalyticsTab: React.FC<FinancialAnalyticsTabProps> = ({
   isOwner: _isOwner,
   userRole: _userRole,
   onOpenDrilldown,
+  onDataMutated,
 }) => {
   const [data, setData] = useState<FinancialAnalyticsResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<any | null>(null);
   const [showCashDetails, setShowCashDetails] = useState(false);
+  const [isOpexModalOpen, setIsOpexModalOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -270,8 +274,14 @@ export const FinancialAnalyticsTab: React.FC<FinancialAnalyticsTabProps> = ({
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                 Laba Operasi (Recorded)
               </span>
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
-                PARTIAL
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  profitability?.operatingProfit?.availability === 'READY'
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    : 'text-amber-700 bg-amber-50 border-amber-200/80'
+                }`}
+              >
+                {profitability?.operatingProfit?.availability ?? 'READY'}
               </span>
             </div>
             <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tabular-nums whitespace-nowrap">
@@ -528,16 +538,51 @@ export const FinancialAnalyticsTab: React.FC<FinancialAnalyticsTabProps> = ({
               </strong>
             </div>
 
-            {/* Banner Transparan Fixed Opex (DILARANG Rp 0 PALSU) */}
-            <div className="mt-3 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-slate-500 text-[11px]">
-              <span className="font-semibold block text-slate-700">
-                Beban Tetap Non-Shift (Sewa Toko, Listrik, Gaji Pokok):
-              </span>
-              <span>Data Belum Tersedia (Roadmap Wave 2: Pencatatan Beban Tetap Non-Shift).</span>
+            {/* Fixed OPEX Riil Wave 2 */}
+            <div className="flex justify-between py-1.5 border-b border-slate-100">
+              <span className="text-slate-600">Beban Tetap Non-Shift (Sewa, Gaji, Utilitas)</span>
+              <strong className="text-slate-900 tabular-nums">
+                {formatRupiah(opex?.fixedOpex?.current ?? 0)}
+              </strong>
+            </div>
+
+            {opex?.fixedOpexByCategory && opex.fixedOpexByCategory.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 py-1">
+                {opex.fixedOpexByCategory.map((cat) => (
+                  <span
+                    key={cat.category}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium"
+                  >
+                    {cat.category}: {formatRupiah(cat.amount)}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsOpexModalOpen(true)}
+                className="w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-blue-900 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                + Catat Biaya Tetap (OPEX)
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal CRUD Operational Expense Wave 2 */}
+      <OperationalExpenseModal
+        isOpen={isOpexModalOpen}
+        onClose={() => setIsOpexModalOpen(false)}
+        activeOutletId={outletId === 'ALL' ? null : outletId}
+        onSuccess={() => {
+          loadData();
+          onDataMutated?.();
+        }}
+      />
     </div>
   );
 };

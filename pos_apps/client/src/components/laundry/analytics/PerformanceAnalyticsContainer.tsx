@@ -379,6 +379,7 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
             isOwner={isOwner}
             userRole={userRole}
             onOpenDrilldown={handleOpenDrilldown}
+            onDataMutated={loadOverview}
           />
         )}
 
@@ -431,6 +432,8 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
             startDate={startDate}
             endDate={endDate}
             outletId={outletId}
+            userRole={userRole}
+            onDataMutated={loadOverview}
           />
         )}
 
@@ -451,6 +454,7 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
             startDate={startDate}
             endDate={endDate}
             onSelectOutlet={(oid) => setOutletId(oid)}
+            onDataMutated={loadOverview}
           />
         )}
 

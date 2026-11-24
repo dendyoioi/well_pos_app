@@ -47,7 +47,7 @@ export interface ExecutiveOverviewResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
     profitMarginPercent: {
       current: number;
@@ -55,7 +55,7 @@ export interface ExecutiveOverviewResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
     netCashFlow: {
       current: number;
@@ -63,7 +63,7 @@ export interface ExecutiveOverviewResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
     cogsBom: FinancialMetricComparison;
     recordedOpex: {
@@ -72,8 +72,14 @@ export interface ExecutiveOverviewResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
+  };
+  targetSummary?: {
+    targetRevenue: number;
+    actualRevenue: number;
+    revenueAchievementPercent: number;
+    availability: 'READY' | 'EMPTY';
   };
   operationalPulse: {
     totalValidOrders: number;
@@ -509,6 +515,35 @@ export async function getExecutiveOverview(
     }
   }
 
+  // Target Bisnis Bulanan untuk targetSummary
+  const [yearStr, monthStr] = dateRange.formattedRange.start.split('-');
+  const periodYear = Number(yearStr);
+  const periodMonth = Number(monthStr);
+  const targetOutletFilter =
+    outletId !== 'ALL' ? Prisma.sql`AND obt.outlet_id = ${outletId}` : Prisma.empty;
+
+  const targetRows = await prisma.$queryRaw<any[]>`
+    SELECT 
+      COALESCE(SUM(obt.target_revenue), 0) as total_target_revenue
+    FROM outlet_business_targets obt
+    WHERE obt.tenant_id = ${tenantId}
+      ${targetOutletFilter}
+      AND obt.period_year = ${periodYear}
+      AND obt.period_month = ${periodMonth};
+  `;
+  const targetRevenueVal = toNum(targetRows[0]?.total_target_revenue);
+  const targetSummary =
+    targetRevenueVal > 0
+      ? {
+          targetRevenue: targetRevenueVal,
+          actualRevenue: financial.revenue.netRevenue.current,
+          revenueAchievementPercent: Number(
+            ((financial.revenue.netRevenue.current / targetRevenueVal) * 100).toFixed(1)
+          ),
+          availability: 'READY' as const,
+        }
+      : undefined;
+
   // Ambil maksimal 5 alert teratas (urutkan CRITICAL sebelum WARNING)
   const severityWeight = { CRITICAL: 1, WARNING: 2, INFO: 3 };
   alerts.sort((a, b) => severityWeight[a.severity] - severityWeight[b.severity]);
@@ -517,6 +552,7 @@ export async function getExecutiveOverview(
   return {
     meta: financial.meta,
     healthScore,
+    targetSummary,
     financialPulse: {
       netRevenue: financial.revenue.netRevenue,
       realCashIn: financial.cashFlow.realCashIn,

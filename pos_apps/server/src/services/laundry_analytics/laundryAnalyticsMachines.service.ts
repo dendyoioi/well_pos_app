@@ -4,7 +4,8 @@
  * 
  * Mengimplementasikan pemantauan utilisasi mesin cuci (Washer) dan pengering (Dryer),
  * estimasi jam operasional berbasis catatan stage log, deteksi jadwal servis berkala,
- * serta metadata transparansi non-IoT sesuai spesifikasi Task W1-10.
+ * pencatatan downtime & servis riil dari laundry_machine_maintenance_logs,
+ * serta kalkulasi biaya per siklus dari beban utilitas operational_expenses.
  */
 
 import { Prisma } from '@prisma/client';
@@ -22,6 +23,10 @@ export interface MachineUtilizationItem {
   operatingHours: number;
   utilizationPercent: number;
   maintenanceDue: boolean;
+  downtimeMinutes: number;
+  maintenanceCount: number;
+  maintenanceCost: number;
+  lastMaintenanceDate: string | null;
 }
 
 export interface MachineTypeAggregation {
@@ -45,7 +50,7 @@ export interface MachinesAnalyticsResult {
     };
     timezone: string;
     dataSourceNote: string;
-    availability: 'PARTIAL';
+    availability: 'READY' | 'PARTIAL';
   };
   summary: {
     totalMachines: number;
@@ -56,14 +61,21 @@ export interface MachinesAnalyticsResult {
     totalOperatingHours: number;
     overallUtilizationPercent: number;
     downtimeLogs: {
-      current: null;
-      availability: 'MISSING';
-      note: string;
+      totalLogs: number;
+      totalDowntimeMinutes: number;
+      totalDowntimeHours: number;
+      totalMaintenanceCost: number;
+      availability: 'READY';
+      note?: string;
     };
     costPerCycle: {
-      current: null;
-      availability: 'MISSING';
-      note: string;
+      current: number;
+      totalCycles: number;
+      totalMachineExpense: number;
+      utilityOpex: number;
+      maintenanceCost: number;
+      availability: 'READY' | 'EMPTY';
+      note?: string;
     };
   };
   byType: MachineTypeAggregation[];
@@ -102,9 +114,10 @@ export async function getMachinesAnalytics(
     ORDER BY lm.machine_type ASC, lm.code ASC;
   `;
 
-  // 2. Ambil catatan siklus (cycle) dari laundry_stage_logs yang mencatat machine_name
+  // 2. Ambil catatan siklus (cycle) dari laundry_stage_logs yang mencatat machine_id atau machine_name
   const stageLogRows = await prisma.$queryRaw<any[]>`
     SELECT 
+      lsl.machine_id,
       TRIM(LOWER(lsl.machine_name)) as machine_name_key,
       COUNT(lsl.id)::int as cycle_count,
       COALESCE(SUM(lsl.duration_minutes), 0)::int as total_duration_minutes
@@ -114,18 +127,96 @@ export async function getMachinesAnalytics(
       ${outletLslFilter}
       AND lsl.created_at >= ${dateRange.startDate}
       AND lsl.created_at <= ${dateRange.endDate}
-      AND lsl.machine_name IS NOT NULL
-      AND TRIM(lsl.machine_name) != ''
-    GROUP BY TRIM(LOWER(lsl.machine_name));
+      AND (
+        (lsl.machine_id IS NOT NULL AND TRIM(lsl.machine_id) != '')
+        OR (lsl.machine_name IS NOT NULL AND TRIM(lsl.machine_name) != '')
+      )
+    GROUP BY lsl.machine_id, TRIM(LOWER(lsl.machine_name));
   `;
 
-  const logMap = new Map<string, { cycles: number; durationMin: number }>();
+  const logByMachineIdMap = new Map<string, { cycles: number; durationMin: number }>();
+  const logByNameMap = new Map<string, { cycles: number; durationMin: number }>();
+
   for (const r of stageLogRows) {
-    logMap.set(String(r.machine_name_key), {
-      cycles: Number(r.cycle_count || 0),
-      durationMin: Number(r.total_duration_minutes || 0),
-    });
+    const mid = r.machine_id ? String(r.machine_id).trim() : '';
+    const nameKey = r.machine_name_key ? String(r.machine_name_key).trim() : '';
+    const cycles = Number(r.cycle_count || 0);
+    const durationMin = Number(r.total_duration_minutes || 0);
+
+    if (mid) {
+      const prevVal = logByMachineIdMap.get(mid) || { cycles: 0, durationMin: 0 };
+      logByMachineIdMap.set(mid, {
+        cycles: prevVal.cycles + cycles,
+        durationMin: prevVal.durationMin + durationMin,
+      });
+    }
+    if (nameKey) {
+      const prevVal = logByNameMap.get(nameKey) || { cycles: 0, durationMin: 0 };
+      logByNameMap.set(nameKey, {
+        cycles: prevVal.cycles + cycles,
+        durationMin: prevVal.durationMin + durationMin,
+      });
+    }
   }
+
+  // 3. Query laundry_machine_maintenance_logs untuk downtime & biaya servis
+  const maintenanceOutletFilter =
+    outletId !== 'ALL' ? Prisma.sql`AND lmml.outlet_id = ${outletId}` : Prisma.empty;
+  const maintenanceRows = await prisma.$queryRaw<any[]>`
+    SELECT 
+      lmml.machine_id,
+      COUNT(lmml.id)::int as total_logs,
+      COALESCE(SUM(lmml.downtime_minutes), 0)::int as total_downtime_minutes,
+      COALESCE(SUM(lmml.cost), 0) as total_maintenance_cost,
+      MAX(lmml.start_date) as last_maintenance_date
+    FROM laundry_machine_maintenance_logs lmml
+    WHERE lmml.tenant_id = ${tenantId}
+      ${maintenanceOutletFilter}
+      AND lmml.start_date >= ${dateRange.startDate}
+      AND lmml.start_date <= ${dateRange.endDate}
+      AND lmml.status != 'CANCELLED'
+    GROUP BY lmml.machine_id;
+  `;
+
+  const maintMap = new Map<
+    string,
+    { totalLogs: number; downtimeMin: number; cost: number; lastDate: string | null }
+  >();
+  let summaryTotalDowntimeMinutes = 0;
+  let summaryTotalMaintenanceCost = 0;
+  let summaryTotalMaintenanceLogs = 0;
+
+  for (const r of maintenanceRows) {
+    const mid = String(r.machine_id);
+    const logs = Number(r.total_logs || 0);
+    const dtMin = Number(r.total_downtime_minutes || 0);
+    const cost = toNum(r.total_maintenance_cost);
+    const lastDate = r.last_maintenance_date
+      ? new Date(r.last_maintenance_date).toISOString()
+      : null;
+
+    summaryTotalMaintenanceLogs += logs;
+    summaryTotalDowntimeMinutes += dtMin;
+    summaryTotalMaintenanceCost += cost;
+
+    maintMap.set(mid, { totalLogs: logs, downtimeMin: dtMin, cost, lastDate });
+  }
+
+  // 4. Query operational_expenses untuk beban utilitas (ELECTRICITY, WATER, MAINTENANCE)
+  const opexOutletFilter =
+    outletId !== 'ALL' ? Prisma.sql`AND oe.outlet_id = ${outletId}` : Prisma.empty;
+  const utilityOpexRows = await prisma.$queryRaw<any[]>`
+    SELECT 
+      COALESCE(SUM(oe.amount), 0) as total_utility_amount
+    FROM operational_expenses oe
+    WHERE oe.tenant_id = ${tenantId}
+      ${opexOutletFilter}
+      AND oe.expense_date >= ${dateRange.startDate}
+      AND oe.expense_date <= ${dateRange.endDate}
+      AND oe.category::text IN ('ELECTRICITY', 'WATER', 'MAINTENANCE');
+  `;
+  const totalUtilityOpex = toNum(utilityOpexRows[0]?.total_utility_amount);
+  const totalMachineExpense = totalUtilityOpex + summaryTotalMaintenanceCost;
 
   // Hitung durasi hari periode untuk patokan utilisasi operasional (standar: 12 jam/hari)
   const diffDays = Math.max(
@@ -160,10 +251,12 @@ export async function getMachinesAnalytics(
     else if (mStatus === 'MAINTENANCE') maintenanceMachines++;
     else inactiveMachines++;
 
-    // Pencocokan fleksibel case-insensitive terhadap name atau code
+    // Pencocokan: machine_id -> machine_name -> machine_code
     const nameKey = mName.trim().toLowerCase();
     const codeKey = mCode.trim().toLowerCase();
-    const matchedLog = logMap.get(nameKey) || logMap.get(codeKey) || { cycles: 0, durationMin: 0 };
+    const byIdLog = logByMachineIdMap.get(mid);
+    const byNameLog = logByNameMap.get(nameKey) || logByNameMap.get(codeKey);
+    const matchedLog = byIdLog || byNameLog || { cycles: 0, durationMin: 0 };
 
     const cycles = matchedLog.cycles;
     const durationMin = matchedLog.durationMin;
@@ -180,6 +273,13 @@ export async function getMachinesAnalytics(
     // Maintenance Due jika telah beroperasi >= 300 cycles
     const maintenanceDue = cycles >= 300;
 
+    const mMaint = maintMap.get(mid) || {
+      totalLogs: 0,
+      downtimeMin: 0,
+      cost: 0,
+      lastDate: null,
+    };
+
     machines.push({
       machineId: mid,
       code: mCode,
@@ -191,6 +291,10 @@ export async function getMachinesAnalytics(
       operatingHours: opHours,
       utilizationPercent,
       maintenanceDue,
+      downtimeMinutes: mMaint.downtimeMin,
+      maintenanceCount: mMaint.totalLogs,
+      maintenanceCost: mMaint.cost,
+      lastMaintenanceDate: mMaint.lastDate,
     });
 
     // Agregasi per tipe
@@ -205,7 +309,9 @@ export async function getMachinesAnalytics(
   const totalAvailableOperatingMinutes = activeMachines * maxAvailableHoursPerMachine * 60;
   const overallUtilizationPercent =
     totalAvailableOperatingMinutes > 0
-      ? Number(Math.min(100, (totalOperatingMinutes / totalAvailableOperatingMinutes) * 100).toFixed(2))
+      ? Number(
+          Math.min(100, (totalOperatingMinutes / totalAvailableOperatingMinutes) * 100).toFixed(2)
+        )
       : 0;
 
   // Susun byType
@@ -232,7 +338,7 @@ export async function getMachinesAnalytics(
       formattedRange: dateRange.formattedRange,
       timezone,
       dataSourceNote: 'Estimasi berbasis pencatatan stage log manual (Non-IoT)',
-      availability: 'PARTIAL',
+      availability: 'READY',
     },
     summary: {
       totalMachines,
@@ -243,14 +349,19 @@ export async function getMachinesAnalytics(
       totalOperatingHours,
       overallUtilizationPercent,
       downtimeLogs: {
-        current: null,
-        availability: 'MISSING',
-        note: 'Data Belum Tersedia (Roadmap Wave 2: Log Servis & Downtime Mesin)',
+        totalLogs: summaryTotalMaintenanceLogs,
+        totalDowntimeMinutes: summaryTotalDowntimeMinutes,
+        totalDowntimeHours: Number((summaryTotalDowntimeMinutes / 60).toFixed(1)),
+        totalMaintenanceCost: summaryTotalMaintenanceCost,
+        availability: 'READY',
       },
       costPerCycle: {
-        current: null,
-        availability: 'MISSING',
-        note: 'Data Belum Tersedia (Roadmap Wave 2: Beban Utilitas Non-Shift)',
+        current: totalCycles > 0 ? Math.round(totalMachineExpense / totalCycles) : 0,
+        totalCycles,
+        totalMachineExpense,
+        utilityOpex: totalUtilityOpex,
+        maintenanceCost: summaryTotalMaintenanceCost,
+        availability: totalCycles > 0 ? 'READY' : 'EMPTY',
       },
     },
     byType,

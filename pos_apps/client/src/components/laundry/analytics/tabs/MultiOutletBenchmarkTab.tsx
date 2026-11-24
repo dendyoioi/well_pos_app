@@ -1,5 +1,6 @@
 // Well POS - MultiOutletBenchmarkTab Component
 // Sub-Tab Benchmark Komparasi Antar-Outlet Laundry (Khusus Role OWNER)
+// Dilengkapi Integrasi Target Bisnis Bulanan Real-Time Wave 2
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -8,16 +9,19 @@ import {
   RotateCcw,
   AlertCircle,
   Layers,
+  Target,
 } from 'lucide-react';
 import type { BenchmarkAnalyticsResult } from '../../../../types/laundryAnalytics';
 import { fetchLaundryBenchmark } from '../../../../services/laundryAnalyticsApi';
 import { formatRupiah } from '../../../../utils/currency';
+import { OutletTargetModal } from '../modals/OutletTargetModal';
 
 interface MultiOutletBenchmarkTabProps {
   preset: string;
   startDate?: string;
   endDate?: string;
   onSelectOutlet?: (outletId: string) => void;
+  onDataMutated?: () => void;
 }
 
 export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = ({
@@ -25,10 +29,12 @@ export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = (
   startDate,
   endDate,
   onSelectOutlet,
+  onDataMutated,
 }) => {
   const [data, setData] = useState<BenchmarkAnalyticsResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -104,88 +110,149 @@ export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = (
 
   if (!data) return null;
 
-  const { consolidatedSummary, workshopSummary, outlets = [] } = data;
-
-  const totalOutletsCount = consolidatedSummary?.totalOutlets || outlets.length || 1;
-  const avgRevenuePerOutlet = Math.round((consolidatedSummary?.totalNetRevenue || 0) / totalOutletsCount);
-
-  // Cari top performer
-  const sortedByRevenue = [...outlets].sort((a, b) => b.netRevenue - a.netRevenue);
-  const topPerformer = sortedByRevenue[0];
+  const { consolidatedSummary, workshopSummary, targets, outlets = [] } = data;
+  const topPerformer = outlets.length > 0 ? outlets[0] : null;
 
   return (
     <div className="space-y-6">
-      {/* 1. Baris Ringkasan Konsolidasi Seluruh Outlet */}
+      {/* 1. Baris Kartu Metrik Konsolidasi */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Omzet Konsolidasi */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
             Total Omzet Konsolidasi
           </span>
-          <div className="text-2xl sm:text-3xl font-extrabold text-blue-900 tabular-nums">
+          <div className="text-xl sm:text-2xl font-extrabold text-blue-900 tabular-nums whitespace-nowrap">
             {formatRupiah(consolidatedSummary?.totalNetRevenue ?? 0)}
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Dari {consolidatedSummary?.totalOutlets ?? outlets.length} outlet aktif bertransaksi
+          <p className="text-xs text-slate-400 mt-1">
+            Dari {consolidatedSummary?.totalOutlets ?? 0} outlet aktif
           </p>
         </div>
 
-        {/* Card 2: Rata-rata Omzet per Outlet */}
+        {/* Card 2: Total Beban Tonase */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-            Rata-rata per Outlet
+            Total Beban Cucian
           </span>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-            {formatRupiah(avgRevenuePerOutlet)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Total volume: {(consolidatedSummary?.totalWeightKg ?? 0).toFixed(1)} Kg
-          </p>
-        </div>
-
-        {/* Card 3: Rata-rata Health Score */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
-            Rata-rata Health Score
-          </span>
-          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-700 tabular-nums">
-            {consolidatedSummary?.avgHealthScore ?? 0}
-            <span className="text-xs font-normal text-slate-500 ml-1">/ 100</span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            SLA Rata-rata: {consolidatedSummary?.avgOnTimeRate ?? 0}% Tepat Waktu
-          </p>
-        </div>
-
-        {/* Card 4: Top Performer Outlet */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Top Performer
-            </span>
-            <Trophy className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="text-lg font-bold text-slate-900 truncate">
-            {topPerformer?.outletName || '-'}
+          <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tabular-nums whitespace-nowrap">
+            {consolidatedSummary?.totalWeightKg ?? 0}
+            <span className="text-sm font-normal text-slate-500 ml-1">Kg</span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            {topPerformer ? formatRupiah(topPerformer.netRevenue) : 'Belum ada transaksi'}
+            {consolidatedSummary?.totalValidOrders ?? 0} pesanan valid
+          </p>
+        </div>
+
+        {/* Card 3: Rata-rata SLA On-Time */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
+            Rata-rata SLA Ketepatan
+          </span>
+          <div className="text-xl sm:text-2xl font-extrabold text-emerald-700 tabular-nums">
+            {consolidatedSummary?.avgOnTimeRate ?? 0}%
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Selesai sebelum estimasi siap
+          </p>
+        </div>
+
+        {/* Card 4: Rata-rata Health Score */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-1">
+            Rata-rata Skor Kesehatan
+          </span>
+          <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tabular-nums">
+            {consolidatedSummary?.avgHealthScore ?? 0}
+            <span className="text-sm font-normal text-slate-400 ml-1">/ 100</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Indeks performa multi-cabang
           </p>
         </div>
       </div>
 
-      {/* 2. Tabel Komparasi Antar-Outlet */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <Store className="w-4 h-4 text-blue-900" />
-              Tabel Komparasi Performa Multi-Outlet
-            </h4>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Bandingkan omzet, volume, mutu pengerjaan, dan skor kesehatan antar-outlet.
-            </p>
+      {/* 2. Target Bulanan Bisnis (Wave 2 Live Data) */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-blue-900" />
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm">
+                Target Bulanan Bisnis & Realisasi KPI
+              </h4>
+              <p className="text-xs text-slate-500">
+                Monitoring pencapaian target omzet & volume kiloan per outlet.
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsTargetModalOpen(true)}
+            className="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 self-start sm:self-auto shadow-sm"
+          >
+            <Target className="w-3.5 h-3.5" />
+            Atur Target Bulanan
+          </button>
+        </div>
+
+        {targets?.availability === 'READY' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <div className="flex justify-between items-baseline mb-1.5">
+                <span className="text-xs font-semibold text-slate-600">Realisasi Omzet Konsolidasi</span>
+                <span className="text-xs font-bold text-blue-900 tabular-nums">
+                  {targets.revenueAchievementPercent}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-2">
+                <div
+                  className="bg-blue-900 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, targets.revenueAchievementPercent)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Realisasi: {formatRupiah(consolidatedSummary?.totalNetRevenue ?? 0)}</span>
+                <span>Target: {formatRupiah(targets.totalTargetRevenue)}</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <div className="flex justify-between items-baseline mb-1.5">
+                <span className="text-xs font-semibold text-slate-600">Realisasi Tonase Konsolidasi</span>
+                <span className="text-xs font-bold text-emerald-700 tabular-nums">
+                  {targets.weightAchievementPercent}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-2">
+                <div
+                  className="bg-emerald-600 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, targets.weightAchievementPercent)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Realisasi: {consolidatedSummary?.totalWeightKg ?? 0} Kg</span>
+                <span>Target: {targets.totalTargetWeightKg} Kg</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
+            <span>Belum ada target bulanan yang diset untuk periode ini. Klik tombol di atas untuk menentukan target omzet & tonase outlet.</span>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Tabel Peringkat Outlet */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+          <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <Store className="w-4 h-4 text-blue-900" />
+            Matriks Peringkat Kinerja Outlet
+          </h4>
+          <span className="text-xs text-slate-500">
+            {outlets.length} Toko / Outlet Terdaftar
+          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -193,10 +260,10 @@ export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = (
             <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-3 px-4">Outlet</th>
-                <th className="py-3 px-4">Tipe Fasilitas</th>
-                <th className="py-3 px-4">Omzet Bersih</th>
-                <th className="py-3 px-4">Porsi Share</th>
-                <th className="py-3 px-4">Volume</th>
+                <th className="py-3 px-4">Tipe</th>
+                <th className="py-3 px-4">Omzet & Target</th>
+                <th className="py-3 px-4">Pangsa Omzet</th>
+                <th className="py-3 px-4">Beban Cucian</th>
                 <th className="py-3 px-4">SLA On-Time</th>
                 <th className="py-3 px-4 text-center">Health Score</th>
                 <th className="py-3 px-4 text-right">Aksi</th>
@@ -230,7 +297,12 @@ export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = (
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900 tabular-nums">
-                      {formatRupiah(out.netRevenue)}
+                      <div>{formatRupiah(out.netRevenue)}</div>
+                      {out.target && out.target.targetRevenue > 0 && (
+                        <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                          Target: {formatRupiah(out.target.targetRevenue)} ({out.target.revenueAchievementPercent}%)
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 tabular-nums">
                       <span className="font-semibold text-slate-800">
@@ -278,7 +350,7 @@ export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = (
         </div>
       </div>
 
-      {/* 3. Workshop Transfer Summary */}
+      {/* 4. Workshop Transfer Summary */}
       {workshopSummary && (
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
           <h4 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
@@ -308,13 +380,15 @@ export const MultiOutletBenchmarkTab: React.FC<MultiOutletBenchmarkTabProps> = (
         </div>
       )}
 
-      {/* Banner Roadmap Target Wave 2 */}
-      <div className="p-3.5 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-xs text-slate-500">
-        <strong className="font-semibold text-slate-800 block mb-0.5">
-          Target Bulanan Outlet (Roadmap Wave 2: Penetapan Target & Realisasi KPI Toko)
-        </strong>
-        Fitur penentuan target omzet bulanan per outlet akan tersedia di Wave 2 untuk memantau selisih realisasi vs target secara live.
-      </div>
+      {/* Modal Target Bisnis Outlet Wave 2 */}
+      <OutletTargetModal
+        isOpen={isTargetModalOpen}
+        onClose={() => setIsTargetModalOpen(false)}
+        onSuccess={() => {
+          loadData();
+          onDataMutated?.();
+        }}
+      />
     </div>
   );
 };

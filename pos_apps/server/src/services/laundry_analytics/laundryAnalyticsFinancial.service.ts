@@ -63,7 +63,7 @@ export interface FinancialAnalyticsResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
   };
   cogsAndProfit: {
@@ -82,17 +82,21 @@ export interface FinancialAnalyticsResult {
     pettyCashByCategory: Array<{ category: string; amount: number }>;
     incidentExpense: FinancialMetricComparison;
     fixedOpex: {
-      current: null;
-      availability: 'MISSING';
-      note: string;
+      current: number;
+      previous: number;
+      diff: number;
+      percentChange: number;
+      direction: 'UP' | 'DOWN' | 'NEUTRAL';
+      availability: 'READY';
     };
+    fixedOpexByCategory: Array<{ category: string; amount: number }>;
     recordedOpex: {
       current: number;
       previous: number;
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
   };
   profitability: {
@@ -102,7 +106,7 @@ export interface FinancialAnalyticsResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
     profitMarginPercent: {
       current: number;
@@ -110,7 +114,7 @@ export interface FinancialAnalyticsResult {
       diff: number;
       percentChange: number;
       direction: 'UP' | 'DOWN' | 'NEUTRAL';
-      availability: 'PARTIAL';
+      availability: 'READY' | 'PARTIAL';
     };
   };
   balanceSheetSummary: {
@@ -309,7 +313,32 @@ async function fetchPeriodFinancialTotals(
       AND li.created_at <= ${end};
   `;
   const incidentExpense = toNum(incidentRows[0]?.incident_expense);
-  const recordedOpex = pettyCashOut + incidentExpense;
+
+  // 4c. Fixed OPEX (operational_expenses)
+  const outletOeFilter =
+    outletId !== 'ALL' ? Prisma.sql`AND oe.outlet_id = ${outletId}` : Prisma.empty;
+
+  const fixedOpexRows = await db.$queryRaw<any[]>`
+    SELECT 
+      COALESCE(SUM(oe.amount), 0) as total_fixed_opex,
+      oe.category
+    FROM operational_expenses oe
+    WHERE oe.tenant_id = ${tenantId}
+      ${outletOeFilter}
+      AND oe.expense_date >= ${start}
+      AND oe.expense_date <= ${end}
+    GROUP BY oe.category;
+  `;
+
+  let fixedOpexTotal = 0;
+  const fixedOpexByCategory: Array<{ category: string; amount: number }> = [];
+  for (const row of fixedOpexRows) {
+    const amt = toNum(row.total_fixed_opex);
+    fixedOpexTotal += amt;
+    fixedOpexByCategory.push({ category: row.category, amount: amt });
+  }
+
+  const recordedOpex = pettyCashOut + incidentExpense + fixedOpexTotal;
   const operatingProfit = netRevenue - cogsBom - recordedOpex;
   const profitMarginPercent = netRevenue > 0 ? Number(((operatingProfit / netRevenue) * 100).toFixed(2)) : 0;
   const netCashFlow = realCashIn - recordedOpex;
@@ -330,6 +359,8 @@ async function fetchPeriodFinancialTotals(
     pettyCashOut,
     pettyCashByCategory,
     incidentExpense,
+    fixedOpexTotal,
+    fixedOpexByCategory,
     recordedOpex,
     operatingProfit,
     profitMarginPercent,
@@ -457,6 +488,19 @@ export async function getFinancialAnalytics(
     GROUP BY tx_date;
   `;
 
+  // Gabungkan operational_expenses harian ke dalam dailyOpexMap (Petty Cash + Fixed OPEX)
+  const dailyFixedOpexRows = await prisma.$queryRaw<any[]>`
+    SELECT 
+      TO_CHAR(oe.expense_date AT TIME ZONE ${timezone}, 'YYYY-MM-DD') as tx_date,
+      COALESCE(SUM(oe.amount), 0) as daily_fixed_opex
+    FROM operational_expenses oe
+    WHERE oe.tenant_id = ${tenantId}
+      ${outletId !== 'ALL' ? Prisma.sql`AND oe.outlet_id = ${outletId}` : Prisma.empty}
+      AND oe.expense_date >= ${dateRange.startDate}
+      AND oe.expense_date <= ${dateRange.endDate}
+    GROUP BY tx_date;
+  `;
+
   const dailyAccrualMap = new Map<string, number>();
   for (const r of dailyOrdersRows) {
     if (r.tx_date) dailyAccrualMap.set(r.tx_date, toNum(r.daily_accrual));
@@ -470,6 +514,12 @@ export async function getFinancialAnalytics(
   const dailyOpexMap = new Map<string, number>();
   for (const r of dailyOpexRows) {
     if (r.tx_date) dailyOpexMap.set(r.tx_date, toNum(r.daily_opex));
+  }
+  for (const r of dailyFixedOpexRows) {
+    if (r.tx_date) {
+      const currentVal = dailyOpexMap.get(r.tx_date) || 0;
+      dailyOpexMap.set(r.tx_date, currentVal + toNum(r.daily_fixed_opex));
+    }
   }
 
   // Buat array tanggal kontinu dari start s/d end
@@ -539,7 +589,7 @@ export async function getFinancialAnalytics(
         diff: netCashFlowChange.diff,
         percentChange: netCashFlowChange.percent,
         direction: netCashFlowChange.direction,
-        availability: 'PARTIAL',
+        availability: 'READY',
       },
     },
     cogsAndProfit: {
@@ -558,17 +608,17 @@ export async function getFinancialAnalytics(
       pettyCashByCategory: curr.pettyCashByCategory,
       incidentExpense: buildMetricComparison(curr.incidentExpense, prev.incidentExpense),
       fixedOpex: {
-        current: null,
-        availability: 'MISSING',
-        note: 'Data Belum Tersedia (Roadmap Wave 2: Beban Tetap Non-Shift)',
+        ...buildMetricComparison(curr.fixedOpexTotal, prev.fixedOpexTotal),
+        availability: 'READY',
       },
+      fixedOpexByCategory: curr.fixedOpexByCategory,
       recordedOpex: {
         current: Number(curr.recordedOpex.toFixed(2)),
         previous: Number(prev.recordedOpex.toFixed(2)),
         diff: opexChange.diff,
         percentChange: opexChange.percent,
         direction: opexChange.direction,
-        availability: 'PARTIAL',
+        availability: 'READY',
       },
     },
     profitability: {
@@ -578,7 +628,7 @@ export async function getFinancialAnalytics(
         diff: opProfitChange.diff,
         percentChange: opProfitChange.percent,
         direction: opProfitChange.direction,
-        availability: 'PARTIAL',
+        availability: 'READY',
       },
       profitMarginPercent: {
         current: curr.profitMarginPercent,
@@ -586,7 +636,7 @@ export async function getFinancialAnalytics(
         diff: profitMarginChange.diff,
         percentChange: profitMarginChange.percent,
         direction: profitMarginChange.direction,
-        availability: 'PARTIAL',
+        availability: 'READY',
       },
     },
     balanceSheetSummary: {

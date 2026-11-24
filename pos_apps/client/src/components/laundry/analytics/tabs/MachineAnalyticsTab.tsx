@@ -1,5 +1,5 @@
 // Well POS - MachineAnalyticsTab Component
-// Sub-Tab Analitik Utilisasi & Pemeliharaan Mesin Laundry (Non-IoT Stage Log Estimation, Washer vs Dryer, Maintenance Alert)
+// Sub-Tab Analitik Utilisasi & Pemeliharaan Mesin Laundry (Non-IoT Stage Log Estimation, Washer vs Dryer, Maintenance Logs Wave 2)
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -10,16 +10,21 @@ import {
   CheckCircle,
   Layers,
   Info,
-  ShieldAlert,
+  Clock,
+  DollarSign,
 } from 'lucide-react';
 import type { MachinesAnalyticsResult } from '../../../../types/laundryAnalytics';
 import { fetchLaundryMachines } from '../../../../services/laundryAnalyticsApi';
+import { formatRupiah } from '../../../../utils/currency';
+import { MachineMaintenanceModal } from '../modals/MachineMaintenanceModal';
 
 interface MachineAnalyticsTabProps {
   preset: string;
   startDate?: string;
   endDate?: string;
   outletId: string;
+  userRole?: string;
+  onDataMutated?: () => void;
 }
 
 export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
@@ -27,10 +32,13 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
   startDate,
   endDate,
   outletId,
+  userRole,
+  onDataMutated,
 }) => {
   const [data, setData] = useState<MachinesAnalyticsResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -108,21 +116,30 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
   if (!data) return null;
 
   const { summary, byType = [], machines = [] } = data;
-  const maintenanceDueCount = machines.filter((m) => m.maintenanceDue).length;
 
   return (
     <div className="space-y-6">
-      {/* 1. Banner Transparansi Wajib (Non-IoT) */}
-      <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start gap-3">
-        <Info className="w-5 h-5 text-blue-900 shrink-0 mt-0.5" />
-        <div className="text-xs text-blue-950">
-          <strong className="font-bold block text-sm mb-0.5">
-            Estimasi Berbasis Pencatatan Log Tahapan Manual (Non-IoT)
-          </strong>
-          Sistem memperkirakan siklus dan utilisasi mesin berdasarkan pencatatan stase kerja
-          operator cuci/kering. Data downtime log otomatis dan biaya daya per siklus belum
-          tersedia (tersedia pada integrasi smart plug IoT Wave 3).
+      {/* 1. Header Banner Transparansi + Tombol Catat Servis */}
+      <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-900 shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-950">
+            <strong className="font-bold block text-sm mb-0.5">
+              Pemantauan Kinerja & Pemeliharaan Mesin Laundry (Wave 2)
+            </strong>
+            Utilisasi dihitung dari stage log stase kerja operator, downtime log riil dicatat via
+            modul perbaikan, dan estimasi biaya per siklus menggabungkan beban utilitas & servis
+            berkala.
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setIsMaintenanceModalOpen(true)}
+          className="shrink-0 px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5 self-end sm:self-center"
+        >
+          <Wrench className="w-4 h-4" />
+          + Catat Servis / Perbaikan
+        </button>
       </div>
 
       {/* 2. Baris Kartu Metrik Ringkasan Mesin */}
@@ -142,7 +159,8 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
             <span className="text-sm font-normal text-slate-500 ml-1">Unit</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            {summary?.activeMachines ?? 0} aktif beroperasi
+            {summary?.activeMachines ?? 0} aktif • {summary?.maintenanceMachines ?? 0} servis •{' '}
+            {summary?.inactiveMachines ?? 0} non-aktif
           </p>
         </div>
 
@@ -161,45 +179,48 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
             <span className="text-sm font-normal text-slate-500 ml-1">Siklus</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Akumulasi cuci & kering dalam periode
+            {summary?.totalOperatingHours ?? 0} jam kerja tercatat ({summary?.overallUtilizationPercent ?? 0}% utilisasi)
           </p>
         </div>
 
-        {/* Card 3: Peringatan Jadwal Servis */}
+        {/* Card 3: Downtime & Log Servis Riil Wave 2 */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
-              Perlu Servis
+              Downtime Servis
             </span>
             <div className="p-2 rounded-xl bg-amber-50 text-amber-700">
-              <Wrench className="w-4 h-4" />
+              <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-amber-700 tabular-nums">
-            {maintenanceDueCount}
-            <span className="text-sm font-semibold text-slate-500 ml-1">Mesin</span>
+            {summary?.downtimeLogs?.totalDowntimeHours ?? 0}
+            <span className="text-sm font-semibold text-slate-500 ml-1">Jam</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Mencapai batas ambang batas pemeliharaan
+            {summary?.downtimeLogs?.totalLogs ?? 0} kejadian pemeliharaan / perbaikan
           </p>
         </div>
 
-        {/* Card 4: Unit Dalam Perbaikan */}
+        {/* Card 4: Biaya per Siklus (Utility + Maintenance) */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">
-              Dalam Perbaikan
+              Biaya per Siklus
             </span>
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-700">
-              <ShieldAlert className="w-4 h-4" />
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-700">
+              <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums">
-            {summary?.maintenanceMachines ?? 0}
-            <span className="text-sm font-normal text-slate-500 ml-1">Unit</span>
+          <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tabular-nums">
+            {summary?.costPerCycle?.current !== undefined
+              ? formatRupiah(summary.costPerCycle.current)
+              : 'Disembunyikan'}
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Status pemeliharaan aktif
+            {summary?.costPerCycle?.availability === 'READY'
+              ? 'Estimasi beban utilitas & servis per siklus'
+              : 'Belum ada siklus mesin pada periode ini'}
           </p>
         </div>
       </div>
@@ -241,11 +262,14 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
 
       {/* 4. Daftar Unit Mesin & Status Pemeliharaan */}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70">
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
           <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
             <Cpu className="w-4 h-4 text-blue-900" />
             Daftar Aset Mesin & Beban Kerja
           </h4>
+          <span className="text-xs text-slate-500">
+            Total {machines.length} Mesin
+          </span>
         </div>
 
         {machines.length === 0 ? (
@@ -260,8 +284,9 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
                   <th className="py-3 px-4">Nama Mesin</th>
                   <th className="py-3 px-4">Tipe & Kapasitas</th>
                   <th className="py-3 px-4">Total Siklus</th>
-                  <th className="py-3 px-4">Estimasi Jam Kerja</th>
+                  <th className="py-3 px-4">Jam Kerja</th>
                   <th className="py-3 px-4">Utilisasi</th>
+                  <th className="py-3 px-4">Downtime & Servis</th>
                   <th className="py-3 px-4 text-right">Status Servis</th>
                 </tr>
               </thead>
@@ -300,10 +325,31 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
                         </span>
                       </div>
                     </td>
+                    <td className="py-3 px-4 tabular-nums text-slate-600">
+                      <div>
+                        {m.downtimeMinutes > 0 ? (
+                          <span className="font-medium text-amber-700">
+                            {m.downtimeMinutes} mnt ({m.maintenanceCount}x)
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">0 mnt</span>
+                        )}
+                        {m.maintenanceCost !== undefined && m.maintenanceCost > 0 && (
+                          <span className="block text-[10px] text-slate-400">
+                            Biaya: {formatRupiah(m.maintenanceCost)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-right">
-                      {m.maintenanceDue ? (
+                      {m.status === 'MAINTENANCE' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
                           <Wrench className="w-3 h-3 text-rose-600" />
+                          Sedang Diservis
+                        </span>
+                      ) : m.maintenanceDue ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-300">
+                          <Wrench className="w-3 h-3 text-amber-600" />
                           Perlu Servis
                         </span>
                       ) : (
@@ -320,6 +366,18 @@ export const MachineAnalyticsTab: React.FC<MachineAnalyticsTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal Maintenance Log Wave 2 */}
+      <MachineMaintenanceModal
+        isOpen={isMaintenanceModalOpen}
+        onClose={() => setIsMaintenanceModalOpen(false)}
+        activeOutletId={outletId === 'ALL' ? null : outletId}
+        userRole={userRole}
+        onSuccess={() => {
+          loadData();
+          onDataMutated?.();
+        }}
+      />
     </div>
   );
 };

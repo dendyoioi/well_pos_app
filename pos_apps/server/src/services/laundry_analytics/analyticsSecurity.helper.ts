@@ -173,6 +173,18 @@ const SENSITIVE_FINANCIAL_KEYS = new Set([
   'grandtotal',
   'remainingamount',
   'totalspent',
+  'cost',
+  'maintenancecost',
+  'maintenance_cost',
+  'totalmaintenancecost',
+  'total_maintenance_cost',
+  'costpercycle',
+  'cost_per_cycle',
+  'targetsummary',
+  'targetrevenue',
+  'actualrevenue',
+  'utilityopex',
+  'totalmachineexpense',
 ]);
 
 const SENSITIVE_ALERT_PREFIXES = [

@@ -3,7 +3,8 @@
  * Laundry Outlet Performance Intelligence (Well POS)
  * 
  * Mengimplementasikan komparasi performa multi-cabang (omzet, tonase, SLA, rating,
- * health score, alur transfer workshop ke satelit) sesuai spesifikasi Task W1-12.
+ * health score, alur transfer workshop ke satelit, fixed OPEX, dan pencapaian target bulanan)
+ * sesuai spesifikasi Task W1-12 & W2-05.
  */
 
 import { Prisma } from '@prisma/client';
@@ -26,6 +27,15 @@ export interface BenchmarkOutletItem {
   incidentRate: number;
   healthScore: number;
   healthGrade: string;
+  target?: {
+    targetRevenue: number;
+    targetProfit: number;
+    targetWeightKg: number;
+    targetOrdersCount: number;
+    targetNewCustomers: number;
+    revenueAchievementPercent: number;
+    weightAchievementPercent: number;
+  } | null;
 }
 
 export interface BenchmarkAnalyticsResult {
@@ -56,8 +66,14 @@ export interface BenchmarkAnalyticsResult {
     avgTransferLagHours: number;
   };
   targets: {
-    availability: 'MISSING';
-    note: string;
+    availability: 'READY' | 'EMPTY';
+    periodYear: number;
+    periodMonth: number;
+    totalTargetRevenue: number;
+    totalTargetWeightKg: number;
+    revenueAchievementPercent: number;
+    weightAchievementPercent: number;
+    note?: string;
   };
   outlets: BenchmarkOutletItem[];
 }
@@ -224,7 +240,7 @@ export async function getBenchmarkAnalytics(
     cogsMap.set(String(c.outlet_id), toNum(c.cogs_bom));
   }
 
-  // 7. Recorded OPEX per Outlet (Petty Cash Out + Laundry Incident Compensation)
+  // 7. Recorded OPEX per Outlet (Petty Cash Out + Incident Compensation + Fixed OPEX)
   const pettyCashRows = await prisma.$queryRaw<any[]>`
     SELECT 
       cm.outlet_id,
@@ -257,7 +273,52 @@ export async function getBenchmarkAnalytics(
     incidentCompMap.set(String(ic.outlet_id), toNum(ic.incident_compensation));
   }
 
-  // 8. Susun Benchmark per Outlet
+  // Fixed OPEX per outlet dari operational_expenses
+  const fixedOpexRows = await prisma.$queryRaw<any[]>`
+    SELECT 
+      oe.outlet_id,
+      COALESCE(SUM(oe.amount), 0) as fixed_opex
+    FROM operational_expenses oe
+    WHERE oe.tenant_id = ${tenantId}
+      AND oe.expense_date >= ${dateRange.startDate}
+      AND oe.expense_date <= ${dateRange.endDate}
+    GROUP BY oe.outlet_id;
+  `;
+  const fixedOpexMap = new Map<string, number>();
+  for (const fo of fixedOpexRows) {
+    fixedOpexMap.set(String(fo.outlet_id), toNum(fo.fixed_opex));
+  }
+
+  // 8. Query Target Bisnis Bulanan dari outlet_business_targets
+  const [yearStr, monthStr] = dateRange.formattedRange.start.split('-');
+  const periodYear = Number(yearStr);
+  const periodMonth = Number(monthStr);
+
+  const targetRows = await prisma.$queryRaw<any[]>`
+    SELECT 
+      obt.outlet_id,
+      COALESCE(obt.target_revenue, 0) as target_revenue,
+      COALESCE(obt.target_profit, 0) as target_profit,
+      COALESCE(obt.target_weight_kg, 0) as target_weight_kg,
+      COALESCE(obt.target_orders_count, 0) as target_orders_count,
+      COALESCE(obt.target_new_customers, 0) as target_new_customers
+    FROM outlet_business_targets obt
+    WHERE obt.tenant_id = ${tenantId}
+      AND obt.period_year = ${periodYear}
+      AND obt.period_month = ${periodMonth};
+  `;
+
+  const targetMap = new Map<string, any>();
+  let totalTargetRevenue = 0;
+  let totalTargetWeightKg = 0;
+
+  for (const t of targetRows) {
+    targetMap.set(String(t.outlet_id), t);
+    totalTargetRevenue += toNum(t.target_revenue);
+    totalTargetWeightKg += toNum(t.target_weight_kg);
+  }
+
+  // 9. Susun Benchmark per Outlet
   const benchmarkOutlets: BenchmarkOutletItem[] = [];
   let sumOnTimeRates = 0;
   let sumHealthScores = 0;
@@ -284,11 +345,12 @@ export async function getBenchmarkAnalytics(
         ? Number(((s.netRevenue / totalConsolidatedRevenue) * 100).toFixed(2))
         : 0;
 
-    // Hitung margin laba aktual per outlet (netRevenue - COGS BoM - OPEX tercatat)
+    // Hitung margin laba aktual per outlet (netRevenue - COGS BoM - OPEX tercatat termasuk Fixed OPEX)
     const cogs = cogsMap.get(oid) || 0;
     const pettyOpex = pettyCashMap.get(oid) || 0;
     const incOpex = incidentCompMap.get(oid) || 0;
-    const recordedOpex = pettyOpex + incOpex;
+    const fixedOpex = fixedOpexMap.get(oid) || 0;
+    const recordedOpex = pettyOpex + incOpex + fixedOpex;
     const operatingProfit = s.netRevenue - cogs - recordedOpex;
     const actualProfitMargin =
       s.netRevenue > 0 ? Number(((operatingProfit / s.netRevenue) * 100).toFixed(2)) : 0;
@@ -306,6 +368,26 @@ export async function getBenchmarkAnalytics(
     sumOnTimeRates += onTimeRate;
     sumHealthScores += hs.score;
 
+    // Target komparasi jika ada
+    const t = targetMap.get(oid);
+    const targetObj = t
+      ? {
+          targetRevenue: toNum(t.target_revenue),
+          targetProfit: toNum(t.target_profit),
+          targetWeightKg: toNum(t.target_weight_kg),
+          targetOrdersCount: Number(t.target_orders_count || 0),
+          targetNewCustomers: Number(t.target_new_customers || 0),
+          revenueAchievementPercent:
+            toNum(t.target_revenue) > 0
+              ? Number(((s.netRevenue / toNum(t.target_revenue)) * 100).toFixed(1))
+              : 0,
+          weightAchievementPercent:
+            toNum(t.target_weight_kg) > 0
+              ? Number(((s.weightKg / toNum(t.target_weight_kg)) * 100).toFixed(1))
+              : 0,
+        }
+      : null;
+
     benchmarkOutlets.push({
       outletId: oid,
       outletCode: oCode,
@@ -321,6 +403,7 @@ export async function getBenchmarkAnalytics(
       incidentRate,
       healthScore: hs.score,
       healthGrade: hs.grade,
+      target: targetObj,
     });
   }
 
@@ -333,7 +416,7 @@ export async function getBenchmarkAnalytics(
   const avgHealthScore =
     totalOutlets > 0 ? Number((sumHealthScores / totalOutlets).toFixed(1)) : 0;
 
-  // 7. Workshop vs Satellite Transfer Summary
+  // 10. Workshop vs Satellite Transfer Summary
   const workshopCount = outletRows.filter((o) => Boolean(o.is_workshop)).length;
   const satelliteCount = totalOutlets - workshopCount;
 
@@ -348,6 +431,7 @@ export async function getBenchmarkAnalytics(
       AND ltm.dispatched_at <= ${dateRange.endDate}
       AND ltm.status != 'CANCELLED';
   `;
+
   const totalManifests = Number(manifestRows[0]?.total_manifests || 0);
   const totalOrdersTransferred = Number(manifestRows[0]?.total_orders_transferred || 0);
   const avgTransferLagHours = Number(toNum(manifestRows[0]?.avg_lag_hours).toFixed(2));
@@ -375,8 +459,23 @@ export async function getBenchmarkAnalytics(
       avgTransferLagHours,
     },
     targets: {
-      availability: 'MISSING',
-      note: 'Data Belum Tersedia (Roadmap Wave 2: Target Bulanan Outlet)',
+      availability: targetRows.length > 0 ? 'READY' : 'EMPTY',
+      periodYear,
+      periodMonth,
+      totalTargetRevenue,
+      totalTargetWeightKg,
+      revenueAchievementPercent:
+        totalTargetRevenue > 0
+          ? Number(((totalConsolidatedRevenue / totalTargetRevenue) * 100).toFixed(1))
+          : 0,
+      weightAchievementPercent:
+        totalTargetWeightKg > 0
+          ? Number(((totalConsolidatedWeight / totalTargetWeightKg) * 100).toFixed(1))
+          : 0,
+      note:
+        targetRows.length > 0
+          ? undefined
+          : 'Belum ada target bulanan yang diset untuk periode ini.',
     },
     outlets: benchmarkOutlets,
   };

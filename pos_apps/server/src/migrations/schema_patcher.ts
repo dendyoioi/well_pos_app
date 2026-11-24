@@ -827,9 +827,126 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "idx_inventory_ledgers_consumption" ON "inventory_ledgers"("tenant_id", "movement_type", "created_at");
     `,
   },
+  {
+    id: '20261124_11_laundry_owner_dashboard_wave2_schema',
+    description: 'Menambahkan model operational_expenses, outlet_business_targets, laundry_machine_maintenance_logs, dan relasi machine_id (Wave 2 Batch 1)',
+    sql: `
+      DO $$ BEGIN
+        CREATE TYPE "ExpenseCategory" AS ENUM ('ELECTRICITY', 'WATER', 'RENT', 'SALARY', 'MARKETING', 'MAINTENANCE', 'SUPPLIES', 'OTHER');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      CREATE TABLE IF NOT EXISTS "operational_expenses" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "expense_date" TIMESTAMP(3) NOT NULL,
+        "category" "ExpenseCategory" NOT NULL DEFAULT 'OTHER',
+        "amount" DECIMAL(15, 2) NOT NULL,
+        "payment_method" "PaymentMethod" NOT NULL DEFAULT 'CASH',
+        "notes" TEXT,
+        "receipt_photo_url" TEXT,
+        "created_by_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "operational_expenses_tenant_id_outlet_id_expense_date_idx" ON "operational_expenses"("tenant_id", "outlet_id", "expense_date");
+      CREATE INDEX IF NOT EXISTS "operational_expenses_tenant_id_category_idx" ON "operational_expenses"("tenant_id", "category");
+
+      CREATE TABLE IF NOT EXISTS "outlet_business_targets" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "period_year" INTEGER NOT NULL,
+        "period_month" INTEGER NOT NULL,
+        "target_revenue" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "target_profit" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "target_weight_kg" DECIMAL(10, 3) NOT NULL DEFAULT 0,
+        "target_orders_count" INTEGER NOT NULL DEFAULT 0,
+        "target_new_customers" INTEGER NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "created_by_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "outlet_business_targets_tenant_id_outlet_id_period_year_period_month_key" UNIQUE ("tenant_id", "outlet_id", "period_year", "period_month")
+      );
+      CREATE INDEX IF NOT EXISTS "outlet_business_targets_tenant_id_period_year_period_month_idx" ON "outlet_business_targets"("tenant_id", "period_year", "period_month");
+
+      CREATE TABLE IF NOT EXISTS "laundry_machine_maintenance_logs" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "machine_id" TEXT NOT NULL REFERENCES "laundry_machines"("id") ON DELETE CASCADE,
+        "service_type" TEXT NOT NULL DEFAULT 'ROUTINE',
+        "start_date" TIMESTAMP(3) NOT NULL,
+        "end_date" TIMESTAMP(3),
+        "downtime_minutes" INTEGER NOT NULL DEFAULT 0,
+        "technician_name" TEXT,
+        "cost" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'SCHEDULED',
+        "created_by_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_machine_maintenance_logs_tenant_id_outlet_id_machine_id_start_date_idx" ON "laundry_machine_maintenance_logs"("tenant_id", "outlet_id", "machine_id", "start_date");
+      CREATE INDEX IF NOT EXISTS "laundry_machine_maintenance_logs_tenant_id_status_idx" ON "laundry_machine_maintenance_logs"("tenant_id", "status");
+
+      ALTER TABLE "laundry_stage_logs" ADD COLUMN IF NOT EXISTS "machine_id" TEXT;
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'laundry_stage_logs_machine_id_fkey') THEN
+          ALTER TABLE "laundry_stage_logs" ADD CONSTRAINT "laundry_stage_logs_machine_id_fkey" FOREIGN KEY ("machine_id") REFERENCES "laundry_machines"("id") ON DELETE SET NULL;
+        END IF;
+      END $$;
+      CREATE INDEX IF NOT EXISTS "laundry_stage_logs_tenant_id_machine_id_idx" ON "laundry_stage_logs"("tenant_id", "machine_id");
+
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "machine_id" TEXT;
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'laundry_incidents_machine_id_fkey') THEN
+          ALTER TABLE "laundry_incidents" ADD CONSTRAINT "laundry_incidents_machine_id_fkey" FOREIGN KEY ("machine_id") REFERENCES "laundry_machines"("id") ON DELETE SET NULL;
+        END IF;
+      END $$;
+      CREATE INDEX IF NOT EXISTS "laundry_incidents_tenant_id_machine_id_idx" ON "laundry_incidents"("tenant_id", "machine_id");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;
+
+/**
+ * Memecah string DDL SQL menjadi pernyataan-pernyataan individual dengan memperhitungkan
+ * blok dollar-quote PostgreSQL (DO $$ BEGIN ... END $$;) agar tidak terpotong oleh semicolon internal.
+ */
+export function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let inDollarQuote = false;
+
+  for (let i = 0; i < sql.length; i++) {
+    if (sql.startsWith('$$', i)) {
+      inDollarQuote = !inDollarQuote;
+      current += '$$';
+      i++;
+      continue;
+    }
+
+    if (sql[i] === ';' && !inDollarQuote) {
+      if (current.trim().length > 0) {
+        statements.push(current.trim());
+      }
+      current = '';
+    } else {
+      current += sql[i];
+    }
+  }
+
+  if (current.trim().length > 0) {
+    statements.push(current.trim());
+  }
+
+  return statements;
+}
 
 /**
  * Menjalankan auto-patcher skema secara non-blocking, idempotent, dan aman dari race condition multi-instance.
@@ -887,11 +1004,8 @@ export async function runAutoSchemaPatcher(prisma: PrismaClient): Promise<{
 
       console.log(`[SchemaPatcher] ⏳ Menerapkan patch ${patch.id}: ${patch.description}`);
       try {
-        // Eksekusi DDL patch (dukung multi-statement dipisah titik koma)
-        const statements = patch.sql
-          .split(';')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
+        // Eksekusi DDL patch (dukung multi-statement dipisah titik koma dengan dollar-quoting safety)
+        const statements = splitSqlStatements(patch.sql);
         for (const stmt of statements) {
           try {
             await prisma.$executeRawUnsafe(stmt);

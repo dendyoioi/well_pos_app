@@ -109,6 +109,9 @@ model Tenant {
   workShiftTemplates WorkShiftTemplate[]
   staffWorkSchedules StaffWorkSchedule[]
   staffPerformanceReviews StaffPerformanceReview[]
+  operationalExpenses OperationalExpense[]
+  outletBusinessTargets OutletBusinessTarget[]
+  machineMaintenanceLogs LaundryMachineMaintenanceLog[]
 
   @@map("tenants")
 }
@@ -262,6 +265,9 @@ model User {
   createdWorkSchedules      StaffWorkSchedule[]        @relation("StaffWorkScheduleCreatedBy")
   performanceReviews        StaffPerformanceReview[]   @relation("StaffPerformanceUser")
   givenPerformanceReviews   StaffPerformanceReview[]   @relation("StaffPerformanceReviewer")
+  createdOperationalExpenses OperationalExpense[]          @relation("OperationalExpenseCreatedBy")
+  createdOutletTargets       OutletBusinessTarget[]        @relation("OutletTargetCreatedBy")
+  createdMachineMaintenances LaundryMachineMaintenanceLog[] @relation("MachineMaintenanceCreatedBy")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -325,6 +331,9 @@ model Outlet {
   workShiftTemplates WorkShiftTemplate[]
   staffWorkSchedules StaffWorkSchedule[]
   staffPerformanceReviews StaffPerformanceReview[]
+  operationalExpenses OperationalExpense[]
+  outletBusinessTargets OutletBusinessTarget[]
+  machineMaintenanceLogs LaundryMachineMaintenanceLog[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -1163,6 +1172,17 @@ enum PaymentMethod {
   LAUNDRY_QUOTA
 }
 
+enum ExpenseCategory {
+  ELECTRICITY
+  WATER
+  RENT
+  SALARY
+  MARKETING
+  MAINTENANCE
+  SUPPLIES
+  OTHER
+}
+
 enum PaymentTxStatus {
   PENDING
   CAPTURED
@@ -1711,6 +1731,7 @@ model LaundryStageLog {
   operatorId      String?   @map("operator_id")
   operatorName    String?   @map("operator_name")
   machineName     String?   @map("machine_name")
+  machineId       String?   @map("machine_id")
   weightKg        Decimal?  @map("weight_kg") @db.Decimal(10, 3)
   piecesCount     Int?      @default(0) @map("pieces_count")
   startedAt       DateTime  @default(now()) @map("started_at")
@@ -1723,10 +1744,12 @@ model LaundryStageLog {
   order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
   laundryDetail LaundryOrderDetail @relation(fields: [laundryDetailId], references: [id], onDelete: Cascade)
   operator      User?              @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  machine       LaundryMachine?    @relation(fields: [machineId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, orderId])
   @@index([tenantId, operatorId, stage])
   @@index([tenantId, stage, completedAt])
+  @@index([tenantId, machineId])
   @@map("laundry_stage_logs")
 }
 
@@ -1932,6 +1955,9 @@ model LaundryMachine {
 
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   outlet      Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  maintenanceLogs LaundryMachineMaintenanceLog[]
+  stageLogs       LaundryStageLog[]
+  incidents       LaundryIncident[]
 
   @@unique([outletId, code])
   @@index([tenantId, outletId])
@@ -1947,6 +1973,7 @@ model LaundryIncident {
   itemDescription       String    @map("item_description")
   stage                 String?   // SORTING | WASHING | DRYING | IRONING | PACKING | RACK_STORAGE
   machineName           String?   @map("machine_name")
+  machineId             String?   @map("machine_id")
   responsibleStaffId    String?   @map("responsible_staff_id")
   reportedById          String    @map("reported_by_id")
   notes                 String    @db.Text
@@ -1966,9 +1993,11 @@ model LaundryIncident {
   reportedBy       User    @relation("IncidentReportedBy", fields: [reportedById], references: [id], onDelete: Restrict)
   responsibleStaff User?   @relation("IncidentResponsibleStaff", fields: [responsibleStaffId], references: [id], onDelete: SetNull)
   approvedBy       User?   @relation("IncidentApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  machine          LaundryMachine? @relation(fields: [machineId], references: [id], onDelete: SetNull)
 
   @@index([outletId, status, createdAt])
   @@index([orderId])
+  @@index([tenantId, machineId])
   @@map("laundry_incidents")
 }
 
@@ -2044,4 +2073,79 @@ model StaffPerformanceReview {
 
   @@index([outletId, userId, periodStart, periodEnd])
   @@map("staff_performance_reviews")
+}
+
+model OperationalExpense {
+  id              String          @id @default(uuid())
+  tenantId        String          @map("tenant_id")
+  outletId        String          @map("outlet_id")
+  expenseDate     DateTime        @map("expense_date")
+  category        ExpenseCategory @default(OTHER)
+  amount          Decimal         @db.Decimal(15, 2)
+  paymentMethod   PaymentMethod   @default(CASH) @map("payment_method")
+  notes           String?         @db.Text
+  receiptPhotoUrl String?         @map("receipt_photo_url")
+  createdById     String          @map("created_by_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet    Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  createdBy User   @relation("OperationalExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, outletId, expenseDate])
+  @@index([tenantId, category])
+  @@map("operational_expenses")
+}
+
+model OutletBusinessTarget {
+  id                 String   @id @default(uuid())
+  tenantId           String   @map("tenant_id")
+  outletId           String   @map("outlet_id")
+  periodYear         Int      @map("period_year")
+  periodMonth        Int      @map("period_month") // 1 - 12
+  targetRevenue      Decimal  @default(0) @map("target_revenue") @db.Decimal(15, 2)
+  targetProfit       Decimal  @default(0) @map("target_profit") @db.Decimal(15, 2)
+  targetWeightKg     Decimal  @default(0) @map("target_weight_kg") @db.Decimal(10, 3)
+  targetOrdersCount  Int      @default(0) @map("target_orders_count")
+  targetNewCustomers Int      @default(0) @map("target_new_customers")
+  notes              String?  @db.Text
+  createdById        String   @map("created_by_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet    Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  createdBy User   @relation("OutletTargetCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, outletId, periodYear, periodMonth])
+  @@index([tenantId, periodYear, periodMonth])
+  @@map("outlet_business_targets")
+}
+
+model LaundryMachineMaintenanceLog {
+  id              String         @id @default(uuid())
+  tenantId        String         @map("tenant_id")
+  outletId        String         @map("outlet_id")
+  machineId       String         @map("machine_id")
+  serviceType     String         @default("ROUTINE") @map("service_type") // ROUTINE | REPAIR | EMERGENCY
+  startDate       DateTime       @map("start_date")
+  endDate         DateTime?      @map("end_date")
+  downtimeMinutes Int            @default(0) @map("downtime_minutes")
+  technicianName  String?        @map("technician_name")
+  cost            Decimal        @default(0) @db.Decimal(15, 2)
+  notes           String?        @db.Text
+  status          String         @default("SCHEDULED") // SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED
+  createdById     String         @map("created_by_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet    Outlet         @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  machine   LaundryMachine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("MachineMaintenanceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, outletId, machineId, startDate])
+  @@index([tenantId, status])
+  @@map("laundry_machine_maintenance_logs")
 }

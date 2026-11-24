@@ -18,6 +18,16 @@ import type {
   AiSummaryResult,
   AiForecastResult,
   AiQueryResult,
+  OperationalExpenseItem,
+  OperationalExpensesResult,
+  CreateOperationalExpensePayload,
+  UpdateOperationalExpensePayload,
+  OutletBusinessTargetItem,
+  UpsertOutletTargetPayload,
+  LaundryMachineMaintenanceLogItem,
+  MachineMaintenanceResult,
+  CreateMachineMaintenancePayload,
+  UpdateMachineMaintenancePayload,
 } from '../types/laundryAnalytics';
 
 const BASE_PATH = `${API_BASE_URL}/api/laundry/analytics`;
@@ -324,5 +334,133 @@ export async function postLaundryAiQuery(
     method: 'POST',
     body: JSON.stringify({ question }),
     signal: signal || params?.signal,
+  });
+}
+
+// =========================================================================
+// WAVE 2: CRUD API FUNCTIONS (OPERATIONAL EXPENSES, TARGETS, MAINTENANCE)
+// =========================================================================
+
+// 14. Operational Expenses CRUD
+export async function fetchOperationalExpenses(
+  params?: {
+    outletId?: string;
+    category?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  },
+  signal?: AbortSignal
+): Promise<OperationalExpensesResult> {
+  const qs = buildQueryString(params);
+  return request<OperationalExpensesResult>(`${BASE_PATH}/operational-expenses${qs}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export async function createOperationalExpense(
+  payload: CreateOperationalExpensePayload
+): Promise<OperationalExpenseItem> {
+  return request<OperationalExpenseItem>(`${BASE_PATH}/operational-expenses`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateOperationalExpense(
+  id: string,
+  payload: UpdateOperationalExpensePayload
+): Promise<OperationalExpenseItem> {
+  return request<OperationalExpenseItem>(`${BASE_PATH}/operational-expenses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteOperationalExpense(
+  id: string
+): Promise<{ status: string; message: string }> {
+  return request<{ status: string; message: string }>(`${BASE_PATH}/operational-expenses/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// 15. Outlet Business Targets CRUD
+export async function fetchOutletTargets(
+  params?: {
+    outletId?: string;
+    periodYear?: number;
+    periodMonth?: number;
+  },
+  signal?: AbortSignal
+): Promise<OutletBusinessTargetItem[]> {
+  const qs = buildQueryString(params);
+  return request<OutletBusinessTargetItem[]>(`${BASE_PATH}/targets${qs}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export async function upsertOutletTarget(
+  payload: UpsertOutletTargetPayload
+): Promise<OutletBusinessTargetItem> {
+  return request<OutletBusinessTargetItem>(`${BASE_PATH}/targets`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteOutletTarget(
+  id: string
+): Promise<{ status: string; message: string }> {
+  return request<{ status: string; message: string }>(`${BASE_PATH}/targets/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// 16. Machine Maintenance Logs CRUD
+export async function fetchMachineMaintenanceLogs(
+  params?: {
+    outletId?: string;
+    machineId?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  },
+  signal?: AbortSignal
+): Promise<MachineMaintenanceResult> {
+  const qs = buildQueryString(params);
+  return request<MachineMaintenanceResult>(`${BASE_PATH}/machine-maintenance${qs}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export async function createMachineMaintenanceLog(
+  payload: CreateMachineMaintenancePayload
+): Promise<LaundryMachineMaintenanceLogItem> {
+  return request<LaundryMachineMaintenanceLogItem>(`${BASE_PATH}/machine-maintenance`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateMachineMaintenanceLog(
+  id: string,
+  payload: UpdateMachineMaintenancePayload
+): Promise<LaundryMachineMaintenanceLogItem> {
+  return request<LaundryMachineMaintenanceLogItem>(`${BASE_PATH}/machine-maintenance/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteMachineMaintenanceLog(
+  id: string
+): Promise<{ status: string; message: string }> {
+  return request<{ status: string; message: string }>(`${BASE_PATH}/machine-maintenance/${id}`, {
+    method: 'DELETE',
   });
 }
