@@ -5777,23 +5777,33 @@ export const getLaundryDashboardSummary = async (req: Request, res: Response) =>
     const bucketMap = new Map<string, { key: string; label: string; kiloanOmzet: number; satuanOmzet: number; totalOmzet: number; orderCount: number }>();
 
     if (granularity === 'MONTH') {
-      // Loop tiap bulan dari startDateTime hingga endDateTime
-      const cur = new Date(startDateTime);
-      while (cur <= endDateTime) {
-        const y = cur.getUTCFullYear();
-        const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
-        const bKey = `${y}-${m}`;
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-        const bLabel = monthNames[cur.getUTCMonth()];
+      const [startYear, startMonth] = startDateStr.split('-').map(Number);
+      const [endYear, endMonth] = endDateStr.split('-').map(Number);
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+      let y = startYear;
+      let m = startMonth;
+      while (y < endYear || (y === endYear && m <= endMonth)) {
+        const mStr = String(m).padStart(2, '0');
+        const bKey = `${y}-${mStr}`;
+        const bLabel = monthNames[m - 1] || mStr;
         if (!bucketMap.has(bKey)) {
           bucketMap.set(bKey, { key: bKey, label: bLabel, kiloanOmzet: 0, satuanOmzet: 0, totalOmzet: 0, orderCount: 0 });
         }
-        cur.setUTCMonth(cur.getUTCMonth() + 1);
+        m++;
+        if (m > 12) {
+          m = 1;
+          y++;
+        }
       }
     } else {
-      // Loop tiap hari dari startDateStr hingga endDateStr
-      const cur = new Date(startDateTime);
-      while (cur <= endDateTime) {
+      // Loop tiap hari dari startDateStr hingga endDateStr secara UTC calendar murni
+      const [sy, sm, sd] = startDateStr.split('-').map(Number);
+      const [ey, em, ed] = endDateStr.split('-').map(Number);
+      const cur = new Date(Date.UTC(sy, sm - 1, sd));
+      const end = new Date(Date.UTC(ey, em - 1, ed));
+
+      while (cur <= end) {
         const y = cur.getUTCFullYear();
         const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
         const d = String(cur.getUTCDate()).padStart(2, '0');

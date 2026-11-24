@@ -1,5 +1,9 @@
 const { chromium } = require('../pos_apps/node_modules/playwright');
 const path = require('path');
+const fs = require('fs');
+
+const ARTIFACT_DIR = '/tmp/wellpos_qa_regression';
+fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 async function run() {
   console.log('========================================================================');
@@ -20,7 +24,7 @@ async function run() {
 
   await page.locator('button:has-text("Portal Pemilik")').first().click();
   await page.locator('input[type="email"]').first().fill('owner.laundry@wellpos.id');
-  await page.locator('input[type="password"]').first().fill('pastiwell789');
+  await page.locator('input[type="password"]').first().fill('password123');
   await page.locator('button:has-text("Masuk ke Portal Pemilik")').first().click();
   await page.waitForTimeout(3000);
 
@@ -42,9 +46,9 @@ async function run() {
     throw new Error('Verifikasi Inventori Laundry GAGAL: Masih ada tab/tombol produk retail!');
   }
 
-  const ssLaundryInv = path.resolve(process.env.HOME, '.gemini/antigravity/brain/f71f8083-0c2f-48e9-b583-29b630ca4a01/screenshot_laundry_clean_inventory.png');
+  const ssLaundryInv = path.join(ARTIFACT_DIR, 'screenshot_laundry_clean_inventory.png');
   await page.screenshot({ path: ssLaundryInv, fullPage: false });
-  console.log('   📸 Screenshot tersimpan di screenshot_laundry_clean_inventory.png');
+  console.log('   📸 Screenshot tersimpan di ' + ssLaundryInv);
   console.log('   ✅ [PASS 1] Inventori Mode Laundry Bersih 100% dari Residu Retail/F&B\n');
 
   // -------------------------------------------------------------------------
@@ -72,9 +76,9 @@ async function run() {
     throw new Error('Verifikasi Tag Produksi Laundry GAGAL: Masih ada residu F&B!');
   }
 
-  const ssLaundryReceipt = path.resolve(process.env.HOME, '.gemini/antigravity/brain/f71f8083-0c2f-48e9-b583-29b630ca4a01/screenshot_laundry_clean_receipt_tag.png');
+  const ssLaundryReceipt = path.join(ARTIFACT_DIR, 'screenshot_laundry_clean_receipt_tag.png');
   await page.screenshot({ path: ssLaundryReceipt, fullPage: false });
-  console.log('   📸 Screenshot tersimpan di screenshot_laundry_clean_receipt_tag.png');
+  console.log('   📸 Screenshot tersimpan di ' + ssLaundryReceipt);
   console.log('   ✅ [PASS 2] Tag Produksi Laundry Bersih 100% dari Residu F&B\n');
 
   // -------------------------------------------------------------------------
@@ -131,9 +135,9 @@ async function run() {
     throw new Error('Anti-Regresi F&B GAGAL: Ada fitur F&B yang terpengaruh!');
   }
 
-  const ssFnbInv = path.resolve(process.env.HOME, '.gemini/antigravity/brain/f71f8083-0c2f-48e9-b583-29b630ca4a01/screenshot_fnb_intact_inventory.png');
+  const ssFnbInv = path.join(ARTIFACT_DIR, 'screenshot_fnb_intact_inventory.png');
   await page.screenshot({ path: ssFnbInv, fullPage: false });
-  console.log('   📸 Screenshot tersimpan di screenshot_fnb_intact_inventory.png');
+  console.log('   📸 Screenshot tersimpan di ' + ssFnbInv);
   console.log('   ✅ [PASS 3] Mode F&B / Retail 100% Normal & Berfungsi Utuh (Zero Regression)\n');
 
   await browser.close();
