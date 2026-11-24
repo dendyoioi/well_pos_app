@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus,
-  Truck,
-  Lock,
   Waves,
   AlertTriangle,
   ArrowRight,
@@ -10,15 +8,17 @@ import {
   Loader2,
   Calendar,
   Shirt,
-  Archive,
-  CheckCircle2,
-  Clock,
+  ShieldAlert,
+  Wallet,
+  Users,
+  ChevronDown,
+  Camera,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Outlet } from '../../types/outlet';
 import type { User } from '../../types/auth';
 import { formatRupiah } from '../../utils/currency';
-import { toLocalDateStr, getLocalStartOfDay, getLocalEndOfDay } from '../../utils/date';
+import { toLocalDateStr } from '../../utils/date';
 
 interface LaundryBusinessSummaryViewProps {
   activeOutlet: Outlet | null;
@@ -27,53 +27,16 @@ interface LaundryBusinessSummaryViewProps {
   onNavigateTab?: (tab: string) => void;
 }
 
-type DatePreset = 'today' | 'yesterday' | '7days' | 'thismonth' | 'lastmonth' | 'custom';
-const PRESET_LABELS: Record<DatePreset, string> = {
-  today: 'Hari ini',
-  yesterday: 'Kemarin',
-  '7days': '7 hari',
-  thismonth: 'Bulan ini',
-  lastmonth: 'Bulan lalu',
-  custom: 'Kustom',
-};
+type PeriodPreset = 'today' | '7days' | 'month' | 'year' | 'custom';
 
-function getPresetRange(preset: DatePreset): { start: Date; end: Date } {
-  const now = new Date();
-  switch (preset) {
-    case 'today':
-      return { start: getLocalStartOfDay(now), end: getLocalEndOfDay(now) };
-    case 'yesterday': {
-      const y = new Date(now.getTime() - 86400_000);
-      return { start: getLocalStartOfDay(y), end: getLocalEndOfDay(y) };
-    }
-    case '7days':
-      return { start: getLocalStartOfDay(new Date(now.getTime() - 6 * 86400_000)), end: getLocalEndOfDay(now) };
-    case 'thismonth':
-      return {
-        start: getLocalStartOfDay(new Date(now.getFullYear(), now.getMonth(), 1)),
-        end: getLocalEndOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)),
-      };
-    case 'lastmonth':
-      return {
-        start: getLocalStartOfDay(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
-        end: getLocalEndOfDay(new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)),
-      };
-    default:
-      return { start: getLocalStartOfDay(now), end: getLocalEndOfDay(now) };
-  }
-}
-
-function getGreetingWib(): string {
-  const hour = new Date().getHours();
-  if (hour >= 4 && hour < 11) return 'Selamat pagi';
-  if (hour >= 11 && hour < 15) return 'Selamat siang';
-  if (hour >= 15 && hour < 18) return 'Selamat sore';
-  return 'Selamat malam';
-}
-
-function formatDayName(date: Date): string {
-  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-  return days[date.getDay()];
+interface HoverPoint {
+  x: number;
+  y: number;
+  label: string;
+  kiloan: number;
+  satuan: number;
+  total: number;
+  orderCount: number;
 }
 
 export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProps> = ({
@@ -82,900 +45,1287 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
   onOpenPos,
   onNavigateTab,
 }) => {
-  // Preset tanggal
-  const [preset, setPreset] = useState<DatePreset>('today');
-  const [customStart, setCustomStart] = useState(toLocalDateStr(new Date()));
-  const [customEnd, setCustomEnd] = useState(toLocalDateStr(new Date()));
-  const [showDateDrop, setShowDateDrop] = useState(false);
+  // --- State Filter Periode ---
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('month');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
-  // Data state
-  const [laundryOrders, setLaundryOrders] = useState<any[]>([]);
-  const [racks, setRacks] = useState<any[]>([]);
-  const [activeShift, setActiveShift] = useState<any | null>(null);
-  const [cashFlowData, setCashFlowData] = useState<{ totalCashOut: number }>({ totalCashOut: 0 });
-  const [loading, setLoading] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
+  const [customStart, setCustomStart] = useState<string>(toLocalDateStr(new Date(now.getTime() - 6 * 86400_000)));
+  const [customEnd, setCustomEnd] = useState<string>(toLocalDateStr(now));
 
-  const dateRange = useMemo(() => {
-    if (preset === 'custom') {
+  // --- State Data Dashboard ---
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<HoverPoint | null>(null);
+
+  // Hitung Tanggal Start & End berdasarkan Preset Terpilih
+  const dateParams = useMemo(() => {
+    if (periodPreset === 'today') {
+      const todayStr = toLocalDateStr(now);
+      return { startDate: todayStr, endDate: todayStr, granularity: 'DAY' as const, label: 'Hari Ini' };
+    }
+    if (periodPreset === '7days') {
+      const start = new Date(now.getTime() - 6 * 86400_000);
       return {
-        start: getLocalStartOfDay(new Date(customStart + 'T00:00:00')),
-        end: getLocalEndOfDay(new Date(customEnd + 'T23:59:59')),
+        startDate: toLocalDateStr(start),
+        endDate: toLocalDateStr(now),
+        granularity: 'DAY' as const,
+        label: '7 Hari Terakhir',
       };
     }
-    return getPresetRange(preset);
-  }, [preset, customStart, customEnd]);
+    if (periodPreset === 'month') {
+      const mStr = String(selectedMonth).padStart(2, '0');
+      const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+      const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      return {
+        startDate: `${selectedYear}-${mStr}-01`,
+        endDate: `${selectedYear}-${mStr}-${String(lastDay).padStart(2, '0')}`,
+        granularity: 'DAY' as const,
+        label: `${monthNames[selectedMonth - 1]} ${selectedYear}`,
+      };
+    }
+    if (periodPreset === 'year') {
+      return {
+        startDate: `${selectedYear}-01-01`,
+        endDate: `${selectedYear}-12-31`,
+        granularity: 'MONTH' as const,
+        label: `Tahun ${selectedYear}`,
+      };
+    }
+    return {
+      startDate: customStart,
+      endDate: customEnd,
+      granularity: 'DAY' as const,
+      label: `${customStart} s/d ${customEnd}`,
+    };
+  }, [periodPreset, selectedYear, selectedMonth, customStart, customEnd]);
 
-  // Load Data dari API
-  const loadData = useCallback(async () => {
+  // Load Data dari API getLaundryDashboardSummary
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
       const outletIdParam = activeOutlet && !activeOutlet.isWarehouse ? activeOutlet.id : undefined;
-      const startStr = toLocalDateStr(dateRange.start);
-      const endStr = toLocalDateStr(dateRange.end);
+      const res = await api.getLaundryDashboardSummary({
+        outletId: outletIdParam,
+        startDate: dateParams.startDate,
+        endDate: dateParams.endDate,
+        granularity: dateParams.granularity,
+      });
 
-      const [resOrders, resShift, resCashFlow, resRacks] = await Promise.all([
-        api.getLaundryOrders(outletIdParam).catch((err) => {
-          console.warn('getLaundryOrders warning:', err);
-          return { status: 'error', data: [] };
-        }),
-        api.getCurrentShift().catch((err) => {
-          console.warn('getCurrentShift warning:', err);
-          return null;
-        }),
-        api.getCashFlowReport({ startDate: startStr, endDate: endStr, outletId: outletIdParam }).catch((err) => {
-          console.warn('getCashFlowReport warning:', err);
-          return null;
-        }),
-        api.getLaundryRacks(outletIdParam).catch((err) => {
-          console.warn('getLaundryRacks warning:', err);
-          return { status: 'error', data: [] };
-        }),
-      ]);
-
-      if (resOrders?.status === 'success' && Array.isArray(resOrders.data)) {
-        setLaundryOrders(resOrders.data);
-      }
-      if (resShift?.status === 'success' && resShift.data) {
-        setActiveShift(resShift.data);
-      } else {
-        setActiveShift(null);
-      }
-      if (resCashFlow?.status === 'success' && resCashFlow.data?.summary) {
-        setCashFlowData({
-          totalCashOut: Number(resCashFlow.data.summary.totalCashOut || 0),
-        });
-      }
-      if (resRacks?.status === 'success' && Array.isArray(resRacks.data)) {
-        setRacks(resRacks.data);
+      if (res?.status === 'success' && res.data) {
+        setDashboardData(res.data);
       }
     } catch (err) {
-      console.error('Error fetching laundry dashboard data:', err);
+      console.error('Gagal memuat dashboard summary:', err);
     } finally {
       setLoading(false);
     }
-  }, [activeOutlet?.id, activeOutlet?.isWarehouse, dateRange]);
+  }, [activeOutlet?.id, activeOutlet?.isWarehouse, dateParams]);
 
   useEffect(() => {
-    loadData();
-    const handleOrderCreated = () => {
-      loadData();
-    };
-    window.addEventListener('wellpos:laundry_order_created', handleOrderCreated);
-    return () => {
-      window.removeEventListener('wellpos:laundry_order_created', handleOrderCreated);
-    };
-  }, [loadData]);
+    loadDashboard();
+    const handleOrderEvent = () => loadDashboard();
+    window.addEventListener('wellpos:laundry_order_created', handleOrderEvent);
+    return () => window.removeEventListener('wellpos:laundry_order_created', handleOrderEvent);
+  }, [loadDashboard]);
 
-  // Filter pesanan dalam rentang tanggal terpilih
-  const filteredOrders = useMemo(() => {
-    return laundryOrders.filter((o) => {
-      const at = new Date(o.createdAt);
-      return at >= dateRange.start && at <= dateRange.end;
-    });
-  }, [laundryOrders, dateRange]);
+  // Role Mode: Dari respon backend atau fallback dari context user
+  const effectiveRole = useMemo((): 'OWNER' | 'CASHIER' | 'PRODUCTION' => {
+    if (dashboardData?.roleMode) return dashboardData.roleMode;
+    const r = (currentUser?.role || '').toUpperCase();
+    if (r === 'CASHIER') return 'CASHIER';
+    if (['WAREHOUSE', 'KITCHEN', 'WAITER'].includes(r)) return 'PRODUCTION';
+    return 'OWNER';
+  }, [dashboardData?.roleMode, currentUser?.role]);
 
-  // Perhitungan Omzet & Metrik Finansial
-  const summaryMetrics = useMemo(() => {
-    let omzetTotal = 0;
-    let kasMasukTotal = 0;
-    let belumDibayarTotal = 0;
-    let totalKg = 0;
-    let totalPcs = 0;
+  // Render Skeleton saat loading awal
+  if (loading && !dashboardData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[420px] p-8 text-slate-500 space-y-3">
+        <Loader2 className="w-9 h-9 animate-spin text-blue-900" />
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Memuat Dashboard Laundry...</span>
+        <span className="text-[11px] text-slate-400">Menghubungkan metrik real-time & analisis operasional</span>
+      </div>
+    );
+  }
 
-    filteredOrders.forEach((o) => {
-      const grandTotal = Number(o.grandTotal || 0);
-      const paid = Number(o.paidAmount || 0);
-      const unpaid = Math.max(0, grandTotal - paid);
+  // =========================================================================
+  // SUB-KOMPONEN: GRAFIK GARIS DUAL SERIES SVG (KILOAN VS SATUAN)
+  // =========================================================================
+  const renderLineChart = () => {
+    const series: Array<{ key: string; label: string; kiloanOmzet: number; satuanOmzet: number; totalOmzet: number; orderCount: number }> =
+      dashboardData?.revenueSeries || [];
 
-      omzetTotal += grandTotal;
-      kasMasukTotal += paid;
-      belumDibayarTotal += unpaid;
-
-      totalKg += Number(o.totalWeightKg || 0);
-      totalPcs += Number(o.totalPieces || 0);
-    });
-
-    return {
-      omzetTotal,
-      kasMasukTotal,
-      belumDibayarTotal,
-      totalKg,
-      totalPcs,
-      orderCount: filteredOrders.length,
-      pengeluaran: cashFlowData.totalCashOut,
-    };
-  }, [filteredOrders, cashFlowData.totalCashOut]);
-
-  // Status Cucian Saat Ini (Antrian, Dicuci, Siap Diambil)
-  const pipelineStatus = useMemo(() => {
-    let antrian = 0;
-    let dicuci = 0;
-    let siapDiambil = 0;
-    let jadwalAntarJemput = 0;
-    let overdueCount = 0;
-    const nowTime = Date.now();
-    const attentionOrders: any[] = [];
-    const washingOrders: any[] = [];
-    const dryingOrders: any[] = [];
-
-    laundryOrders.forEach((o) => {
-      const st = o.status;
-      const stage = (o.currentStage || '').toUpperCase();
-      const isCompleted = st === 'COMPLETED';
-
-      if (!isCompleted) {
-        if (st === 'QUEUED' || ['DROP_OFF', 'LABEL', 'TAGGING', 'SORTIR', 'SORTING'].includes(stage)) {
-          antrian++;
-        } else if (st === 'PROCESSING' || ['CUCI', 'WASHING', 'KERING', 'DRYING', 'SETRIKA', 'IRONING', 'LIPAT', 'FOLDING', 'PACKING'].includes(stage)) {
-          dicuci++;
-          if (['CUCI', 'WASHING'].includes(stage)) {
-            washingOrders.push(o);
-          } else if (['KERING', 'DRYING'].includes(stage)) {
-            dryingOrders.push(o);
-          }
-        } else if (st === 'READY' || stage === 'RACK_STORAGE' || stage === 'PENGEMASAN') {
-          siapDiambil++;
-        }
-      }
-
-      // Deteksi layanan antar jemput
-      const notes = (o.customerNotes || '').toLowerCase();
-      const sName = (o.serviceName || '').toLowerCase();
-      if (notes.includes('antar') || notes.includes('jemput') || sName.includes('delivery') || sName.includes('pickup')) {
-        jadwalAntarJemput++;
-      }
-
-      // Deteksi terlambat (Overdue SLA)
-      if (o.estimatedReadyAt && !isCompleted) {
-        const estTime = new Date(o.estimatedReadyAt).getTime();
-        const isOverdue = nowTime > estTime;
-        if (isOverdue) {
-          overdueCount++;
-          attentionOrders.push({
-            ...o,
-            isOverdue: true,
-            estReady: new Date(o.estimatedReadyAt),
-          });
-        }
-      } else if (st === 'READY' && !isCompleted) {
-        // Siap diambil tapi belum diambil > 2 hari
-        const readyTime = new Date(o.completedAt || o.createdAt).getTime();
-        const days = Math.floor((nowTime - readyTime) / 86400_000);
-        if (days >= 2) {
-          attentionOrders.push({
-            ...o,
-            isOverdue: false,
-            daysInRack: days,
-          });
-        }
-      }
-    });
-
-    return {
-      antrian,
-      dicuci,
-      siapDiambil,
-      jadwalAntarJemput,
-      overdueCount,
-      attentionOrders,
-      washingOrders,
-      dryingOrders,
-    };
-  }, [laundryOrders]);
-
-  // Kas Masuk 7 Hari Terakhir untuk Mini Bar Chart
-  const last7DaysChart = useMemo(() => {
-    const days: { date: Date; label: string; amount: number; isToday: boolean }[] = [];
-    const now = new Date();
-    let total7Days = 0;
-
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const start = getLocalStartOfDay(d).getTime();
-      const end = getLocalEndOfDay(d).getTime();
-      const isToday = i === 0;
-
-      let dayTotal = 0;
-      laundryOrders.forEach((o) => {
-        const orderTime = new Date(o.createdAt).getTime();
-        if (orderTime >= start && orderTime <= end) {
-          dayTotal += Number(o.paidAmount || 0);
-        }
-      });
-
-      total7Days += dayTotal;
-      days.push({
-        date: d,
-        label: isToday ? 'Hari ini' : formatDayName(d),
-        amount: dayTotal,
-        isToday,
-      });
+    if (series.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 text-slate-400 text-xs">
+          <Calendar className="w-8 h-8 mb-2 text-slate-300" />
+          <span>Belum ada data transaksi pada periode ini</span>
+        </div>
+      );
     }
 
-    const maxAmount = Math.max(...days.map((d) => d.amount), 1);
+    const W = 700;
+    const H = 220;
+    const padL = 54;
+    const padR = 24;
+    const padT = 24;
+    const padB = 38;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
 
-    return {
-      days,
-      total7Days,
-      maxAmount,
-    };
-  }, [laundryOrders]);
+    const maxVal = Math.max(...series.flatMap((p) => [p.kiloanOmzet, p.satuanOmzet]), 1000) * 1.15;
+    const stepX = series.length > 1 ? plotW / (series.length - 1) : plotW;
 
-  const todayFormatted = useMemo(() => {
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(new Date());
-  }, []);
+    const ptK = series.map((p, i) => ({
+      x: padL + i * stepX,
+      y: padT + plotH - (p.kiloanOmzet / maxVal) * plotH,
+      val: p.kiloanOmzet,
+      raw: p,
+    }));
 
-  // Kapasitas Slot Rak
-  const rackOccupancy = useMemo(() => {
-    const readyOrdersWithRack = laundryOrders.filter(
-      (o) => o.status === 'READY' && o.rackCode
-    );
-    const totalSlots = racks.length > 0
-      ? racks.reduce((acc, r) => acc + (Number(r.capacity) || 4), 0)
-      : 24;
-    const occupiedCount = readyOrdersWithRack.length;
+    const ptS = series.map((p, i) => ({
+      x: padL + i * stepX,
+      y: padT + plotH - (p.satuanOmzet / maxVal) * plotH,
+      val: p.satuanOmzet,
+      raw: p,
+    }));
 
-    // Display sample 8 slots
-    const sampleSlots = [
-      { code: 'A-01', order: readyOrdersWithRack[0]?.invoiceNumber?.slice(-4) || 'LD-38', occupied: true },
-      { code: 'A-02', order: readyOrdersWithRack[1]?.invoiceNumber?.slice(-4) || 'LD-40', occupied: true },
-      { code: 'A-03', order: null, occupied: false },
-      { code: 'A-04', order: null, occupied: false },
-      { code: 'B-01', order: readyOrdersWithRack[2]?.invoiceNumber?.slice(-4) || 'LD-42', occupied: true },
-      { code: 'B-02', order: readyOrdersWithRack[3]?.invoiceNumber?.slice(-4) || 'LD-44', occupied: true },
-      { code: 'B-03', order: readyOrdersWithRack[4]?.invoiceNumber?.slice(-4) || 'LD-45', occupied: true },
-      { code: 'B-04', order: null, occupied: false },
-    ];
+    const linePath = (pts: typeof ptK) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const areaPath = (pts: typeof ptK) =>
+      `${linePath(pts)} L ${pts[pts.length - 1].x.toFixed(1)} ${(padT + plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`;
 
-    return {
-      totalSlots,
-      occupiedCount: occupiedCount > 0 ? occupiedCount : 12,
-      sampleSlots,
-    };
-  }, [laundryOrders, racks]);
+    // 4 Garis Grid Horizontal
+    const gridFractions = [0, 0.33, 0.66, 1];
+    const gridLines = gridFractions.map((f) => {
+      const y = padT + plotH - f * plotH;
+      const v = Math.round(maxVal * f);
+      const vStr = v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1000 ? `${Math.round(v / 1000)}rb` : String(v);
+      return { y, label: vStr };
+    });
 
-  return (
-    <div className="space-y-5 pb-24 sm:pb-16 font-sans max-w-6xl mx-auto">
-      {/* ── 1. TOP HEADER & OPERATIONAL GREETING RIBBON ────────────────── */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 flex items-center justify-center shrink-0 shadow-2xs">
-            <Shirt className="w-6 h-6 stroke-[2.2]" />
+    // Sampel Label X-Axis agar tidak menumpuk di Mobile / Periode Panjang
+    const sampleRate = series.length > 18 ? Math.ceil(series.length / 8) : series.length > 10 ? 2 : 1;
+
+    return (
+      <div className="relative w-full">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto overflow-visible select-none">
+          <defs>
+            <linearGradient id="gradKiloan" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1e3a8a" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0.01" />
+            </linearGradient>
+            <linearGradient id="gradSatuan" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#059669" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#059669" stopOpacity="0.01" />
+            </linearGradient>
+          </defs>
+
+          {/* Grid Lines & Y-Labels */}
+          {gridLines.map((gl, idx) => (
+            <g key={idx}>
+              <line
+                x1={padL}
+                y1={gl.y.toFixed(1)}
+                x2={(W - padR).toFixed(1)}
+                y2={gl.y.toFixed(1)}
+                stroke="#e2e8f0"
+                strokeDasharray="3 4"
+                strokeWidth="1"
+              />
+              <text
+                x={padL - 8}
+                y={(gl.y + 3.5).toFixed(1)}
+                textAnchor="end"
+                fontSize="10"
+                fontWeight="700"
+                fill="#64748b"
+              >
+                {gl.label}
+              </text>
+            </g>
+          ))}
+
+          {/* Area Fills */}
+          <path d={areaPath(ptK)} fill="url(#gradKiloan)" />
+          <path d={areaPath(ptS)} fill="url(#gradSatuan)" />
+
+          {/* Lines */}
+          <path
+            d={linePath(ptK)}
+            fill="none"
+            stroke="#1e3a8a"
+            strokeWidth="2.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d={linePath(ptS)}
+            fill="none"
+            stroke="#059669"
+            strokeWidth="2.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Titik Kiloan (Navy) */}
+          {ptK.map((p, i) => (
+            <circle
+              key={`k-${i}`}
+              cx={p.x.toFixed(1)}
+              cy={p.y.toFixed(1)}
+              r="4"
+              fill="#1e3a8a"
+              stroke="#ffffff"
+              strokeWidth="2"
+              className="cursor-pointer transition-all hover:r-6"
+              onMouseEnter={() =>
+                setHoveredPoint({
+                  x: p.x,
+                  y: Math.min(p.y, ptS[i].y),
+                  label: p.raw.label,
+                  kiloan: p.raw.kiloanOmzet,
+                  satuan: p.raw.satuanOmzet,
+                  total: p.raw.totalOmzet,
+                  orderCount: p.raw.orderCount,
+                })
+              }
+              onMouseLeave={() => setHoveredPoint(null)}
+            />
+          ))}
+
+          {/* Titik Satuan (Emerald) */}
+          {ptS.map((p, i) => (
+            <circle
+              key={`s-${i}`}
+              cx={p.x.toFixed(1)}
+              cy={p.y.toFixed(1)}
+              r="4"
+              fill="#059669"
+              stroke="#ffffff"
+              strokeWidth="2"
+              className="cursor-pointer transition-all hover:r-6"
+              onMouseEnter={() =>
+                setHoveredPoint({
+                  x: p.x,
+                  y: Math.min(ptK[i].y, p.y),
+                  label: p.raw.label,
+                  kiloan: p.raw.kiloanOmzet,
+                  satuan: p.raw.satuanOmzet,
+                  total: p.raw.totalOmzet,
+                  orderCount: p.raw.orderCount,
+                })
+              }
+              onMouseLeave={() => setHoveredPoint(null)}
+            />
+          ))}
+
+          {/* X-Axis Labels */}
+          {series.map((p, i) => {
+            if (i % sampleRate !== 0 && i !== series.length - 1) return null;
+            const x = padL + i * stepX;
+            return (
+              <text
+                key={`x-${i}`}
+                x={x.toFixed(1)}
+                y={(H - 12).toFixed(1)}
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="700"
+                fill="#64748b"
+              >
+                {p.label}
+              </text>
+            );
+          })}
+        </svg>
+
+        {/* Hover Tooltip Popup */}
+        {hoveredPoint && (
+          <div
+            className="absolute z-20 pointer-events-none bg-slate-900/95 backdrop-blur-xs text-white text-xs rounded-xl p-3 shadow-xl border border-slate-700/60 transform -translate-x-1/2 -translate-y-full mb-3 min-w-[190px]"
+            style={{
+              left: `${(hoveredPoint.x / W) * 100}%`,
+              top: `${(hoveredPoint.y / H) * 100}%`,
+            }}
+          >
+            <div className="font-extrabold text-[11px] text-slate-300 pb-1.5 border-b border-slate-800 flex justify-between items-center">
+              <span>{hoveredPoint.label}</span>
+              <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">
+                {hoveredPoint.orderCount} Nota
+              </span>
+            </div>
+            <div className="space-y-1.5 pt-2 text-[11px]">
+              <div className="flex justify-between items-center text-blue-300">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Kiloan (Kg):
+                </span>
+                <span className="font-bold font-mono">{formatRupiah(hoveredPoint.kiloan)}</span>
+              </div>
+              <div className="flex justify-between items-center text-emerald-300">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Satuan (Pcs):
+                </span>
+                <span className="font-bold font-mono">{formatRupiah(hoveredPoint.satuan)}</span>
+              </div>
+              <div className="flex justify-between items-center text-white pt-1 border-t border-slate-800 font-extrabold">
+                <span>Total Omzet:</span>
+                <span className="font-mono text-amber-300">{formatRupiah(hoveredPoint.total)}</span>
+              </div>
+            </div>
           </div>
+        )}
+      </div>
+    );
+  };
+
+  // =========================================================================
+  // VIEW A: DASHBOARD OWNER (MODE LENGKAP)
+  // =========================================================================
+  const renderOwnerDashboard = () => {
+    const hl = dashboardData?.highlights || {
+      totalOmzet: 0,
+      prevOmzet: 0,
+      omzetGrowthPercent: 0,
+      totalOmzetKiloan: 0,
+      totalOmzetSatuan: 0,
+      cashIn: 0,
+      outstandingReceivables: 0,
+      estimatedBomCost: 0,
+      shiftCashOut: 0,
+      estimatedCommissions: 0,
+      estimatedOperatingProfit: 0,
+      operatingMarginPercent: 0,
+      totalTransactions: 0,
+      totalWeightKg: 0,
+      totalPieces: 0,
+      avgOrderValue: 0,
+      activeCustomers: { total: 0, newCustomers: 0, repeatCustomers: 0 },
+    };
+
+    const ops = dashboardData?.operations || {};
+    const pipeline = ops.pipelineCounts || {
+      sorting: 0,
+      washingDrying: 0,
+      ironingFolding: 0,
+      readyForPickup: 0,
+      overdueCount: 0,
+      dueTodayCount: 0,
+    };
+
+    const deposits = ops.pendingDeposits || { count: 0, totalAmount: 0, items: [] };
+    const shift = ops.activeShift;
+    const stale = ops.staleRack || { over3DaysCount: 0, over7DaysCount: 0 };
+    const machines = ops.activeMachines || [];
+    const lowStock = ops.lowStockSupplies || [];
+
+    return (
+      <div className="space-y-4">
+        {/* HEADER DENGAN FILTER PERIODE */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-slate-500">
-                {getGreetingWib()},
-              </span>
-              <span className="text-sm font-black text-slate-900">
-                {currentUser?.name ? currentUser.name.split(' ')[0] : 'Pemilik Laundry'} 👋
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-extrabold border border-blue-200">
-                {activeOutlet?.name || 'Toko Laundry'}
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                Ringkasan Bisnis & Operasional
+              </h1>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-black uppercase tracking-wider bg-blue-100 text-blue-900">
+                👑 Mode Pemilik (Lengkap)
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">
-              {todayFormatted} • Operasional Workshop &amp; Rak Simpan
+            <p className="text-xs text-slate-500 mt-1">
+              Periode aktif: <strong className="text-slate-700">{dateParams.label}</strong> • Data agregasi real-time kasir & workshop
             </p>
           </div>
-        </div>
 
-        {/* Shift Status Pill & Filter Pills */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {activeShift ? (
-            <div
-              onClick={() => onNavigateTab?.('shifts')}
-              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-900 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Shift Aktif: {activeShift.cashier?.name || 'Kasir'}</span>
+          {/* Period Filter Bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 overflow-x-auto max-w-full">
+              {(['today', '7days', 'month', 'year', 'custom'] as PeriodPreset[]).map((p) => {
+                const label = p === 'today' ? 'Hari Ini' : p === '7days' ? '7 Hari' : p === 'month' ? 'Bulan Ini' : p === 'year' ? 'Tahun Ini' : 'Kustom';
+                const isActive = periodPreset === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPeriodPreset(p)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                      isActive ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <div
-              onClick={() => onNavigateTab?.('shifts')}
-              className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
-            >
-              <Lock className="w-3.5 h-3.5 text-amber-600" />
-              <span>Kasir Belum Buka</span>
-            </div>
-          )}
 
-          {/* Time Filter Pills */}
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200/80 overflow-x-auto no-scrollbar">
-            {(['today', 'yesterday', '7days', 'thismonth', 'custom'] as DatePreset[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => {
-                  setPreset(p);
-                  if (p === 'custom') setShowDateDrop(true);
-                }}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  preset === p
-                    ? 'bg-white text-blue-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {PRESET_LABELS[p]}
-              </button>
-            ))}
-          </div>
-
-          {loading && (
-            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
-              <Loader2 size={13} className="animate-spin text-blue-900" />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Custom Date Dropdown */}
-      {showDateDrop && preset === 'custom' && (
-        <div className="bg-white text-slate-800 p-4 rounded-3xl shadow-xl border border-slate-200 text-xs space-y-3">
-          <div className="flex items-center gap-2">
-            <Calendar size={14} className="text-blue-900" />
-            <span className="font-extrabold text-xs text-slate-800">Pilih Rentang Tanggal Analisis</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="text-[10px] text-slate-500 font-bold block mb-1">Mulai:</span>
-              <input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="w-full text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 font-medium"
-              />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 font-bold block mb-1">Sampai:</span>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-full text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 font-medium"
-              />
-            </div>
-          </div>
-          <button
-            onClick={() => setShowDateDrop(false)}
-            className="w-full py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-xs transition-colors cursor-pointer"
-          >
-            Terapkan Filter Tanggal
-          </button>
-        </div>
-      )}
-
-      {/* ── 2. PRIMARY BENTO ROW: HERO TONASE & RADAR MESIN WORKSHOP ──────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* 2.1 BENTO HERO CARD: TONASE & FINANCIAL (2 Cols on Tablet & Laptop) */}
-        <div className="md:col-span-2 lg:col-span-2 bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-5 sm:p-6 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute left-1/2 -top-12 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          {/* Top: Big Tonase & Label */}
-          <div className="flex items-start justify-between gap-3 relative z-10">
-            <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Tonase Masuk ({PRESET_LABELS[preset]})
-              </span>
-              <div className="text-3xl sm:text-4xl font-black text-white mt-1 tracking-tight flex items-baseline gap-2">
-                <span>{summaryMetrics.totalKg.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
-                <span className="text-base sm:text-lg font-bold text-blue-300">Kilogram (Kg)</span>
+            {/* Input Rentang Tanggal Kustom */}
+            {periodPreset === 'custom' && (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 shadow-xs focus:outline-hidden focus:border-blue-900"
+                />
+                <span className="text-slate-400 text-xs font-bold">-</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 shadow-xs focus:outline-hidden focus:border-blue-900"
+                />
               </div>
-              {summaryMetrics.totalPcs > 0 && (
-                <p className="text-xs text-blue-200/80 font-medium mt-0.5">
-                  Termasuk +{summaryMetrics.totalPcs} Pcs Satuan
-                </p>
+            )}
+
+            {/* Dropdown Bulan (Aktif jika preset month) */}
+            {periodPreset === 'month' && (
+              <div className="relative">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="appearance-none bg-white border border-slate-200 rounded-xl px-3 pr-8 py-1.5 text-xs font-bold text-slate-700 cursor-pointer shadow-xs focus:outline-hidden focus:border-blue-900"
+                >
+                  {['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'].map((m, idx) => (
+                    <option key={idx} value={idx + 1}>{m}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+              </div>
+            )}
+
+            {/* Dropdown Tahun */}
+            <div className="relative">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="appearance-none bg-white border border-slate-200 rounded-xl px-3 pr-8 py-1.5 text-xs font-bold text-slate-700 cursor-pointer shadow-xs focus:outline-hidden focus:border-blue-900"
+              >
+                {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+        </div>
+
+        {/* 4 TOP HIGHLIGHT KPI CARDS */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* Card 1: Total Omzet (Hero Navy) */}
+          <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-3xl p-4 sm:p-5 text-white shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-200">Total Omzet</span>
+              {hl.omzetGrowthPercent !== 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300">
+                  {hl.omzetGrowthPercent > 0 ? `+${hl.omzetGrowthPercent}%` : `${hl.omzetGrowthPercent}%`}
+                </span>
               )}
             </div>
+            <div className="text-xl sm:text-2xl font-black font-mono tracking-tight my-2">
+              {formatRupiah(hl.totalOmzet)}
+            </div>
+            <div className="text-[11px] text-slate-300 leading-relaxed border-t border-blue-800/60 pt-2 space-y-0.5">
+              <div>Kas Masuk: <strong>{formatRupiah(hl.cashIn)}</strong></div>
+              <div>Piutang Aktif: <span className="text-amber-300 font-bold">{formatRupiah(hl.outstandingReceivables)}</span></div>
+            </div>
+          </div>
 
-            <div className="flex flex-col items-end shrink-0">
-              <span className="px-3.5 py-1.5 rounded-full bg-white/10 text-xs font-black border border-white/15 text-blue-100 shadow-2xs">
-                {summaryMetrics.orderCount} Nota Masuk
+          {/* Card 2: Estimasi Laba Operasional */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Estimasi Laba Ops</span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                {hl.operatingMarginPercent}% margin
               </span>
             </div>
+            <div className={`text-xl sm:text-2xl font-black font-mono tracking-tight my-2 ${hl.estimatedOperatingProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+              {formatRupiah(hl.estimatedOperatingProfit)}
+            </div>
+            <div className="text-[11px] text-slate-500 leading-relaxed border-t border-slate-100 pt-2 line-clamp-2">
+              BoM {formatRupiah(hl.estimatedBomCost)} • Kas Out {formatRupiah(hl.shiftCashOut)} • Komisi {formatRupiah(hl.estimatedCommissions)}
+            </div>
           </div>
 
-          {/* Micro Metrics: 2x2 on Mobile & Tablet, 4x1 on Laptop Desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-white/10 text-xs relative z-10">
-            <div className="bg-white/5 p-3 rounded-2xl border border-white/5 backdrop-blur-xs">
-              <div className="text-blue-300 text-[10px] font-bold uppercase tracking-wider">Omset Kasir</div>
-              <div className="font-black text-sm sm:text-base text-white mt-0.5 truncate font-mono">
-                {formatRupiah(summaryMetrics.omzetTotal)}
-              </div>
+          {/* Card 3: Total Transaksi & Tonase */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Total Transaksi</span>
+              <Shirt className="w-4 h-4 text-blue-900" />
             </div>
-
-            <div className="bg-white/5 p-3 rounded-2xl border border-white/5 backdrop-blur-xs">
-              <div className="text-blue-300 text-[10px] font-bold uppercase tracking-wider">Selesai di Rak</div>
-              <div className="font-black text-sm sm:text-base text-emerald-300 mt-0.5 truncate">
-                {pipelineStatus.siapDiambil} Nota ({summaryMetrics.orderCount > 0 ? Math.round((pipelineStatus.siapDiambil / summaryMetrics.orderCount) * 100) : 0}%)
-              </div>
+            <div className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 my-2">
+              {hl.totalTransactions} Nota
             </div>
-
-            <div className="bg-white/5 p-3 rounded-2xl border border-white/5 backdrop-blur-xs">
-              <div className="text-blue-300 text-[10px] font-bold uppercase tracking-wider">Piutang Pelanggan</div>
-              <div className="font-black text-sm sm:text-base text-amber-300 mt-0.5 truncate font-mono">
-                {formatRupiah(summaryMetrics.belumDibayarTotal)}
-              </div>
+            <div className="text-[11px] text-slate-500 leading-relaxed border-t border-slate-100 pt-2 space-y-0.5">
+              <div className="font-bold text-slate-700">{hl.totalWeightKg} Kg • {hl.totalPieces} Pcs Satuan</div>
+              <div>Rata-rata {formatRupiah(hl.avgOrderValue)} / nota</div>
             </div>
+          </div>
 
-            <div className="bg-white/5 p-3 rounded-2xl border border-white/5 backdrop-blur-xs">
-              <div className="text-blue-300 text-[10px] font-bold uppercase tracking-wider">Mesin Workshop</div>
-              <div className="font-black text-sm sm:text-base text-white mt-0.5 truncate">
-                {pipelineStatus.dicuci} Order Proses
+          {/* Card 4: Pelanggan Aktif */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Pelanggan Aktif</span>
+              <Users className="w-4 h-4 text-blue-900" />
+            </div>
+            <div className="text-xl sm:text-2xl font-black tracking-tight text-blue-900 my-2">
+              {hl.activeCustomers?.total || 0} Pelanggan
+            </div>
+            <div className="text-[11px] text-slate-500 leading-relaxed border-t border-slate-100 pt-2 space-y-0.5">
+              <div>{hl.activeCustomers?.newCustomers || 0} Baru • {hl.activeCustomers?.repeatCustomers || 0} Repeat</div>
+              <div className="text-emerald-700 font-bold">
+                {hl.activeCustomers?.total > 0
+                  ? `${Math.round(((hl.activeCustomers.repeatCustomers || 0) / hl.activeCustomers.total) * 100)}% Retensi Pelanggan`
+                  : '0% Retensi'}
               </div>
             </div>
           </div>
         </div>
 
-        {/* 2.2 BENTO RADAR MESIN WORKSHOP (2 Cols on Tablet, 1 Col on Laptop) */}
-        <div className="md:col-span-2 lg:col-span-1 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  Radar Workshop Mesin
-                </h3>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {/* Mesin Cuci 1 */}
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 font-black text-[10px] flex items-center justify-center shrink-0">
-                    M1
-                  </div>
-                  <div className="min-w-0">
-                    <span className="font-extrabold text-slate-900 block truncate">Mesin Cuci #1</span>
-                    <span className="text-[10px] text-slate-500 block truncate">Kapasitas 8 Kg</span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                  Ready (Kosong)
-                </span>
-              </div>
-
-              {/* Mesin Cuci 2 / Running Wash */}
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-xl bg-indigo-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
-                    M2
-                  </div>
-                  <div className="min-w-0">
-                    <span className="font-extrabold text-indigo-950 block leading-tight truncate">Mesin Cuci #2</span>
-                    <span className="text-[10px] text-indigo-700 font-semibold truncate block">
-                      {pipelineStatus.washingOrders.length > 0
-                        ? `${pipelineStatus.washingOrders[0].customerName || 'Pelanggan'} • ${pipelineStatus.washingOrders[0].totalWeightKg || 5} Kg`
-                        : 'Paket Cuci 7 Kg • Dimas'}
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-200 text-indigo-900 border border-indigo-300 animate-pulse shrink-0">
-                  ⏱️ 18 Menit
-                </span>
-              </div>
-
-              {/* Pengering / Dryer */}
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-amber-50/70 border border-amber-100 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-xl bg-amber-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
-                    D1
-                  </div>
-                  <div className="min-w-0">
-                    <span className="font-extrabold text-amber-950 block leading-tight truncate">Pengering (Dryer)</span>
-                    <span className="text-[10px] text-amber-800 font-semibold truncate block">
-                      {pipelineStatus.dryingOrders.length > 0
-                        ? `${pipelineStatus.dryingOrders[0].customerName || 'Pelanggan'} • Bedcover`
-                        : 'Bedcover • Bu Ratna'}
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
-                  ⏱️ 25 Menit
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigateTab?.('laundry_production')}
-            className="mt-3.5 w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-extrabold text-xs rounded-xl transition-colors cursor-pointer border border-slate-200/80 flex items-center justify-center gap-1.5"
-          >
-            <span>Buka Panel Mesin Workshop</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── 3. QUICK 4-TILE ACTION RIBBON ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* 1. Input Cepat */}
-        <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'));
-          }}
-          className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-900 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Input Cepat</span>
-            <span className="text-[10px] text-slate-500 font-medium truncate block">Timbang &amp; Nota</span>
-          </div>
-        </button>
-
-        {/* 2. Antrean Cucian */}
-        <button
-          onClick={() => onNavigateTab?.('laundry_queue')}
-          className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Antrean Cucian</span>
-            <span className="text-[10px] text-slate-500 font-medium truncate block">Status &amp; SLA ({pipelineStatus.antrian})</span>
-          </div>
-        </button>
-
-        {/* 3. Workshop */}
-        <button
-          onClick={() => onNavigateTab?.('laundry_production')}
-          className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-            <Waves className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Workshop</span>
-            <span className="text-[10px] text-slate-500 font-medium truncate block">Cuci, Kering &amp; Setrika ({pipelineStatus.dicuci})</span>
-          </div>
-        </button>
-
-        {/* 4. Rak Simpan */}
-        <button
-          onClick={() => onNavigateTab?.('laundry_racks')}
-          className="p-3 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-xs active:scale-98 transition-all flex items-center gap-3 text-left cursor-pointer group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-            <Archive className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs font-black text-slate-900 block leading-tight">Rak Simpan</span>
-            <span className="text-[10px] text-slate-500 font-medium truncate block">Serah Ambil ({pipelineStatus.siapDiambil})</span>
-          </div>
-        </button>
-      </div>
-
-      {/* ── 4. SECONDARY BENTO ROW: ANTREAN MENDESAK & RAK/BAHAN TILES ─────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-        {/* 4.1 ANTREAN CUCIAN MENDESAK & ATTENTION STREAM (1 Col on Tablet, 2 Cols on Laptop) */}
-        <div className="md:col-span-1 lg:col-span-2 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
+        {/* GRAFIK GARIS KILOAN VS SATUAN + SIDE PANEL KAS & PERSETUJUAN */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Grafik Garis (2 Kolom) */}
+          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col justify-between space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  Antrean Cucian Mendesak (Live Feed)
-                </h3>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Grafik Garis Omzet Kiloan vs Satuan ({dateParams.label})
+                </h2>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Prioritas express, mendekati SLA, dan siap diambil di rak
+                  Garis biru: basis per Kg (Kiloan) • Garis hijau: basis per Item/Pcs/Stel (Satuan)
                 </p>
               </div>
-              <button
-                onClick={() => onNavigateTab?.('laundry_queue')}
-                className="text-xs font-extrabold text-blue-900 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer shrink-0"
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-900 border border-blue-200">
+                  <span className="w-2 h-2 rounded-full bg-blue-900" /> Kiloan: {formatRupiah(hl.totalOmzetKiloan)}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600" /> Satuan: {formatRupiah(hl.totalOmzetSatuan)}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              {renderLineChart()}
+            </div>
+          </div>
+
+          {/* Panel Persetujuan & Kas Kasir (1 Kolom) */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col justify-between space-y-3">
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                Persetujuan & Kas Kasir
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Monitoring lantai kasir & setoran shift
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              {/* Item 1: Setoran Kas Shift */}
+              <div
+                onClick={() => onNavigateTab?.('shifts')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer flex items-center justify-between gap-3"
               >
-                <span>Lihat Semua Antrean ({laundryOrders.length})</span>
+                <div className="min-w-0">
+                  <div className="text-xs font-extrabold text-slate-900">Setoran Kas Menunggu</div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {deposits.count > 0
+                      ? `${deposits.count} pengajuan • Total ${formatRupiah(deposits.totalAmount)}`
+                      : 'Semua setoran telah diverifikasi'}
+                  </div>
+                </div>
+                <span className={`text-[10.5px] font-black px-2 py-1 rounded-full shrink-0 ${
+                  deposits.count > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {deposits.count > 0 ? `${deposits.count} Pending` : 'Nihil'}
+                </span>
+              </div>
+
+              {/* Item 2: Shift Aktif Berjalan */}
+              <div
+                onClick={() => onNavigateTab?.('shifts')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-extrabold text-slate-900">Shift Kasir Aktif</div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {shift
+                      ? `${shift.cashierName} • Kas Drawer: ${formatRupiah(shift.cashInDrawer)}`
+                      : 'Belum ada kasir yang membuka shift hari ini'}
+                  </div>
+                </div>
+                <span className={`text-[10.5px] font-black px-2 py-1 rounded-full shrink-0 ${
+                  shift ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {shift ? 'OPEN' : 'TUTUP'}
+                </span>
+              </div>
+
+              {/* Item 3: Cucian Mengendap di Rak */}
+              <div
+                onClick={() => onNavigateTab?.('laundry_racks')}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-extrabold text-slate-900">Cucian Mengendap di Rak</div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {stale.over3DaysCount > 0
+                      ? `${stale.over3DaysCount} nota > 3 hari • ${stale.over7DaysCount} nota > 7 hari`
+                      : 'Semua cucian di rak bergerak lancar'}
+                  </div>
+                </div>
+                <span className={`text-[10.5px] font-black px-2 py-1 rounded-full shrink-0 ${
+                  stale.over3DaysCount > 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {stale.over3DaysCount > 0 ? 'Perlu WA' : 'Lancar'}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => onNavigateTab?.('shifts')}
+                className="w-full py-2 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Buka Rekap Shift & Keuangan</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
+        </div>
 
-            {/* List of Tickets */}
-            {pipelineStatus.attentionOrders.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-1.5">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <p className="text-xs font-bold text-slate-700">Semua Jadwal Cucian Aman!</p>
-                <p className="text-[11px] text-slate-500">
-                  Tidak ada cucian yang terlambat dari jadwal SLA maupun menumpuk di rak.
+        {/* OPERASIONAL PRODUKSI & STOK BAHAN */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Monitor Lantai Produksi */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Monitor Lantai Produksi (Live)
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Status antrean cucian aktif di stasiun kerja
                 </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {pipelineStatus.attentionOrders.slice(0, 3).map((order) => {
-                  const isPaid = order.paymentStatus === 'PAID';
-                  const isReady = order.status === 'READY';
-                  const cleanPhone = (order.customerPhone || '').replace(/[^0-9]/g, '');
-                  const waLink = cleanPhone
-                    ? `https://wa.me/${cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(
-                        `Halo Kak ${order.customerName || 'Pelanggan'}, cucian Anda di ${activeOutlet?.name || 'Laundry'} dengan nomor nota ${order.invoiceNumber} statusnya sudah ${isReady ? 'SIAP DIAMBIL' : 'SEDANG KAMI PROSES'} ya. Terima kasih!`
-                      )}`
-                    : null;
+              {pipeline.overdueCount > 0 && (
+                <span className="text-[10.5px] font-black px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                  {pipeline.overdueCount} Overdue SLA
+                </span>
+              )}
+            </div>
 
-                  return (
-                    <div
-                      key={order.id}
-                      className={`p-3.5 sm:p-4 rounded-2xl border relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        order.isOverdue
-                          ? 'border-amber-300 bg-amber-50/40'
-                          : isReady
-                          ? 'border-emerald-300 bg-emerald-50/40'
-                          : 'border-slate-200 bg-slate-50/60'
-                      }`}
-                    >
-                      <div
-                        className={`absolute left-0 top-0 bottom-0 w-1.5 ${
-                          order.isOverdue ? 'bg-amber-500' : isReady ? 'bg-emerald-500' : 'bg-blue-600'
-                        }`}
-                      />
-                      <div className="min-w-0 pl-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-sm text-slate-900 truncate">
-                            {order.customerName || 'Pelanggan Walk-In'}
-                          </span>
-                          <span className="font-mono text-[10px] font-bold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                            #{order.invoiceNumber || '001'}
-                          </span>
-                          {order.isOverdue ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3 text-rose-600" />
-                              <span>Overdue SLA</span>
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                              Siap di Rak {order.rackCode || 'Simpan'}
-                            </span>
-                          )}
-                          {!isPaid && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
-                              Belum Lunas: {formatRupiah(order.grandTotal - (order.paidAmount || 0))}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-blue-900">
-                            {order.totalWeightKg ? `${order.totalWeightKg} Kg` : `${order.totalPieces || 1} Pcs`}
-                          </span>
-                          <span>•</span>
-                          <span>{order.serviceName || 'Cuci Komplit'}</span>
-                          {waLink && (
-                            <a
-                              href={waLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 ml-1"
-                            >
-                              <MessageSquare className="w-3 h-3" />
-                              <span>Hubungi WA</span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+              <div
+                onClick={() => onNavigateTab?.('laundry_production')}
+                className="bg-slate-50 hover:bg-slate-100 p-3 rounded-2xl border border-slate-200 transition-all cursor-pointer"
+              >
+                <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">1. Sortir</div>
+                <div className="text-lg font-black text-slate-900 my-0.5">{pipeline.sorting} Nota</div>
+                <div className="text-[10px] text-slate-400">Menunggu QC</div>
+              </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isReady ? (
-                          <button
-                            onClick={() => onOpenPos?.()}
-                            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                          >
-                            <span>Bayar &amp; Serahkan</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => onNavigateTab?.('laundry_production')}
-                            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                          >
-                            <span>Proses ke Rak</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div
+                onClick={() => onNavigateTab?.('laundry_production')}
+                className="bg-blue-50 hover:bg-blue-100/70 p-3 rounded-2xl border border-blue-200 transition-all cursor-pointer"
+              >
+                <div className="text-[10px] font-black uppercase tracking-wider text-blue-900">2. Cuci/Kering</div>
+                <div className="text-lg font-black text-blue-900 my-0.5">{pipeline.washingDrying} Nota</div>
+                <div className="text-[10px] text-blue-600">Mesin aktif</div>
+              </div>
+
+              <div
+                onClick={() => onNavigateTab?.('laundry_production')}
+                className="bg-amber-50 hover:bg-amber-100/70 p-3 rounded-2xl border border-amber-200 transition-all cursor-pointer"
+              >
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-800">3. Setrika</div>
+                <div className="text-lg font-black text-amber-900 my-0.5">{pipeline.ironingFolding} Nota</div>
+                <div className="text-[10px] text-amber-600">Finishing</div>
+              </div>
+
+              <div
+                onClick={() => onNavigateTab?.('laundry_racks')}
+                className="bg-emerald-50 hover:bg-emerald-100/70 p-3 rounded-2xl border border-emerald-200 transition-all cursor-pointer"
+              >
+                <div className="text-[10px] font-black uppercase tracking-wider text-emerald-800">4. Siap di Rak</div>
+                <div className="text-lg font-black text-emerald-900 my-0.5">{pipeline.readyForPickup} Nota</div>
+                <div className="text-[10px] text-emerald-600">Siap serah</div>
+              </div>
+            </div>
+
+            {/* Mesin Berjalan */}
+            {machines.length > 0 && (
+              <div className="border-t border-slate-100 pt-3">
+                <div className="text-[11px] font-bold text-slate-600 mb-1.5">Mesin Sedang Berjalan:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {machines.map((m: any, idx: number) => (
+                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100/80 text-blue-900 text-[10.5px] font-extrabold">
+                      <Waves className="w-3 h-3 text-blue-700" />
+                      {m.machineName} ({m.invoiceNumber || 'Aktif'})
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Antar Jemput Live Reminder */}
-          {pipelineStatus.jadwalAntarJemput > 0 && (
-            <div
-              onClick={() => onNavigateTab?.('laundry_queue')}
-              className="mt-4 p-3 rounded-2xl bg-blue-50/80 border border-blue-200 text-blue-900 text-xs font-bold flex items-center justify-between gap-2 cursor-pointer hover:bg-blue-100/70 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-blue-700 shrink-0" />
-                <span>{pipelineStatus.jadwalAntarJemput} permintaan jemput / antar kurir hari ini</span>
+          {/* Bahan Cuci Menipis */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Bahan Cuci Menipis (Inventori BoM)
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Dihitung otomatis dari stok nyata gudang & outlet
+                </p>
               </div>
-              <span className="text-[11px] font-extrabold text-blue-900">Buka Jadwal ➔</span>
-            </div>
-          )}
-        </div>
-
-        {/* 4.2 RAK SIMPAN & BAHAN CUCI TILES (1 Col on Tablet & Laptop) */}
-        <div className="md:col-span-1 lg:col-span-1 space-y-4">
-          {/* Mini Peta Rak Simpan */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                Kapasitas Rak Simpan
-              </h3>
-              <span className="font-mono text-xs font-bold text-blue-900">
-                {rackOccupancy.occupiedCount}/{rackOccupancy.totalSlots} Slot
-              </span>
-            </div>
-
-            <p className="text-[11px] text-slate-400 mb-2.5">
-              Slot terisi siap serah ambil pelanggan
-            </p>
-
-            <div className="grid grid-cols-4 gap-2">
-              {rackOccupancy.sampleSlots.map((slot, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => onNavigateTab?.('laundry_racks')}
-                  className={`p-2 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-transform active:scale-95 ${
-                    slot.occupied
-                      ? 'bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
-                      : 'bg-slate-50 text-slate-400 border border-dashed border-slate-200 hover:bg-slate-100'
-                  }`}
-                  title={slot.occupied ? `Rak ${slot.code}: Nota ${slot.order}` : `Rak ${slot.code}: Kosong`}
-                >
-                  <span className="text-[10px] font-black">{slot.code}</span>
-                  <span className="text-[8px] opacity-85 truncate max-w-full">
-                    {slot.occupied ? slot.order : 'Kosong'}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => onNavigateTab?.('laundry_racks')}
-              className="mt-3 w-full py-1.5 text-center text-xs font-bold text-blue-900 hover:underline cursor-pointer"
-            >
-              Kelola Seluruh Slot Rak ➔
-            </button>
-          </div>
-
-          {/* Persediaan Bahan Cuci */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                Bahan Cuci Workshop
-              </h3>
               <button
                 onClick={() => onNavigateTab?.('inventory')}
-                className="text-[11px] font-bold text-blue-900 hover:underline cursor-pointer"
+                className="text-xs text-blue-900 font-bold hover:underline cursor-pointer"
               >
-                Restock ➔
+                Kelola Stok →
               </button>
             </div>
 
-            <div className="space-y-3 pt-1">
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-700">Deterjen Cair Matic</span>
-                  <span className="text-emerald-700 font-extrabold">72%</span>
+            <div className="space-y-2 pt-1">
+              {lowStock.length > 0 ? (
+                lowStock.map((it: any, idx: number) => {
+                  const pct = it.reorderPoint > 0 ? Math.min(100, Math.round((it.quantityOnHand / (it.reorderPoint * 2)) * 100)) : 50;
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-2xl border transition-all ${
+                        it.isLow ? 'bg-rose-50/70 border-rose-200' : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="text-slate-900">{it.name}</span>
+                        <span className={it.isLow ? 'text-rose-700 font-black' : 'text-slate-600'}>
+                          Sisa {it.quantityOnHand} {it.uom} {it.isLow ? '(Menipis)' : ''}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1.5">
+                        <div
+                          className={`h-full rounded-full ${it.isLow ? 'bg-rose-500' : 'bg-blue-600'}`}
+                          style={{ width: `${Math.max(5, pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-6 text-center text-slate-400 text-xs">
+                  Semua stok deterjen, softener & parfum dalam batas aman.
                 </div>
-                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '72%' }} />
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
+  // =========================================================================
+  // VIEW B: DASHBOARD KASIR (FRONT-DESK)
+  // =========================================================================
+  const renderCashierDashboard = () => {
+    const shift = dashboardData?.activeShift;
+    const readyOrders: any[] = dashboardData?.readyForPickupOrders || [];
+    const staleOrders: any[] = dashboardData?.staleRackOrders || [];
+    const todayDeliveriesCount: number = dashboardData?.todayDeliveriesCount || 0;
+
+    return (
+      <div className="space-y-4">
+        {/* Banner Isolasi Kasir */}
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-emerald-700 shrink-0" />
+          <span>
+            <strong>Mode Kasir (Front-Desk):</strong> Fokus layanan pelanggan & kas shift berjalan. Estimasi laba operasional & total omzet bulanan/tahunan bisnis disembunyikan.
+          </span>
+        </div>
+
+        {/* Header Shift Aktif */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                Halo, {shift?.cashierName || currentUser?.name || 'Kasir'}
+              </h1>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-black uppercase tracking-wider ${
+                shift ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+              }`}>
+                {shift ? '● Shift Aktif Berjalan' : '○ Belum Buka Shift'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Modal Awal Laci: <strong className="text-slate-700">{formatRupiah(shift?.startingCash || 0)}</strong>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => onNavigateTab?.('shifts')}
+              className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              🏦 Ajukan Setoran Kas
+            </button>
+            <button
+              onClick={() => onNavigateTab?.('shifts')}
+              className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              🔒 Kelola / Tutup Shift
+            </button>
+          </div>
+        </div>
+
+        {/* 4 KPI Kasir Shift Ini */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Kas Tunai di Laci</span>
+            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700 my-1">
+              {formatRupiah(shift?.totalCashDrawer || 0)}
+            </div>
+            <div className="text-[11px] text-slate-400">Modal + Tunai Masuk</div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Non-Tunai Shift Ini</span>
+            <div className="text-xl sm:text-2xl font-black font-mono text-blue-900 my-1">
+              {formatRupiah(shift?.nonTunaiAmount || 0)}
+            </div>
+            <div className="text-[11px] text-slate-400">QRIS & Transfer Masuk</div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Siap Diambil di Rak</span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 my-1">
+              {readyOrders.length} Nota
+            </div>
+            <div className="text-[11px] text-slate-400">
+              {readyOrders.filter((o) => !o.isPaid).length} nota ada sisa tagihan
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Pengiriman Hari Ini</span>
+            <div className="text-xl sm:text-2xl font-black text-amber-700 my-1">
+              {todayDeliveriesCount} Order
+            </div>
+            <div className="text-[11px] text-slate-400">Antar-jemput kurir</div>
+          </div>
+        </div>
+
+        {/* 4 Aksi Cepat Kasir */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div
+            onClick={() => onOpenPos ? onOpenPos() : onNavigateTab?.('pos')}
+            className="bg-white hover:bg-blue-50/50 p-4 rounded-3xl border border-slate-200/90 transition-all cursor-pointer flex items-center gap-3 shadow-xs"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 font-extrabold flex items-center justify-center shrink-0">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900">Input Cucian</div>
+              <div className="text-[11px] text-slate-400 truncate">Timbang & nota baru</div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => onNavigateTab?.('laundry_queue')}
+            className="bg-white hover:bg-emerald-50/50 p-4 rounded-3xl border border-slate-200/90 transition-all cursor-pointer flex items-center gap-3 shadow-xs"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 font-extrabold flex items-center justify-center shrink-0">
+              <Camera className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900">Serah Ambil</div>
+              <div className="text-[11px] text-slate-400 truncate">Pelunasan & serahkan</div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => onNavigateTab?.('customers')}
+            className="bg-white hover:bg-amber-50/50 p-4 rounded-3xl border border-slate-200/90 transition-all cursor-pointer flex items-center gap-3 shadow-xs"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 font-extrabold flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900">Top-Up Deposit</div>
+              <div className="text-[11px] text-slate-400 truncate">Paket saldo / kiloan</div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => onNavigateTab?.('laundry_racks')}
+            className="bg-white hover:bg-rose-50/50 p-4 rounded-3xl border border-slate-200/90 transition-all cursor-pointer flex items-center gap-3 shadow-xs"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-800 font-extrabold flex items-center justify-center shrink-0">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900">Reminder Rak</div>
+              <div className="text-[11px] text-slate-400 truncate">Kirim WA pengingat</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2 Prioritas Meja Depan: Siap Serah Terima & Mengendap di Rak */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Siap Serah Terima */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-700">Parfum Lavender</span>
-                  <span className="text-amber-600 font-extrabold">24% (Menipis)</span>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Siap Serah Terima & Pelunasan
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Cucian sudah di rak simpan
+                </p>
+              </div>
+              <span className="text-[10.5px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                {readyOrders.length} di Rak
+              </span>
+            </div>
+
+            <div className="space-y-2 pt-1 max-h-80 overflow-y-auto">
+              {readyOrders.length > 0 ? (
+                readyOrders.slice(0, 8).map((o: any) => (
+                  <div
+                    key={o.id}
+                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
+                        <span>{o.customerName}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-900 text-[10px] font-extrabold">
+                          {o.rackCode}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {o.invoiceNumber} • {o.weightKg ? `${o.weightKg} Kg` : `${o.totalPieces} Pcs`} •{' '}
+                        {o.isPaid ? (
+                          <span className="text-emerald-700 font-black">LUNAS</span>
+                        ) : (
+                          <span className="text-rose-600 font-black">Sisa: {formatRupiah(o.remainingAmount)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onNavigateTab?.('laundry_queue')}
+                      className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto ${
+                        o.isPaid
+                          ? 'bg-blue-900 hover:bg-blue-800 text-white'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      }`}
+                    >
+                      {o.isPaid ? 'Serahkan Pakaian' : 'Lunasi & Serahkan'}
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-slate-400 text-xs">
+                  Tidak ada cucian yang sedang menunggu serah ambil di rak.
                 </div>
-                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '24%' }} />
+              )}
+            </div>
+          </div>
+
+          {/* Cucian Mengendap di Rak (> 3 Hari) */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Cucian Mengendap di Rak (&gt; 3 Hari)
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Kirim pengingat WhatsApp 1-klik agar rak tetap lega
+                </p>
+              </div>
+              <span className="text-[10.5px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                {staleOrders.length} Nota
+              </span>
+            </div>
+
+            <div className="space-y-2 pt-1 max-h-80 overflow-y-auto">
+              {staleOrders.length > 0 ? (
+                staleOrders.map((o: any) => (
+                  <div
+                    key={o.id}
+                    className="p-3 rounded-2xl bg-rose-50/50 border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
+                        <span>{o.customerName}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-extrabold">
+                          {o.daysOnRack} Hari di Rak
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {o.invoiceNumber} • {o.rackCode} • {o.isPaid ? 'Lunas' : `Sisa ${formatRupiah(o.remainingAmount)}`}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onNavigateTab?.('laundry_racks')}
+                      className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Kirim WA</span>
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-slate-400 text-xs">
+                  Semua cucian di rak masih baru (&lt; 3 hari).
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // =========================================================================
+  // VIEW C: DASHBOARD OPERATOR PRODUKSI (WORKSHOP — 100% ZERO RUPIAH)
+  // =========================================================================
+  const renderProductionDashboard = () => {
+    const pipeline = dashboardData?.pipelineCounts || {
+      sorting: { orderCount: 0, totalKg: 0 },
+      washingDrying: { orderCount: 0, totalKg: 0 },
+      ironingFolding: { orderCount: 0, totalKg: 0 },
+      readyForPickup: { orderCount: 0, totalKg: 0 },
+      overdueCount: 0,
+      dueTodayCount: 0,
+    };
+
+    const urgentQueue: any[] = dashboardData?.urgentQueue || [];
+    const activeMachines: any[] = dashboardData?.activeMachines || [];
+    const lowStock: any[] = dashboardData?.lowStockSupplies || [];
+    const myOutput = dashboardData?.myOutputToday || { orderCount: 0, totalKg: 0, stageActionsCount: 0 };
+
+    return (
+      <div className="space-y-4">
+        {/* Banner Isolasi Workshop */}
+        <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200/80 text-purple-900 text-xs font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-purple-700 shrink-0" />
+          <span>
+            <strong>Mode Operator Produksi (Workshop):</strong> 100% terisolasi dari nominal uang, omzet, harga layanan, dan kas laci. Fokus penuh ke SLA, antrean cucian, & kualitas pengerjaan.
+          </span>
+        </div>
+
+        {/* Header Operator Workshop */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                Stasiun Kerja — {currentUser?.name || 'Operator Workshop'}
+              </h1>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-black uppercase tracking-wider bg-purple-100 text-purple-900">
+                🫧 Mode Produksi
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Target hari ini: selesaikan <strong className="text-rose-600">{pipeline.overdueCount} nota Overdue</strong> & <strong className="text-amber-700">{pipeline.dueTodayCount} nota Jatuh Tempo Hari Ini</strong>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => onNavigateTab?.('laundry_production')}
+              className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Scan QR / Barcode Nota</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Beban Kerja Stasiun (ZERO RUPIAH) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div
+            onClick={() => onNavigateTab?.('laundry_production')}
+            className="bg-white hover:bg-slate-50 p-4 sm:p-5 rounded-3xl border border-slate-200/90 transition-all cursor-pointer flex flex-col justify-between shadow-xs"
+          >
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">1. Sortir & QC</span>
+            <div className="text-xl sm:text-2xl font-black text-slate-900 my-1">
+              {pipeline.sorting.orderCount} Nota
+            </div>
+            <div className="text-[11px] text-slate-400">{pipeline.sorting.totalKg} Kg menunggu hitung</div>
+          </div>
+
+          <div
+            onClick={() => onNavigateTab?.('laundry_production')}
+            className="bg-blue-50/60 hover:bg-blue-50 p-4 sm:p-5 rounded-3xl border border-blue-200 transition-all cursor-pointer flex flex-col justify-between shadow-xs"
+          >
+            <span className="text-[11px] font-black uppercase tracking-wider text-blue-900">2. Cuci & Kering</span>
+            <div className="text-xl sm:text-2xl font-black text-blue-900 my-1">
+              {pipeline.washingDrying.orderCount} Nota
+            </div>
+            <div className="text-[11px] text-blue-600">{pipeline.washingDrying.totalKg} Kg • Mesin cuci/dryer</div>
+          </div>
+
+          <div
+            onClick={() => onNavigateTab?.('laundry_production')}
+            className="bg-white hover:bg-slate-50 p-4 sm:p-5 rounded-3xl border border-slate-200/90 transition-all cursor-pointer flex flex-col justify-between shadow-xs"
+          >
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-800">3. Setrika & Lipat</span>
+            <div className="text-xl sm:text-2xl font-black text-amber-900 my-1">
+              {pipeline.ironingFolding.orderCount} Nota
+            </div>
+            <div className="text-[11px] text-amber-600">{pipeline.ironingFolding.totalKg} Kg menunggu boiler</div>
+          </div>
+
+          <div className="bg-emerald-50/60 p-4 sm:p-5 rounded-3xl border border-emerald-200 flex flex-col justify-between shadow-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800">Output Saya Hari Ini</span>
+            <div className="text-xl sm:text-2xl font-black text-emerald-800 my-1">
+              {myOutput.totalKg} Kg
+            </div>
+            <div className="text-[11px] text-emerald-600">{myOutput.orderCount} nota selesai dikerjakan</div>
+          </div>
+        </div>
+
+        {/* Antrean Prioritas SLA & Status Mesin */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Antrean Prioritas SLA (2 Kolom) */}
+          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Antrean Prioritas SLA (Kerjakan Duluan)
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Diurutkan dari nota terlambat & jatuh tempo paling dekat
+                </p>
+              </div>
+              {pipeline.overdueCount > 0 && (
+                <span className="text-[10.5px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                  {pipeline.overdueCount} Terlambat
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-1 max-h-96 overflow-y-auto">
+              {urgentQueue.length > 0 ? (
+                urgentQueue.map((o: any) => (
+                  <div
+                    key={o.id}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                      o.isOverdue
+                        ? 'bg-rose-50/70 border-rose-200'
+                        : o.isRewash
+                        ? 'bg-purple-50/70 border-purple-200'
+                        : 'bg-amber-50/60 border-amber-200'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
+                        <span>{o.invoiceNumber} — {o.customerName}</span>
+                        {o.isOverdue && (
+                          <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-black">
+                            OVERDUE
+                          </span>
+                        )}
+                        {o.isRewash && (
+                          <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-black">
+                            GARANSI REWASH
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {o.serviceName} • {o.weightKg ? `${o.weightKg} Kg` : `${o.totalPieces} Pcs`} • Tahap: {o.currentStage}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onNavigateTab?.('laundry_production')}
+                      className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto ${
+                        o.isOverdue
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          : 'bg-blue-900 hover:bg-blue-800 text-white'
+                      }`}
+                    >
+                      {o.isRewash ? 'Mulai Cuci Ulang' : 'Buka Stasiun →'}
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="py-8 text-center text-slate-400 text-xs">
+                  Semua cucian berjalan sesuai jadwal SLA. Tidak ada antrean kritis.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Status Mesin & Stok Bahan (1 Kolom) */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-4">
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                Status Mesin Aktif (Log Riil)
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Mesin yang sedang berjalan di workshop
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {activeMachines.length > 0 ? (
+                activeMachines.map((m: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-slate-900">{m.machineName}</div>
+                      <div className="text-[11px] text-slate-500 truncate">
+                        {m.invoiceNumber} • {m.weightKg ? `${m.weightKg} Kg` : ''} • Op: {m.operatorName}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 shrink-0">
+                      BERJALAN
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="py-4 text-center text-slate-400 text-xs">
+                  Belum ada mesin yang ditag aktif saat ini.
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 pt-3">
+              <div className="text-xs font-black uppercase tracking-wider text-slate-800 mb-2">
+                Stok Bahan Menipis
+              </div>
+              <div className="space-y-1.5">
+                {lowStock.length > 0 ? (
+                  lowStock.map((it: any, idx: number) => (
+                    <div key={idx} className="p-2 rounded-xl bg-rose-50 border border-rose-200 flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-800">{it.name}</span>
+                      <span className="font-black text-rose-700">Sisa {it.quantityOnHand} {it.uom}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-slate-400 text-[11px]">Semua bahan cuci aman.</div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+    );
+  };
 
-      {/* ── 5. KAS MASUK 7 HARI TERAKHIR (MINI VERTICAL BAR CHART) ─────────── */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
-              Tren Kas Masuk 7 Hari Terakhir
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Akumulasi penerimaan pembayaran lunas dan uang muka (DP)
-            </p>
-          </div>
-          <span className="text-xs sm:text-sm font-mono font-black text-slate-900">
-            Total: {formatRupiah(last7DaysChart.total7Days)}
-          </span>
-        </div>
-
-        {/* Bar Chart Container */}
-        <div className="pt-6 pb-2">
-          <div className="flex items-end justify-between gap-2 h-28">
-            {last7DaysChart.days.map((item, idx) => {
-              const heightPct = Math.max(8, (item.amount / last7DaysChart.maxAmount) * 100);
-              const isPositive = item.amount > 0;
-
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                  {/* Value on top of bar */}
-                  {isPositive ? (
-                    <span className="text-[10px] font-bold font-mono text-slate-600">
-                      {item.amount >= 1_000_000
-                        ? `${(item.amount / 1_000_000).toFixed(1)}jt`
-                        : item.amount >= 1000
-                        ? `${Math.round(item.amount / 1000)}rb`
-                        : item.amount}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-300">-</span>
-                  )}
-
-                  {/* The Bar */}
-                  <div className="w-full max-w-[32px] h-full flex items-end">
-                    <div
-                      className={`w-full rounded-t-xl transition-all ${
-                        item.isToday
-                          ? 'bg-blue-900 shadow-sm'
-                          : isPositive
-                          ? 'bg-blue-200 hover:bg-blue-300'
-                          : 'bg-slate-100'
-                      }`}
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  </div>
-
-                  {/* Day Label */}
-                  <div className="text-center pt-1">
-                    <span
-                      className={`text-[11px] block ${
-                        item.isToday
-                          ? 'font-black text-blue-900 border-b-2 border-blue-900 pb-0.5'
-                          : 'font-semibold text-slate-400'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+  // =========================================================================
+  // RENDER UTAMA BERDASARKAN ROLE
+  // =========================================================================
+  return (
+    <div className="space-y-4">
+      {effectiveRole === 'OWNER' && renderOwnerDashboard()}
+      {effectiveRole === 'CASHIER' && renderCashierDashboard()}
+      {effectiveRole === 'PRODUCTION' && renderProductionDashboard()}
     </div>
   );
 };

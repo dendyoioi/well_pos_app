@@ -46,6 +46,7 @@ import {
   createStaffCashAdvance,
   repayStaffCashAdvance,
   executeLaundryAutoReminders,
+  getLaundryDashboardSummary,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -55,6 +56,9 @@ router.get('/public/track/:invoiceNumber', getPublicLaundryTracking);
 
 // Proteksi seluruh endpoint operasional di bawah ini dengan Autentikasi & Multi-Tenant Isolation
 router.use(authenticate);
+
+// --- Smart Role-Based Laundry Dashboard Summary ---
+router.get('/dashboard-summary', getLaundryDashboardSummary);
 
 // --- Master Pengaturan Tahapan Produksi (Owner Custom Stages) ---
 router.get('/stage-settings', getLaundryStageSettings);

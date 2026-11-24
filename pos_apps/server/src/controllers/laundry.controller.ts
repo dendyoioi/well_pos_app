@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
-import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Prisma } from '@prisma/client';
+import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Role, Prisma } from '@prisma/client';
 import { whatsAppService, LaundryNotificationData } from '../services/whatsapp.service';
 import { idempotencyService } from '../services/idempotency.service';
 import { storageService } from '../services/storage.service';
@@ -959,6 +959,8 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
     let subtotal = 0;
     let totalWeightKg = 0;
     const orderItemsData = items.map((item) => {
+      const normUnit = (item.unit || 'PCS').trim().toUpperCase();
+      const isKiloan = ['KG', 'PER_KG'].includes(normUnit);
       const baseLineTotal = Math.round(item.quantity * item.unitPrice);
       const addonsTotal = (item.addons || []).reduce((acc, a) => {
         if (a.total !== undefined) return acc + a.total;
@@ -967,7 +969,7 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
       }, 0);
       const lineTotal = baseLineTotal + addonsTotal;
       subtotal += lineTotal;
-      if (item.unit === 'KG') {
+      if (isKiloan) {
         totalWeightKg += item.quantity;
       }
 
@@ -986,6 +988,8 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
         discountAmount: 0,
         subtotal: lineTotal,
         notes: itemNotes || null,
+        unit: normUnit,
+        pricingBasis: isKiloan ? 'KILOAN' : 'SATUAN',
       };
     });
 
@@ -5178,5 +5182,969 @@ export const executeLaundryAutoReminders = async (req: Request, res: Response) =
   } catch (error: any) {
     console.error('Error executeLaundryAutoReminders:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal menjalankan auto-reminder WhatsApp' });
+  }
+};
+
+/**
+ * Controller: Agregasi Dashboard Pintar Berbasis Peran Laundry (Owner, Kasir, Produksi)
+ * @route GET /api/laundry/dashboard-summary
+ */
+export const getLaundryDashboardSummary = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const userRole = (req.user?.role || '').toUpperCase();
+
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    // 1. Tentukan Role Mode
+    let roleMode: 'OWNER' | 'CASHIER' | 'PRODUCTION' = 'OWNER';
+    if (userRole === Role.CASHIER) {
+      roleMode = 'CASHIER';
+    } else if (userRole === Role.WAREHOUSE || userRole === Role.KITCHEN || userRole === Role.WAITER) {
+      roleMode = 'PRODUCTION';
+    } else {
+      roleMode = 'OWNER';
+    }
+
+    // 2. Tentukan Scoping Outlet
+    let effectiveOutletId = req.user?.outletId || undefined;
+    if (!effectiveOutletId && req.query.outletId && req.query.outletId !== 'ALL') {
+      effectiveOutletId = String(req.query.outletId);
+    }
+
+    // 3. Parser Rentang Waktu (WIB / GMT+7)
+    const nowUtc = new Date();
+    const nowWib = new Date(nowUtc.getTime() + 7 * 3600_000);
+    const currYear = nowWib.getUTCFullYear();
+    const currMonth = String(nowWib.getUTCMonth() + 1).padStart(2, '0');
+    const currDay = String(nowWib.getUTCDate()).padStart(2, '0');
+
+    const defaultStartStr = `${currYear}-${currMonth}-01`;
+    const defaultEndStr = `${currYear}-${currMonth}-${currDay}`;
+
+    const startDateStr = (req.query.startDate as string) || defaultStartStr;
+    const endDateStr = (req.query.endDate as string) || defaultEndStr;
+
+    const startDateTime = new Date(`${startDateStr}T00:00:00.000+07:00`);
+    const endDateTime = new Date(`${endDateStr}T23:59:59.999+07:00`);
+
+    const durationMs = Math.max(1, endDateTime.getTime() - startDateTime.getTime() + 1);
+    const prevStartDateTime = new Date(startDateTime.getTime() - durationMs);
+    const prevEndDateTime = new Date(startDateTime.getTime() - 1);
+
+    const diffDays = Math.ceil(durationMs / (24 * 3600_000));
+    let granularity = ((req.query.granularity as string) || '').toUpperCase();
+    if (!['DAY', 'MONTH'].includes(granularity)) {
+      granularity = diffDays > 62 ? 'MONTH' : 'DAY';
+    }
+
+    // Today WIB boundaries for operational widgets
+    const todayStartWib = new Date(`${currYear}-${currMonth}-${currDay}T00:00:00.000+07:00`);
+    const todayEndWib = new Date(`${currYear}-${currMonth}-${currDay}T23:59:59.999+07:00`);
+
+    // =========================================================================
+    // A. JALUR ROLE CASHIER (FRONT-DESK) — ZERO OVERALL OMZET / PROFIT
+    // =========================================================================
+    if (roleMode === 'CASHIER') {
+      // 1. Shift Aktif Kasir
+      const activeShift = await prisma.shift.findFirst({
+        where: {
+          tenantId,
+          status: 'OPEN',
+          ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+        },
+        include: {
+          user: { select: { id: true, name: true, userCode: true } },
+          paymentTransactions: { where: { status: 'CAPTURED' } },
+        },
+        orderBy: { startTime: 'desc' },
+      });
+
+      let shiftSummary = null;
+      if (activeShift) {
+        const cashPayments = activeShift.paymentTransactions
+          .filter((p) => p.paymentMethod === 'CASH')
+          .reduce((acc, p) => acc + Number(p.amount), 0);
+        const nonCashPayments = activeShift.paymentTransactions
+          .filter((p) => p.paymentMethod !== 'CASH')
+          .reduce((acc, p) => acc + Number(p.amount), 0);
+        const startCash = Number(activeShift.startingCash || 0);
+
+        shiftSummary = {
+          id: activeShift.id,
+          cashierName: activeShift.user?.name || req.user?.name || 'Kasir',
+          startTime: activeShift.startTime,
+          startingCash: startCash,
+          cashInTunai: cashPayments,
+          totalCashDrawer: startCash + cashPayments,
+          nonTunaiAmount: nonCashPayments,
+        };
+      }
+
+      // 2. Daftar Siap Diambil di Rak (Ready for Pickup)
+      const readyOrders = await prisma.order.findMany({
+        where: {
+          tenantId,
+          ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+          orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] },
+          laundryDetail: {
+            currentStage: { in: ['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP'] },
+          },
+        },
+        include: {
+          customer: true,
+          laundryDetail: true,
+          customerDebts: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 30,
+      });
+
+      const readyForPickupOrders = readyOrders.map((o) => {
+        const debtRem = o.customerDebts?.reduce((acc, d) => acc + Number(d.remainingAmount || 0), 0) || 0;
+        const totalAmt = Number(o.totalAmount || 0);
+        const paidAmt = Number(o.paidAmount || 0);
+        const remainingAmount = debtRem > 0 ? debtRem : Math.max(0, totalAmt - paidAmt);
+
+        return {
+          id: o.id,
+          invoiceNumber: o.invoiceNumber,
+          customerName: o.customer?.name || 'Pelanggan',
+          customerPhone: o.customer?.phone || null,
+          rackCode: o.laundryDetail?.rackCode || 'RAK',
+          weightKg: o.laundryDetail?.totalWeightKg ? Number(o.laundryDetail.totalWeightKg) : null,
+          totalPieces: o.laundryDetail?.totalPieces || 0,
+          paymentStatus: o.paymentStatus,
+          remainingAmount,
+          isPaid: o.paymentStatus === 'PAID',
+        };
+      });
+
+      // 3. Pengiriman / Kurir Hari Ini
+      const todayDeliveriesCount = await prisma.laundryOrderDetail.count({
+        where: {
+          tenantId,
+          ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+          deliveryType: { not: 'NONE' },
+          createdAt: { gte: todayStartWib, lte: todayEndWib },
+        },
+      });
+
+      // 4. Cucian Mengendap di Rak (> 3 Hari)
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 3600_000);
+      const staleOrders = await prisma.order.findMany({
+        where: {
+          tenantId,
+          ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+          orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] },
+          laundryDetail: {
+            rackCode: { not: null },
+            currentStage: { in: ['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP'] },
+          },
+          updatedAt: { lte: threeDaysAgo },
+        },
+        include: {
+          customer: true,
+          laundryDetail: true,
+          customerDebts: true,
+        },
+        orderBy: { updatedAt: 'asc' },
+        take: 15,
+      });
+
+      const staleRackOrders = staleOrders.map((o) => {
+        const daysOnRack = Math.max(3, Math.floor((Date.now() - o.updatedAt.getTime()) / (24 * 3600_000)));
+        const debtRem = o.customerDebts?.reduce((acc, d) => acc + Number(d.remainingAmount || 0), 0) || 0;
+        const totalAmt = Number(o.totalAmount || 0);
+        const paidAmt = Number(o.paidAmount || 0);
+        const remainingAmount = debtRem > 0 ? debtRem : Math.max(0, totalAmt - paidAmt);
+
+        return {
+          id: o.id,
+          invoiceNumber: o.invoiceNumber,
+          customerName: o.customer?.name || 'Pelanggan',
+          customerPhone: o.customer?.phone || null,
+          rackCode: o.laundryDetail?.rackCode || 'RAK',
+          daysOnRack,
+          remainingAmount,
+          isPaid: o.paymentStatus === 'PAID',
+        };
+      });
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          roleMode: 'CASHIER',
+          outletId: effectiveOutletId || null,
+          activeShift: shiftSummary,
+          readyForPickupOrders,
+          todayDeliveriesCount,
+          staleRackOrders,
+        },
+      });
+    }
+
+    // =========================================================================
+    // B. JALUR ROLE PRODUKSI (WORKSHOP) — ZERO NOMINAL RUPIAH
+    // =========================================================================
+    if (roleMode === 'PRODUCTION') {
+      // 1. Beban Kerja Stasiun & Antrean Aktual (Tanpa Uang)
+      const activeLaundryOrders = await prisma.order.findMany({
+        where: {
+          tenantId,
+          ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+          orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] },
+          laundryDetail: { isNot: null },
+        },
+        include: {
+          laundryDetail: true,
+        },
+      });
+
+      let sortingCount = 0;
+      let sortingKg = 0;
+      let washingDryingCount = 0;
+      let washingDryingKg = 0;
+      let ironingFoldingCount = 0;
+      let ironingFoldingKg = 0;
+      let readyCount = 0;
+      let readyKg = 0;
+      let overdueCount = 0;
+      let dueTodayCount = 0;
+
+      const nowTime = Date.now();
+      for (const ord of activeLaundryOrders) {
+        const det = ord.laundryDetail;
+        if (!det) continue;
+        const stg = (det.currentStage || '').toUpperCase();
+        const kg = Number(det.totalWeightKg || 0);
+
+        if (['DROP_OFF', 'LABEL', 'TAGGING', 'SORTIR', 'SORTING', 'RECEIVED'].includes(stg)) {
+          sortingCount++;
+          sortingKg += kg;
+        } else if (['CUCI', 'WASHING', 'KERING', 'DRYING'].includes(stg)) {
+          washingDryingCount++;
+          washingDryingKg += kg;
+        } else if (['SETRIKA', 'IRONING', 'LIPAT', 'FOLDING', 'PACKING', 'IRONING_PACKING'].includes(stg)) {
+          ironingFoldingCount++;
+          ironingFoldingKg += kg;
+        } else if (['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP'].includes(stg)) {
+          readyCount++;
+          readyKg += kg;
+        }
+
+        if (det.estimatedReadyAt) {
+          const estTime = new Date(det.estimatedReadyAt).getTime();
+          if (estTime < nowTime) {
+            overdueCount++;
+          } else if (estTime >= todayStartWib.getTime() && estTime <= todayEndWib.getTime()) {
+            dueTodayCount++;
+          }
+        }
+      }
+
+      const pipelineCounts = {
+        sorting: { orderCount: sortingCount, totalKg: Number(sortingKg.toFixed(1)) },
+        washingDrying: { orderCount: washingDryingCount, totalKg: Number(washingDryingKg.toFixed(1)) },
+        ironingFolding: { orderCount: ironingFoldingCount, totalKg: Number(ironingFoldingKg.toFixed(1)) },
+        readyForPickup: { orderCount: readyCount, totalKg: Number(readyKg.toFixed(1)) },
+        overdueCount,
+        dueTodayCount,
+      };
+
+      // 2. Antrean Prioritas SLA (Overdue, Due Today, Rewash)
+      const urgentOrders = await prisma.order.findMany({
+        where: {
+          tenantId,
+          ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+          orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] },
+          laundryDetail: {
+            currentStage: { notIn: ['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP', 'HANDOVER'] },
+            OR: [
+              { defectNotes: { contains: 'REWASH' } },
+              { estimatedReadyAt: { lte: todayEndWib } },
+            ],
+          },
+        },
+        include: {
+          customer: true,
+          laundryDetail: true,
+          items: true,
+        },
+        orderBy: [
+          { laundryDetail: { estimatedReadyAt: 'asc' } },
+        ],
+        take: 15,
+      });
+
+      const urgentQueue = urgentOrders.map((o) => {
+        const isOverdue = Boolean(o.laundryDetail?.estimatedReadyAt && new Date(o.laundryDetail.estimatedReadyAt).getTime() < nowTime);
+        const isRewash = Boolean(o.laundryDetail?.defectNotes?.includes('REWASH'));
+        const serviceName = o.items?.[0]?.productName || 'Layanan Laundry';
+
+        return {
+          id: o.id,
+          invoiceNumber: o.invoiceNumber,
+          customerName: o.customer?.name || 'Pelanggan',
+          serviceName,
+          weightKg: o.laundryDetail?.totalWeightKg ? Number(o.laundryDetail.totalWeightKg) : null,
+          totalPieces: o.laundryDetail?.totalPieces || 0,
+          perfumeVariant: o.laundryDetail?.perfumeVariant,
+          currentStage: o.laundryDetail?.currentStage,
+          machineName: null,
+          estimatedReadyAt: o.laundryDetail?.estimatedReadyAt,
+          isRewash,
+          isOverdue,
+        };
+      });
+
+      // 3. Status Mesin Aktif (Log Riil)
+      const unfinishedIds = activeLaundryOrders.map((o) => o.id);
+      let activeMachines: any[] = [];
+      if (unfinishedIds.length > 0) {
+        const stageLogs = await prisma.laundryStageLog.findMany({
+          where: {
+            orderId: { in: unfinishedIds },
+            machineName: { not: null },
+          },
+          include: {
+            operator: { select: { id: true, name: true } },
+            order: { select: { invoiceNumber: true, laundryDetail: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        });
+
+        // Dedup per machineName
+        const seenMachines = new Set<string>();
+        for (const log of stageLogs) {
+          if (log.machineName && !seenMachines.has(log.machineName)) {
+            seenMachines.add(log.machineName);
+            activeMachines.push({
+              machineName: log.machineName,
+              stage: log.stage,
+              invoiceNumber: log.order?.invoiceNumber,
+              weightKg: log.order?.laundryDetail?.totalWeightKg ? Number(log.order.laundryDetail.totalWeightKg) : null,
+              operatorName: log.operator?.name || log.operatorName || 'Operator',
+              startedAt: log.createdAt,
+            });
+          }
+        }
+      }
+
+      // 4. Bahan Cuci Menipis (Hanya Nama, Sisa Stok & UoM — Tanpa Harga)
+      const inventoryItems = await prisma.inventoryItem.findMany({
+        where: {
+          tenantId,
+          isActive: true,
+          OR: [
+            { laundryBomItems: { some: {} } },
+            { reorderPoint: { gt: 0 } },
+          ],
+        },
+        include: {
+          balances: {
+            where: effectiveOutletId ? { storageLocation: { outletId: effectiveOutletId } } : {},
+          },
+        },
+        take: 8,
+      });
+
+      const lowStockSupplies = inventoryItems.map((item) => {
+        const totalStock = item.balances.reduce((acc, b) => acc + Number(b.quantityOnHand), 0);
+        const reorderPoint = Number(item.reorderPoint || 0);
+        return {
+          name: item.name,
+          uom: item.canonicalUom,
+          quantityOnHand: totalStock,
+          reorderPoint,
+          isLow: reorderPoint > 0 && totalStock <= reorderPoint,
+        };
+      });
+
+      // 5. Output Saya Hari Ini
+      const myLogs = await prisma.laundryStageLog.findMany({
+        where: {
+          tenantId,
+          operatorId: userId,
+          createdAt: { gte: todayStartWib, lte: todayEndWib },
+        },
+        include: {
+          order: {
+            select: {
+              laundryDetail: { select: { totalWeightKg: true } },
+            },
+          },
+        },
+      });
+
+      const myUniqueOrders = new Set(myLogs.map((l) => l.orderId)).size;
+      const myTotalKg = myLogs.reduce((acc, l) => acc + Number(l.order?.laundryDetail?.totalWeightKg || 0), 0);
+
+      const myOutputToday = {
+        orderCount: myUniqueOrders,
+        totalKg: Number(myTotalKg.toFixed(1)),
+        stageActionsCount: myLogs.length,
+      };
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          roleMode: 'PRODUCTION',
+          outletId: effectiveOutletId || null,
+          pipelineCounts,
+          urgentQueue,
+          activeMachines,
+          lowStockSupplies,
+          myOutputToday,
+        },
+      });
+    }
+
+    // =========================================================================
+    // C. JALUR ROLE OWNER / ADMIN / SUPERVISOR (MODE LENGKAP)
+    // =========================================================================
+
+    // 1. Agregasi Highlights Keuangan & Performa Utama
+    const currentOrdersAgg = await prisma.order.aggregate({
+      where: {
+        tenantId,
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+        orderStatus: { notIn: ['VOIDED', 'CANCELLED'] },
+        createdAt: { gte: startDateTime, lte: endDateTime },
+      },
+      _sum: { totalAmount: true },
+      _count: { id: true },
+    });
+    const totalOmzet = Number(currentOrdersAgg._sum.totalAmount || 0);
+    const totalTransactions = currentOrdersAgg._count.id;
+    const avgOrderValue = totalTransactions > 0 ? Math.round(totalOmzet / totalTransactions) : 0;
+
+    // Omzet Periode Sebelumnya
+    const prevOrdersAgg = await prisma.order.aggregate({
+      where: {
+        tenantId,
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+        orderStatus: { notIn: ['VOIDED', 'CANCELLED'] },
+        createdAt: { gte: prevStartDateTime, lte: prevEndDateTime },
+      },
+      _sum: { totalAmount: true },
+    });
+    const prevOmzet = Number(prevOrdersAgg._sum.totalAmount || 0);
+    const omzetGrowthPercent = prevOmzet > 0
+      ? Number((((totalOmzet - prevOmzet) / prevOmzet) * 100).toFixed(1))
+      : 0;
+
+    // Breakdown Omzet: Kiloan vs Satuan
+    const splitResult: any = await prisma.$queryRawUnsafe(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN (
+          COALESCE(oi.pricing_basis, CASE WHEN UPPER(COALESCE(oi.unit, ls.unit, '')) IN ('KG', 'PER_KG') THEN 'KILOAN' ELSE 'SATUAN' END) = 'KILOAN'
+        ) THEN oi.subtotal ELSE 0 END), 0) AS "kiloanOmzet",
+        COALESCE(SUM(CASE WHEN (
+          COALESCE(oi.pricing_basis, CASE WHEN UPPER(COALESCE(oi.unit, ls.unit, '')) IN ('KG', 'PER_KG') THEN 'KILOAN' ELSE 'SATUAN' END) = 'SATUAN'
+        ) THEN oi.subtotal ELSE 0 END), 0) AS "satuanOmzet"
+      FROM "order_items" oi
+      JOIN "orders" o ON o.id = oi.order_id
+      LEFT JOIN LATERAL (
+        SELECT unit
+        FROM "laundry_services"
+        WHERE tenant_id = o.tenant_id AND LOWER(name) = LOWER(oi.product_name)
+        ORDER BY is_active DESC, updated_at DESC
+        LIMIT 1
+      ) ls ON true
+      WHERE o.tenant_id = $1
+        AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
+        AND o.created_at >= $2 AND o.created_at <= $3
+        AND ($4::text IS NULL OR o.outlet_id = $4::text)
+    `, tenantId, startDateTime, endDateTime, effectiveOutletId || null);
+
+    const totalOmzetKiloan = Number(splitResult[0]?.kiloanOmzet || 0);
+    const totalOmzetSatuan = Number(splitResult[0]?.satuanOmzet || 0);
+
+    // Kas Masuk Riil (Payment Transactions CAPTURED)
+    const cashInRes: any = await prisma.$queryRawUnsafe(`
+      SELECT COALESCE(SUM(amount), 0) AS "cashIn"
+      FROM "payment_transactions"
+      WHERE tenant_id = $1
+        AND status = 'CAPTURED'
+        AND created_at >= $2 AND created_at <= $3
+        AND ($4::text IS NULL OR outlet_id = $4::text)
+    `, tenantId, startDateTime, endDateTime, effectiveOutletId || null);
+    const cashIn = Number(cashInRes[0]?.cashIn || 0);
+
+    // Sisa Piutang Aktif (CustomerDebt UNPAID / PARTIAL)
+    const receivablesRes: any = await prisma.$queryRawUnsafe(`
+      SELECT COALESCE(SUM(remaining_amount), 0) AS "receivables"
+      FROM "customer_debts"
+      WHERE tenant_id = $1
+        AND status IN ('UNPAID', 'PARTIAL')
+        AND ($2::text IS NULL OR outlet_id = $2::text)
+    `, tenantId, effectiveOutletId || null);
+    const outstandingReceivables = Number(receivablesRes[0]?.receivables || 0);
+
+    // Estimasi HPP BoM (InventoryLedger PRODUCTION_CONSUMPTION)
+    const bomRes: any = await prisma.$queryRawUnsafe(`
+      SELECT COALESCE(SUM(ABS(il.quantity_delta) * il.unit_cost), 0) AS "bomCost"
+      FROM "inventory_ledgers" il
+      LEFT JOIN "storage_locations" sl ON sl.id = il.storage_location_id
+      WHERE il.tenant_id = $1
+        AND il.movement_type = 'PRODUCTION_CONSUMPTION'
+        AND il.created_at >= $2 AND il.created_at <= $3
+        AND ($4::text IS NULL OR sl.outlet_id = $4::text)
+    `, tenantId, startDateTime, endDateTime, effectiveOutletId || null);
+    const estimatedBomCost = Number(bomRes[0]?.bomCost || 0);
+
+    // Pengeluaran Kas Operasional / Kas Keluar Shift
+    const cashOutRes: any = await prisma.$queryRawUnsafe(`
+      SELECT 
+        COALESCE(SUM(amount), 0) AS "totalCashOut",
+        COALESCE(SUM(CASE WHEN category = 'STAFF_COMMISSION' THEN amount ELSE 0 END), 0) AS "commissionPaid"
+      FROM "cash_movements"
+      WHERE tenant_id = $1
+        AND type = 'CASH_OUT'
+        AND created_at >= $2 AND created_at <= $3
+        AND ($4::text IS NULL OR outlet_id = $4::text)
+    `, tenantId, startDateTime, endDateTime, effectiveOutletId || null);
+    const totalCashOut = Number(cashOutRes[0]?.totalCashOut || 0);
+    const paidCommissions = Number(cashOutRes[0]?.commissionPaid || 0);
+
+    // Estimasi Komisi Staf/Kurir: gunakan paidCommissions jika ada, atau estimasi 10% omzet bila belum dicairkan
+    const estimatedCommissions = paidCommissions;
+    const shiftCashOut = Math.max(0, totalCashOut - paidCommissions);
+
+    // Laba Operasional & Margin
+    const estimatedOperatingProfit = totalOmzet - estimatedBomCost - shiftCashOut - estimatedCommissions;
+    const operatingMarginPercent = totalOmzet > 0
+      ? Number(((estimatedOperatingProfit / totalOmzet) * 100).toFixed(1))
+      : 0;
+
+    // Total Tonase (Kg) & Helai Satuan
+    const tonaseRes: any = await prisma.$queryRawUnsafe(`
+      SELECT 
+        COALESCE(SUM(lod.total_weight_kg), 0) AS "totalKg",
+        COALESCE(SUM(lod.total_pieces), 0) AS "totalPcs"
+      FROM "orders" o
+      JOIN "laundry_order_details" lod ON lod.order_id = o.id
+      WHERE o.tenant_id = $1
+        AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
+        AND o.created_at >= $2 AND o.created_at <= $3
+        AND ($4::text IS NULL OR o.outlet_id = $4::text)
+    `, tenantId, startDateTime, endDateTime, effectiveOutletId || null);
+    const totalWeightKg = Number(Number(tonaseRes[0]?.totalKg || 0).toFixed(1));
+    const totalPieces = Number(tonaseRes[0]?.totalPcs || 0);
+
+    // Analisis Pelanggan Aktif: Total, Baru, dan Repeat
+    const custAggRes: any = await prisma.$queryRawUnsafe(`
+      WITH customer_orders AS (
+        SELECT 
+          o.customer_id,
+          MIN(o.created_at) AS first_order_date
+        FROM "orders" o
+        WHERE o.tenant_id = $1
+          AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
+          AND o.customer_id IS NOT NULL
+        GROUP BY o.customer_id
+      ),
+      period_customers AS (
+        SELECT DISTINCT o.customer_id
+        FROM "orders" o
+        WHERE o.tenant_id = $1
+          AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
+          AND o.customer_id IS NOT NULL
+          AND o.created_at >= $2 AND o.created_at <= $3
+          AND ($4::text IS NULL OR o.outlet_id = $4::text)
+      )
+      SELECT 
+        COUNT(pc.customer_id) AS "total",
+        COUNT(CASE WHEN co.first_order_date >= $2 AND co.first_order_date <= $3 THEN 1 END) AS "newCustomers",
+        COUNT(CASE WHEN co.first_order_date < $2 THEN 1 END) AS "repeatCustomers"
+      FROM period_customers pc
+      JOIN customer_orders co ON co.customer_id = pc.customer_id
+    `, tenantId, startDateTime, endDateTime, effectiveOutletId || null);
+
+    const activeCustomers = {
+      total: Number(custAggRes[0]?.total || 0),
+      newCustomers: Number(custAggRes[0]?.newCustomers || 0),
+      repeatCustomers: Number(custAggRes[0]?.repeatCustomers || 0),
+    };
+
+    // 2. Pembentukan revenueSeries (Grafik Garis Kiloan vs Satuan)
+    // Pre-populate seluruh bucket dalam rentang tanggal agar garis kontinu mulus tanpa loncatan
+    const bucketMap = new Map<string, { key: string; label: string; kiloanOmzet: number; satuanOmzet: number; totalOmzet: number; orderCount: number }>();
+
+    if (granularity === 'MONTH') {
+      // Loop tiap bulan dari startDateTime hingga endDateTime
+      const cur = new Date(startDateTime);
+      while (cur <= endDateTime) {
+        const y = cur.getUTCFullYear();
+        const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
+        const bKey = `${y}-${m}`;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        const bLabel = monthNames[cur.getUTCMonth()];
+        if (!bucketMap.has(bKey)) {
+          bucketMap.set(bKey, { key: bKey, label: bLabel, kiloanOmzet: 0, satuanOmzet: 0, totalOmzet: 0, orderCount: 0 });
+        }
+        cur.setUTCMonth(cur.getUTCMonth() + 1);
+      }
+    } else {
+      // Loop tiap hari dari startDateStr hingga endDateStr
+      const cur = new Date(startDateTime);
+      while (cur <= endDateTime) {
+        const y = cur.getUTCFullYear();
+        const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(cur.getUTCDate()).padStart(2, '0');
+        const bKey = `${y}-${m}-${d}`;
+        const bLabel = `${d}/${m}`;
+        if (!bucketMap.has(bKey)) {
+          bucketMap.set(bKey, { key: bKey, label: bLabel, kiloanOmzet: 0, satuanOmzet: 0, totalOmzet: 0, orderCount: 0 });
+        }
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    }
+
+    // Query agregasi time-series aktual
+    const seriesSql = `
+      SELECT 
+        CASE 
+          WHEN $5 = 'MONTH' THEN TO_CHAR(o.created_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM')
+          ELSE TO_CHAR(o.created_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD')
+        END AS "bucketKey",
+        COUNT(DISTINCT o.id) AS "orderCount",
+        COALESCE(SUM(CASE WHEN (
+          COALESCE(oi.pricing_basis, CASE WHEN UPPER(COALESCE(oi.unit, ls.unit, '')) IN ('KG', 'PER_KG') THEN 'KILOAN' ELSE 'SATUAN' END) = 'KILOAN'
+        ) THEN oi.subtotal ELSE 0 END), 0) AS "kiloanOmzet",
+        COALESCE(SUM(CASE WHEN (
+          COALESCE(oi.pricing_basis, CASE WHEN UPPER(COALESCE(oi.unit, ls.unit, '')) IN ('KG', 'PER_KG') THEN 'KILOAN' ELSE 'SATUAN' END) = 'SATUAN'
+        ) THEN oi.subtotal ELSE 0 END), 0) AS "satuanOmzet",
+        COALESCE(SUM(oi.subtotal), 0) AS "totalOmzet"
+      FROM "orders" o
+      JOIN "order_items" oi ON oi.order_id = o.id
+      LEFT JOIN LATERAL (
+        SELECT unit
+        FROM "laundry_services"
+        WHERE tenant_id = o.tenant_id AND LOWER(name) = LOWER(oi.product_name)
+        ORDER BY is_active DESC, updated_at DESC
+        LIMIT 1
+      ) ls ON true
+      WHERE o.tenant_id = $1
+        AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
+        AND o.created_at >= $2 AND o.created_at <= $3
+        AND ($4::text IS NULL OR o.outlet_id = $4::text)
+      GROUP BY 1
+      ORDER BY 1 ASC
+    `;
+
+    const dbSeries: any = await prisma.$queryRawUnsafe(
+      seriesSql,
+      tenantId,
+      startDateTime,
+      endDateTime,
+      effectiveOutletId || null,
+      granularity
+    );
+
+    for (const row of dbSeries) {
+      const bKey = String(row.bucketKey);
+      if (bucketMap.has(bKey)) {
+        const item = bucketMap.get(bKey)!;
+        item.kiloanOmzet = Number(row.kiloanOmzet || 0);
+        item.satuanOmzet = Number(row.satuanOmzet || 0);
+        item.totalOmzet = Number(row.totalOmzet || 0);
+        item.orderCount = Number(row.orderCount || 0);
+      } else {
+        bucketMap.set(bKey, {
+          key: bKey,
+          label: bKey,
+          kiloanOmzet: Number(row.kiloanOmzet || 0),
+          satuanOmzet: Number(row.satuanOmzet || 0),
+          totalOmzet: Number(row.totalOmzet || 0),
+          orderCount: Number(row.orderCount || 0),
+        });
+      }
+    }
+
+    const revenueSeries = Array.from(bucketMap.values());
+
+    // 3. Panel Operasional Nyata (Kasir + Produksi + Rak + Mesin)
+    // Pipeline order aktif
+    const activeOrders = await prisma.order.findMany({
+      where: {
+        tenantId,
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+        orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] },
+        laundryDetail: { isNot: null },
+      },
+      include: {
+        laundryDetail: true,
+      },
+    });
+
+    let sCount = 0;
+    let wdCount = 0;
+    let ipCount = 0;
+    let rdyCount = 0;
+    let odCount = 0;
+    let dtCount = 0;
+    const nowMs = Date.now();
+
+    for (const ord of activeOrders) {
+      const det = ord.laundryDetail;
+      if (!det) continue;
+      const stg = (det.currentStage || '').toUpperCase();
+      if (['DROP_OFF', 'LABEL', 'TAGGING', 'SORTIR', 'SORTING', 'RECEIVED'].includes(stg)) sCount++;
+      else if (['CUCI', 'WASHING', 'KERING', 'DRYING'].includes(stg)) wdCount++;
+      else if (['SETRIKA', 'IRONING', 'LIPAT', 'FOLDING', 'PACKING', 'IRONING_PACKING'].includes(stg)) ipCount++;
+      else if (['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP'].includes(stg)) rdyCount++;
+
+      if (det.estimatedReadyAt) {
+        const estTime = new Date(det.estimatedReadyAt).getTime();
+        if (estTime < nowMs) odCount++;
+        else if (estTime >= todayStartWib.getTime() && estTime <= todayEndWib.getTime()) dtCount++;
+      }
+    }
+
+    const pipelineCounts = {
+      sorting: sCount,
+      washingDrying: wdCount,
+      ironingFolding: ipCount,
+      readyForPickup: rdyCount,
+      overdueCount: odCount,
+      dueTodayCount: dtCount,
+    };
+
+    // Shift Aktif
+    const curShift = await prisma.shift.findFirst({
+      where: {
+        tenantId,
+        status: 'OPEN',
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+      },
+      include: {
+        user: { select: { id: true, name: true } },
+        paymentTransactions: { where: { status: 'CAPTURED' } },
+      },
+      orderBy: { startTime: 'desc' },
+    });
+
+    let activeShiftData = null;
+    if (curShift) {
+      const cashIn = curShift.paymentTransactions.filter((p) => p.paymentMethod === 'CASH').reduce((acc, p) => acc + Number(p.amount), 0);
+      const qrisIn = curShift.paymentTransactions.filter((p) => p.paymentMethod !== 'CASH').reduce((acc, p) => acc + Number(p.amount), 0);
+      activeShiftData = {
+        id: curShift.id,
+        cashierName: curShift.user?.name || 'Kasir',
+        startingCash: Number(curShift.startingCash || 0),
+        cashInDrawer: Number(curShift.startingCash || 0) + cashIn,
+        nonCashIn: qrisIn,
+        startTime: curShift.startTime,
+      };
+    }
+
+    // Setoran Kas Menunggu Verifikasi
+    const pendingDepositsList = await prisma.shiftCashDeposit.findMany({
+      where: {
+        tenantId,
+        status: 'PENDING',
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+      },
+      include: {
+        cashier: { select: { id: true, name: true } },
+        shift: { select: { id: true, startTime: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const pendingDeposits = {
+      count: pendingDepositsList.length,
+      totalAmount: pendingDepositsList.reduce((acc, d) => acc + Number(d.amount), 0),
+      items: pendingDepositsList.slice(0, 3).map((d) => ({
+        id: d.id,
+        cashierName: d.cashier?.name || 'Kasir',
+        amount: Number(d.amount),
+        targetAccount: d.targetAccount,
+        submittedAt: d.createdAt,
+        notes: d.notes,
+      })),
+    };
+
+    // Cucian Mengendap di Rak
+    const threeDaysAgoTime = new Date(Date.now() - 3 * 24 * 3600_000);
+    const sevenDaysAgoTime = new Date(Date.now() - 7 * 24 * 3600_000);
+
+    const staleInRack = await prisma.order.findMany({
+      where: {
+        tenantId,
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+        orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] },
+        laundryDetail: {
+          rackCode: { not: null },
+          currentStage: { in: ['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP'] },
+        },
+        updatedAt: { lte: threeDaysAgoTime },
+      },
+      select: { id: true, updatedAt: true },
+    });
+
+    const staleRack = {
+      over3DaysCount: staleInRack.length,
+      over7DaysCount: staleInRack.filter((o) => o.updatedAt <= sevenDaysAgoTime).length,
+    };
+
+    // Okupansi Rak (Dihitung dari data aktual laundry_order_details per rack_code)
+    const racks = await prisma.laundryRack.findMany({
+      where: {
+        tenantId,
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+      },
+    });
+
+    const occupiedRackCounts = await prisma.laundryOrderDetail.groupBy({
+      by: ['rackCode'],
+      where: {
+        tenantId,
+        ...(effectiveOutletId ? { outletId: effectiveOutletId } : {}),
+        rackCode: { not: null },
+        order: { orderStatus: { notIn: ['COMPLETED', 'VOIDED', 'CANCELLED'] } },
+      },
+      _count: { id: true },
+    });
+
+    const rackCountMap = new Map<string, number>();
+    occupiedRackCounts.forEach((rc) => {
+      if (rc.rackCode) rackCountMap.set(rc.rackCode, rc._count.id);
+    });
+
+    const totalCapacity = racks.reduce((acc, r) => acc + r.capacity, 0);
+    const occupiedSlots = Array.from(rackCountMap.values()).reduce((acc, c) => acc + c, 0);
+
+    const rackOccupancy = {
+      occupiedSlots,
+      totalCapacity,
+      racks: racks.map((r) => ({
+        id: r.id,
+        code: r.code,
+        name: r.name,
+        category: r.category,
+        capacity: r.capacity,
+        occupied: rackCountMap.get(r.code) || 0,
+      })),
+    };
+
+    // Mesin Aktif Riil
+    const activeOrderIds = activeOrders.map((o) => o.id);
+    let activeMachines: any[] = [];
+    if (activeOrderIds.length > 0) {
+      const logs = await prisma.laundryStageLog.findMany({
+        where: {
+          orderId: { in: activeOrderIds },
+          machineName: { not: null },
+        },
+        include: {
+          operator: { select: { id: true, name: true } },
+          order: { select: { invoiceNumber: true, laundryDetail: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      const seen = new Set<string>();
+      for (const log of logs) {
+        if (log.machineName && !seen.has(log.machineName)) {
+          seen.add(log.machineName);
+          activeMachines.push({
+            machineName: log.machineName,
+            stage: log.stage,
+            invoiceNumber: log.order?.invoiceNumber,
+            weightKg: log.order?.laundryDetail?.totalWeightKg ? Number(log.order.laundryDetail.totalWeightKg) : null,
+            operatorName: log.operator?.name || log.operatorName || 'Operator',
+            startedAt: log.createdAt,
+          });
+        }
+      }
+    }
+
+    // Bahan Cuci Menipis
+    const rawInvItems = await prisma.inventoryItem.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+        OR: [
+          { laundryBomItems: { some: {} } },
+          { reorderPoint: { gt: 0 } },
+        ],
+      },
+      include: {
+        balances: {
+          where: effectiveOutletId ? { storageLocation: { outletId: effectiveOutletId } } : {},
+        },
+      },
+      take: 6,
+    });
+
+    const lowStockSupplies = rawInvItems.map((item) => {
+      const qoh = item.balances.reduce((acc, b) => acc + Number(b.quantityOnHand), 0);
+      const rp = Number(item.reorderPoint || 0);
+      return {
+        id: item.id,
+        name: item.name,
+        uom: item.canonicalUom,
+        quantityOnHand: qoh,
+        reorderPoint: rp,
+        isLow: rp > 0 && qoh <= rp,
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        roleMode: 'OWNER',
+        outletId: effectiveOutletId || null,
+        period: {
+          startDate: startDateStr,
+          endDate: endDateStr,
+          granularity,
+        },
+        highlights: {
+          totalOmzet,
+          prevOmzet,
+          omzetGrowthPercent,
+          totalOmzetKiloan,
+          totalOmzetSatuan,
+          cashIn,
+          outstandingReceivables,
+          estimatedBomCost,
+          shiftCashOut,
+          estimatedCommissions,
+          estimatedOperatingProfit,
+          operatingMarginPercent,
+          totalTransactions,
+          totalWeightKg,
+          totalPieces,
+          avgOrderValue,
+          activeCustomers,
+        },
+        revenueSeries,
+        operations: {
+          pipelineCounts,
+          activeShift: activeShiftData,
+          pendingDeposits,
+          staleRack,
+          rackOccupancy,
+          activeMachines,
+          lowStockSupplies,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getLaundryDashboardSummary:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Gagal memuat ringkasan dashboard laundry',
+      error: error?.message,
+    });
   }
 };

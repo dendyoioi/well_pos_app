@@ -884,6 +884,8 @@ model OrderItem {
   subtotal          Decimal @db.Decimal(15, 2)
   notes             String?
   modifiersSnapshot Json?   @map("modifiers_snapshot") // Immutable array of applied modifiers
+  unit              String? @map("unit")
+  pricingBasis      String? @map("pricing_basis") // 'KILOAN' | 'SATUAN'
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)

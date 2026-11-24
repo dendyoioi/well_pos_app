@@ -650,6 +650,14 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "customer_laundry_wallets" ADD COLUMN IF NOT EXISTS "last_expiry_reminder_sent_at" TIMESTAMP(3);
     `,
   },
+  {
+    id: '20261124_06_add_order_items_unit_pricing_basis',
+    description: 'Menambahkan kolom unit dan pricing_basis pada tabel order_items untuk snapshot klasifikasi kiloan vs satuan',
+    sql: `
+      ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "unit" VARCHAR(20);
+      ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "pricing_basis" VARCHAR(20);
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

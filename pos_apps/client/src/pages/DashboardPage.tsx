@@ -156,7 +156,7 @@ type TabKey =
   | 'laundry_commissions';
 
 const ROLE_TABS: Record<UserRole, TabKey[]> = {
-  CASHIER: ['pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders', 'laundry_queue', 'laundry_production', 'laundry_services', 'laundry_racks', 'laundry_transfers'],
+  CASHIER: ['overview', 'pos', 'orders', 'customers', 'shifts', 'payment_items', 'qr_orders', 'laundry_queue', 'laundry_production', 'laundry_services', 'laundry_racks', 'laundry_transfers'],
   WAREHOUSE: [
     'inventory',
     'warehouses',
@@ -508,7 +508,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             setUsersList(res.data);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [user.id, user.tenantId]);
 
@@ -579,10 +579,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       return ['laundry_production', 'laundry_queue', 'laundry_racks', 'overview'];
     }
     if (user.role === 'WAREHOUSE') {
-      return ['inventory', 'stock_movements', 'purchase_orders', 'transfers', 'suppliers', 'warehouses', 'laundry_transfers', 'overview'];
+      return ['laundry_production', 'laundry_queue', 'laundry_racks', 'inventory', 'stock_movements', 'purchase_orders', 'transfers', 'suppliers', 'warehouses', 'laundry_transfers', 'overview'];
     }
     if (user.role === 'CASHIER') {
-      return ['pos', 'laundry_queue', 'laundry_production', 'laundry_racks', 'laundry_services', 'orders', 'customers', 'shifts', 'payment_items', 'laundry_transfers'];
+      return ['pos', 'overview', 'laundry_queue', 'laundry_production', 'laundry_racks', 'laundry_services', 'orders', 'customers', 'shifts', 'payment_items', 'laundry_transfers'];
     }
 
     const filtered = baseTabs.filter((tab) => !fnbOnlyTabs.includes(tab));
@@ -673,218 +673,218 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               />
             )
           ) : activeTab === 'billing_tokens' ? (
-          <BillingTokensView
-            user={user}
-            activeOutlet={activeOutlet}
-          />
-        ) : activeTab === 'products' ? (
-          <ProductsView
-            userRole={user.role}
-            outletId={activeOutlet?.id}
-            onProductCountChange={(count) => setProductCount(count)}
-            onNavigateToCategories={() => setActiveTab('categories')}
-          />
-        ) : activeTab === 'categories' ? (
-          <CategoriesView
-            activeOutlet={activeOutlet}
-            onNavigateToProductsWithCategory={() => setActiveTab('products')}
-          />
-        ) : activeTab === 'modifiers' ? (
-          <ModifiersView />
-        ) : activeTab === 'recipes' ? (
-          <RecipesView outletId={activeOutlet?.id} />
-        ) : activeTab === 'qr_tables' ? (
-          <QrTablesView activeOutlet={activeOutlet} />
-        ) : activeTab === 'qr_settings' ? (
-          <QrMenuSettingsView activeOutlet={activeOutlet} />
-        ) : activeTab === 'qr_orders' ? (
-          <QrLiveOrdersView
-            activeOutlet={activeOutlet}
-            onOpenInPos={(order) => {
-              setSelectedQrOrderForPos(order);
-              setActiveTab('pos');
-            }}
-          />
-        ) : activeTab === 'qr_guest_menu' ? (
-          <div className="space-y-0">
-            {/* 2-Col: Info Panel + Phone Mockup */}
-            <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <BillingTokensView
+              user={user}
+              activeOutlet={activeOutlet}
+            />
+          ) : activeTab === 'products' ? (
+            <ProductsView
+              userRole={user.role}
+              outletId={activeOutlet?.id}
+              onProductCountChange={(count) => setProductCount(count)}
+              onNavigateToCategories={() => setActiveTab('categories')}
+            />
+          ) : activeTab === 'categories' ? (
+            <CategoriesView
+              activeOutlet={activeOutlet}
+              onNavigateToProductsWithCategory={() => setActiveTab('products')}
+            />
+          ) : activeTab === 'modifiers' ? (
+            <ModifiersView />
+          ) : activeTab === 'recipes' ? (
+            <RecipesView outletId={activeOutlet?.id} />
+          ) : activeTab === 'qr_tables' ? (
+            <QrTablesView activeOutlet={activeOutlet} />
+          ) : activeTab === 'qr_settings' ? (
+            <QrMenuSettingsView activeOutlet={activeOutlet} />
+          ) : activeTab === 'qr_orders' ? (
+            <QrLiveOrdersView
+              activeOutlet={activeOutlet}
+              onOpenInPos={(order) => {
+                setSelectedQrOrderForPos(order);
+                setActiveTab('pos');
+              }}
+            />
+          ) : activeTab === 'qr_guest_menu' ? (
+            <div className="space-y-0">
+              {/* 2-Col: Info Panel + Phone Mockup */}
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-              {/* Kiri: Info Panel */}
-              <div className="w-full lg:w-80 shrink-0 space-y-4">
-                <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Smartphone className="w-4 h-4 text-blue-900 shrink-0" />
-                      <h2 className="text-sm font-black text-slate-900">Pratinjau Menu Tamu</h2>
+                {/* Kiri: Info Panel */}
+                <div className="w-full lg:w-80 shrink-0 space-y-4">
+                  <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Smartphone className="w-4 h-4 text-blue-900 shrink-0" />
+                        <h2 className="text-sm font-black text-slate-900">Pratinjau Menu Tamu</h2>
+                      </div>
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[11px] font-bold border border-blue-200 mb-2">
+                        Toko: {activeOutlet?.name || 'Utama'}
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Tampilan persis yang dilihat tamu saat memindai QR meja restoran.
+                      </p>
                     </div>
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[11px] font-bold border border-blue-200 mb-2">
-                      Toko: {activeOutlet?.name || 'Utama'}
-                    </div>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Tampilan persis yang dilihat tamu saat memindai QR meja restoran.
-                    </p>
+
+                    <a
+                      href={`/#menu?outletId=${activeOutlet?.id || ''}&table=DEMO`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-900/20 active:scale-95 cursor-pointer"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Buka Layar Penuh di Tab Baru</span>
+                    </a>
                   </div>
 
-                  <a
-                    href={`/#menu?outletId=${activeOutlet?.id || ''}&table=DEMO`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-900/20 active:scale-95 cursor-pointer"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    <span>Buka Layar Penuh di Tab Baru</span>
-                  </a>
+                  {/* Tips */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                    <p className="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider">💡 Tips</p>
+                    <ul className="text-xs text-amber-900 space-y-1.5 leading-relaxed">
+                      <li>• Scan QR meja untuk membuka tampilan asli di HP tamu</li>
+                      <li>• Klik "Buka Layar Penuh" untuk menguji di browser HP</li>
+                      <li>• Pratinjau di sini menggunakan <strong>Meja DEMO</strong></li>
+                    </ul>
+                  </div>
                 </div>
 
-                {/* Tips */}
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
-                  <p className="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider">💡 Tips</p>
-                  <ul className="text-xs text-amber-900 space-y-1.5 leading-relaxed">
-                    <li>• Scan QR meja untuk membuka tampilan asli di HP tamu</li>
-                    <li>• Klik "Buka Layar Penuh" untuk menguji di browser HP</li>
-                    <li>• Pratinjau di sini menggunakan <strong>Meja DEMO</strong></li>
-                  </ul>
+                {/* Kanan: Phone Mockup */}
+                <div className="flex-1 flex justify-center lg:justify-start items-start">
+                  <div className="w-full max-w-[375px] bg-white rounded-[2.5rem] border-[8px] border-slate-900 shadow-2xl overflow-hidden relative">
+                    {/* Simulated Phone Notch */}
+                    <div className="bg-slate-900 h-6 flex items-center justify-center">
+                      <div className="w-24 h-3 bg-slate-950 rounded-full" />
+                    </div>
+
+                    {/* Embedded Customer Menu Container (Scroll-only, tanpa banner merah, non-clickable) */}
+                    <div className="max-h-[680px] overflow-y-auto select-none cursor-default">
+                      <div className="pointer-events-none">
+                        <CustomerQrMenuView
+                          outletId={activeOutlet?.id || ''}
+                          tableCode="DEMO"
+                          hidePreviewBanner
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bottom bar notch */}
+                    <div className="bg-slate-900 h-5 flex items-center justify-center">
+                      <div className="w-28 h-1 bg-slate-700 rounded-full" />
+                    </div>
+                  </div>
                 </div>
+
               </div>
-
-              {/* Kanan: Phone Mockup */}
-              <div className="flex-1 flex justify-center lg:justify-start items-start">
-                <div className="w-full max-w-[375px] bg-white rounded-[2.5rem] border-[8px] border-slate-900 shadow-2xl overflow-hidden relative">
-                  {/* Simulated Phone Notch */}
-                  <div className="bg-slate-900 h-6 flex items-center justify-center">
-                    <div className="w-24 h-3 bg-slate-950 rounded-full" />
-                  </div>
-
-                  {/* Embedded Customer Menu Container (Scroll-only, tanpa banner merah, non-clickable) */}
-                  <div className="max-h-[680px] overflow-y-auto select-none cursor-default">
-                    <div className="pointer-events-none">
-                      <CustomerQrMenuView
-                        outletId={activeOutlet?.id || ''}
-                        tableCode="DEMO"
-                        hidePreviewBanner
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bottom bar notch */}
-                  <div className="bg-slate-900 h-5 flex items-center justify-center">
-                    <div className="w-28 h-1 bg-slate-700 rounded-full" />
-                  </div>
-                </div>
-              </div>
-
             </div>
-          </div>
-        ) : activeTab === 'inventory' ? (
-          <InventoryView activeOutlet={activeOutlet} />
-        ) : activeTab === 'warehouses' ? (
-          <WarehousesView
-            activeOutletId={activeOutlet?.id}
-            onSelectActiveOutlet={(id) => {
-              handleOutletSelect(id);
-            }}
-            onWarehousesUpdated={fetchOutlets}
-          />
-        ) : activeTab === 'stock_movements' ? (
-          <StockMovementsView activeOutlet={activeOutlet} />
-        ) : activeTab === 'purchase_orders' ? (
-          <PurchaseOrdersView activeOutlet={activeOutlet} />
-        ) : activeTab === 'transfers' ? (
-          <StockTransfersView activeOutlet={activeOutlet} />
-        ) : activeTab === 'suppliers' ? (
-          <SuppliersView activeOutlet={activeOutlet} currentUser={user} />
-        ) : activeTab === 'orders' ? (
-          <OrdersView
-            activeOutlet={activeOutlet}
-            currentUser={user}
-            onAppendOrder={(order) => {
-              setAppendOrderData(order);
-              setActiveTab('pos');
-            }}
-          />
-        ) : activeTab === 'customers' ? (
-          <CustomersView activeOutlet={activeOutlet} />
-        ) : activeTab === 'shifts' ? (
-          <ShiftsAuditView activeOutlet={activeOutlet} currentUser={user} />
-        ) : activeTab === 'payment_items' ? (
-          <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
-        ) : activeTab === 'reports' ? (
-          <FinancialReportView activeOutlet={activeOutlet} />
-        ) : activeTab === 'product_analytics' ? (
-          <ProductAnalyticsView activeOutlet={activeOutlet} />
-        ) : activeTab === 'promotions' ? (
-          <PromotionsView activeOutlet={activeOutlet} currentUser={user} isLaundryMode={isLaundryMode} />
-        ) : activeTab === 'staff_users' || activeTab === 'users' ? (
-          <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
-        ) : activeTab === 'staff_roles' ? (
-          <StaffRolesView
-            activeOutlet={activeOutlet}
-            currentUser={user}
-            onBackToStaffList={() => setActiveTab('staff_users')}
-          />
-        ) : activeTab === 'settings_receipt' ? (
-          <ReceiptSettingsView
-            activeOutlet={activeOutlet}
-            onOutletUpdated={handleOutletUpdated}
-          />
-        ) : activeTab === 'settings_taxes' ? (
-          <TaxesSettingsView
-            activeOutlet={activeOutlet}
-            onOutletUpdated={handleOutletUpdated}
-            currentUserRole={user.role}
-          />
-        ) : activeTab === 'settings_payment' ? (
-          <PaymentSettingsView
-            activeOutlet={activeOutlet}
-            onOutletUpdated={handleOutletUpdated}
-            currentUserRole={user.role}
-          />
-        ) : activeTab === 'settings_channels' ? (
-          <SalesChannelsSettingsView
-            activeOutlet={activeOutlet}
-            onOutletUpdated={handleOutletUpdated}
-            currentUserRole={user.role}
-          />
-        ) : activeTab === 'settings_loyalty' ? (
-          <LoyaltySettingsView
-            activeOutlet={activeOutlet}
-            onOutletUpdated={handleOutletUpdated}
-          />
-        ) : activeTab === 'outlets' ? (
-          <OutletsView
-            activeOutletId={activeOutlet?.id}
-            onSelectActiveOutlet={(id) => {
-              handleOutletSelect(id);
-            }}
-            onOutletsUpdated={fetchOutlets}
-          />
-        ) : activeTab === 'guide' ? (
-          <UserGuideView
-            initialSection={guideSection}
-            onNavigateTab={(tab) => {
-              setActiveTab(tab as TabKey);
-            }}
-            currentUserRole={user.role}
-            activeOutlet={activeOutlet}
-            currentUser={user}
-            isLaundryMode={isLaundryMode}
-          />
-        ) : activeTab === 'laundry_services' ? (
-          <LaundryServicesView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_queue' ? (
-          <LaundryQueueView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_production' ? (
-          <LaundryProductionView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_racks' ? (
-          <LaundryRacksView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_transfers' ? (
-          <LaundryTransfersView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_commissions' ? (
-          <LaundryCommissionView activeOutlet={activeOutlet} currentUser={user} />
-        ) : (
-          <InventoryView activeOutlet={activeOutlet} />
-        )}
+          ) : activeTab === 'inventory' ? (
+            <InventoryView activeOutlet={activeOutlet} />
+          ) : activeTab === 'warehouses' ? (
+            <WarehousesView
+              activeOutletId={activeOutlet?.id}
+              onSelectActiveOutlet={(id) => {
+                handleOutletSelect(id);
+              }}
+              onWarehousesUpdated={fetchOutlets}
+            />
+          ) : activeTab === 'stock_movements' ? (
+            <StockMovementsView activeOutlet={activeOutlet} />
+          ) : activeTab === 'purchase_orders' ? (
+            <PurchaseOrdersView activeOutlet={activeOutlet} />
+          ) : activeTab === 'transfers' ? (
+            <StockTransfersView activeOutlet={activeOutlet} />
+          ) : activeTab === 'suppliers' ? (
+            <SuppliersView activeOutlet={activeOutlet} currentUser={user} />
+          ) : activeTab === 'orders' ? (
+            <OrdersView
+              activeOutlet={activeOutlet}
+              currentUser={user}
+              onAppendOrder={(order) => {
+                setAppendOrderData(order);
+                setActiveTab('pos');
+              }}
+            />
+          ) : activeTab === 'customers' ? (
+            <CustomersView activeOutlet={activeOutlet} />
+          ) : activeTab === 'shifts' ? (
+            <ShiftsAuditView activeOutlet={activeOutlet} currentUser={user} />
+          ) : activeTab === 'payment_items' ? (
+            <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
+          ) : activeTab === 'reports' ? (
+            <FinancialReportView activeOutlet={activeOutlet} />
+          ) : activeTab === 'product_analytics' ? (
+            <ProductAnalyticsView activeOutlet={activeOutlet} />
+          ) : activeTab === 'promotions' ? (
+            <PromotionsView activeOutlet={activeOutlet} currentUser={user} isLaundryMode={isLaundryMode} />
+          ) : activeTab === 'staff_users' || activeTab === 'users' ? (
+            <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
+          ) : activeTab === 'staff_roles' ? (
+            <StaffRolesView
+              activeOutlet={activeOutlet}
+              currentUser={user}
+              onBackToStaffList={() => setActiveTab('staff_users')}
+            />
+          ) : activeTab === 'settings_receipt' ? (
+            <ReceiptSettingsView
+              activeOutlet={activeOutlet}
+              onOutletUpdated={handleOutletUpdated}
+            />
+          ) : activeTab === 'settings_taxes' ? (
+            <TaxesSettingsView
+              activeOutlet={activeOutlet}
+              onOutletUpdated={handleOutletUpdated}
+              currentUserRole={user.role}
+            />
+          ) : activeTab === 'settings_payment' ? (
+            <PaymentSettingsView
+              activeOutlet={activeOutlet}
+              onOutletUpdated={handleOutletUpdated}
+              currentUserRole={user.role}
+            />
+          ) : activeTab === 'settings_channels' ? (
+            <SalesChannelsSettingsView
+              activeOutlet={activeOutlet}
+              onOutletUpdated={handleOutletUpdated}
+              currentUserRole={user.role}
+            />
+          ) : activeTab === 'settings_loyalty' ? (
+            <LoyaltySettingsView
+              activeOutlet={activeOutlet}
+              onOutletUpdated={handleOutletUpdated}
+            />
+          ) : activeTab === 'outlets' ? (
+            <OutletsView
+              activeOutletId={activeOutlet?.id}
+              onSelectActiveOutlet={(id) => {
+                handleOutletSelect(id);
+              }}
+              onOutletsUpdated={fetchOutlets}
+            />
+          ) : activeTab === 'guide' ? (
+            <UserGuideView
+              initialSection={guideSection}
+              onNavigateTab={(tab) => {
+                setActiveTab(tab as TabKey);
+              }}
+              currentUserRole={user.role}
+              activeOutlet={activeOutlet}
+              currentUser={user}
+              isLaundryMode={isLaundryMode}
+            />
+          ) : activeTab === 'laundry_services' ? (
+            <LaundryServicesView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_queue' ? (
+            <LaundryQueueView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_production' ? (
+            <LaundryProductionView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_racks' ? (
+            <LaundryRacksView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_transfers' ? (
+            <LaundryTransfersView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_commissions' ? (
+            <LaundryCommissionView activeOutlet={activeOutlet} currentUser={user} />
+          ) : (
+            <InventoryView activeOutlet={activeOutlet} />
+          )}
         </Suspense>
 
         {/* Modal Onboarding Wizard (3 Steps) */}
@@ -963,11 +963,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('pos');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'pos'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'pos'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <CreditCard className="w-4 h-4" />
                     <span>{isLaundryMode ? 'Kasir Laundry' : 'Mesin Kasir (POS)'}</span>
@@ -982,11 +981,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('laundry_queue');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'laundry_queue'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'laundry_queue'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Layers className="w-4 h-4" />
                     <span>Antrean Cucian</span>
@@ -1000,11 +998,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('laundry_production');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'laundry_production'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'laundry_production'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Shirt className="w-4 h-4" />
                     <span>Workshop Produksi</span>
@@ -1018,11 +1015,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('laundry_racks');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'laundry_racks'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'laundry_racks'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Archive className="w-4 h-4" />
                     <span>Rak Simpan</span>
@@ -1036,11 +1032,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('laundry_services');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'laundry_services'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'laundry_services'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Tag className="w-4 h-4" />
                     <span>Layanan &amp; Tarif</span>
@@ -1054,11 +1049,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('laundry_transfers');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'laundry_transfers'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'laundry_transfers'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Truck className="w-4 h-4" />
                     <span>Delivery / Drop-point</span>
@@ -1073,11 +1067,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('overview');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'overview'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'overview'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     <span>Ringkasan {user.role === 'WAREHOUSE' ? 'Gudang' : 'Toko'}</span>
@@ -1092,11 +1085,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('products');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-all text-left cursor-pointer ${
-                      activeTab === 'products'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-all text-left cursor-pointer ${activeTab === 'products'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <ShoppingBag className="w-4 h-4" />
@@ -1116,11 +1108,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('inventory');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'inventory'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'inventory'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Boxes className="w-4 h-4" />
                     <span>Bahan Baku &amp; Stok</span>
@@ -1135,11 +1126,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('recipes');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'recipes'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'recipes'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <UtensilsCrossed className="w-4 h-4" />
                     <span>Resep &amp; Bahan Baku</span>
@@ -1154,11 +1144,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('stock_movements');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'stock_movements'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'stock_movements'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <ClipboardList className="w-4 h-4" />
                     <span>Kartu Mutasi Stok</span>
@@ -1173,11 +1162,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('purchase_orders');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'purchase_orders'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'purchase_orders'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <FileText className="w-4 h-4" />
                     <span>Pengadaan (PO)</span>
@@ -1192,11 +1180,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('transfers');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'transfers'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'transfers'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <ArrowLeftRight className="w-4 h-4" />
                     <span>Transfer Antar Toko</span>
@@ -1211,11 +1198,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('suppliers');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'suppliers'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'suppliers'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Contact className="w-4 h-4" />
                     <span>Pemasok (Vendor)</span>
@@ -1230,11 +1216,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('orders');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'orders'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'orders'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Receipt className="w-4 h-4" />
                     <span>Riwayat Transaksi</span>
@@ -1249,11 +1234,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('qr_orders');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'qr_orders'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'qr_orders'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Ticket className="w-4 h-4" />
                     <span>Pesanan QR Meja</span>
@@ -1268,11 +1252,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('customers');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'customers'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'customers'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Users className="w-4 h-4" />
                     <span>Pelanggan &amp; Member</span>
@@ -1287,11 +1270,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                       setActiveTab('shifts');
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${
-                      activeTab === 'shifts'
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 transition-all text-left cursor-pointer ${activeTab === 'shifts'
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Clock className="w-4 h-4" />
                     <span>Laporan Shift Kasir</span>
@@ -1463,11 +1445,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('pos') && (
             <button
               onClick={() => setActiveTab('pos')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'pos'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'pos'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <CreditCard className="w-4 h-4" />
               <span>{isLaundryMode ? 'Kasir Laundry' : 'Mesin Kasir (POS)'}</span>
@@ -1478,11 +1459,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {isLaundryMode && allowedTabs.includes('laundry_queue') && (
             <button
               onClick={() => setActiveTab('laundry_queue')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'laundry_queue'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'laundry_queue'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Layers className="w-4 h-4" />
               <span>Antrean Cucian</span>
@@ -1492,11 +1472,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {isLaundryMode && allowedTabs.includes('laundry_production') && (
             <button
               onClick={() => setActiveTab('laundry_production')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'laundry_production'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'laundry_production'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Shirt className="w-4 h-4" />
               <span>Workshop</span>
@@ -1506,11 +1485,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {isLaundryMode && allowedTabs.includes('laundry_racks') && (
             <button
               onClick={() => setActiveTab('laundry_racks')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'laundry_racks'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'laundry_racks'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Archive className="w-4 h-4" />
               <span>Rak Simpan</span>
@@ -1520,11 +1498,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {isLaundryMode && allowedTabs.includes('laundry_services') && (
             <button
               onClick={() => setActiveTab('laundry_services')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'laundry_services'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'laundry_services'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Tag className="w-4 h-4" />
               <span>Layanan &amp; Tarif</span>
@@ -1534,11 +1511,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {isLaundryMode && allowedTabs.includes('laundry_transfers') && (
             <button
               onClick={() => setActiveTab('laundry_transfers')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'laundry_transfers'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'laundry_transfers'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Truck className="w-4 h-4" />
               <span>Delivery</span>
@@ -1549,11 +1525,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('overview') && (
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'overview'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'overview'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Ringkasan {user.role === 'WAREHOUSE' ? 'Gudang' : 'Toko'}</span>
@@ -1564,11 +1539,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('products') && (
             <button
               onClick={() => setActiveTab('products')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'products'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'products'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <ShoppingBag className="w-4 h-4" />
               <span>Katalog Produk</span>
@@ -1582,11 +1556,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('inventory') && (
             <button
               onClick={() => setActiveTab('inventory')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'inventory'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'inventory'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Boxes className="w-4 h-4" />
               <span>Stok & Kartu Mutasi</span>
@@ -1597,11 +1570,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('purchase_orders') && (
             <button
               onClick={() => setActiveTab('purchase_orders')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'purchase_orders'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'purchase_orders'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <FileText className="w-4 h-4" />
               <span>Pengadaan (PO)</span>
@@ -1612,11 +1584,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('transfers') && (
             <button
               onClick={() => setActiveTab('transfers')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'transfers'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'transfers'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <ArrowLeftRight className="w-4 h-4" />
               <span>Transfer Toko</span>
@@ -1627,11 +1598,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('orders') && (
             <button
               onClick={() => setActiveTab('orders')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'orders'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'orders'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Receipt className="w-4 h-4" />
               <span>Riwayat Transaksi</span>
@@ -1642,11 +1612,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('customers') && (
             <button
               onClick={() => setActiveTab('customers')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'customers'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'customers'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Contact className="w-4 h-4" />
               <span>Data Pelanggan</span>
@@ -1657,11 +1626,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('shifts') && (
             <button
               onClick={() => setActiveTab('shifts')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'shifts'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'shifts'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Clock className="w-4 h-4" />
               <span>{user.role === 'CASHIER' ? 'Shift Kasir' : 'Audit Shift'}</span>
@@ -1672,11 +1640,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('reports') && (
             <button
               onClick={() => setActiveTab('reports')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'reports'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'reports'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <TrendingUp className="w-4 h-4" />
               <span>Laporan Finansial</span>
@@ -1687,11 +1654,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('users') && (
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'users'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'users'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Users className="w-4 h-4" />
               <span>Kelola Staf</span>
@@ -1702,11 +1668,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
           {allowedTabs.includes('outlets') && (
             <button
               onClick={() => setActiveTab('outlets')}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === 'outlets'
-                  ? 'bg-blue-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === 'outlets'
+                ? 'bg-blue-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-blue-950 hover:bg-slate-100'
+                }`}
             >
               <Store className="w-4 h-4" />
               <span>Outlet Toko</span>
@@ -1721,9 +1686,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
       </div>
 
       {/* Main Content Area */}
-      <main className={`flex-1 w-full mx-auto ${
-        activeTab === 'pos' ? 'max-w-[1600px] p-0 sm:p-3' : 'max-w-6xl p-4 sm:p-8'
-      }`}>
+      <main className={`flex-1 w-full mx-auto ${activeTab === 'pos' ? 'max-w-[1600px] p-0 sm:p-3' : 'max-w-6xl p-4 sm:p-8'
+        }`}>
         {/* Widget Panduan & Progres Setup Awal (Jika Belum 100%) */}
         {isSetupIncomplete && (
           <div className="mb-6 p-5 sm:p-6 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl border border-indigo-500/30 shadow-2xl relative overflow-hidden animate-in fade-in">
@@ -1769,11 +1733,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {/* Item 1 */}
               <div
-                className={`p-3 rounded-2xl border transition-all ${
-                  hasStep1Address
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
+                className={`p-3 rounded-2xl border transition-all ${hasStep1Address
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] font-extrabold flex items-center gap-1.5">
@@ -1799,11 +1762,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
               {/* Item 2 */}
               <div
-                className={`p-3 rounded-2xl border transition-all ${
-                  hasStep2Receipt
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
+                className={`p-3 rounded-2xl border transition-all ${hasStep2Receipt
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] font-extrabold flex items-center gap-1.5">
@@ -1829,11 +1791,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
               {/* Item 3 */}
               <div
-                className={`p-3 rounded-2xl border transition-all ${
-                  hasStep3Staff
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
-                }`}
+                className={`p-3 rounded-2xl border transition-all ${hasStep3Staff
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] font-extrabold flex items-center gap-1.5">
@@ -1887,565 +1848,572 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               />
             )
           ) : activeTab === 'overview' ? (
-          <div className="space-y-8">
-            {/* Welcome Hero Banner in Deep Navy */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 border border-blue-800/40 p-6 sm:p-8 shadow-xl text-white">
-              <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-800/80 border border-blue-700/60 text-blue-200 text-xs font-semibold mb-3">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>
-                    {user.role === 'WAREHOUSE'
-                      ? 'Portal Manajemen Gudang & Logistik Stok Aktif'
-                      : user.role === 'CASHIER'
-                      ? 'Portal Mesin Kasir & Transaksi Siap Digunakan'
-                      : 'Portal Administrasi & Finansial Multi-Role Aktif'}
-                  </span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                  Selamat datang, {user.name.split(' ')[0]}! 👋
-                </h2>
-                <p className="text-sm text-blue-100/90 mt-2 leading-relaxed">
-                  {user.role === 'WAREHOUSE'
-                    ? 'Anda masuk sebagai Tim Gudang. Catat penerimaan barang (PO Supplier), pengeluaran barang rusak/kedaluwarsa, stock opname fisik, serta pantau alert stok menipis secara real-time.'
-                    : user.role === 'CASHIER'
-                    ? 'Anda masuk sebagai Kasir. Buka shift kerja di awal sesi, lakukan transaksi penjualan cepat, cetak struk thermal atau kirim via email, dan tutup shift (Z-Report) di akhir sesi.'
-                    : 'Sistem POS terintegrasi penuh: Mesin kasir responsif, barcode scanner USB, cetak struk thermal 58/80mm, audit shift kasir (X/Z Report), dan dashboard laporan laba rugi HPP.'}
-                </p>
+            isLaundryMode ? (
+              <LaundryBusinessSummaryView
+                activeOutlet={activeOutlet}
+                currentUser={user}
+                onOpenPos={() => setActiveTab('pos')}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+              />
+            ) : (
+              <div className="space-y-8">
+                {/* Welcome Hero Banner in Deep Navy */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 border border-blue-800/40 p-6 sm:p-8 shadow-xl text-white">
+                  <div className="relative z-10 max-w-2xl">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-800/80 border border-blue-700/60 text-blue-200 text-xs font-semibold mb-3">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>
+                        {user.role === 'WAREHOUSE'
+                          ? 'Portal Manajemen Gudang & Logistik Stok Aktif'
+                          : user.role === 'CASHIER'
+                            ? 'Portal Mesin Kasir & Transaksi Siap Digunakan'
+                            : 'Portal Administrasi & Finansial Multi-Role Aktif'}
+                      </span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                      Selamat datang, {user.name.split(' ')[0]}! 👋
+                    </h2>
+                    <p className="text-sm text-blue-100/90 mt-2 leading-relaxed">
+                      {user.role === 'WAREHOUSE'
+                        ? 'Anda masuk sebagai Tim Gudang. Catat penerimaan barang (PO Supplier), pengeluaran barang rusak/kedaluwarsa, stock opname fisik, serta pantau alert stok menipis secara real-time.'
+                        : user.role === 'CASHIER'
+                          ? 'Anda masuk sebagai Kasir. Buka shift kerja di awal sesi, lakukan transaksi penjualan cepat, cetak struk thermal atau kirim via email, dan tutup shift (Z-Report) di akhir sesi.'
+                          : 'Sistem POS terintegrasi penuh: Mesin kasir responsif, barcode scanner USB, cetak struk thermal 58/80mm, audit shift kasir (X/Z Report), dan dashboard laporan laba rugi HPP.'}
+                    </p>
 
-                {/* Role-tailored action shortcuts */}
-                <div className="flex items-center gap-3 mt-5 flex-wrap">
-                  {allowedTabs.includes('pos') && (
-                    <button
-                      onClick={() => setActiveTab('pos')}
-                      className="px-5 py-2.5 bg-white text-blue-950 font-black rounded-xl text-xs sm:text-sm shadow-md hover:bg-blue-50 transition-all flex items-center gap-2"
-                    >
-                      <ShoppingCart className="w-4 h-4 text-blue-900" />
-                      <span>Mulai Transaksi Kasir (F4)</span>
-                    </button>
-                  )}
+                    {/* Role-tailored action shortcuts */}
+                    <div className="flex items-center gap-3 mt-5 flex-wrap">
+                      {allowedTabs.includes('pos') && (
+                        <button
+                          onClick={() => setActiveTab('pos')}
+                          className="px-5 py-2.5 bg-white text-blue-950 font-black rounded-xl text-xs sm:text-sm shadow-md hover:bg-blue-50 transition-all flex items-center gap-2"
+                        >
+                          <ShoppingCart className="w-4 h-4 text-blue-900" />
+                          <span>Mulai Transaksi Kasir (F4)</span>
+                        </button>
+                      )}
 
-                  {allowedTabs.includes('inventory') && (
-                    <button
-                      onClick={() => setActiveTab('inventory')}
-                      className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
-                    >
-                      <PackageCheck className="w-4 h-4 text-sky-300" />
-                      <span>Mutasi Stok & Opname</span>
-                    </button>
-                  )}
+                      {allowedTabs.includes('inventory') && (
+                        <button
+                          onClick={() => setActiveTab('inventory')}
+                          className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
+                        >
+                          <PackageCheck className="w-4 h-4 text-sky-300" />
+                          <span>Mutasi Stok & Opname</span>
+                        </button>
+                      )}
 
-                  {allowedTabs.includes('shifts') && (
-                    <button
-                      onClick={() => setActiveTab('shifts')}
-                      className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
-                    >
-                      <Clock className="w-4 h-4 text-blue-200" />
-                      <span>{user.role === 'CASHIER' ? 'Buka/Tutup Shift' : 'Audit Shift'}</span>
-                    </button>
-                  )}
+                      {allowedTabs.includes('shifts') && (
+                        <button
+                          onClick={() => setActiveTab('shifts')}
+                          className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
+                        >
+                          <Clock className="w-4 h-4 text-blue-200" />
+                          <span>{user.role === 'CASHIER' ? 'Buka/Tutup Shift' : 'Audit Shift'}</span>
+                        </button>
+                      )}
 
-                  {allowedTabs.includes('reports') && (
-                    <button
-                      onClick={() => setActiveTab('reports')}
-                      className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
-                    >
-                      <TrendingUp className="w-4 h-4 text-emerald-300" />
-                      <span>Laporan Finansial</span>
-                    </button>
-                  )}
+                      {allowedTabs.includes('reports') && (
+                        <button
+                          onClick={() => setActiveTab('reports')}
+                          className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
+                        >
+                          <TrendingUp className="w-4 h-4 text-emerald-300" />
+                          <span>Laporan Finansial</span>
+                        </button>
+                      )}
 
-                  {allowedTabs.includes('products') && (
-                    <button
-                      onClick={() => setActiveTab('products')}
-                      className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      <span>Katalog Produk</span>
-                    </button>
-                  )}
+                      {allowedTabs.includes('products') && (
+                        <button
+                          onClick={() => setActiveTab('products')}
+                          className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>Katalog Produk</span>
+                        </button>
+                      )}
 
-                  {allowedTabs.includes('users') && (
-                    <button
-                      onClick={() => setActiveTab('users')}
-                      className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
-                    >
-                      <Users className="w-4 h-4 text-purple-300" />
-                      <span>Kelola Staf & PIN</span>
-                    </button>
-                  )}
+                      {allowedTabs.includes('users') && (
+                        <button
+                          onClick={() => setActiveTab('users')}
+                          className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
+                        >
+                          <Users className="w-4 h-4 text-purple-300" />
+                          <span>Kelola Staf & PIN</span>
+                        </button>
+                      )}
 
-                  {allowedTabs.includes('outlets') && (
-                    <button
-                      onClick={() => setActiveTab('outlets')}
-                      className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
-                    >
-                      <Store className="w-4 h-4 text-sky-300" />
-                      <span>Kelola Toko ({outlets.filter((o) => !o.isWarehouse).length})</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Status Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card 1: Outlet Info */}
-              <div
-                onClick={() => allowedTabs.includes('outlets') && setActiveTab('outlets')}
-                className={`p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
-                  allowedTabs.includes('outlets') ? 'cursor-pointer hover:border-blue-300' : ''
-                }`}
-                title={allowedTabs.includes('outlets') ? 'Klik untuk kelola outlet toko' : undefined}
-              >
-                <div className="flex items-center justify-between text-slate-500 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider">Outlet Toko</span>
-                  <Store className="w-4 h-4 text-blue-900" />
-                </div>
-                <div>
-                  <div className="text-lg font-extrabold text-blue-950 truncate">
-                    {activeOutlet?.name || user.outlet?.name || 'Toko Utama'}
+                      {allowedTabs.includes('outlets') && (
+                        <button
+                          onClick={() => setActiveTab('outlets')}
+                          className="px-4 py-2 bg-blue-800/70 hover:bg-blue-800 text-white font-bold rounded-xl text-xs sm:text-sm border border-blue-700 transition-all flex items-center gap-1.5"
+                        >
+                          <Store className="w-4 h-4 text-sky-300" />
+                          <span>Kelola Toko ({outlets.filter((o) => !o.isWarehouse).length})</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1 flex items-center justify-between">
-                    <span>ID: {(activeOutlet?.id || user.outlet?.id || 'Default').slice(0, 8)}...</span>
-                    {allowedTabs.includes('outlets') && (
-                      <span className="text-[11px] font-bold text-blue-700 hover:underline">Kelola &rarr;</span>
+                </div>
+
+                {/* Status Metric Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: Outlet Info */}
+                  <div
+                    onClick={() => allowedTabs.includes('outlets') && setActiveTab('outlets')}
+                    className={`p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${allowedTabs.includes('outlets') ? 'cursor-pointer hover:border-blue-300' : ''
+                      }`}
+                    title={allowedTabs.includes('outlets') ? 'Klik untuk kelola outlet toko' : undefined}
+                  >
+                    <div className="flex items-center justify-between text-slate-500 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider">Outlet Toko</span>
+                      <Store className="w-4 h-4 text-blue-900" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-extrabold text-blue-950 truncate">
+                        {activeOutlet?.name || user.outlet?.name || 'Toko Utama'}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+                        <span>ID: {(activeOutlet?.id || user.outlet?.id || 'Default').slice(0, 8)}...</span>
+                        {allowedTabs.includes('outlets') && (
+                          <span className="text-[11px] font-bold text-blue-700 hover:underline">Kelola &rarr;</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Role & PIN */}
+                  <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-slate-500 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider">Hak Akses & PIN</span>
+                      <Shield className="w-4 h-4 text-blue-900" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-extrabold text-blue-950">{badge.label}</div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        PIN Kasir: <span className="font-semibold text-blue-900">{user.pin ? `•••••• (${user.pin})` : 'Belum diatur'}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Database & Sample Products */}
+                  <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-slate-500 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider">Katalog Produk</span>
+                      <Database className="w-4 h-4 text-blue-900" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-extrabold text-blue-950">{productCount} Produk Terdata</div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Akses Hanya Lihat (Read-Only)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Backend API Health */}
+                  <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-slate-500 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider">Status API Backend</span>
+                      <Activity className="w-4 h-4 text-blue-900" />
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${healthStatus === 'ok'
+                          ? 'bg-emerald-500 ring-4 ring-emerald-100'
+                          : healthStatus === 'error'
+                            ? 'bg-rose-500'
+                            : 'bg-amber-400'
+                          }`}
+                      />
+                      <span className="text-lg font-extrabold text-blue-950">
+                        {healthStatus === 'ok' ? 'Terhubung (200)' : healthStatus === 'error' ? 'Terputus' : 'Memeriksa...'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workflow Guidance per Role */}
+                <div>
+                  <h3 className="text-lg font-extrabold text-blue-950 mb-4 flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-blue-900" />
+                    <span>Panduan Alur Pengetesan Manual Role Ini</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {user.role === 'CASHIER' ? (
+                      <>
+                        <div
+                          onClick={() => setActiveTab('shifts')}
+                          className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
+                              1
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Buka Shift Kasir</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Buka menu Shift Kasir, masukkan modal awal kas laci (misal Rp 200.000), dan mulai sesi penjualan Anda.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
+                            <span>Buka Shift</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setActiveTab('pos')}
+                          className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                              2
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Transaksi Kasir & Struk</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Pilih produk minuman/makanan, atur jumlah & diskon, bayar Tunai atau QRIS, lalu cetak/unduh struk thermal.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                            <span>Buka Kasir (F4)</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setActiveTab('shifts')}
+                          className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                              3
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Tutup Shift (Z-Report)</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Hitung uang fisik di laci kasir, input ke sistem, cetak laporan Z-Report penutupan shift, dan verifikasi selisih kas.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                            <span>Tutup Shift</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </>
+                    ) : user.role === 'WAREHOUSE' ? (
+                      <>
+                        <div
+                          onClick={() => setActiveTab('purchase_orders')}
+                          className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
+                              1
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Pengadaan Barang (PO)</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Terima pasokan bahan baku dari supplier, cetak PO, dan verifikasi penerimaan fisik dengan update Moving Average Cost otomatis.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
+                            <span>Buka Pengadaan PO</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setActiveTab('inventory')}
+                          className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                              2
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Penyesuaian & Opname</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Lakukan penyesuaian fisik (*stock opname*) atau catat barang rusak/kedaluwarsa sebagai stok keluar.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                            <span>Opname Stok</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setActiveTab(isLaundryMode ? 'laundry_services' : 'products')}
+                          className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                              3
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">
+                              {isLaundryMode ? 'Katalog Layanan & Tarif (Read-Only)' : 'Katalog Produk (Read-Only)'}
+                            </h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              {isLaundryMode
+                                ? 'Lihat daftar layanan kiloan, satuan, dry clean, dan ketentuan durasi tanpa risiko mengubah tarif.'
+                                : 'Lihat daftar SKU, kategori, dan barcode produk tanpa risiko mengubah harga jual atau HPP produk.'}
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                            <span>{isLaundryMode ? 'Lihat Layanan' : 'Lihat Katalog'}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </>
+                    ) : user.role === 'KITCHEN' ? (
+                      isLaundryMode ? (
+                        <>
+                          <div
+                            onClick={() => setActiveTab('laundry_production')}
+                            className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                          >
+                            <div>
+                              <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
+                                1
+                              </div>
+                              <h4 className="font-bold text-blue-950 text-base">Stasiun Workshop Cuci &amp; Setrika</h4>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                                Pantau stasiun cuci, dryer, setrika uap, dan QC packing pakaian pelanggan secara real-time.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
+                              <span>Buka Workshop</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => setActiveTab('laundry_queue')}
+                            className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                          >
+                            <div>
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                                2
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-base">Antrean Cucian Masuk</h4>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                                Pantau tiket cucian masuk dari kasir drop-off yang siap diproses mesin atau sortir noda khusus.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                              <span>Buka Antrean Cucian</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => setActiveTab('laundry_racks')}
+                            className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                          >
+                            <div>
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                                3
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-base">Rak Simpan &amp; Serah Ambil</h4>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                                Alokasikan cucian bersih ke rak A-01 s/d B-04 dan siap diambil oleh pelanggan.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                              <span>Buka Rak Simpan</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div
+                            onClick={() => setActiveTab('qr_orders')}
+                            className="p-6 rounded-2xl bg-white border-2 border-amber-600 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                          >
+                            <div>
+                              <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-3 font-bold">
+                                1
+                              </div>
+                              <h4 className="font-bold text-amber-950 text-base">Pesanan Masak Live (KDS)</h4>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                                Pantau tiket pesanan masuk per meja secara real-time, ubah status ke Sedang Dimasak, dan tandai saat hidangan Siap Saji.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-extrabold flex items-center justify-between">
+                              <span>Buka Antrean Dapur</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => setActiveTab('recipes')}
+                            className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                          >
+                            <div>
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                                2
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-base">Formula Resep &amp; BOM</h4>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                                Periksa standar takaran gramatur bahan baku, komposisi saus, dan SOP konsistensi rasa setiap menu minuman/makanan.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
+                              <span>Lihat Resep &amp; BOM</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => setActiveTab('qr_orders')}
+                            className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                          >
+                            <div>
+                              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                                3
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-base">Koordinasi Pramusaji</h4>
+                              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                                Tandai pesanan Selesai saat hidangan telah diantar ke meja tamu pelanggan untuk memperbarui status kasir otomatis.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
+                              <span>Monitor Antrean</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <div
+                          onClick={() => setActiveTab('pos')}
+                          className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
+                              1
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Operasional Kasir (POS)</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Buka mesin kasir, lakukan penjualan barang, diskon manual, cetak struk thermal 58/80mm, atau kirim struk email.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
+                            <span>Buka Terminal Kasir</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setActiveTab('shifts')}
+                          className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                              2
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Audit Shift & Laci Uang</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Audit laporan shift kasir, periksa selisih uang fisik vs kalkulasi sistem, dan pantau cetakan X-Report & Z-Report.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                            <span>Buka Audit Shift</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setActiveTab('reports')}
+                          className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                        >
+                          <div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
+                              3
+                            </div>
+                            <h4 className="font-bold text-blue-950 text-base">Laporan Finansial & HPP</h4>
+                            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                              Analisis laba kotor, HPP riil, performa metode pembayaran, breakdown per kategori, dan ekspor data ke format CSV.
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
+                            <span>Buka Laporan</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </>
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
-
-              {/* Card 2: Role & PIN */}
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider">Hak Akses & PIN</span>
-                  <Shield className="w-4 h-4 text-blue-900" />
-                </div>
-                <div>
-                  <div className="text-lg font-extrabold text-blue-950">{badge.label}</div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    PIN Kasir: <span className="font-semibold text-blue-900">{user.pin ? `•••••• (${user.pin})` : 'Belum diatur'}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 3: Database & Sample Products */}
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider">Katalog Produk</span>
-                  <Database className="w-4 h-4 text-blue-900" />
-                </div>
-                <div>
-                  <div className="text-lg font-extrabold text-blue-950">{productCount} Produk Terdata</div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Akses Hanya Lihat (Read-Only)
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 4: Backend API Health */}
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-500 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider">Status API Backend</span>
-                  <Activity className="w-4 h-4 text-blue-900" />
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      healthStatus === 'ok'
-                        ? 'bg-emerald-500 ring-4 ring-emerald-100'
-                        : healthStatus === 'error'
-                        ? 'bg-rose-500'
-                        : 'bg-amber-400'
-                    }`}
-                  />
-                  <span className="text-lg font-extrabold text-blue-950">
-                    {healthStatus === 'ok' ? 'Terhubung (200)' : healthStatus === 'error' ? 'Terputus' : 'Memeriksa...'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Workflow Guidance per Role */}
-            <div>
-              <h3 className="text-lg font-extrabold text-blue-950 mb-4 flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-blue-900" />
-                <span>Panduan Alur Pengetesan Manual Role Ini</span>
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {user.role === 'CASHIER' ? (
-                  <>
-                    <div
-                      onClick={() => setActiveTab('shifts')}
-                      className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
-                          1
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Buka Shift Kasir</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Buka menu Shift Kasir, masukkan modal awal kas laci (misal Rp 200.000), dan mulai sesi penjualan Anda.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
-                        <span>Buka Shift</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActiveTab('pos')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          2
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Transaksi Kasir & Struk</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Pilih produk minuman/makanan, atur jumlah & diskon, bayar Tunai atau QRIS, lalu cetak/unduh struk thermal.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>Buka Kasir (F4)</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActiveTab('shifts')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          3
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Tutup Shift (Z-Report)</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Hitung uang fisik di laci kasir, input ke sistem, cetak laporan Z-Report penutupan shift, dan verifikasi selisih kas.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>Tutup Shift</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </>
-                ) : user.role === 'WAREHOUSE' ? (
-                  <>
-                    <div
-                      onClick={() => setActiveTab('purchase_orders')}
-                      className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
-                          1
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Pengadaan Barang (PO)</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Terima pasokan bahan baku dari supplier, cetak PO, dan verifikasi penerimaan fisik dengan update Moving Average Cost otomatis.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
-                        <span>Buka Pengadaan PO</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActiveTab('inventory')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          2
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Penyesuaian & Opname</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Lakukan penyesuaian fisik (*stock opname*) atau catat barang rusak/kedaluwarsa sebagai stok keluar.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>Opname Stok</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActiveTab(isLaundryMode ? 'laundry_services' : 'products')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          3
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">
-                          {isLaundryMode ? 'Katalog Layanan & Tarif (Read-Only)' : 'Katalog Produk (Read-Only)'}
-                        </h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          {isLaundryMode
-                            ? 'Lihat daftar layanan kiloan, satuan, dry clean, dan ketentuan durasi tanpa risiko mengubah tarif.'
-                            : 'Lihat daftar SKU, kategori, dan barcode produk tanpa risiko mengubah harga jual atau HPP produk.'}
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>{isLaundryMode ? 'Lihat Layanan' : 'Lihat Katalog'}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </>
-                ) : user.role === 'KITCHEN' ? (
-                  isLaundryMode ? (
-                    <>
-                      <div
-                        onClick={() => setActiveTab('laundry_production')}
-                        className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
-                      >
-                        <div>
-                          <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
-                            1
-                          </div>
-                          <h4 className="font-bold text-blue-950 text-base">Stasiun Workshop Cuci &amp; Setrika</h4>
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Pantau stasiun cuci, dryer, setrika uap, dan QC packing pakaian pelanggan secara real-time.
-                          </p>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
-                          <span>Buka Workshop</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => setActiveTab('laundry_queue')}
-                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                      >
-                        <div>
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                            2
-                          </div>
-                          <h4 className="font-bold text-slate-900 text-base">Antrean Cucian Masuk</h4>
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Pantau tiket cucian masuk dari kasir drop-off yang siap diproses mesin atau sortir noda khusus.
-                          </p>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                          <span>Buka Antrean Cucian</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => setActiveTab('laundry_racks')}
-                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                      >
-                        <div>
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                            3
-                          </div>
-                          <h4 className="font-bold text-slate-900 text-base">Rak Simpan &amp; Serah Ambil</h4>
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Alokasikan cucian bersih ke rak A-01 s/d B-04 dan siap diambil oleh pelanggan.
-                          </p>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                          <span>Buka Rak Simpan</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div
-                        onClick={() => setActiveTab('qr_orders')}
-                        className="p-6 rounded-2xl bg-white border-2 border-amber-600 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
-                      >
-                        <div>
-                          <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-3 font-bold">
-                            1
-                          </div>
-                          <h4 className="font-bold text-amber-950 text-base">Pesanan Masak Live (KDS)</h4>
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Pantau tiket pesanan masuk per meja secara real-time, ubah status ke Sedang Dimasak, dan tandai saat hidangan Siap Saji.
-                          </p>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-extrabold flex items-center justify-between">
-                          <span>Buka Antrean Dapur</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => setActiveTab('recipes')}
-                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                      >
-                        <div>
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                            2
-                          </div>
-                          <h4 className="font-bold text-slate-900 text-base">Formula Resep &amp; BOM</h4>
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Periksa standar takaran gramatur bahan baku, komposisi saus, dan SOP konsistensi rasa setiap menu minuman/makanan.
-                          </p>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
-                          <span>Lihat Resep &amp; BOM</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => setActiveTab('qr_orders')}
-                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                      >
-                        <div>
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                            3
-                          </div>
-                          <h4 className="font-bold text-slate-900 text-base">Koordinasi Pramusaji</h4>
-                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                            Tandai pesanan Selesai saat hidangan telah diantar ke meja tamu pelanggan untuk memperbarui status kasir otomatis.
-                          </p>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-amber-700 font-bold flex items-center justify-between">
-                          <span>Monitor Antrean</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </>
-                  )
-                ) : (
-                  <>
-                    <div
-                      onClick={() => setActiveTab('pos')}
-                      className="p-6 rounded-2xl bg-white border-2 border-blue-900 shadow-md flex flex-col justify-between cursor-pointer hover:scale-[1.01] transition-all"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center mb-3 font-bold">
-                          1
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Operasional Kasir (POS)</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Buka mesin kasir, lakukan penjualan barang, diskon manual, cetak struk thermal 58/80mm, atau kirim struk email.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-extrabold flex items-center justify-between">
-                        <span>Buka Terminal Kasir</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActiveTab('shifts')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          2
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Audit Shift & Laci Uang</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Audit laporan shift kasir, periksa selisih uang fisik vs kalkulasi sistem, dan pantau cetakan X-Report & Z-Report.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>Buka Audit Shift</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActiveTab('reports')}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3 font-bold">
-                          3
-                        </div>
-                        <h4 className="font-bold text-blue-950 text-base">Laporan Finansial & HPP</h4>
-                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                          Analisis laba kotor, HPP riil, performa metode pembayaran, breakdown per kategori, dan ekspor data ke format CSV.
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                        <span>Buka Laporan</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : activeTab === 'products' ? (
-          <ProductsView
-            userRole={user.role}
-            outletId={activeOutlet?.id}
-            onProductCountChange={(count) => setProductCount(count)}
-            onNavigateToCategories={() => setActiveTab('categories')}
-          />
-        ) : activeTab === 'orders' ? (
-          <OrdersView
-            activeOutlet={activeOutlet}
-            currentUser={user}
-            onAppendOrder={(order) => {
-              setAppendOrderData(order);
-              setActiveTab('pos');
-            }}
-          />
-        ) : activeTab === 'customers' ? (
-          <CustomersView />
-        ) : activeTab === 'shifts' ? (
-          <ShiftsAuditView activeOutlet={activeOutlet} />
-        ) : activeTab === 'payment_items' ? (
-          <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
-        ) : activeTab === 'reports' ? (
-          <FinancialReportView activeOutlet={activeOutlet} />
-        ) : activeTab === 'users' ? (
-          <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
-        ) : activeTab === 'warehouses' ? (
-          <WarehousesView
-            activeOutletId={activeOutlet?.id}
-            onSelectActiveOutlet={(id) => {
-              handleOutletSelect(id);
-            }}
-            onWarehousesUpdated={fetchOutlets}
-          />
-        ) : activeTab === 'outlets' ? (
-          <OutletsView
-            activeOutletId={activeOutlet?.id}
-            onSelectActiveOutlet={(id) => {
-              handleOutletSelect(id);
-            }}
-            onOutletsUpdated={fetchOutlets}
-          />
-        ) : activeTab === 'guide' ? (
-          <div className="max-w-6xl mx-auto p-4 sm:p-6">
-            <UserGuideView
-              initialSection={guideSection}
-              onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
-              currentUserRole={user.role}
+            )
+          ) : activeTab === 'products' ? (
+            <ProductsView
+              userRole={user.role}
+              outletId={activeOutlet?.id}
+              onProductCountChange={(count) => setProductCount(count)}
+              onNavigateToCategories={() => setActiveTab('categories')}
+            />
+          ) : activeTab === 'orders' ? (
+            <OrdersView
               activeOutlet={activeOutlet}
               currentUser={user}
-              isLaundryMode={isLaundryMode}
+              onAppendOrder={(order) => {
+                setAppendOrderData(order);
+                setActiveTab('pos');
+              }}
             />
-          </div>
-        ) : activeTab === 'laundry_services' ? (
-          <LaundryServicesView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_queue' ? (
-          <LaundryQueueView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_production' ? (
-          <LaundryProductionView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_racks' ? (
-          <LaundryRacksView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_transfers' ? (
-          <LaundryTransfersView activeOutlet={activeOutlet} />
-        ) : activeTab === 'laundry_commissions' ? (
-          <LaundryCommissionView activeOutlet={activeOutlet} currentUser={user} />
-        ) : (
-          <InventoryView activeOutlet={activeOutlet} />
-        )}
+          ) : activeTab === 'customers' ? (
+            <CustomersView />
+          ) : activeTab === 'shifts' ? (
+            <ShiftsAuditView activeOutlet={activeOutlet} />
+          ) : activeTab === 'payment_items' ? (
+            <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
+          ) : activeTab === 'reports' ? (
+            <FinancialReportView activeOutlet={activeOutlet} />
+          ) : activeTab === 'users' ? (
+            <UsersView activeOutlet={activeOutlet} onNavigateToRoles={() => setActiveTab('staff_roles')} />
+          ) : activeTab === 'warehouses' ? (
+            <WarehousesView
+              activeOutletId={activeOutlet?.id}
+              onSelectActiveOutlet={(id) => {
+                handleOutletSelect(id);
+              }}
+              onWarehousesUpdated={fetchOutlets}
+            />
+          ) : activeTab === 'outlets' ? (
+            <OutletsView
+              activeOutletId={activeOutlet?.id}
+              onSelectActiveOutlet={(id) => {
+                handleOutletSelect(id);
+              }}
+              onOutletsUpdated={fetchOutlets}
+            />
+          ) : activeTab === 'guide' ? (
+            <div className="max-w-6xl mx-auto p-4 sm:p-6">
+              <UserGuideView
+                initialSection={guideSection}
+                onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
+                currentUserRole={user.role}
+                activeOutlet={activeOutlet}
+                currentUser={user}
+                isLaundryMode={isLaundryMode}
+              />
+            </div>
+          ) : activeTab === 'laundry_services' ? (
+            <LaundryServicesView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_queue' ? (
+            <LaundryQueueView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_production' ? (
+            <LaundryProductionView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_racks' ? (
+            <LaundryRacksView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_transfers' ? (
+            <LaundryTransfersView activeOutlet={activeOutlet} />
+          ) : activeTab === 'laundry_commissions' ? (
+            <LaundryCommissionView activeOutlet={activeOutlet} currentUser={user} />
+          ) : (
+            <InventoryView activeOutlet={activeOutlet} />
+          )}
         </Suspense>
 
         {/* Modal Onboarding Wizard (3 Steps) */}

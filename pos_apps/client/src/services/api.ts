@@ -3199,6 +3199,29 @@ export const api = {
     });
     return res.json();
   },
+
+  getLaundryDashboardSummary: async (params?: {
+    outletId?: string;
+    startDate?: string;
+    endDate?: string;
+    granularity?: 'DAY' | 'MONTH';
+  }): Promise<{
+    status: string;
+    data: any;
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.granularity) query.append('granularity', params.granularity);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const res = await fetch(`/api/laundry/dashboard-summary${queryString}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
 };
 
 // ----------------------------------------------------
