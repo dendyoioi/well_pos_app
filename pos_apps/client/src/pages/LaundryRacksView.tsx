@@ -9,10 +9,13 @@ import {
   AlertTriangle,
   ChevronDown,
   Send,
+  Bell,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
-import type { LaundryRack } from '../types/laundry';
+import type { LaundryRack, LaundryAutoReminderResult } from '../types/laundry';
 
 interface LaundryRacksViewProps {
   activeOutlet: Outlet | null;
@@ -156,6 +159,58 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
   const [formCapacity, setFormCapacity] = useState('10');
   const [formLocation, setFormLocation] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Auto-Reminder WhatsApp Modal State (P2)
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [reminderSubmitting, setReminderSubmitting] = useState(false);
+  const [reminderTab, setReminderTab] = useState<'STALE_RACK' | 'EXPIRING_WALLET'>('STALE_RACK');
+  const [reminderData, setReminderData] = useState<LaundryAutoReminderResult | null>(null);
+  const [reminderToast, setReminderToast] = useState<string | null>(null);
+
+  const handleOpenReminderModal = async () => {
+    setShowReminderModal(true);
+    setReminderLoading(true);
+    try {
+      const res = await api.runLaundryAutoReminders({
+        outletId: activeOutlet?.id,
+        dryRun: true,
+      });
+      if (res.status === 'success' && res.data) {
+        setReminderData(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching auto reminders preview:', err);
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  const handleExecuteReminders = async () => {
+    if (!activeOutlet?.id) return;
+    setReminderSubmitting(true);
+    try {
+      const res = await api.runLaundryAutoReminders({
+        outletId: activeOutlet.id,
+        dryRun: false,
+      });
+      if (res.status === 'success' && res.data) {
+        const totalSent = res.data.summary.sentCount;
+        setReminderToast(
+          `✅ Berhasil memproses ${totalSent} pengingat WhatsApp! (${res.data.summary.totalStaleRack} rak, ${res.data.summary.totalExpiringQuota} kuota expired)`
+        );
+        setTimeout(() => setReminderToast(null), 5000);
+        setShowReminderModal(false);
+        fetchRacks();
+      } else {
+        alert(res.message || 'Gagal mengirim pengingat otomatis');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan sistem saat mengirim pengingat');
+    } finally {
+      setReminderSubmitting(false);
+    }
+  };
 
   const fetchRacks = async () => {
     try {
@@ -325,13 +380,25 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
           </div>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm transition-colors shadow-xs cursor-pointer active:scale-95 shrink-0 w-full lg:w-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Rak Baru</span>
-        </button>
+        <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 flex-wrap">
+          <button
+            type="button"
+            onClick={handleOpenReminderModal}
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-colors shadow-xs cursor-pointer active:scale-95 shrink-0"
+            title="Scan & Broadcast Pengingat WhatsApp"
+          >
+            <Bell className="w-4 h-4 stroke-[2.5]" />
+            <span>Reminder Otomatis WA</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm transition-colors shadow-xs cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Rak Baru</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -685,7 +752,7 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
@@ -699,6 +766,216 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Modal Broadcast Reminder WhatsApp Otomatis (P2) */}
+      {showReminderModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] shadow-2xl flex flex-col min-h-0 overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  <Bell className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight">
+                    Broadcast Reminder WhatsApp Otomatis
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Kirim pengingat cucian mengendap di rak &amp; kuota paket kiloan expired
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReminderModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sub-Tabs Selector */}
+            <div className="flex items-center gap-2 px-5 pt-3 border-b border-slate-100 bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => setReminderTab('STALE_RACK')}
+                className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                  reminderTab === 'STALE_RACK'
+                    ? 'border-emerald-700 text-emerald-900 font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>Cucian Mengendap di Rak (≥ 3 Hari)</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono font-bold">
+                  {reminderData?.staleCandidates?.length || 0}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReminderTab('EXPIRING_WALLET')}
+                className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                  reminderTab === 'EXPIRING_WALLET'
+                    ? 'border-emerald-700 text-emerald-900 font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>Kuota Paket Expired (H-1)</span>
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-mono font-bold">
+                  {reminderData?.expiringCandidates?.length || 0}
+                </span>
+              </button>
+            </div>
+
+            {/* Body Content */}
+            <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain flex-1 space-y-3">
+              {reminderLoading ? (
+                <div className="p-12 text-center text-slate-400">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
+                  <span className="text-xs font-bold">Memindai data kandidat reminder WhatsApp...</span>
+                </div>
+              ) : reminderTab === 'STALE_RACK' ? (
+                (!reminderData?.staleCandidates || reminderData.staleCandidates.length === 0) ? (
+                  <div className="p-12 text-center text-slate-400">
+                    <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">Semua Rak Bersih!</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Tidak ada cucian yang mengendap lebih dari 3 hari tanpa reminder.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {reminderData.staleCandidates.map((c) => (
+                      <div
+                        key={c.detailId || c.orderId}
+                        className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-sm">{c.customerName}</span>
+                            <span className="font-mono text-slate-400">({c.customerPhone || '-'})</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <span className="font-mono font-bold text-blue-900">{c.invoiceNumber}</span>
+                            <span>•</span>
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 font-bold text-[11px] text-slate-700">
+                              {c.rackCode}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            c.daysAging >= 7
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}>
+                            {c.daysAging} Hari di Rak
+                          </span>
+                          <span className="font-mono font-bold text-slate-800">
+                            {c.remainingAmount <= 0 ? (
+                              <span className="text-emerald-700 font-black">LUNAS</span>
+                            ) : (
+                              <span className="text-amber-800 font-black">
+                                Tagihan Rp {c.remainingAmount.toLocaleString('id-ID')}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                (!reminderData?.expiringCandidates || reminderData.expiringCandidates.length === 0) ? (
+                  <div className="p-12 text-center text-slate-400">
+                    <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">Tidak Ada Kuota Hampir Hangus</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Semua paket kiloan pelanggan aktif memiliki masa berlaku lebih dari 1 hari.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {reminderData.expiringCandidates.map((w) => (
+                      <div
+                        key={w.walletId}
+                        className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-sm">{w.customerName}</span>
+                            <span className="font-mono text-slate-400">({w.customerPhone || '-'})</span>
+                          </div>
+                          <div className="text-slate-500 text-[11px]">
+                            Kedaluwarsa: <strong className="text-rose-700">{w.expiryDateStr || (w.quotaExpiresAt ? new Date(w.quotaExpiresAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-')}</strong>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-900 border border-blue-200 font-mono">
+                            Sisa {w.remainingQuotaKg} Kg
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-600 font-bold">
+                <span>Siap Dikirim: </span>
+                <strong className="text-emerald-700 font-mono">
+                  {((reminderData?.staleCandidates?.length || 0) + (reminderData?.expiringCandidates?.length || 0))} Pesan WA
+                </strong>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReminderModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    reminderSubmitting ||
+                    reminderLoading ||
+                    ((reminderData?.staleCandidates?.length || 0) + (reminderData?.expiringCandidates?.length || 0)) === 0
+                  }
+                  onClick={handleExecuteReminders}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  {reminderSubmitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Mengirim Broadcast...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Kirim Reminder Sekarang</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Feedback */}
+      {reminderToast && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-xl flex items-center gap-2 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{reminderToast}</span>
         </div>
       )}
     </div>

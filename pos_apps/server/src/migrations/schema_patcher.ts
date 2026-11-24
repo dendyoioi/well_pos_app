@@ -594,6 +594,62 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "laundry_deposit_config" JSONB;
     `,
   },
+  {
+    id: '20261124_03_create_shift_cash_deposits',
+    description: 'Membuat tabel shift_cash_deposits untuk pelacakan setoran kas shift ke bank/kas pusat beserta verifikasi owner',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "shift_cash_deposits" (
+        "id" VARCHAR(36) PRIMARY KEY,
+        "tenant_id" VARCHAR(36) NOT NULL,
+        "outlet_id" VARCHAR(36) NOT NULL,
+        "shift_id" VARCHAR(36) NOT NULL,
+        "cashier_id" VARCHAR(36) NOT NULL,
+        "amount" DECIMAL(15, 2) NOT NULL,
+        "target_account" VARCHAR(100) NOT NULL,
+        "reference_number" VARCHAR(100),
+        "proof_photo_url" TEXT,
+        "notes" TEXT,
+        "status" VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        "verified_by_id" VARCHAR(36),
+        "verified_at" TIMESTAMP(3),
+        "rejection_reason" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "shift_cash_deposits_tenant_id_outlet_id_status_idx" ON "shift_cash_deposits"("tenant_id", "outlet_id", "status");
+      CREATE INDEX IF NOT EXISTS "shift_cash_deposits_tenant_id_shift_id_idx" ON "shift_cash_deposits"("tenant_id", "shift_id");
+    `,
+  },
+  {
+    id: '20261124_04_create_staff_cash_advances',
+    description: 'Membuat tabel staff_cash_advances untuk pencatatan kasbon karyawan dan pemotongan otomatis saat payout komisi',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "staff_cash_advances" (
+        "id" VARCHAR(36) PRIMARY KEY,
+        "tenant_id" VARCHAR(36) NOT NULL,
+        "outlet_id" VARCHAR(36) NOT NULL,
+        "staff_id" VARCHAR(36),
+        "staff_name" VARCHAR(200) NOT NULL,
+        "amount" DECIMAL(15, 2) NOT NULL,
+        "remaining_amount" DECIMAL(15, 2) NOT NULL,
+        "status" VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+        "reason" TEXT,
+        "shift_id" VARCHAR(36),
+        "created_by_id" VARCHAR(36),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "staff_cash_advances_tenant_id_outlet_id_status_idx" ON "staff_cash_advances"("tenant_id", "outlet_id", "status");
+    `,
+  },
+  {
+    id: '20261124_05_add_laundry_reminder_timestamps',
+    description: 'Menambahkan kolom timestamp last_reminder_sent_at pada laundry_order_details dan last_expiry_reminder_sent_at pada customer_laundry_wallets',
+    sql: `
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "last_reminder_sent_at" TIMESTAMP(3);
+      ALTER TABLE "customer_laundry_wallets" ADD COLUMN IF NOT EXISTS "last_expiry_reminder_sent_at" TIMESTAMP(3);
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

@@ -42,6 +42,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   const [selectedOrderForRewash, setSelectedOrderForRewash] = useState<LaundryQueueOrder | null>(null);
   const [rewashModalOpen, setRewashModalOpen] = useState(false);
   const [advancingId, setAdvancingId] = useState<string | null>(null);
+  const [selectedMachines, setSelectedMachines] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -190,12 +191,19 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
 
     try {
       setAdvancingId(order.id);
+      const isWashing = current === 'WASHING' || current === 'CUCI';
+      const isDrying = current === 'DRYING' || current === 'KERING';
+      const machine = selectedMachines[order.id] || (isWashing ? 'W-01' : isDrying ? 'D-01' : undefined);
+
       const res = await api.advanceLaundryStage(order.id, {
         nextStage,
-        notes: `Pengerjaan stasiun selesai -> lanjut ke ${nextStage}`,
+        machineName: machine,
+        notes: machine
+          ? `Pengerjaan di mesin ${machine} selesai -> lanjut ke ${nextStage}`
+          : `Pengerjaan stasiun selesai -> lanjut ke ${nextStage}`,
       });
       if (res.status === 'success') {
-        showToast(`Nota ${order.invoiceNumber} berhasil dimajukan ke tahap ${nextStage}`);
+        showToast(`Nota ${order.invoiceNumber} berhasil dimajukan ke tahap ${nextStage}${machine ? ` (${machine})` : ''}`);
         fetchData();
       } else {
         showToast(res.message || 'Gagal memajukan tahapan', 'error');
@@ -461,8 +469,11 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             const currentStage = (order.currentStage || 'DROP_OFF').toUpperCase();
             const isAtSorting =
               currentStage === 'DROP_OFF' || currentStage === 'TAGGING' || currentStage === 'LABEL' || currentStage === 'SORTING' || currentStage === 'SORTIR';
+            const isWashing = currentStage === 'WASHING' || currentStage === 'CUCI';
+            const isDrying = currentStage === 'DRYING' || currentStage === 'KERING';
             const isAdvancing = advancingId === order.id;
             const slaStatus = getSlaStatus(order);
+            const currentMachineTag = selectedMachines[order.id] || (isWashing ? 'W-01' : isDrying ? 'D-01' : undefined);
 
             return (
               <div
@@ -585,46 +596,81 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                 </div>
 
                 {/* Footer Action Buttons with Mobile-Ergonomic Touch Targets (>= 44px) */}
-                <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
-                  {(order.status === 'READY_FOR_PICKUP' || order.status === 'COMPLETED') && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedOrderForRewash(order);
-                        setRewashModalOpen(true);
-                      }}
-                      className="h-11 sm:h-10 min-h-[44px] px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-extrabold text-xs flex items-center justify-center gap-1.5 border border-rose-200 cursor-pointer active:scale-95 transition-all shrink-0"
-                      title="Klaim Garansi Cuci Ulang (Rp 0)"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Cuci Ulang</span>
-                    </button>
-                  )}
-                  {isAtSorting ? (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForSorting(order)}
-                      className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Filter className="w-4 h-4" />
-                      <span>Buka Form Sortir &amp; QC</span>
-                    </button>
-                  ) : order.currentStage === 'RACK_STORAGE' || order.status === 'READY_FOR_PICKUP' ? (
-                    <div className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 px-3">
-                      <Archive className="w-4 h-4 text-blue-900" />
-                      <span>Siap Diambil di Kasir (Rak: {order.rackCode || 'RAK-A1'})</span>
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                  {!isAtSorting && (isWashing || isDrying) && (
+                    <div className="w-full bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80">
+                      <div className="flex items-center justify-between text-[11px] mb-2 font-bold text-slate-600">
+                        <span>Pilih Nomor Mesin ({isWashing ? 'Cuci' : 'Pengering'}):</span>
+                        <span className="font-mono font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                          {currentMachineTag}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(isWashing
+                          ? ['W-01', 'W-02', 'W-03', 'W-04']
+                          : ['D-01', 'D-02', 'D-03', 'D-04']
+                        ).map((m) => {
+                          const isSelected = currentMachineTag === m;
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setSelectedMachines((prev) => ({ ...prev, [order.id]: m }))}
+                              className={`py-1.5 text-center font-mono font-black text-xs rounded-xl transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-blue-900 text-white shadow-xs'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {m}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleQuickAdvance(order)}
-                      disabled={isAdvancing}
-                      className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>{isAdvancing ? 'Memproses...' : 'Selesai & Lanjut Tahap'}</span>
-                    </button>
                   )}
+
+                  <div className="flex items-center gap-2">
+                    {(order.status === 'READY_FOR_PICKUP' || order.status === 'COMPLETED') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedOrderForRewash(order);
+                          setRewashModalOpen(true);
+                        }}
+                        className="h-11 sm:h-10 min-h-[44px] px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-extrabold text-xs flex items-center justify-center gap-1.5 border border-rose-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                        title="Klaim Garansi Cuci Ulang (Rp 0)"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Cuci Ulang</span>
+                      </button>
+                    )}
+                    {isAtSorting ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForSorting(order)}
+                        className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Filter className="w-4 h-4" />
+                        <span>Buka Form Sortir &amp; QC</span>
+                      </button>
+                    ) : order.currentStage === 'RACK_STORAGE' || order.status === 'READY_FOR_PICKUP' ? (
+                      <div className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 px-3">
+                        <Archive className="w-4 h-4 text-blue-900" />
+                        <span>Siap Diambil di Kasir (Rak: {order.rackCode || 'RAK-A1'})</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdvance(order)}
+                        disabled={isAdvancing}
+                        className="w-full h-11 sm:h-10 min-h-[44px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>{isAdvancing ? 'Memproses...' : 'Selesai & Lanjut Tahap'}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

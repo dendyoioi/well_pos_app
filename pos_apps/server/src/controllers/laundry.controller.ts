@@ -4097,6 +4097,13 @@ export const DEFAULT_COMMISSION_CONFIG = {
   deliveryPerTrip: 3000,
   pickupPerTrip: 2000,
   rewashPenaltyPerCase: 0,
+  // Komisi Sales Kasir (P2)
+  cashierCommissionEnabled: false,
+  cashierCommissionBasis: 'PAID_ONLY' as 'PAID_ONLY' | 'ALL_ORDERS',
+  cashierCommissionTiers: [
+    { minSales: 5000000, percent: 1.5 },
+    { minSales: 10000000, percent: 3.0 },
+  ],
 };
 
 export const getLaundryCommissionConfig = async (req: Request, res: Response) => {
@@ -4305,11 +4312,55 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
       },
     });
 
+    // 4b. Ambil data Order untuk Komisi Sales Kasir (Tiered)
+    const cashierOrders = await prisma.order.findMany({
+      where: {
+        tenantId,
+        ...(outletId ? { outletId: String(outletId) } : {}),
+        createdAt: { gte: start, lte: end },
+        orderStatus: { notIn: [OrderStatus.VOIDED, OrderStatus.CANCELLED] },
+        ...(config.cashierCommissionBasis === 'PAID_ONLY' ? { paymentStatus: 'PAID' } : {}),
+      },
+      select: {
+        id: true,
+        userId: true,
+        totalAmount: true,
+        cashier: { select: { id: true, name: true, userCode: true } },
+      },
+    });
+
+    // 4c. Ambil data Kasbon Karyawan yang masih aktif (OPEN / PARTIAL)
+    const activeAdvances = await prisma.staffCashAdvance.findMany({
+      where: {
+        tenantId,
+        ...(outletId ? { outletId: String(outletId) } : {}),
+        status: { in: ['OPEN', 'PARTIAL'] },
+      },
+      select: {
+        id: true,
+        staffId: true,
+        staffName: true,
+        remainingAmount: true,
+      },
+    });
+
+    const advancesMap: Record<string, number> = {};
+    for (const adv of activeAdvances) {
+      const rem = Number(adv.remainingAmount || 0);
+      if (adv.staffId) {
+        advancesMap[adv.staffId] = (advancesMap[adv.staffId] || 0) + rem;
+      }
+      const nameKey = (adv.staffName || '').trim().toLowerCase();
+      if (nameKey) {
+        advancesMap[nameKey] = (advancesMap[nameKey] || 0) + rem;
+      }
+    }
+
     // 5. Akumulasi data per staf / kurir
     const staffMap: Record<string, {
       staffId?: string;
       name: string;
-      roleType: 'OPERATOR' | 'COURIER' | 'BOTH';
+      roleType: 'OPERATOR' | 'COURIER' | 'CASHIER' | 'BOTH';
       washingKg: number;
       dryingKg: number;
       ironingKg: number;
@@ -4324,6 +4375,11 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
       deliveryCommission: number;
       rewashPenalty: number;
       productionCommission: number;
+      cashierSales: number;
+      cashierOrders: number;
+      appliedTierPercent: number;
+      cashierCommission: number;
+      outstandingCashAdvance: number;
       totalCommission: number;
     }> = {};
 
@@ -4349,6 +4405,11 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
           deliveryCommission: 0,
           rewashPenalty: 0,
           productionCommission: 0,
+          cashierSales: 0,
+          cashierOrders: 0,
+          appliedTierPercent: 0,
+          cashierCommission: 0,
+          outstandingCashAdvance: 0,
           totalCommission: 0,
         };
       }
@@ -4390,17 +4451,50 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
       }
     }
 
+    // Akumulasi Komisi Sales Kasir (Tiered)
+    const cashierTiers: Array<{ minSales: number; percent: number }> = Array.isArray(config.cashierCommissionTiers)
+      ? [...config.cashierCommissionTiers].sort((a, b) => b.minSales - a.minSales)
+      : [];
+
+    const cashierAggregation: Record<string, { name: string; totalSales: number; orderCount: number }> = {};
+    for (const ord of cashierOrders) {
+      const cId = ord.userId;
+      const cName = ord.cashier?.name || 'Kasir';
+      if (!cashierAggregation[cId]) {
+        cashierAggregation[cId] = { name: cName, totalSales: 0, orderCount: 0 };
+      }
+      cashierAggregation[cId].totalSales += Number(ord.totalAmount || 0);
+      cashierAggregation[cId].orderCount += 1;
+    }
+
+    for (const [cId, cData] of Object.entries(cashierAggregation)) {
+      const staff = getOrCreateStaff(cData.name, cId);
+      staff.cashierSales = Math.round(cData.totalSales * 100) / 100;
+      staff.cashierOrders = cData.orderCount;
+
+      const matchedTier = cashierTiers.find((t) => cData.totalSales >= t.minSales);
+      if (matchedTier && config.cashierCommissionEnabled !== false) {
+        staff.appliedTierPercent = matchedTier.percent;
+        staff.cashierCommission = Math.round(cData.totalSales * (matchedTier.percent / 100));
+      } else {
+        staff.appliedTierPercent = 0;
+        staff.cashierCommission = 0;
+      }
+    }
+
     // 6. Hitung komisi dan tentukan roleType
     let totalProductionCommission = 0;
     let totalDeliveryCommission = 0;
+    let totalCashierCommission = 0;
     let totalPenalty = 0;
     let grandTotalCommission = 0;
     let totalWashingKg = 0;
     let totalDryingKg = 0;
     let totalIroningKg = 0;
     let totalTripsCompleted = 0;
+    let totalOutstandingAdvances = 0;
 
-    const staffList = Object.values(staffMap).map(s => {
+    const staffList = Object.values(staffMap).map((s) => {
       // Pembulatan angka tonase
       s.washingKg = Math.round(s.washingKg * 100) / 100;
       s.dryingKg = Math.round(s.dryingKg * 100) / 100;
@@ -4419,15 +4513,27 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
       s.productionCommission =
         s.washingCommission + s.dryingCommission + s.ironingCommission + s.packingCommission;
 
-      s.totalCommission = Math.max(0, s.productionCommission + s.deliveryCommission - s.rewashPenalty);
+      s.totalCommission = Math.max(
+        0,
+        s.productionCommission + s.deliveryCommission + (s.cashierCommission || 0) - s.rewashPenalty
+      );
+
+      // Kaitkan Kasbon Aktif
+      const advTotal = (s.staffId && advancesMap[s.staffId]) || advancesMap[s.name.toLowerCase()] || 0;
+      s.outstandingCashAdvance = Math.round(advTotal * 100) / 100;
 
       // Tentukan peran
       const hasProd = s.washingKg > 0 || s.dryingKg > 0 || s.ironingKg > 0 || s.packingOrders > 0;
       const hasCourier = s.deliveryTrips > 0 || s.pickupTrips > 0;
-      if (hasProd && hasCourier) {
+      const hasCashier = (s.cashierCommission || 0) > 0 || (s.cashierSales || 0) > 0;
+
+      const rolesActive = [hasProd, hasCourier, hasCashier].filter(Boolean).length;
+      if (rolesActive > 1) {
         s.roleType = 'BOTH';
       } else if (hasCourier) {
         s.roleType = 'COURIER';
+      } else if (hasCashier) {
+        s.roleType = 'CASHIER';
       } else {
         s.roleType = 'OPERATOR';
       }
@@ -4435,12 +4541,14 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
       // Akumulasi ringkasan
       totalProductionCommission += s.productionCommission;
       totalDeliveryCommission += s.deliveryCommission;
+      totalCashierCommission += s.cashierCommission || 0;
       totalPenalty += s.rewashPenalty;
       grandTotalCommission += s.totalCommission;
       totalWashingKg += s.washingKg;
       totalDryingKg += s.dryingKg;
       totalIroningKg += s.ironingKg;
       totalTripsCompleted += s.deliveryTrips + s.pickupTrips;
+      totalOutstandingAdvances += s.outstandingCashAdvance;
 
       return s;
     });
@@ -4452,15 +4560,17 @@ export const getLaundryCommissions = async (req: Request, res: Response) => {
     let filteredStaff = staffList;
     if (search && typeof search === 'string' && search.trim() !== '') {
       const q = search.trim().toLowerCase();
-      filteredStaff = staffList.filter(s => s.name.toLowerCase().includes(q));
+      filteredStaff = staffList.filter((s) => s.name.toLowerCase().includes(q));
     }
 
     const summary = {
       totalStaff: filteredStaff.length,
       totalProductionCommission,
       totalDeliveryCommission,
+      totalCashierCommission,
       totalPenalty,
       grandTotalCommission,
+      totalOutstandingAdvances,
       totalKgProcessed: Math.round((totalWashingKg + totalDryingKg + totalIroningKg) * 100) / 100,
       totalTripsCompleted,
       startDate: start.toISOString(),
@@ -4493,7 +4603,7 @@ export const payoutLaundryCommission = async (req: Request, res: Response) => {
       return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
     }
 
-    const { outletId, staffName, amount, periodLabel, notes } = req.body;
+    const { outletId, staffName, staffId, amount, periodLabel, notes, deductCashAdvanceAmount } = req.body;
 
     if (!outletId || typeof outletId !== 'string') {
       return res.status(400).json({ status: 'error', message: 'Outlet ID wajib diisi' });
@@ -4505,6 +4615,9 @@ export const payoutLaundryCommission = async (req: Request, res: Response) => {
     if (isNaN(numAmount) || numAmount <= 0) {
       return res.status(400).json({ status: 'error', message: 'Nominal pencairan komisi harus lebih dari Rp 0' });
     }
+
+    const numDeductAdvance = Number(deductCashAdvanceAmount) > 0 ? Number(deductCashAdvanceAmount) : 0;
+    const netPayout = Math.max(0, numAmount - numDeductAdvance);
 
     // 1. Validasi kepemilikan outlet
     const outlet = await prisma.outlet.findFirst({
@@ -4535,41 +4648,535 @@ export const payoutLaundryCommission = async (req: Request, res: Response) => {
 
     const shiftId = activeShift.id;
 
-    const movementNotes = `Pencairan Komisi Staf/Kurir: ${staffName.trim()}${
-      periodLabel ? ` (${periodLabel})` : ''
-    }${notes ? ` - ${notes.trim()}` : ''}`;
+    const movementNotes = `Pencairan Komisi: ${staffName.trim()}${
+      numDeductAdvance > 0 ? ` (Komisi Rp ${numAmount.toLocaleString('id-ID')} - Potong Kasbon Rp ${numDeductAdvance.toLocaleString('id-ID')})` : ''
+    }${periodLabel ? ` [${periodLabel}]` : ''}${notes ? ` - ${notes.trim()}` : ''}`;
 
     const result = await prisma.$transaction(async (tx) => {
-      const movement = await tx.cashMovement.create({
-        data: {
-          tenantId,
-          outletId,
-          shiftId,
-          userId,
-          type: 'CASH_OUT',
-          category: 'STAFF_COMMISSION',
-          amount: numAmount,
-          notes: movementNotes,
-        },
-      });
+      // Potong kasbon secara FIFO jika ada deductCashAdvanceAmount
+      if (numDeductAdvance > 0) {
+        const advances = await tx.staffCashAdvance.findMany({
+          where: {
+            tenantId,
+            outletId,
+            status: { in: ['OPEN', 'PARTIAL'] },
+            ...(staffId ? { staffId } : { staffName: { equals: staffName.trim(), mode: 'insensitive' } }),
+          },
+          orderBy: { createdAt: 'asc' },
+        });
 
-      await tx.shift.update({
-        where: { id: activeShift.id },
-        data: {
-          expectedEnding: { decrement: numAmount },
-        },
-      });
+        let remainingToDeduct = numDeductAdvance;
+        for (const adv of advances) {
+          if (remainingToDeduct <= 0) break;
+          const currentRem = Number(adv.remainingAmount || 0);
+          const deduction = Math.min(currentRem, remainingToDeduct);
+          const newRem = currentRem - deduction;
+          await tx.staffCashAdvance.update({
+            where: { id: adv.id },
+            data: {
+              remainingAmount: newRem,
+              status: newRem <= 0 ? 'PAID' : 'PARTIAL',
+            },
+          });
+          remainingToDeduct -= deduction;
+        }
+      }
 
-      return movement;
+      let movement = null;
+      if (netPayout > 0) {
+        movement = await tx.cashMovement.create({
+          data: {
+            tenantId,
+            outletId,
+            shiftId,
+            userId,
+            type: 'CASH_OUT',
+            category: 'STAFF_COMMISSION',
+            amount: netPayout,
+            notes: movementNotes,
+          },
+        });
+
+        await tx.shift.update({
+          where: { id: activeShift.id },
+          data: {
+            expectedEnding: { decrement: netPayout },
+          },
+        });
+      }
+
+      return { movement, netPayout, deductedAdvance: numDeductAdvance };
     });
 
     return res.status(201).json({
       status: 'success',
-      message: `Pencairan komisi Rp ${numAmount.toLocaleString('id-ID')} untuk ${staffName} berhasil dicatat ke Kas Keluar`,
+      message: `Pencairan komisi Rp ${numAmount.toLocaleString('id-ID')} untuk ${staffName} berhasil diproses.${
+        numDeductAdvance > 0 ? ` Dipotong kasbon Rp ${numDeductAdvance.toLocaleString('id-ID')}, kas keluar laci: Rp ${netPayout.toLocaleString('id-ID')}` : ''
+      }`,
       data: result,
     });
   } catch (error: any) {
     console.error('Error in payoutLaundryCommission:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mencatat pencairan komisi', error: error?.message });
+  }
+};
+
+/**
+ * Controller: Daftar Kasbon Karyawan (P2)
+ * @route GET /api/laundry/cash-advances
+ */
+export const getStaffCashAdvances = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    const { outletId, status, search } = req.query;
+
+    const where: any = { tenantId };
+    if (outletId && typeof outletId === 'string') where.outletId = outletId;
+    if (status && typeof status === 'string' && status !== 'ALL') where.status = status;
+    if (search && typeof search === 'string' && search.trim()) {
+      where.staffName = { contains: search.trim(), mode: 'insensitive' };
+    }
+
+    const advances = await prisma.staffCashAdvance.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        staff: { select: { id: true, name: true, userCode: true, role: true } },
+        outlet: { select: { id: true, name: true } },
+        shift: { select: { id: true, startTime: true, endTime: true, status: true } },
+      },
+    });
+
+    // KPI total outstanding
+    const outstandingAgg = await prisma.staffCashAdvance.aggregate({
+      where: {
+        tenantId,
+        ...(outletId ? { outletId: String(outletId) } : {}),
+        status: { in: ['OPEN', 'PARTIAL'] },
+      },
+      _sum: { remainingAmount: true },
+      _count: true,
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: advances,
+      summary: {
+        totalOutstandingAmount: Number(outstandingAgg._sum.remainingAmount || 0),
+        totalActiveAdvances: outstandingAgg._count || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getStaffCashAdvances:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil data kasbon karyawan' });
+  }
+};
+
+/**
+ * Controller: Catat Kasbon Karyawan Baru (P2)
+ * @route POST /api/laundry/cash-advances
+ */
+export const createStaffCashAdvance = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const userRole = (req.user?.role || '').toUpperCase();
+
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(userRole)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang berhak mencatat kasbon karyawan',
+      });
+    }
+
+    const { outletId, staffId, staffName, amount, reason, deductFromOpenShift } = req.body;
+
+    if (!outletId || typeof outletId !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Outlet ID wajib diisi' });
+    }
+    if (!staffName || typeof staffName !== 'string' || !staffName.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Nama staf wajib diisi' });
+    }
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Nominal kasbon harus lebih dari Rp 0' });
+    }
+
+    let activeShiftId: string | null = null;
+    if (deductFromOpenShift) {
+      const activeShift = await prisma.shift.findFirst({
+        where: { outletId, status: ShiftStatus.OPEN },
+        orderBy: { startTime: 'desc' },
+      });
+      if (!activeShift) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Pencairan kasbon dari laci kasir gagal: Tidak ada shift kasir yang sedang aktif di outlet ini.',
+        });
+      }
+      activeShiftId = activeShift.id;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const advance = await tx.staffCashAdvance.create({
+        data: {
+          tenantId,
+          outletId,
+          staffId: staffId || null,
+          staffName: staffName.trim(),
+          amount: numAmount,
+          remainingAmount: numAmount,
+          status: 'OPEN',
+          reason: reason?.trim() || null,
+          shiftId: activeShiftId,
+          createdById: userId,
+        },
+        include: {
+          staff: { select: { id: true, name: true, userCode: true } },
+          outlet: { select: { id: true, name: true } },
+        },
+      });
+
+      if (activeShiftId) {
+        await tx.cashMovement.create({
+          data: {
+            tenantId,
+            outletId,
+            shiftId: activeShiftId,
+            userId,
+            type: 'CASH_OUT',
+            category: 'STAFF_CASH_ADVANCE',
+            amount: numAmount,
+            notes: `Kasbon Karyawan: ${staffName.trim()}${reason ? ` (${reason.trim()})` : ''}`,
+          },
+        });
+
+        await tx.shift.update({
+          where: { id: activeShiftId },
+          data: { expectedEnding: { decrement: numAmount } },
+        });
+      }
+
+      return advance;
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: `Kasbon Rp ${numAmount.toLocaleString('id-ID')} untuk ${staffName} berhasil dicatat${
+        activeShiftId ? ' dan kas keluar laci berhasil dicatat' : ''
+      }`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error in createStaffCashAdvance:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mencatat kasbon karyawan' });
+  }
+};
+
+/**
+ * Controller: Pelunasan / Cicilan Kasbon Karyawan Manual (P2)
+ * @route PATCH /api/laundry/cash-advances/:id/repay
+ */
+export const repayStaffCashAdvance = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userRole = (req.user?.role || '').toUpperCase();
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(userRole)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang berhak mencatat pelunasan kasbon',
+      });
+    }
+
+    const { id } = req.params;
+    const { amount, notes } = req.body;
+
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Nominal pelunasan kasbon harus lebih dari Rp 0' });
+    }
+
+    const advance = await prisma.staffCashAdvance.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!advance) {
+      return res.status(404).json({ status: 'error', message: 'Data kasbon tidak ditemukan' });
+    }
+
+    const currentRemaining = Number(advance.remainingAmount);
+    const newRemaining = Math.max(0, currentRemaining - numAmount);
+    const newStatus = newRemaining <= 0 ? 'PAID' : 'PARTIAL';
+
+    const updated = await prisma.staffCashAdvance.update({
+      where: { id },
+      data: {
+        remainingAmount: newRemaining,
+        status: newStatus,
+        reason: notes ? `${advance.reason || ''} [Pelunasan: ${notes.trim()}]`.trim() : advance.reason,
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Pelunasan kasbon Rp ${numAmount.toLocaleString('id-ID')} berhasil dicatat. Sisa kasbon: Rp ${newRemaining.toLocaleString('id-ID')}`,
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error in repayStaffCashAdvance:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mencatat pelunasan kasbon' });
+  }
+};
+
+/**
+ * Helper: Logika Inti Pengingat Otomatis (Stale Rack & Expiring Quota)
+ */
+export const runLaundryAutoReminders = async (
+  tenantId: string,
+  outletId?: string,
+  options?: { dryRun?: boolean }
+) => {
+  const isDryRun = options?.dryRun === true;
+  const now = new Date();
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  const seventyTwoHoursAgo = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  // 1. Ambil Kandidat Cucian Mengendap di Rak (>= 3 hari)
+  const staleDetails = await prisma.laundryOrderDetail.findMany({
+    where: {
+      tenantId,
+      ...(outletId ? { outletId } : {}),
+      status: { notIn: ['COMPLETED', 'CANCELLED'] },
+      currentStage: { in: ['RACK_STORAGE', 'READY_FOR_PICKUP'] },
+      order: {
+        orderStatus: { notIn: [OrderStatus.CANCELLED, OrderStatus.VOIDED, OrderStatus.COMPLETED] },
+      },
+      OR: [
+        { completedAt: { lte: threeDaysAgo } },
+        { completedAt: null, updatedAt: { lte: threeDaysAgo } },
+      ],
+      AND: [
+        {
+          OR: [
+            { lastReminderSentAt: null },
+            { lastReminderSentAt: { lte: seventyTwoHoursAgo } },
+          ],
+        },
+      ],
+    },
+    include: {
+      order: {
+        include: {
+          customer: true,
+          outlet: true,
+          customerDebts: true,
+        },
+      },
+    },
+    orderBy: { updatedAt: 'asc' },
+  });
+
+  const staleCandidates = staleDetails.map((detail) => {
+    const order = detail.order;
+    const completedOrUpdated = detail.completedAt || detail.updatedAt;
+    const daysAging = Math.max(3, Math.floor((now.getTime() - new Date(completedOrUpdated).getTime()) / (24 * 60 * 60 * 1000)));
+
+    let remaining = 0;
+    if (order.paymentStatus !== 'PAID') {
+      const activeDebt = order.customerDebts?.find((d) => d.status === 'UNPAID' || d.status === 'PARTIAL');
+      remaining = activeDebt ? Number(activeDebt.remainingAmount) : Math.max(0, Number(order.totalAmount || 0) - Number(order.paidAmount || 0));
+    }
+
+    return {
+      detailId: detail.id,
+      orderId: order.id,
+      invoiceNumber: order.invoiceNumber,
+      rackCode: detail.rackCode || 'KASIR',
+      customerName: order.customer?.name || 'Pelanggan',
+      customerPhone: order.customer?.phone || null,
+      daysAging,
+      remainingAmount: remaining,
+      outletName: order.outlet.name,
+      lastReminderSentAt: detail.lastReminderSentAt,
+      outletReceiptConfig: (order.outlet as any)?.receiptConfig,
+    };
+  });
+
+  // 2. Ambil Kandidat Kuota Kiloan Akan Expired (H-1)
+  const expiringWallets = await prisma.customerLaundryWallet.findMany({
+    where: {
+      tenantId,
+      quotaKg: { gt: 0 },
+      quotaExpiresAt: {
+        gte: now,
+        lte: twentyFourHoursFromNow,
+      },
+      OR: [
+        { lastExpiryReminderSentAt: null },
+        { lastExpiryReminderSentAt: { lte: twentyFourHoursAgo } },
+      ],
+    },
+    include: {
+      customer: true,
+    },
+  });
+
+  let defaultOutletName = 'Outlet Laundry';
+  let defaultReceiptConfig = null;
+  const outletInfo = await prisma.outlet.findFirst({
+    where: { tenantId, ...(outletId ? { id: outletId } : { isActive: true }) },
+    select: { name: true, receiptConfig: true },
+  });
+  if (outletInfo) {
+    defaultOutletName = outletInfo.name;
+    defaultReceiptConfig = outletInfo.receiptConfig;
+  }
+
+  const expiringCandidates = expiringWallets.map((w) => ({
+    walletId: w.id,
+    customerId: w.customerId,
+    customerName: w.customer.name,
+    customerPhone: w.customer.phone,
+    remainingQuotaKg: Number(w.quotaKg),
+    quotaExpiresAt: w.quotaExpiresAt,
+    expiryDateStr: w.quotaExpiresAt
+      ? new Date(w.quotaExpiresAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : '',
+    outletName: defaultOutletName,
+    receiptConfig: defaultReceiptConfig,
+    lastExpiryReminderSentAt: w.lastExpiryReminderSentAt,
+  }));
+
+  let sentCount = 0;
+  let failedCount = 0;
+
+  if (!isDryRun) {
+    for (const item of staleCandidates) {
+      if (!item.customerPhone) {
+        failedCount++;
+        continue;
+      }
+      try {
+        const sendRes = await whatsAppService.sendStaleRackReminder({
+          phone: item.customerPhone,
+          customerName: item.customerName,
+          invoiceNumber: item.invoiceNumber,
+          rackCode: item.rackCode,
+          daysAging: item.daysAging,
+          remainingAmount: item.remainingAmount,
+          outletName: item.outletName,
+          receiptConfig: item.outletReceiptConfig,
+        });
+
+        if (sendRes.status === 'success') {
+          await prisma.laundryOrderDetail.update({
+            where: { id: item.detailId },
+            data: { lastReminderSentAt: now },
+          });
+          sentCount++;
+        } else {
+          failedCount++;
+        }
+      } catch (err) {
+        console.error(`[AUTO-REMINDER] Gagal kirim WA ke ${item.customerPhone}:`, err);
+        failedCount++;
+      }
+    }
+
+    for (const item of expiringCandidates) {
+      if (!item.customerPhone) {
+        failedCount++;
+        continue;
+      }
+      try {
+        const sendRes = await whatsAppService.sendQuotaExpiryReminder({
+          phone: item.customerPhone,
+          customerName: item.customerName,
+          remainingQuotaKg: item.remainingQuotaKg,
+          expiryDateStr: item.expiryDateStr,
+          outletName: item.outletName,
+          receiptConfig: item.receiptConfig,
+        });
+
+        if (sendRes.status === 'success') {
+          await prisma.customerLaundryWallet.update({
+            where: { id: item.walletId },
+            data: { lastExpiryReminderSentAt: now },
+          });
+          sentCount++;
+        } else {
+          failedCount++;
+        }
+      } catch (err) {
+        console.error(`[AUTO-REMINDER] Gagal kirim WA ke ${item.customerPhone}:`, err);
+        failedCount++;
+      }
+    }
+  }
+
+  return {
+    isDryRun,
+    summary: {
+      totalStaleRack: staleCandidates.length,
+      totalExpiringQuota: expiringCandidates.length,
+      totalCandidates: staleCandidates.length + expiringCandidates.length,
+      sentCount,
+      failedCount,
+    },
+    staleCandidates,
+    expiringCandidates,
+  };
+};
+
+/**
+ * Controller: Eksekusi / Preview Auto-Reminder WA (P2)
+ * @route POST /api/laundry/reminders/run
+ */
+export const executeLaundryAutoReminders = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userRole = (req.user?.role || '').toUpperCase();
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(userRole)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang berhak menjalankan auto-reminder',
+      });
+    }
+
+    const { outletId, dryRun } = req.body;
+    const isDryRun = dryRun !== false;
+
+    const result = await runLaundryAutoReminders(tenantId, outletId, { dryRun: isDryRun });
+
+    return res.status(200).json({
+      status: 'success',
+      message: isDryRun
+        ? `Preview auto-reminder berhasil dimuat: ${result.summary.totalCandidates} kandidat ditemukan`
+        : `Auto-reminder berhasil dijalankan: ${result.summary.sentCount} terkirim, ${result.summary.failedCount} gagal`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error executeLaundryAutoReminders:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menjalankan auto-reminder WhatsApp' });
   }
 };

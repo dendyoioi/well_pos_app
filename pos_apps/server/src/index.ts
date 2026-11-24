@@ -163,6 +163,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 import { runAutoSchemaPatcherWithDirectUrl } from './migrations/schema_patcher';
 import { initBackupScheduler } from './services/backupScheduler';
+import { runLaundryAutoReminders } from './controllers/laundry.controller';
 
 // Jalankan Server jika dieksekusi secara langsung (bukan di-import oleh test suite)
 let server: any = null;
@@ -178,6 +179,22 @@ if (process.env.NODE_ENV !== 'test' && require.main === module) {
 
   // Inisialisasi scheduler backup otomatis harian
   initBackupScheduler();
+
+  // Inisialisasi auto-reminder WA laundry jika diaktifkan di environment (P2)
+  if (process.env.ENABLE_LAUNDRY_AUTO_REMINDER === 'true') {
+    const intervalHours = Number(process.env.LAUNDRY_AUTO_REMINDER_INTERVAL_HOURS) || 6;
+    console.log(`[AutoReminder] ⏰ Background auto-reminder laundry diaktifkan (interval: ${intervalHours} jam)`);
+    setInterval(async () => {
+      try {
+        const tenants = await prisma.tenant.findMany({ where: { status: 'ACTIVE' }, select: { id: true } });
+        for (const t of tenants) {
+          await runLaundryAutoReminders(t.id, undefined, { dryRun: false });
+        }
+      } catch (err: any) {
+        console.warn('[AutoReminder] ⚠️ Background runner error:', err.message);
+      }
+    }, intervalHours * 60 * 60 * 1000);
+  }
 
   server = app.listen(PORT, () => {
     console.log(`=========================================`);

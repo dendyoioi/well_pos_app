@@ -411,6 +411,11 @@ export interface LaundryDeliveryKpi {
   totalCodRemaining: number;
 }
 
+export interface CashierCommissionTier {
+  minSales: number;
+  percent: number;
+}
+
 export interface LaundryCommissionConfig {
   enabled: boolean;
   washingPerKg: number;
@@ -420,12 +425,15 @@ export interface LaundryCommissionConfig {
   deliveryPerTrip: number;
   pickupPerTrip: number;
   rewashPenaltyPerCase: number;
+  cashierCommissionEnabled?: boolean;
+  cashierCommissionBasis?: 'PAID_ONLY' | 'ALL_ORDERS';
+  cashierCommissionTiers?: CashierCommissionTier[];
 }
 
 export interface LaundryStaffCommissionRow {
   staffId?: string;
   name: string;
-  roleType: 'OPERATOR' | 'COURIER' | 'BOTH';
+  roleType: 'OPERATOR' | 'COURIER' | 'CASHIER' | 'BOTH';
   washingKg: number;
   dryingKg: number;
   ironingKg: number;
@@ -440,6 +448,11 @@ export interface LaundryStaffCommissionRow {
   deliveryCommission: number;
   rewashPenalty: number;
   productionCommission: number;
+  cashierSales?: number;
+  cashierOrders?: number;
+  appliedTierPercent?: number;
+  cashierCommission?: number;
+  outstandingCashAdvance?: number;
   totalCommission: number;
 }
 
@@ -447,8 +460,10 @@ export interface LaundryCommissionSummary {
   totalStaff: number;
   totalProductionCommission: number;
   totalDeliveryCommission: number;
+  totalCashierCommission?: number;
   totalPenalty: number;
   grandTotalCommission: number;
+  totalOutstandingAdvances?: number;
   totalKgProcessed: number;
   totalTripsCompleted: number;
   startDate: string;
@@ -459,4 +474,84 @@ export interface LaundryCommissionReport {
   config: LaundryCommissionConfig;
   summary: LaundryCommissionSummary;
   staff: LaundryStaffCommissionRow[];
+}
+
+export interface StaffCashAdvance {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  staffId?: string | null;
+  staffName: string;
+  amount: number;
+  remainingAmount: number;
+  status: 'OPEN' | 'PARTIAL' | 'PAID' | 'CANCELLED';
+  reason?: string | null;
+  shiftId?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  staff?: { id: string; name: string; userCode: string; role?: string };
+  outlet?: { id: string; name: string };
+  shift?: { id: string; startTime: string; endTime?: string | null; status: string };
+}
+
+export interface ShiftCashDeposit {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  shiftId: string;
+  cashierId: string;
+  amount: number;
+  targetAccount: string;
+  referenceNumber?: string | null;
+  proofPhotoUrl?: string | null;
+  notes?: string | null;
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  verifiedById?: string | null;
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  cashier?: { id: string; name: string; userCode: string };
+  verifier?: { id: string; name: string };
+  outlet?: { id: string; name: string };
+  shift?: { id: string; startTime: string; endTime?: string | null; status: string; actualEnding?: number };
+}
+
+export interface StaleRackReminderCandidate {
+  detailId: string;
+  orderId: string;
+  invoiceNumber: string;
+  rackCode: string;
+  customerName: string;
+  customerPhone: string | null;
+  daysAging: number;
+  remainingAmount: number;
+  outletName: string;
+  lastReminderSentAt?: string | null;
+}
+
+export interface ExpiringQuotaReminderCandidate {
+  walletId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string | null;
+  remainingQuotaKg: number;
+  quotaExpiresAt?: string | null;
+  expiryDateStr: string;
+  outletName: string;
+  lastExpiryReminderSentAt?: string | null;
+}
+
+export interface LaundryAutoReminderResult {
+  isDryRun: boolean;
+  summary: {
+    totalStaleRack: number;
+    totalExpiringQuota: number;
+    totalCandidates: number;
+    sentCount: number;
+    failedCount: number;
+  };
+  staleCandidates: StaleRackReminderCandidate[];
+  expiringCandidates: ExpiringQuotaReminderCandidate[];
 }

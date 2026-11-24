@@ -1341,3 +1341,243 @@ export const getCashMovements = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Controller: Ajukan Setoran Kas Shift ke Pusat / Bank (P2)
+ * @route POST /api/shifts/deposits
+ */
+export const createShiftCashDeposit = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    const { shiftId, amount, targetAccount, referenceNumber, proofPhotoUrl, notes } = req.body;
+
+    if (!shiftId || typeof shiftId !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Shift ID wajib diisi' });
+    }
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Nominal setoran kas harus lebih besar dari Rp 0' });
+    }
+    if (!targetAccount || typeof targetAccount !== 'string' || !targetAccount.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Akun atau rekening tujuan setoran wajib diisi' });
+    }
+
+    const shift = await prisma.shift.findFirst({
+      where: { id: shiftId, tenantId },
+      include: { outlet: true },
+    });
+
+    if (!shift) {
+      return res.status(404).json({ status: 'error', message: 'Shift kasir tidak ditemukan pada toko Anda' });
+    }
+
+    const deposit = await prisma.shiftCashDeposit.create({
+      data: {
+        tenantId,
+        outletId: shift.outletId,
+        shiftId: shift.id,
+        cashierId: userId,
+        amount: numAmount,
+        targetAccount: targetAccount.trim(),
+        referenceNumber: referenceNumber?.trim() || null,
+        proofPhotoUrl: proofPhotoUrl?.trim() || null,
+        notes: notes?.trim() || null,
+        status: 'PENDING',
+      },
+      include: {
+        cashier: { select: { id: true, name: true, userCode: true } },
+        outlet: { select: { id: true, name: true } },
+        shift: { select: { id: true, startTime: true, endTime: true, status: true } },
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: `Pengajuan setoran kas Rp ${numAmount.toLocaleString('id-ID')} ke ${targetAccount} berhasil dibuat`,
+      data: deposit,
+    });
+  } catch (error: any) {
+    console.error('Error in createShiftCashDeposit:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengajukan setoran kas shift' });
+  }
+};
+
+/**
+ * Controller: Ambil Riwayat Setoran Kas Shift & Rekapitulasi (P2)
+ * @route GET /api/shifts/deposits
+ */
+export const getShiftCashDeposits = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    const { outletId, shiftId, status, startDate, endDate, page = 1, limit = 20 } = req.query;
+
+    const where: any = { tenantId };
+    if (outletId && typeof outletId === 'string') where.outletId = outletId;
+    if (shiftId && typeof shiftId === 'string') where.shiftId = shiftId;
+    if (status && typeof status === 'string' && status !== 'ALL') where.status = status;
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate && typeof startDate === 'string') {
+        const s = new Date(startDate);
+        s.setHours(0, 0, 0, 0);
+        where.createdAt.gte = s;
+      }
+      if (endDate && typeof endDate === 'string') {
+        const e = new Date(endDate);
+        e.setHours(23, 59, 59, 999);
+        where.createdAt.lte = e;
+      }
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const take = Number(limit);
+
+    const [deposits, totalCount] = await Promise.all([
+      prisma.shiftCashDeposit.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          cashier: { select: { id: true, name: true, userCode: true } },
+          verifier: { select: { id: true, name: true } },
+          outlet: { select: { id: true, name: true } },
+          shift: { select: { id: true, startTime: true, endTime: true, status: true, actualEnding: true } },
+        },
+      }),
+      prisma.shiftCashDeposit.count({ where }),
+    ]);
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+    const [pendingAgg, verifiedMonthAgg] = await Promise.all([
+      prisma.shiftCashDeposit.aggregate({
+        where: {
+          tenantId,
+          ...(outletId ? { outletId: String(outletId) } : {}),
+          status: 'PENDING',
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      prisma.shiftCashDeposit.aggregate({
+        where: {
+          tenantId,
+          ...(outletId ? { outletId: String(outletId) } : {}),
+          status: 'VERIFIED',
+          verifiedAt: { gte: startOfMonth },
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+    ]);
+
+    const summary = {
+      totalPendingAmount: Number(pendingAgg._sum.amount || 0),
+      pendingCount: pendingAgg._count || 0,
+      totalVerifiedMonthAmount: Number(verifiedMonthAgg._sum.amount || 0),
+      verifiedCount: verifiedMonthAgg._count || 0,
+    };
+
+    return res.status(200).json({
+      status: 'success',
+      data: deposits,
+      summary,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        totalCount,
+        totalRecords: totalCount,
+        totalPages: Math.ceil(totalCount / Number(limit)),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getShiftCashDeposits:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil daftar setoran kas' });
+  }
+};
+
+/**
+ * Controller: Verifikasi / Tolak Setoran Kas Shift oleh Owner / Admin / SPV (P2)
+ * @route PATCH /api/shifts/deposits/:id/verify
+ */
+export const verifyShiftCashDeposit = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const userRole = (req.user?.role || '').toUpperCase();
+
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak valid' });
+    }
+
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(userRole)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Pemilik (Owner), Admin, atau Supervisor yang berhak memverifikasi setoran kas',
+      });
+    }
+
+    const { id } = req.params;
+    const { status, rejectionReason } = req.body;
+
+    if (!['VERIFIED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Status verifikasi tidak valid. Pilihan yang tersedia: VERIFIED atau REJECTED',
+      });
+    }
+
+    if (status === 'REJECTED' && (!rejectionReason || !rejectionReason.trim())) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Alasan penolakan setoran kas wajib diisi jika status REJECTED',
+      });
+    }
+
+    const deposit = await prisma.shiftCashDeposit.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!deposit) {
+      return res.status(404).json({ status: 'error', message: 'Data setoran kas tidak ditemukan' });
+    }
+
+    const updated = await prisma.shiftCashDeposit.update({
+      where: { id },
+      data: {
+        status,
+        verifiedById: userId,
+        verifiedAt: new Date(),
+        rejectionReason: status === 'REJECTED' ? rejectionReason.trim() : null,
+      },
+      include: {
+        cashier: { select: { id: true, name: true, userCode: true } },
+        verifier: { select: { id: true, name: true } },
+        outlet: { select: { id: true, name: true } },
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Setoran kas sebesar Rp ${Number(updated.amount).toLocaleString('id-ID')} berhasil ${
+        status === 'VERIFIED' ? 'diverifikasi' : 'ditolak'
+      }`,
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error in verifyShiftCashDeposit:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memverifikasi setoran kas' });
+  }
+};
+

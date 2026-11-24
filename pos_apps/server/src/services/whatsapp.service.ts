@@ -508,6 +508,203 @@ export class WhatsAppService {
   }
 
   /**
+   * Kirim Pengingat Cucian Mengendap di Rak (>= 3 / 7 Hari)
+   */
+  public async sendStaleRackReminder(data: {
+    phone: string;
+    customerName: string;
+    invoiceNumber: string;
+    rackCode?: string | null;
+    daysAging: number;
+    remainingAmount: number;
+    outletName: string;
+    outletAddress?: string | null;
+    outletPhone?: string | null;
+    trackingUrl?: string | null;
+    receiptConfig?: any;
+  }): Promise<WhatsAppSendResult> {
+    if (!data.phone || !data.phone.trim()) {
+      return {
+        status: 'error',
+        message: 'Nomor WhatsApp pelanggan tidak tersedia',
+        targetPhone: '',
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+
+    const cleanPhone = this.normalizePhone(data.phone);
+    const { apiKey, enabled } = this.resolveApiKey(data.receiptConfig);
+
+    const trackingUrl =
+      data.trackingUrl ||
+      (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://wellpos.id').replace(/\/$/, '') +
+        '/track/' +
+        encodeURIComponent(data.invoiceNumber);
+
+    const messageText =
+      `*PEMBERITAHUAN PENYIMPANAN CUCIAN — ${data.outletName.toUpperCase()}*\n\n` +
+      `Halo Kak *${data.customerName || 'Pelanggan Setia'}*,\n` +
+      `Pakaian bersih Anda dengan nomor nota *${data.invoiceNumber}* telah selesai diproses dan saat ini tersimpan aman di *Rak ${data.rackCode || 'Kasir'}* selama *${data.daysAging} hari*.\n\n` +
+      `📍 *Lokasi Pengambilan:* ${data.outletName}${data.outletAddress ? ` (${data.outletAddress})` : ''}\n` +
+      `💰 *Status Tagihan:* ${
+        data.remainingAmount > 0
+          ? `Sisa tagihan Rp ${Number(data.remainingAmount).toLocaleString('id-ID')} (dapat dilunasi saat pengambilan)`
+          : 'LUNAS (tinggal serah terima)'
+      }\n` +
+      `🔍 Pantau nota: ${trackingUrl}\n\n` +
+      `Agar pakaian tetap terjaga kesegaran dan keharumannya, mohon berkenan mengambil pakaian Anda pada jam operasional kami. Terima kasih atas kepercayaan Anda! ✨\n\n` +
+      `_${data.outletName}_`;
+
+    if (!apiKey) {
+      console.log(`[WHATSAPP MOCK/UNCONFIGURED] Stale rack reminder ke ${cleanPhone}:\n${messageText}`);
+      return {
+        status: 'success',
+        message: `(Mock) Reminder cucian mengendap tercatat untuk +${cleanPhone}`,
+        targetPhone: cleanPhone,
+        isMock: true,
+        provider: 'FONNTE',
+      };
+    }
+
+    try {
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: cleanPhone,
+          message: messageText,
+          countryCode: '62',
+        }),
+      });
+
+      const resJson: any = await response.json();
+      if (response.ok && resJson.status === true) {
+        return {
+          status: 'success',
+          message: `Reminder cucian mengendap berhasil dikirim ke +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      } else {
+        const errorMsg = resJson.reason || resJson.message || 'Gagal mengirim notifikasi via Fonnte API';
+        return {
+          status: 'error',
+          message: `Fonnte: ${errorMsg}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      }
+    } catch (err: any) {
+      console.error('[WHATSAPP API ERROR]', err);
+      return {
+        status: 'error',
+        message: `Koneksi gateway WhatsApp terputus: ${err.message}`,
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+  }
+
+  /**
+   * Kirim Pengingat Masa Aktif Kuota Laundry Kiloan (H-1 Expired)
+   */
+  public async sendQuotaExpiryReminder(data: {
+    phone: string;
+    customerName: string;
+    remainingQuotaKg: number;
+    expiryDateStr: string;
+    outletName: string;
+    receiptConfig?: any;
+  }): Promise<WhatsAppSendResult> {
+    if (!data.phone || !data.phone.trim()) {
+      return {
+        status: 'error',
+        message: 'Nomor WhatsApp pelanggan tidak tersedia',
+        targetPhone: '',
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+
+    const cleanPhone = this.normalizePhone(data.phone);
+    const { apiKey, enabled } = this.resolveApiKey(data.receiptConfig);
+
+    const messageText =
+      `*PENGINGAT MASA AKTIF KUOTA LAUNDRY — ${data.outletName.toUpperCase()}*\n\n` +
+      `Halo Kak *${data.customerName || 'Pelanggan Setia'}*,\n` +
+      `Kami menginformasikan bahwa sisa kuota cuci kiloan Anda sebesar *${data.remainingQuotaKg} Kg* akan kedaluwarsa pada besok hari (*${data.expiryDateStr}*).\n\n` +
+      `Yuk manfaatkan kuota kiloan Anda untuk mencuci pakaian kotor Anda sebelum hangus! Cukup bawa pakaian kotor Anda ke *${data.outletName}* hari ini.\n\n` +
+      `Terima kasih atas kesetiaan Anda menggunakan layanan kami! 🙏\n\n` +
+      `_${data.outletName}_`;
+
+    if (!apiKey) {
+      console.log(`[WHATSAPP MOCK/UNCONFIGURED] Quota expiry reminder ke ${cleanPhone}:\n${messageText}`);
+      return {
+        status: 'success',
+        message: `(Mock) Reminder kuota expired tercatat untuk +${cleanPhone}`,
+        targetPhone: cleanPhone,
+        isMock: true,
+        provider: 'FONNTE',
+      };
+    }
+
+    try {
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: cleanPhone,
+          message: messageText,
+          countryCode: '62',
+        }),
+      });
+
+      const resJson: any = await response.json();
+      if (response.ok && resJson.status === true) {
+        return {
+          status: 'success',
+          message: `Reminder kuota expired berhasil dikirim ke +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      } else {
+        const errorMsg = resJson.reason || resJson.message || 'Gagal mengirim notifikasi via Fonnte API';
+        return {
+          status: 'error',
+          message: `Fonnte: ${errorMsg}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      }
+    } catch (err: any) {
+      console.error('[WHATSAPP API ERROR]', err);
+      return {
+        status: 'error',
+        message: `Koneksi gateway WhatsApp terputus: ${err.message}`,
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+  }
+
+  /**
    * Tes Koneksi / Cek Status Akun Fonnte API
    */
   public async testDeviceConnection(apiKey: string, testTarget?: string): Promise<any> {

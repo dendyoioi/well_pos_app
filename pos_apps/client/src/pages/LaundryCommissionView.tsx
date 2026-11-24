@@ -15,6 +15,11 @@ import {
   FileText,
   UserCheck,
   Banknote,
+  Plus,
+  Trash2,
+  HandCoins,
+  Wallet,
+  ChevronDown,
 } from 'lucide-react';
 import type { User } from '../types/auth';
 import type { Outlet } from '../types/outlet';
@@ -22,11 +27,13 @@ import type {
   LaundryCommissionConfig,
   LaundryStaffCommissionRow,
   LaundryCommissionReport,
+  StaffCashAdvance,
 } from '../types/laundry';
 import { api } from '../services/api';
 import { formatRupiah } from '../utils/currency';
 import { TablePagination } from '../components/TablePagination';
 import { TableSkeleton } from '../components/ui/TableSkeleton';
+import { CurrencyInput } from '../components/ui/CurrencyInput';
 
 interface LaundryCommissionViewProps {
   activeOutlet: Outlet | null;
@@ -42,6 +49,12 @@ const DEFAULT_CONFIG: LaundryCommissionConfig = {
   deliveryPerTrip: 3000,
   pickupPerTrip: 2000,
   rewashPenaltyPerCase: 0,
+  cashierCommissionEnabled: false,
+  cashierCommissionBasis: 'PAID_ONLY',
+  cashierCommissionTiers: [
+    { minSales: 5000000, percent: 1.5 },
+    { minSales: 10000000, percent: 3.0 },
+  ],
 };
 
 type PeriodType = 'TODAY' | 'LAST_7' | 'THIS_MONTH' | 'LAST_MONTH' | 'CUSTOM';
@@ -87,6 +100,172 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [paidOutKeys, setPaidOutKeys] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Tab Utama: Komisi Staf & Kurir vs Kasbon Karyawan (P2)
+  const [activeMainTab, setActiveMainTab] = useState<'COMMISSION' | 'CASH_ADVANCE'>('COMMISSION');
+
+  // State Kasbon Karyawan (P2)
+  const [advances, setAdvances] = useState<StaffCashAdvance[]>([]);
+  const [advanceSummary, setAdvanceSummary] = useState<{ totalActiveDebt: number; countPending: number } | null>(null);
+  const [loadingAdvances, setLoadingAdvances] = useState(false);
+  const [advanceStatusFilter, setAdvanceStatusFilter] = useState('ALL');
+  const [advanceSearch, setAdvanceSearch] = useState('');
+  const [advancePage, setAdvancePage] = useState(1);
+  const [advancePageSize, setAdvancePageSize] = useState(10);
+
+  // Modal Catat Kasbon Baru
+  const [showCreateAdvanceModal, setShowCreateAdvanceModal] = useState(false);
+  const [advanceStaffName, setAdvanceStaffName] = useState('');
+  const [advanceStaffId, setAdvanceStaffId] = useState('');
+  const [advanceAmount, setAdvanceAmount] = useState(0);
+  const [advanceReason, setAdvanceReason] = useState('');
+  const [deductFromOpenShift, setDeductFromOpenShift] = useState(true);
+  const [submittingAdvance, setSubmittingAdvance] = useState(false);
+
+  // Modal Pelunasan Kasbon
+  const [selectedAdvanceForRepay, setSelectedAdvanceForRepay] = useState<StaffCashAdvance | null>(null);
+  const [repayAmount, setRepayAmount] = useState(0);
+  const [repayNotes, setRepayNotes] = useState('');
+  const [submittingRepay, setSubmittingRepay] = useState(false);
+
+  // State auto-offset potongan kasbon saat pencairan komisi (P2)
+  const [deductCashAdvance, setDeductCashAdvance] = useState(true);
+  const [cashAdvanceDeductionAmount, setCashAdvanceDeductionAmount] = useState(0);
+
+  const handleOpenPayoutModal = (staff: LaundryStaffCommissionRow) => {
+    setSelectedStaffForPayout(staff);
+    const advanceDebt = staff.outstandingCashAdvance || 0;
+    if (advanceDebt > 0) {
+      setDeductCashAdvance(true);
+      setCashAdvanceDeductionAmount(Math.min(advanceDebt, staff.totalCommission));
+    } else {
+      setDeductCashAdvance(false);
+      setCashAdvanceDeductionAmount(0);
+    }
+    setPayoutNotes('');
+    setShowPayoutModal(true);
+  };
+
+  const fetchAdvances = async () => {
+    try {
+      setLoadingAdvances(true);
+      const res = await api.getStaffCashAdvances({
+        outletId: activeOutlet?.id,
+        status: advanceStatusFilter !== 'ALL' ? advanceStatusFilter : undefined,
+        search: advanceSearch.trim() || undefined,
+      });
+      if (res.status === 'success' && res.data) {
+        setAdvances(res.data);
+        if (res.summary) {
+          setAdvanceSummary(res.summary);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching staff cash advances:', err);
+    } finally {
+      setLoadingAdvances(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdvances();
+  }, [activeOutlet?.id, advanceStatusFilter, advanceSearch]);
+
+  const handleSubmitAdvance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeOutlet?.id) {
+      alert('Toko / Outlet aktif tidak ditemukan');
+      return;
+    }
+    if (!advanceStaffName.trim()) {
+      alert('Nama karyawan wajib diisi.');
+      return;
+    }
+    if (!advanceAmount || advanceAmount <= 0) {
+      alert('Nominal kasbon harus lebih dari Rp 0.');
+      return;
+    }
+
+    setSubmittingAdvance(true);
+    try {
+      const res = await api.createStaffCashAdvance({
+        outletId: activeOutlet.id,
+        staffId: advanceStaffId || undefined,
+        staffName: advanceStaffName.trim(),
+        amount: advanceAmount,
+        reason: advanceReason.trim() || undefined,
+        deductFromOpenShift,
+      });
+
+      if (res.status === 'success') {
+        setShowCreateAdvanceModal(false);
+        setAdvanceStaffName('');
+        setAdvanceStaffId('');
+        setAdvanceAmount(0);
+        setAdvanceReason('');
+        setToastMessage(`✅ ${res.message || 'Kasbon karyawan berhasil dicatat!'}`);
+        setTimeout(() => setToastMessage(null), 4000);
+        fetchAdvances();
+        fetchCommissions();
+      } else {
+        alert(res.message || 'Gagal mencatat kasbon');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan sistem');
+    } finally {
+      setSubmittingAdvance(false);
+    }
+  };
+
+  const handleSubmitRepay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAdvanceForRepay) return;
+    if (!repayAmount || repayAmount <= 0) {
+      alert('Nominal pelunasan harus lebih dari Rp 0.');
+      return;
+    }
+    if (repayAmount > selectedAdvanceForRepay.remainingAmount) {
+      alert(`Nominal melebihi sisa kasbon (maks. ${formatRupiah(selectedAdvanceForRepay.remainingAmount)}).`);
+      return;
+    }
+
+    setSubmittingRepay(true);
+    try {
+      const res = await api.repayStaffCashAdvance(selectedAdvanceForRepay.id, {
+        amount: repayAmount,
+        notes: repayNotes.trim() || undefined,
+      });
+
+      if (res.status === 'success') {
+        setSelectedAdvanceForRepay(null);
+        setRepayAmount(0);
+        setRepayNotes('');
+        setToastMessage(`✅ ${res.message || 'Pelunasan kasbon berhasil dicatat!'}`);
+        setTimeout(() => setToastMessage(null), 4000);
+        fetchAdvances();
+        fetchCommissions();
+      } else {
+        alert(res.message || 'Gagal memproses pelunasan');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan sistem');
+    } finally {
+      setSubmittingRepay(false);
+    }
+  };
+
+  const filteredAdvances = useMemo(() => {
+    if (!advanceSearch.trim()) return advances;
+    const q = advanceSearch.toLowerCase();
+    return advances.filter(
+      (a) => a.staffName.toLowerCase().includes(q) || (a.reason || '').toLowerCase().includes(q)
+    );
+  }, [advances, advanceSearch]);
+
+  const paginatedAdvances = useMemo(() => {
+    const startIndex = (advancePage - 1) * advancePageSize;
+    return filteredAdvances.slice(startIndex, startIndex + advancePageSize);
+  }, [filteredAdvances, advancePage, advancePageSize]);
 
   // Sinkronisasi rentang tanggal berdasarkan period pill
   const handlePeriodChange = (newPeriod: PeriodType) => {
@@ -292,7 +471,42 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Filter Bar: Pill Periode & Custom Date + Search */}
+      {/* Navigation Tabs (Komisi Staf & Kurir vs Kasbon Karyawan) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 no-print">
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('COMMISSION')}
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            activeMainTab === 'COMMISSION'
+              ? 'border-blue-900 text-blue-900 font-extrabold'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Award className="w-4 h-4 stroke-[2.5]" />
+          <span>Komisi Staf &amp; Kurir</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('CASH_ADVANCE')}
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            activeMainTab === 'CASH_ADVANCE'
+              ? 'border-blue-900 text-blue-900 font-extrabold'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <HandCoins className="w-4 h-4 stroke-[2.5]" />
+          <span>Kasbon Karyawan</span>
+          {advanceSummary && advanceSummary.countPending > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono font-bold">
+              {advanceSummary.countPending}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeMainTab === 'COMMISSION' ? (
+        <>
+          {/* 2. Filter Bar: Pill Periode & Custom Date + Search */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Periode Pills */}
@@ -530,21 +744,32 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                             </div>
                             <div>
                               <span className="font-bold text-slate-900 block">{s.name}</span>
-                              <span
-                                className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                                  s.roleType === 'BOTH'
-                                    ? 'bg-purple-100 text-purple-800'
+                              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                <span
+                                  className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                    s.roleType === 'BOTH'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : s.roleType === 'COURIER'
+                                      ? 'bg-indigo-100 text-indigo-800'
+                                      : s.roleType === 'CASHIER'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {s.roleType === 'BOTH'
+                                    ? 'Operator & Kurir'
                                     : s.roleType === 'COURIER'
-                                    ? 'bg-indigo-100 text-indigo-800'
-                                    : 'bg-amber-100 text-amber-800'
-                                }`}
-                              >
-                                {s.roleType === 'BOTH'
-                                  ? 'Operator & Kurir'
-                                  : s.roleType === 'COURIER'
-                                  ? 'Kurir Delivery'
-                                  : 'Operator Produksi'}
-                              </span>
+                                    ? 'Kurir Delivery'
+                                    : s.roleType === 'CASHIER'
+                                    ? 'Kasir Penjualan'
+                                    : 'Operator Produksi'}
+                                </span>
+                                {(s.outstandingCashAdvance || 0) > 0 && (
+                                  <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                    Kasbon: {formatRupiah(s.outstandingCashAdvance || 0)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -635,11 +860,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setSelectedStaffForPayout(s);
-                                    setPayoutNotes('');
-                                    setShowPayoutModal(true);
-                                  }}
+                                  onClick={() => handleOpenPayoutModal(s)}
                                   className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1 cursor-pointer"
                                   title="Catat Pencairan Kas Komisi"
                                 >
@@ -698,13 +919,32 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                         </div>
                         <div>
                           <span className="font-bold text-slate-900 text-xs block">{s.name}</span>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            {s.roleType === 'BOTH'
-                              ? 'Operator & Kurir'
-                              : s.roleType === 'COURIER'
-                              ? 'Kurir Delivery'
-                              : 'Operator Produksi'}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                s.roleType === 'BOTH'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : s.roleType === 'COURIER'
+                                  ? 'bg-indigo-100 text-indigo-800'
+                                  : s.roleType === 'CASHIER'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {s.roleType === 'BOTH'
+                                ? 'Operator & Kurir'
+                                : s.roleType === 'COURIER'
+                                ? 'Kurir Delivery'
+                                : s.roleType === 'CASHIER'
+                                ? 'Kasir Penjualan'
+                                : 'Operator Produksi'}
+                            </span>
+                            {(s.outstandingCashAdvance || 0) > 0 && (
+                              <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                Kasbon: {formatRupiah(s.outstandingCashAdvance || 0)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -738,6 +978,12 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                         <span className="text-slate-400 block">Kurir ({s.deliveryTrips + s.pickupTrips} Trip):</span>
                         <span className="font-bold text-indigo-700">{formatRupiah(s.deliveryCommission)}</span>
                       </div>
+                      {s.cashierCommission != null && s.cashierCommission > 0 && (
+                        <div>
+                          <span className="text-emerald-700 block">Kasir ({s.appliedTierPercent}%):</span>
+                          <span className="font-bold text-emerald-800">{formatRupiah(s.cashierCommission)}</span>
+                        </div>
+                      )}
                       {s.rewashPenalty > 0 && (
                         <div>
                           <span className="text-rose-400 block">Penalti Rewash:</span>
@@ -755,11 +1001,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                         ) : (
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedStaffForPayout(s);
-                              setPayoutNotes('');
-                              setShowPayoutModal(true);
-                            }}
+                            onClick={() => handleOpenPayoutModal(s)}
                             className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
                           >
                             <Banknote className="w-3.5 h-3.5" />
@@ -801,6 +1043,517 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
           </>
         )}
       </div>
+      </>
+      ) : (
+        <div className="space-y-6">
+          {/* Summary KPI Cards Kasbon Karyawan */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Total Kasbon Aktif
+                </span>
+                <div className="text-xl sm:text-2xl font-black text-rose-700 mt-1 font-mono">
+                  {formatRupiah(advanceSummary?.totalActiveDebt || 0)}
+                </div>
+                <span className="text-[11px] text-slate-400 mt-0.5 block font-medium">
+                  {advanceSummary?.countPending || 0} pinjaman belum lunas
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0">
+                <HandCoins className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Auto-Potong Komisi
+                </span>
+                <div className="text-sm font-bold text-emerald-800 mt-1">
+                  Didukung Otomatis
+                </div>
+                <span className="text-[11px] text-slate-400 mt-0.5 block font-medium">
+                  Kasbon dapat dipotong saat kasir mencairkan komisi
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Toko / Outlet Aktif
+                </span>
+                <div className="text-base font-black text-slate-900 mt-1 truncate">
+                  {activeOutlet?.name || 'Toko Aktif'}
+                </div>
+                <span className="text-[11px] text-slate-400 mt-0.5 block font-medium">
+                  Buku kasbon staf outlet
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center shrink-0">
+                <Wallet className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+
+          {/* Toolbar Kasbon */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:max-w-xl">
+              <div className="relative w-full">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Cari nama karyawan, alasan..."
+                  value={advanceSearch}
+                  onChange={(e) => {
+                    setAdvanceSearch(e.target.value);
+                    setAdvancePage(1);
+                  }}
+                  className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900 shadow-xs"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="relative w-full sm:w-44 shrink-0">
+                <select
+                  value={advanceStatusFilter}
+                  onChange={(e) => {
+                    setAdvanceStatusFilter(e.target.value);
+                    setAdvancePage(1);
+                  }}
+                  className="w-full h-10 pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none appearance-none cursor-pointer focus:border-blue-900 shadow-xs"
+                >
+                  <option value="ALL">Semua Status</option>
+                  <option value="ACTIVE">Aktif (Belum Lunas)</option>
+                  <option value="PAID">Lunas</option>
+                  <option value="CANCELLED">Dibatalkan</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+              </div>
+            </div>
+
+            {isSupervisorOrAbove && (
+              <button
+                type="button"
+                onClick={() => setShowCreateAdvanceModal(true)}
+                className="h-10 px-4 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Catat Kasbon Baru</span>
+              </button>
+            )}
+          </div>
+
+          {/* Table Kasbon Karyawan */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-4">Tanggal Pengajuan</th>
+                    <th className="py-3 px-4">Nama Karyawan</th>
+                    <th className="py-3 px-4 text-right">Nominal Kasbon</th>
+                    <th className="py-3 px-4 text-right">Sisa Kasbon</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Alasan / Catatan</th>
+                    <th className="py-3 px-4">Sumber Kas</th>
+                    <th className="py-3 px-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loadingAdvances ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-400">
+                        Memuat data kasbon karyawan...
+                      </td>
+                    </tr>
+                  ) : paginatedAdvances.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <HandCoins className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                        <p className="text-sm font-bold text-slate-700">Belum Ada Kasbon Karyawan</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Pinjaman atau kasbon staf akan tercatat di sini dan dapat dipotong otomatis dari komisi bulanan.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedAdvances.map((adv) => {
+                      const isActive = adv.status === 'OPEN' || adv.status === 'PARTIAL';
+                      return (
+                        <tr key={adv.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="font-bold text-slate-800 block">
+                              {new Date(adv.createdAt).toLocaleDateString('id-ID', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(adv.createdAt).toLocaleTimeString('id-ID', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
+                            {adv.staffName}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-slate-700 whitespace-nowrap">
+                            {formatRupiah(adv.amount)}
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <span className="font-black font-mono text-sm text-rose-700">
+                              {formatRupiah(adv.remainingAmount)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {isActive ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                Aktif
+                              </span>
+                            ) : adv.status === 'PAID' ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                Lunas
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                Batal
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 max-w-xs truncate">
+                            {adv.reason || '-'}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {adv.shiftId ? (
+                              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 font-bold text-[10px]">
+                                Laci Kasir Shift
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[11px]">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            {isActive && isSupervisorOrAbove ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAdvanceForRepay(adv);
+                                  setRepayAmount(adv.remainingAmount);
+                                  setRepayNotes('');
+                                }}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-900 text-blue-900 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+                              >
+                                <Banknote className="w-3.5 h-3.5" />
+                                <span>Pelunasan / Cicil</span>
+                              </button>
+                            ) : (
+                              <span className="text-slate-400 text-xs">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List Kasbon */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {loadingAdvances ? (
+                <div className="p-8 text-center text-slate-400 text-xs">Memuat kasbon...</div>
+              ) : paginatedAdvances.length === 0 ? (
+                <div className="p-8 text-center text-slate-400">
+                  <HandCoins className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                  <p className="font-bold text-slate-600 text-xs">Belum ada kasbon</p>
+                </div>
+              ) : (
+                paginatedAdvances.map((adv) => {
+                  const isActive = adv.status === 'OPEN' || adv.status === 'PARTIAL';
+                  return (
+                    <div key={adv.id} className="p-4 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-900 text-xs block">{adv.staffName}</span>
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(adv.createdAt).toLocaleDateString('id-ID')}
+                          </span>
+                        </div>
+                        {isActive ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            Aktif
+                          </span>
+                        ) : adv.status === 'PAID' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            Lunas
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                            Batal
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Pinjaman Awal</span>
+                          <span className="font-mono font-semibold text-slate-700">{formatRupiah(adv.amount)}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Sisa Kasbon</span>
+                          <span className="font-mono font-black text-rose-700">{formatRupiah(adv.remainingAmount)}</span>
+                        </div>
+                      </div>
+
+                      {adv.reason && (
+                        <p className="text-[11px] text-slate-500 italic">{adv.reason}</p>
+                      )}
+
+                      {isActive && isSupervisorOrAbove && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAdvanceForRepay(adv);
+                            setRepayAmount(adv.remainingAmount);
+                            setRepayNotes('');
+                          }}
+                          className="w-full py-2 bg-blue-50 text-blue-900 rounded-xl text-xs font-bold hover:bg-blue-900 hover:text-white transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Banknote className="w-3.5 h-3.5" />
+                          <span>Pelunasan / Cicil Kasbon</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Pagination Kasbon */}
+            {filteredAdvances.length > 0 && (
+              <div className="border-t border-slate-100 p-3 sm:p-4">
+                <TablePagination
+                  currentPage={advancePage}
+                  pageSize={advancePageSize}
+                  totalItems={filteredAdvances.length}
+                  onPageChange={setAdvancePage}
+                  onPageSizeChange={setAdvancePageSize}
+                  itemLabel="kasbon"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Catat Kasbon Baru */}
+      {showCreateAdvanceModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[92dvh] sm:max-h-[90vh] shadow-2xl flex flex-col min-h-0 overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
+                  <HandCoins className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                    Catat Kasbon Karyawan
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Pinjaman dana staf laundry</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateAdvanceModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitAdvance} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain flex-1 space-y-4 text-xs">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nama Karyawan / Staf <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Budi Santoso"
+                    value={advanceStaffName}
+                    onChange={(e) => setAdvanceStaffName(e.target.value)}
+                    className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nominal Kasbon (Rp) <span className="text-rose-500">*</span>
+                  </label>
+                  <CurrencyInput
+                    value={advanceAmount}
+                    onChange={setAdvanceAmount}
+                    placeholder="0"
+                    className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black font-mono text-blue-900 focus:outline-none focus:border-blue-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Alasan Pinjaman / Keterangan
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Contoh: Keperluan mendesak keluarga..."
+                    value={advanceReason}
+                    onChange={(e) => setAdvanceReason(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900 resize-none"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-blue-950">
+                    <input
+                      type="checkbox"
+                      checked={deductFromOpenShift}
+                      onChange={(e) => setDeductFromOpenShift(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 cursor-pointer"
+                    />
+                    <span>Keluarkan Uang dari Laci Kasir Shift Aktif</span>
+                  </label>
+                  <p className="text-[11px] text-blue-800 pl-6">
+                    Jika dicentang, pengeluaran kasbon akan otomatis memotong saldo uang kas fisik laci kasir saat ini.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateAdvanceModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingAdvance || !advanceAmount || advanceAmount <= 0}
+                  className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-900/20 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingAdvance ? 'Menyimpan...' : 'Simpan Kasbon'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Pelunasan Kasbon */}
+      {selectedAdvanceForRepay && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[92dvh] sm:max-h-[90vh] shadow-2xl flex flex-col min-h-0 overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  <Banknote className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                    Pelunasan / Cicilan Kasbon
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {selectedAdvanceForRepay.staffName} • Sisa {formatRupiah(selectedAdvanceForRepay.remainingAmount)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAdvanceForRepay(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitRepay} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain flex-1 space-y-4 text-xs">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Pinjaman Awal:</span>
+                    <span className="font-bold text-slate-800">{formatRupiah(selectedAdvanceForRepay.amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Sisa Kasbon Saat Ini:</span>
+                    <span className="font-black text-rose-700 font-mono">
+                      {formatRupiah(selectedAdvanceForRepay.remainingAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nominal Bayar / Cicil (Rp) <span className="text-rose-500">*</span>
+                  </label>
+                  <CurrencyInput
+                    value={repayAmount}
+                    onChange={(val) => setRepayAmount(Math.min(val, selectedAdvanceForRepay.remainingAmount))}
+                    placeholder="0"
+                    className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black font-mono text-emerald-800 focus:outline-none focus:border-emerald-700"
+                  />
+                  <div className="flex items-center justify-between mt-1 text-[11px]">
+                    <span className="text-slate-400">Maks. {formatRupiah(selectedAdvanceForRepay.remainingAmount)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setRepayAmount(selectedAdvanceForRepay.remainingAmount)}
+                      className="font-bold text-blue-900 hover:underline cursor-pointer"
+                    >
+                      Lunasi Seluruhnya
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Catatan Pembayaran (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Bayar tunai di kasir / transfer BCA"
+                    value={repayNotes}
+                    onChange={(e) => setRepayNotes(e.target.value)}
+                    className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-900"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAdvanceForRepay(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRepay || !repayAmount || repayAmount <= 0}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {submittingRepay ? 'Memproses...' : 'Konfirmasi Pelunasan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ==================================================== */}
       {/* MODAL 1: ATUR TARIF KOMISI OTOMATIS                  */}
@@ -992,6 +1745,154 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                     }
                     className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
                   />
+                </div>
+
+                {/* Sub-Header: Komisi Kasir Berjenjang (P2) */}
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div>
+                      <span className="font-bold text-slate-800 block flex items-center gap-1.5">
+                        <Banknote className="w-4 h-4 text-emerald-600" />
+                        <span>Komisi Penjualan Kasir (Berjenjang / Tiered)</span>
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Insentif persentase berjenjang dari akumulasi omset kasir
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(configDraft.cashierCommissionEnabled)}
+                      onChange={(e) =>
+                        setConfigDraft({
+                          ...configDraft,
+                          cashierCommissionEnabled: e.target.checked,
+                          cashierCommissionBasis: configDraft.cashierCommissionBasis || 'PAID_ONLY',
+                          cashierCommissionTiers: configDraft.cashierCommissionTiers || [
+                            { minSales: 5000000, percent: 1.5 },
+                            { minSales: 10000000, percent: 3.0 },
+                          ],
+                        })
+                      }
+                      className="w-5 h-5 rounded text-blue-900 focus:ring-blue-900 cursor-pointer"
+                    />
+                  </div>
+
+                  {configDraft.cashierCommissionEnabled && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50/50 border border-slate-200 space-y-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">
+                          Basis Perhitungan Omset Kasir
+                        </label>
+                        <div className="flex items-center gap-4 text-xs font-medium text-slate-700">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="cashierCommissionBasis"
+                              value="PAID_ONLY"
+                              checked={configDraft.cashierCommissionBasis !== 'ALL_ORDERS'}
+                              onChange={() =>
+                                setConfigDraft({ ...configDraft, cashierCommissionBasis: 'PAID_ONLY' })
+                              }
+                              className="text-blue-900 focus:ring-blue-900 cursor-pointer"
+                            />
+                            <span>Hanya Pesanan Lunas</span>
+                          </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="cashierCommissionBasis"
+                              value="ALL_ORDERS"
+                              checked={configDraft.cashierCommissionBasis === 'ALL_ORDERS'}
+                              onChange={() =>
+                                setConfigDraft({ ...configDraft, cashierCommissionBasis: 'ALL_ORDERS' })
+                              }
+                              className="text-blue-900 focus:ring-blue-900 cursor-pointer"
+                            />
+                            <span>Seluruh Pesanan Non-Void</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Tier Table */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="font-bold text-slate-700 text-xs">
+                            Jenjang Omset &amp; Persentase Komisi
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentTiers = configDraft.cashierCommissionTiers || [];
+                              setConfigDraft({
+                                ...configDraft,
+                                cashierCommissionTiers: [
+                                  ...currentTiers,
+                                  { minSales: 15000000, percent: 4.0 },
+                                ],
+                              });
+                            }}
+                            className="text-[11px] font-bold text-blue-900 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Tambah Jenjang</span>
+                          </button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {(configDraft.cashierCommissionTiers || []).map((tier, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                              <span className="text-[11px] font-mono font-bold text-slate-400 w-5 text-center">
+                                #{idx + 1}
+                              </span>
+                              <div className="flex-1">
+                                <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                                  Min. Omset (Rp)
+                                </span>
+                                <CurrencyInput
+                                  value={tier.minSales}
+                                  onChange={(val) => {
+                                    const next = [...(configDraft.cashierCommissionTiers || [])];
+                                    next[idx] = { ...next[idx], minSales: val };
+                                    setConfigDraft({ ...configDraft, cashierCommissionTiers: next });
+                                  }}
+                                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 focus:outline-none"
+                                />
+                              </div>
+                              <div className="w-24">
+                                <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                                  Komisi (%)
+                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={tier.percent}
+                                  onChange={(e) => {
+                                    const next = [...(configDraft.cashierCommissionTiers || [])];
+                                    next[idx] = { ...next[idx], percent: Number(e.target.value) || 0 };
+                                    setConfigDraft({ ...configDraft, cashierCommissionTiers: next });
+                                  }}
+                                  className="w-full h-8 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 focus:outline-none"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = (configDraft.cashierCommissionTiers || []).filter((_, i) => i !== idx);
+                                  setConfigDraft({ ...configDraft, cashierCommissionTiers: next });
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 cursor-pointer self-end mb-0.5"
+                                title="Hapus jenjang tier"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1201,7 +2102,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4 text-xs">
               <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-2">
                 <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800 block">
-                  Nominal Komisi yang Dicairkan
+                  Nominal Komisi Kotor
                 </span>
                 <div className="text-2xl font-black font-mono text-emerald-900">
                   {formatRupiah(selectedStaffForPayout.totalCommission)}
@@ -1209,6 +2110,91 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                 <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
                   Pencairan komisi ini akan dicatat sebagai <strong>Kas Keluar (STAFF_COMMISSION)</strong> pada Laporan Arus Kas toko dan otomatis memotong saldo kas laci shift aktif (jika shift sedang dibuka).
                 </p>
+              </div>
+
+              {/* Box Kasbon Karyawan Aktif (P2) */}
+              {(selectedStaffForPayout.outstandingCashAdvance || 0) > 0 && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Kasbon Karyawan Aktif</span>
+                    </span>
+                    <span className="text-xs font-black font-mono text-amber-800">
+                      {formatRupiah(selectedStaffForPayout.outstandingCashAdvance || 0)}
+                    </span>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-900">
+                    <input
+                      type="checkbox"
+                      checked={deductCashAdvance}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setDeductCashAdvance(checked);
+                        if (checked) {
+                          setCashAdvanceDeductionAmount(
+                            Math.min(selectedStaffForPayout.outstandingCashAdvance || 0, selectedStaffForPayout.totalCommission)
+                          );
+                        } else {
+                          setCashAdvanceDeductionAmount(0);
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 cursor-pointer"
+                    />
+                    <span>Potong Kasbon Otomatis saat Pencairan</span>
+                  </label>
+
+                  {deductCashAdvance && (
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                        Nominal Potongan Kasbon (Rp)
+                      </label>
+                      <CurrencyInput
+                        value={cashAdvanceDeductionAmount}
+                        onChange={(val) => {
+                          const maxAllowed = Math.min(
+                            selectedStaffForPayout.outstandingCashAdvance || 0,
+                            selectedStaffForPayout.totalCommission
+                          );
+                          setCashAdvanceDeductionAmount(Math.min(val, maxAllowed));
+                        }}
+                        className="w-full h-10 px-3 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-900 focus:outline-none"
+                      />
+                      <p className="text-[10px] text-amber-700 mt-1">
+                        Maks. {formatRupiah(Math.min(selectedStaffForPayout.outstandingCashAdvance || 0, selectedStaffForPayout.totalCommission))}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Rincian Kas Keluar Bersih */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                <div className="flex justify-between text-slate-600">
+                  <span>Komisi Kotor:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {formatRupiah(selectedStaffForPayout.totalCommission)}
+                  </span>
+                </div>
+                {deductCashAdvance && cashAdvanceDeductionAmount > 0 && (
+                  <div className="flex justify-between text-rose-600 font-medium">
+                    <span>Potongan Kasbon:</span>
+                    <span className="font-mono font-bold">
+                      -{formatRupiah(cashAdvanceDeductionAmount)}
+                    </span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-slate-900">
+                  <span className="font-black text-xs uppercase tracking-wider">
+                    Sisa Kas Keluar (Kas Drawer):
+                  </span>
+                  <span className="text-base font-black font-mono text-blue-900">
+                    {formatRupiah(
+                      Math.max(0, selectedStaffForPayout.totalCommission - (deductCashAdvance ? cashAdvanceDeductionAmount : 0))
+                    )}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -1266,7 +2252,9 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                     const res = await api.recordLaundryCommissionPayout({
                       outletId: activeOutlet.id,
                       staffName: selectedStaffForPayout.name,
+                      staffId: selectedStaffForPayout.staffId,
                       amount: selectedStaffForPayout.totalCommission,
+                      deductCashAdvanceAmount: deductCashAdvance ? cashAdvanceDeductionAmount : 0,
                       periodLabel: `${startDate} s/d ${endDate}`,
                       notes: payoutNotes.trim() || undefined,
                     });
@@ -1279,6 +2267,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                       setToastMessage(`✅ ${res.message || 'Pencairan komisi berhasil dicatat ke Kas Keluar!'}`);
                       setTimeout(() => setToastMessage(null), 4000);
                       fetchCommissions();
+                      fetchAdvances();
                     } else {
                       alert(`Gagal mencatat pencairan komisi: ${res.message}`);
                     }

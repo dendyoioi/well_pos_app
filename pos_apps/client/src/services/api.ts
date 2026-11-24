@@ -16,7 +16,12 @@ import type {
   CreateStockTransferInput,
   ExpiryAlertBatch,
 } from '../types/purchasing';
-import type { LaundryCommissionConfig, LaundryCommissionReport } from '../types/laundry';
+import type {
+  LaundryCommissionConfig,
+  LaundryCommissionReport,
+  StaffCashAdvance,
+  LaundryAutoReminderResult,
+} from '../types/laundry';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -1041,6 +1046,59 @@ export const api = {
     if (shiftId) query.append('shiftId', shiftId);
     const res = await fetch(`/api/shifts/cash-movements?${query.toString()}`, {
       headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // Setoran Kas Shift ke Pusat / Bank (P2)
+  createShiftCashDeposit: async (data: {
+    shiftId: string;
+    amount: number;
+    targetAccount: string;
+    referenceNumber?: string;
+    proofPhotoUrl?: string;
+    notes?: string;
+  }): Promise<any> => {
+    const res = await fetch('/api/shifts/deposits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getShiftCashDeposits: async (params?: {
+    outletId?: string;
+    shiftId?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<any> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.shiftId) query.append('shiftId', params.shiftId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+
+    const res = await fetch(`/api/shifts/deposits?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  verifyShiftCashDeposit: async (
+    id: string,
+    data: { status: 'VERIFIED' | 'REJECTED'; rejectionReason?: string }
+  ): Promise<any> => {
+    const res = await fetch(`/api/shifts/deposits/${id}/verify`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
     });
     return res.json();
   },
@@ -3036,7 +3094,9 @@ export const api = {
   recordLaundryCommissionPayout: async (payload: {
     outletId: string;
     staffName: string;
+    staffId?: string;
     amount: number;
+    deductCashAdvanceAmount?: number;
     periodLabel?: string;
     notes?: string;
   }): Promise<{
@@ -3051,6 +3111,91 @@ export const api = {
         ...authHeader(),
       },
       body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // Modul Kasbon Karyawan Laundry / Staf (P2)
+  getStaffCashAdvances: async (params?: {
+    outletId?: string;
+    status?: string;
+    search?: string;
+  }): Promise<{
+    status: string;
+    data: StaffCashAdvance[];
+    summary?: { totalActiveDebt: number; countPending: number };
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.search) query.append('search', params.search);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const res = await fetch(`/api/laundry/cash-advances${queryString}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createStaffCashAdvance: async (data: {
+    outletId: string;
+    staffId?: string;
+    staffName: string;
+    amount: number;
+    reason?: string;
+    deductFromOpenShift?: boolean;
+  }): Promise<{
+    status: string;
+    message: string;
+    data?: StaffCashAdvance;
+  }> => {
+    const res = await fetch('/api/laundry/cash-advances', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  repayStaffCashAdvance: async (
+    id: string,
+    data: { amount: number; notes?: string }
+  ): Promise<{
+    status: string;
+    message: string;
+    data?: any;
+  }> => {
+    const res = await fetch(`/api/laundry/cash-advances/${id}/repay`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Auto-Reminder WA Berjadwal (P2)
+  runLaundryAutoReminders: async (data: {
+    outletId?: string;
+    dryRun?: boolean;
+  }): Promise<{
+    status: string;
+    message: string;
+    data?: LaundryAutoReminderResult;
+  }> => {
+    const res = await fetch('/api/laundry/reminders/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
     });
     return res.json();
   },

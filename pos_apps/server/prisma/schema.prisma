@@ -100,6 +100,8 @@ model Tenant {
   customerLaundryWallets CustomerLaundryWallet[]
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
   laundryServiceBomItems LaundryServiceBomItem[]
+  shiftCashDeposits ShiftCashDeposit[]
+  staffCashAdvances StaffCashAdvance[]
 
   @@map("tenants")
 }
@@ -242,6 +244,9 @@ model User {
   attendances         Attendance[]
   laundryStageLogs    LaundryStageLog[]
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
+  shiftCashDepositsCreated  ShiftCashDeposit[] @relation("DepositCashier")
+  shiftCashDepositsVerified ShiftCashDeposit[] @relation("DepositVerifier")
+  staffCashAdvances         StaffCashAdvance[] @relation("StaffCashAdvanceUser")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -295,6 +300,8 @@ model Outlet {
   sourceLaundryManifests LaundryTransferManifest[] @relation("ManifestSourceOutlet")
   targetLaundryManifests LaundryTransferManifest[] @relation("ManifestTargetOutlet")
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
+  shiftCashDeposits ShiftCashDeposit[]
+  staffCashAdvances StaffCashAdvance[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -325,6 +332,8 @@ model Shift {
   customerDebtPayments CustomerDebtPayment[]
   paymentTransactions PaymentTransaction[]
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
+  cashDeposits      ShiftCashDeposit[]
+  staffCashAdvances StaffCashAdvance[]
 
   @@index([tenantId, outletId, status])
   @@map("shifts")
@@ -1595,6 +1604,7 @@ model LaundryOrderDetail {
   deliveryProofPhotoUrl String?   @map("delivery_proof_photo_url")
   isBomDeducted         Boolean   @default(false) @map("is_bom_deducted")
   bomDeductedAt         DateTime? @map("bom_deducted_at")
+  lastReminderSentAt    DateTime? @map("last_reminder_sent_at")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -1694,6 +1704,7 @@ model CustomerLaundryWallet {
   balanceAmount  Decimal   @default(0) @map("balance_amount") @db.Decimal(15, 2)
   quotaKg        Decimal   @default(0) @map("quota_kg") @db.Decimal(12, 3)
   quotaExpiresAt DateTime? @map("quota_expires_at")
+  lastExpiryReminderSentAt DateTime? @map("last_expiry_reminder_sent_at")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
@@ -1757,6 +1768,59 @@ model LaundryServiceBomItem {
   @@unique([laundryServiceId, inventoryItemId])
   @@index([tenantId, laundryServiceId])
   @@map("laundry_service_bom_items")
+}
+
+model ShiftCashDeposit {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  outletId        String    @map("outlet_id")
+  shiftId         String    @map("shift_id")
+  cashierId       String    @map("cashier_id")
+  amount          Decimal   @db.Decimal(15, 2)
+  targetAccount   String    @map("target_account")
+  referenceNumber String?   @map("reference_number")
+  proofPhotoUrl   String?   @map("proof_photo_url")
+  notes           String?
+  status          String    @default("PENDING") // 'PENDING' | 'VERIFIED' | 'REJECTED'
+  verifiedById    String?   @map("verified_by_id")
+  verifiedAt      DateTime? @map("verified_at")
+  rejectionReason String?   @map("rejection_reason")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet   Outlet @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  shift    Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  cashier  User   @relation("DepositCashier", fields: [cashierId], references: [id], onDelete: Restrict)
+  verifier User?  @relation("DepositVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, status])
+  @@index([tenantId, shiftId])
+  @@map("shift_cash_deposits")
+}
+
+model StaffCashAdvance {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  outletId        String    @map("outlet_id")
+  staffId         String?   @map("staff_id")
+  staffName       String    @map("staff_name")
+  amount          Decimal   @db.Decimal(15, 2)
+  remainingAmount Decimal   @map("remaining_amount") @db.Decimal(15, 2)
+  status          String    @default("OPEN") // 'OPEN' | 'PARTIAL' | 'PAID' | 'CANCELLED'
+  reason          String?
+  shiftId         String?   @map("shift_id")
+  createdById     String?   @map("created_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet Outlet  @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  staff  User?   @relation("StaffCashAdvanceUser", fields: [staffId], references: [id], onDelete: SetNull)
+  shift  Shift?  @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, status])
+  @@map("staff_cash_advances")
 }
 
 model SchemaPatch {

@@ -42,6 +42,10 @@ import {
   updateLaundryCommissionConfig,
   getLaundryCommissions,
   payoutLaundryCommission,
+  getStaffCashAdvances,
+  createStaffCashAdvance,
+  repayStaffCashAdvance,
+  executeLaundryAutoReminders,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -110,5 +114,11 @@ router.get('/commission-config', getLaundryCommissionConfig);
 router.put('/commission-config', updateLaundryCommissionConfig);
 router.get('/commissions', getLaundryCommissions);
 router.post('/commissions/payout', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), payoutLaundryCommission);
+
+// --- Modul Kasbon Karyawan & Auto-Reminder WA (P2) ---
+router.get('/cash-advances', getStaffCashAdvances);
+router.post('/cash-advances', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createStaffCashAdvance);
+router.patch('/cash-advances/:id/repay', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), repayStaffCashAdvance);
+router.post('/reminders/run', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), executeLaundryAutoReminders);
 
 export { router as laundryRouter };
