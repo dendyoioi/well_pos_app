@@ -13,6 +13,10 @@ import {
   Camera,
   Truck,
   ShieldCheck,
+  Star,
+  ExternalLink,
+  Send,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -28,6 +32,16 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // State Rating & Komplain (Fase A Retensi)
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [feedbackCategory, setFeedbackCategory] = useState<string>('CUCIAN_KURANG_BERSIH');
+  const [feedbackComment, setFeedbackComment] = useState<string>('');
+  const [feedbackPhotoUrl, setFeedbackPhotoUrl] = useState<string>('');
+  const [submittingFeedback, setSubmittingFeedback] = useState<boolean>(false);
+  const [feedbackSuccessMsg, setFeedbackSuccessMsg] = useState<string | null>(null);
+  const [googleReviewClicked, setGoogleReviewClicked] = useState<boolean>(false);
 
   // Auto-detect invoice from URL (?track=INV-XXX or path)
   useEffect(() => {
@@ -72,6 +86,47 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
     if (invoiceInput.trim()) {
       setInvoiceNumber(invoiceInput.trim());
     }
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!data?.invoiceNumber || selectedRating === 0) return;
+    try {
+      setSubmittingFeedback(true);
+      const isComplaint = selectedRating <= 3;
+      const res = await api.submitPublicLaundryFeedback(data.invoiceNumber, {
+        rating: selectedRating,
+        category: isComplaint ? feedbackCategory : undefined,
+        comment: feedbackComment.trim() || undefined,
+        photoUrl: isComplaint && feedbackPhotoUrl.trim() ? feedbackPhotoUrl.trim() : undefined,
+      });
+
+      if (res.status === 'success') {
+        setFeedbackSuccessMsg(
+          isComplaint
+            ? 'Komplain Anda berhasil dicatat. Tim supervisor kami akan segera menindaklanjuti.'
+            : 'Terima kasih atas penilaian positif Anda!'
+        );
+        fetchTracking(data.invoiceNumber);
+      } else {
+        alert(res.message || 'Gagal mengirim ulasan');
+      }
+    } catch {
+      alert('Terjadi kesalahan saat mengirim ulasan');
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
+  const handleOpenGoogleReview = async () => {
+    if (!data?.googleReviewUrl || !data?.invoiceNumber) return;
+    setGoogleReviewClicked(true);
+    try {
+      await api.trackGoogleReviewClick(data.invoiceNumber);
+    } catch {
+      // ignore
+    }
+    window.open(data.googleReviewUrl, '_blank');
   };
 
   return (
@@ -230,6 +285,49 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 </div>
               </div>
             </div>
+
+            {/* Multi-Layanan / Rincian Layanan Cucian */}
+            {Array.isArray(data.items) && data.items.length > 0 && (
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-blue-900" />
+                    <span>Layanan Cucian ({data.itemsCount || data.items.length} Item)</span>
+                  </h3>
+                  {data.perfumeVariant && (
+                    <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      Aroma: {data.perfumeVariant}
+                    </span>
+                  )}
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {data.items.map((it: any, idx: number) => (
+                    <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3 text-xs">
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-slate-900">{it.name}</div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span>
+                            {it.quantity} {it.unit || 'Kg'}
+                          </span>
+                          {it.perfumeVariant && it.perfumeVariant !== data.perfumeVariant && (
+                            <span className="text-blue-700 font-semibold">• Aroma: {it.perfumeVariant}</span>
+                          )}
+                          {it.pricingBasis && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                              {it.pricingBasis}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="font-mono font-bold text-slate-800 shrink-0 text-right">
+                        Rp {Number(it.totalPrice ?? it.subtotal ?? (it.unitPrice * it.quantity)).toLocaleString('id-ID')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Delivery Status Card */}
             {data.deliveryType && data.deliveryType !== 'NONE' && (
@@ -438,6 +536,243 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 </div>
               </div>
             )}
+
+            {/* Feedback, Rating & Google Review Card */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3.5 text-xs">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>Kepuasan Pelanggan &amp; Ulasan Layanan</span>
+                </h3>
+                {data.hasFeedback && (
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                    data.feedback?.status === 'RESOLVED'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : data.feedback?.status === 'IN_REVIEW'
+                      ? 'bg-indigo-100 text-indigo-900'
+                      : data.feedback?.isComplaint
+                      ? 'bg-rose-100 text-rose-800'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    {data.feedback?.isComplaint
+                      ? data.feedback?.status === 'RESOLVED'
+                        ? '✓ Komplain Selesai Ditangani'
+                        : data.feedback?.status === 'IN_REVIEW'
+                        ? 'Sedang Ditinjau Tim'
+                        : 'Komplain Tercatat'
+                      : '✓ Ulasan Diterima'}
+                  </span>
+                )}
+              </div>
+
+              {/* JIKA SUDAH ADA FEEDBACK */}
+              {data.hasFeedback ? (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-700">Penilaian Anda:</span>
+                    <div className="flex items-center text-amber-400">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-4 h-4 ${
+                            s <= (data.feedbackRating || data.feedback?.rating || 0)
+                              ? 'text-amber-400 fill-amber-400'
+                              : 'text-slate-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {data.feedback?.comment && (
+                    <p className="text-[11.5px] text-slate-700 italic bg-white p-3 rounded-xl border border-slate-200">
+                      "{data.feedback.comment}"
+                    </p>
+                  )}
+
+                  {data.feedback?.resolutionNotes && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-[11px] space-y-1">
+                      <div className="font-black flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Tanggapan / Solusi Toko:</span>
+                      </div>
+                      <p>{data.feedback.resolutionNotes}</p>
+                    </div>
+                  )}
+
+                  {/* Jika Rating 4/5 dan ada Google Review URL */}
+                  {(data.feedbackRating >= 4 || data.feedback?.rating >= 4) && data.googleReviewUrl && (
+                    <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="text-[11px] text-slate-600">
+                        Bantu toko kami semakin berkembang dengan memberi bintang 5 di Google Maps:
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenGoogleReview}
+                        className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0 transition-transform active:scale-95"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{googleReviewClicked ? 'Buka Kembali Google Review' : 'Beri Bintang 5 di Google'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* FORM RATING BARU */
+                <form onSubmit={handleSubmitFeedback} className="space-y-3">
+                  <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 text-center space-y-2">
+                    <p className="font-extrabold text-slate-900 text-xs">
+                      Bagaimana kualitas hasil cucian dan pelayanan kami?
+                    </p>
+                    <div className="flex items-center justify-center gap-2 py-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          onClick={() => setSelectedRating(star)}
+                          className="p-1 hover:scale-125 transition-transform cursor-pointer focus:outline-none"
+                        >
+                          <Star
+                            className={`w-7 h-7 sm:w-8 sm:h-8 transition-colors ${
+                              (hoverRating || selectedRating) >= star
+                                ? 'text-amber-400 fill-amber-400'
+                                : 'text-slate-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-500 block">
+                      {selectedRating === 5
+                        ? '⭐⭐⭐⭐⭐ Sangat Puas & Bersih!'
+                        : selectedRating === 4
+                        ? '⭐⭐⭐⭐ Puas & Rapi'
+                        : selectedRating === 3
+                        ? '⭐⭐⭐ Cukup / Ada Catatan'
+                        : selectedRating === 2
+                        ? '⭐⭐ Kurang Puas'
+                        : selectedRating === 1
+                        ? '⭐ Sangat Kecewa / Ada Kendala'
+                        : 'Pilih bintang 1 s/d 5'}
+                    </span>
+                  </div>
+
+                  {feedbackSuccessMsg && (
+                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{feedbackSuccessMsg}</span>
+                    </div>
+                  )}
+
+                  {/* JIKA BINTANG 4 ATAU 5: PUAS -> TESTIMONI & REDIRECT GOOGLE REVIEW */}
+                  {selectedRating >= 4 && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 animate-fadeIn">
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        Komentar atau kesan Anda (opsional):
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={feedbackComment}
+                        onChange={(e) => setFeedbackComment(e.target.value)}
+                        placeholder="Contoh: Wanginya enak, lipatan rapi, kasir sangat ramah..."
+                        className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-900"
+                      />
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={submittingFeedback}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>{submittingFeedback ? 'Mengirim...' : 'Kirim Ulasan'}</span>
+                        </button>
+
+                        {data.googleReviewUrl && (
+                          <button
+                            type="button"
+                            onClick={handleOpenGoogleReview}
+                            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white border border-blue-200 text-blue-900 hover:bg-blue-50 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-700" />
+                            <span>Beri Bintang 5 di Google Maps</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* JIKA BINTANG 1, 2, ATAU 3: INTERNAL KOMPLAIN KE SUPERVISOR */}
+                  {selectedRating >= 1 && selectedRating <= 3 && (
+                    <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-3 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 text-rose-900 font-extrabold text-xs">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Sampaikan kendala cucian Anda agar kami segera tangani:</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Kategori Kendala:
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={feedbackCategory}
+                            onChange={(e) => setFeedbackCategory(e.target.value)}
+                            className="w-full p-2.5 appearance-none pr-10 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-rose-700 font-semibold"
+                          >
+                            <option value="CUCIAN_KURANG_BERSIH">Cucian Kurang Bersih / Noda Masih Ada</option>
+                            <option value="AROMA_TIDAK_WANGI">Aroma Kurang Wangi / Tidak Sesuai Pilihan</option>
+                            <option value="PAKAIAN_RUSAK_HILANG">Pakaian Tertukar / Rusak / Hilang</option>
+                            <option value="KETERLAMBATAN">Pengerjaan Terlambat dari Estimasi</option>
+                            <option value="PELAYANAN_STAF">Pelayanan Kasir / Staf Kurang Ramah</option>
+                            <option value="LAINNYA">Lainnya</option>
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Ceritakan detail kendala yang dialami:
+                        </label>
+                        <textarea
+                          rows={3}
+                          required
+                          value={feedbackComment}
+                          onChange={(e) => setFeedbackComment(e.target.value)}
+                          placeholder="Jelaskan pakaian mana yang bermasalah agar supervisor segera cek CCTV & log mesin..."
+                          className="w-full p-2.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-rose-700"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Tautan Foto Kendala Pakaian (Opsional):
+                        </label>
+                        <input
+                          type="url"
+                          value={feedbackPhotoUrl}
+                          onChange={(e) => setFeedbackPhotoUrl(e.target.value)}
+                          placeholder="Contoh: https://..."
+                          className="w-full p-2.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-rose-700 font-mono"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={submittingFeedback || !feedbackComment.trim()}
+                        className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>{submittingFeedback ? 'Mengirim Komplain...' : 'Kirim Komplain ke Supervisor Toko'}</span>
+                      </button>
+                    </div>
+                  )}
+                </form>
+              )}
+            </div>
 
             {/* Info Pembayaran & Kontak Toko */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3 text-xs">

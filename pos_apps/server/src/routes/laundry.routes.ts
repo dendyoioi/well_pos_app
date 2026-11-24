@@ -47,12 +47,20 @@ import {
   repayStaffCashAdvance,
   executeLaundryAutoReminders,
   getLaundryDashboardSummary,
+  submitPublicLaundryFeedback,
+  trackGoogleReviewClick,
+  getLaundryFeedbacks,
+  resolveLaundryFeedback,
+  getDormantLaundryCustomers,
+  sendCustomerWinback,
 } from '../controllers/laundry.controller';
 
 const router = Router();
 
-// --- 0. Endpoint Publik Tanpa Autentikasi (Live QR Tracking Pelanggan) ---
+// --- 0. Endpoint Publik Tanpa Autentikasi (Live QR Tracking & Feedback Pelanggan) ---
 router.get('/public/track/:invoiceNumber', getPublicLaundryTracking);
+router.post('/public/track/:invoiceNumber/feedback', submitPublicLaundryFeedback);
+router.patch('/public/track/:invoiceNumber/feedback/google-click', trackGoogleReviewClick);
 
 // Proteksi seluruh endpoint operasional di bawah ini dengan Autentikasi & Multi-Tenant Isolation
 router.use(authenticate);
@@ -124,5 +132,13 @@ router.get('/cash-advances', getStaffCashAdvances);
 router.post('/cash-advances', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createStaffCashAdvance);
 router.patch('/cash-advances/:id/repay', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), repayStaffCashAdvance);
 router.post('/reminders/run', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), executeLaundryAutoReminders);
+
+// --- Modul Rating, Feedback & Komplain Pelanggan (Fase A) ---
+router.get('/feedbacks', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getLaundryFeedbacks);
+router.patch('/feedbacks/:id/resolve', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), resolveLaundryFeedback);
+
+// --- Modul Pelanggan Pasif & Sapaan Win-Back WA (Fase A) ---
+router.get('/customers/dormant', getDormantLaundryCustomers);
+router.post('/customers/:customerId/send-winback', sendCustomerWinback);
 
 export { router as laundryRouter };

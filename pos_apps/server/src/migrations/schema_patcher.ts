@@ -658,6 +658,38 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "pricing_basis" VARCHAR(20);
     `,
   },
+  {
+    id: '20261124_07_laundry_customer_feedback_and_retention',
+    description: 'Menambahkan kolom google_review_url pada outlets, last_winback_sent_at pada customers, perfume_variant pada order_items, dan tabel laundry_customer_feedbacks untuk retensi & kepuasan pelanggan',
+    sql: `
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "google_review_url" TEXT;
+      ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "last_winback_sent_at" TIMESTAMP(3);
+      ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "perfume_variant" VARCHAR(100);
+
+      CREATE TABLE IF NOT EXISTS "laundry_customer_feedbacks" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "order_id" TEXT NOT NULL UNIQUE REFERENCES "orders"("id") ON DELETE CASCADE,
+        "customer_id" TEXT REFERENCES "customers"("id") ON DELETE SET NULL,
+        "rating" INTEGER NOT NULL,
+        "category" VARCHAR(50),
+        "comment" TEXT,
+        "photo_url" TEXT,
+        "is_complaint" BOOLEAN NOT NULL DEFAULT FALSE,
+        "redirected_to_google" BOOLEAN NOT NULL DEFAULT FALSE,
+        "status" VARCHAR(50) NOT NULL DEFAULT 'OPEN',
+        "resolution_notes" TEXT,
+        "handled_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "resolved_at" TIMESTAMP(3),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "laundry_customer_feedbacks_outlet_status_created_idx" ON "laundry_customer_feedbacks"("outlet_id", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "laundry_customer_feedbacks_tenant_outlet_rating_idx" ON "laundry_customer_feedbacks"("tenant_id", "outlet_id", "rating");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

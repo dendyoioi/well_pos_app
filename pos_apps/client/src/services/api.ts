@@ -2082,8 +2082,10 @@ export const api = {
       phone?: string;
       isWarehouse?: boolean;
       isActive?: boolean;
+      googleReviewUrl?: string | null;
       receiptConfig?: Partial<ReceiptConfig>;
       loyaltyConfig?: OutletLoyaltyConfig;
+      [key: string]: any;
     }
   ): Promise<{ status: string; data?: Outlet; message?: string }> => {
     const res = await fetch(`/api/outlets/${id}`, {
@@ -2984,6 +2986,25 @@ export const api = {
     return res.json();
   },
 
+  submitPublicLaundryFeedback: async (
+    invoiceNumber: string,
+    data: { rating: number; category?: string; comment?: string; photoUrl?: string }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/public/track/${encodeURIComponent(invoiceNumber)}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  trackGoogleReviewClick: async (invoiceNumber: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/public/track/${encodeURIComponent(invoiceNumber)}/feedback/google-click`, {
+      method: 'PATCH',
+    });
+    return res.json();
+  },
+
   // ----------------------------------------------------
   // MODUL DELIVERY PELANGGAN & ONGKIR OTOMATIS
   // ----------------------------------------------------
@@ -3219,6 +3240,79 @@ export const api = {
 
     const res = await fetch(`/api/laundry/dashboard-summary${queryString}`, {
       headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // RETENSI & KEPUASAN PELANGGAN (FEEDBACK & WIN-BACK)
+  // ----------------------------------------------------
+  getLaundryFeedbacks: async (params?: {
+    outletId?: string;
+    status?: string;
+    onlyComplaints?: boolean;
+    minRating?: number;
+    maxRating?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{ status: string; data: any[]; message?: string }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.onlyComplaints !== undefined) query.append('onlyComplaints', String(params.onlyComplaints));
+    if (params?.minRating) query.append('minRating', String(params.minRating));
+    if (params?.maxRating) query.append('maxRating', String(params.maxRating));
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const res = await fetch(`/api/laundry/feedbacks${queryString}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  resolveLaundryFeedback: async (
+    id: string,
+    data: { status: 'IN_REVIEW' | 'RESOLVED'; resolutionNotes?: string }
+  ): Promise<{ status: string; data: any; message?: string }> => {
+    const res = await fetch(`/api/laundry/feedbacks/${id}/resolve`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getDormantLaundryCustomers: async (params?: {
+    outletId?: string;
+    inactiveDays?: number;
+  }): Promise<{ status: string; data: any[]; count?: number; message?: string }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.inactiveDays) query.append('inactiveDays', String(params.inactiveDays));
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const res = await fetch(`/api/laundry/customers/dormant${queryString}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  sendCustomerWinback: async (
+    customerId: string,
+    data: { outletId?: string; promoId?: string; customMessage?: string; force?: boolean }
+  ): Promise<{ status: string; data?: any; message?: string; targetPhone?: string }> => {
+    const res = await fetch(`/api/laundry/customers/${customerId}/send-winback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
     });
     return res.json();
   },

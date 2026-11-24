@@ -19,6 +19,7 @@ import {
   Tag,
   Coffee,
   Shirt,
+  Star,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api, authStorage } from '../services/api';
@@ -63,6 +64,8 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   const [waUsePlatformFallback, setWaUsePlatformFallback] = useState(true);
   const [waApiKey, setWaApiKey] = useState('');
   const [waSenderNumber, setWaSenderNumber] = useState('');
+  const [autoSendWaOnDropoff, setAutoSendWaOnDropoff] = useState(true);
+  const [googleReviewUrl, setGoogleReviewUrl] = useState('');
 
   // Cup Label Sticker Settings (Barista F&B Setup - Opt-in)
   const [cupLabelEnabled, setCupLabelEnabled] = useState(false);
@@ -82,7 +85,22 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (activeOutlet) {
+      if ((activeOutlet as any).googleReviewUrl !== undefined) {
+        setGoogleReviewUrl((activeOutlet as any).googleReviewUrl || '');
+      } else {
+        setGoogleReviewUrl('');
+      }
+    }
     if (activeOutlet?.receiptConfig) {
+      const rc: any = activeOutlet.receiptConfig;
+      if (rc.autoSendWaOnDropoff !== undefined) {
+        setAutoSendWaOnDropoff(rc.autoSendWaOnDropoff !== false);
+      } else if (rc.whatsappConfig?.autoSendWaOnDropoff !== undefined) {
+        setAutoSendWaOnDropoff(rc.whatsappConfig.autoSendWaOnDropoff !== false);
+      } else {
+        setAutoSendWaOnDropoff(true);
+      }
       if (activeOutlet.receiptConfig.paperSize) {
         setPaperSize(activeOutlet.receiptConfig.paperSize);
       }
@@ -149,18 +167,21 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
 
     try {
       const res = await api.updateOutlet(activeOutlet.id, {
+        googleReviewUrl: googleReviewUrl.trim() || null,
         receiptConfig: {
           paperSize,
           footerText: footerText.trim(),
           laundryTerms: laundryTerms.trim(),
           showQueueNumber,
           showWatermark,
+          autoSendWaOnDropoff,
           whatsappConfig: {
             enabled: waEnabled,
             provider: 'FONNTE',
             usePlatformFallback: waUsePlatformFallback,
             apiKey: waUsePlatformFallback ? undefined : waApiKey.trim(),
             senderNumber: waSenderNumber.trim() || undefined,
+            autoSendWaOnDropoff,
           },
           cupLabelConfig: {
             enabled: cupLabelEnabled,
@@ -286,18 +307,26 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
               <Printer className="w-5 h-5 text-blue-900" />
-              <span>Format Struk & Pengaturan Printer</span>
+              <span>
+                {isLaundryMode
+                  ? 'Format Struk Nota & Tag Pakaian Laundry'
+                  : 'Format Struk & Pengaturan Printer'}
+              </span>
             </h2>
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1">
               <Store className="w-3 h-3 text-blue-800" />
               Toko: {activeOutlet?.name || 'Utama'}
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              Thermal 58/80mm & WhatsApp E-Receipt
+              {isLaundryMode
+                ? 'Nota Drop-off/Ambil, Tag Pakaian, Thermal 58/80mm & WA Tracking'
+                : 'Thermal 58/80mm & WhatsApp E-Receipt'}
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Kustomisasi tata letak nota belanja kasir, printer thermal Bluetooth (ESC/POS), serta otomasi struk digital via WhatsApp Gateway.
+            {isLaundryMode
+              ? 'Kustomisasi nota drop-off/pengambilan pelanggan, cetak tag keranjang pakaian, printer thermal Bluetooth (ESC/POS), dan otomasi link WhatsApp tracking.'
+              : 'Kustomisasi tata letak nota belanja kasir, printer thermal Bluetooth (ESC/POS), serta otomasi struk digital via WhatsApp Gateway.'}
           </p>
         </div>
 
@@ -532,7 +561,9 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Nama Bisnis:</span>
-                <span className="font-extrabold text-slate-900">{(activeOutlet as any)?.tenant?.name || 'Well POS Coffee'}</span>
+                <span className="font-extrabold text-slate-900">
+                  {(activeOutlet as any)?.tenant?.name || (isLaundryMode ? 'Well POS Laundry' : 'Well POS Coffee')}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Nama Toko:</span>
@@ -557,11 +588,13 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
-                  4. Nomor Antrean / Panggilan Pesanan (#01)
+                  {isLaundryMode
+                    ? '4. Blok Info Estimasi Selesai (SLA) & Kode Rak di Atas Nota'
+                    : '4. Nomor Antrean / Panggilan Pesanan (#01)'}
                 </label>
                 <p className="text-xs text-slate-500 font-medium">
                   {isLaundryMode
-                    ? 'Cetak nomor antrean berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan staf kasir memanggil pelanggan saat drop-off atau pengambilan cucian.'
+                    ? 'Tampilkan kotak blok estimasi tanggal/jam selesai cucian dan kode rak penyimpanan di bagian atas nota untuk mempercepat identifikasi pakaian saat pelanggan datang mengambil.'
                     : 'Cetak nomor panggilan berukuran besar di atas struk kasir dan tampilkan di layar kasir untuk memudahkan barista/pelayan memanggil pelanggan secara cepat tanpa perlu input nama/meja.'}
                 </p>
               </div>
@@ -770,6 +803,51 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                     </span>
                   </div>
                 )}
+
+                {/* Auto Kirim WA saat Drop-off (Khusus Laundry) */}
+                {isLaundryMode && (
+                  <div className="pt-3 border-t border-emerald-200/60 flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs font-extrabold text-emerald-950 block">
+                        Auto-Kirim WA Tanda Terima saat Drop-off
+                      </span>
+                      <p className="text-[11px] text-emerald-800/80">
+                        Otomatis kirim pesan WhatsApp berisi tautan pelacakan cucian live saat kasir menyelesaikan checkout nota drop-off.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={autoSendWaOnDropoff}
+                        onChange={(e) => setAutoSendWaOnDropoff(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5.5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Google Review URL untuk Retensi & Reputasi Toko (Khusus Laundry) */}
+            {isLaundryMode && (
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <label className="block text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>Link Google Review Toko (Google Maps / Profil Bisnis)</span>
+                </label>
+                <p className="text-xs text-slate-500 font-medium">
+                  Pelanggan yang memberikan rating 4 atau 5 bintang pada halaman pelacakan live akan otomatis diarahkan untuk memberikan ulasan positif bintang 5 ke Google Maps toko Anda.
+                </p>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={googleReviewUrl}
+                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                    placeholder="Contoh: https://g.page/r/CbXxYzA1234/review atau https://maps.app.goo.gl/..."
+                    className="w-full h-10 px-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-hidden"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -819,7 +897,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { size: '40x30mm' as const, label: '40 × 30 mm', badge: 'Standar Cafe' },
+                      { size: '40x30mm' as const, label: '40 × 30 mm', badge: isLaundryMode ? 'Standar Tag' : 'Standar Cafe' },
                       { size: '50x30mm' as const, label: '50 × 30 mm', badge: 'Lebar' },
                       { size: '40x20mm' as const, label: '40 × 20 mm', badge: 'Kecil' },
                       { size: '50x40mm' as const, label: '50 × 40 mm', badge: 'Ekstra Luas' },
@@ -892,7 +970,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   </label>
 
                   <label className="flex items-center justify-between text-xs font-bold text-slate-700 cursor-pointer">
-                    <span>Tampilkan Nama Pelanggan di Bagian Bawah Stiker</span>
+                    <span>
+                      {isLaundryMode
+                        ? 'Tampilkan Nama Pelanggan di Bagian Bawah Tag'
+                        : 'Tampilkan Nama Pelanggan di Bagian Bawah Stiker'}
+                    </span>
                     <input
                       type="checkbox"
                       checked={cupLabelShowCustomerName}
@@ -955,7 +1037,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                       className="h-8 px-3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <Tag className="w-3.5 h-3.5" />
-                      <span>{testingLabel ? 'Mencetak Stiker...' : `Uji Cetak Stiker (${cupLabelPaperSize})`}</span>
+                      <span>
+                        {testingLabel
+                          ? (isLaundryMode ? 'Mencetak Tag...' : 'Mencetak Stiker...')
+                          : (isLaundryMode ? `Uji Cetak Tag Produksi (${cupLabelPaperSize})` : `Uji Cetak Stiker (${cupLabelPaperSize})`)}
+                      </span>
                     </button>
                   </div>
                   {printerHub.labelPrintError && (

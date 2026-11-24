@@ -54,6 +54,7 @@ const updateOutletSchema = z.object({
   isWarehouse: z.boolean().optional(),
   warehouseId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional(),
+  googleReviewUrl: z.string().optional().nullable(),
   industries: z.array(z.string()).optional(),
   receiptConfig: z.object({
     paperSize: z.enum(['58mm', '80mm']).default('58mm'),

@@ -58,6 +58,7 @@ export interface Customer {
   laundryWallet?: CustomerLaundryWallet | null;
   firstOutlet?: { id?: string; name: string } | null;
   firstOrderAt?: string | null;
+  lastWinbackSentAt?: string | null;
 }
 
 export interface CustomerSummaryStats {

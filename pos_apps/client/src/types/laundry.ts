@@ -148,6 +148,8 @@ export interface LaundryQueueOrder {
   workshopOutletId?: string | null;
   customerNotes?: string | null;
   isSorted?: boolean;
+  itemsCount?: number;
+  serviceSummary?: string;
   garmentCounts?: Array<{ type: string; qty: number }>;
   defects?: string[];
   defectNotes?: string | null;
@@ -171,8 +173,50 @@ export interface LaundryQueueOrder {
     unitPrice: number;
     subtotal: number;
     notes?: string;
+    perfumeVariant?: string | null;
+    pricingBasis?: string | null;
     addons?: Array<{ id: string; name: string; price: number; unit: string; total: number }>;
   }>;
+}
+
+export interface LaundryCustomerFeedback {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  orderId: string;
+  customerId?: string | null;
+  invoiceNumber: string;
+  rating: number; // 1 - 5
+  category?: string | null;
+  comment?: string | null;
+  photoUrl?: string | null;
+  isComplaint: boolean;
+  status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED';
+  googleReviewClicked: boolean;
+  googleReviewClickedAt?: string | null;
+  resolutionNotes?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order?: {
+    id: string;
+    invoiceNumber: string;
+    customerName: string;
+    customerPhone?: string | null;
+    serviceSummary?: string | null;
+    grandTotal: number;
+    createdAt: string;
+  };
+  customer?: {
+    id: string;
+    name: string;
+    phone?: string | null;
+  };
+  outlet?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface LaundryTransferManifest {

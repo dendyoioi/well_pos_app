@@ -26,13 +26,15 @@ import {
   Clock,
   ChevronDown,
 } from 'lucide-react';
-import { customerApi, api } from '../services/api';
+import { customerApi, api, authStorage } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
 import type { Outlet } from '../types/outlet';
+import { checkIsLaundry } from '../utils/businessType';
 import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
 import { CustomerDebtsTab } from '../components/CustomerDebtsTab';
+import { LaundryCustomerWinbackTab } from '../components/laundry/LaundryCustomerWinbackTab';
 
 interface CustomersViewProps {
   activeOutlet?: Outlet | null;
@@ -40,20 +42,28 @@ interface CustomersViewProps {
 
 export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) => {
   const dialog = useDialog();
-  const [activeSubTab, setActiveSubTab] = useState<'directory' | 'debts'>(() => {
+  const isLaundryMode = React.useMemo(() => {
+    return checkIsLaundry(activeOutlet, authStorage.getUser());
+  }, [activeOutlet]);
+
+  const [activeSubTab, setActiveSubTab] = useState<'directory' | 'debts' | 'winback'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('subtab') === 'debts') return 'debts';
+      if (params.get('subtab') === 'winback') {
+        const isL = checkIsLaundry(activeOutlet, authStorage.getUser());
+        if (isL) return 'winback';
+      }
     }
     return 'directory';
   });
 
-  const handleSubTabChange = (tab: 'directory' | 'debts') => {
+  const handleSubTabChange = (tab: 'directory' | 'debts' | 'winback') => {
     setActiveSubTab(tab);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
-      if (tab === 'debts') {
-        url.searchParams.set('subtab', 'debts');
+      if (tab === 'debts' || (tab === 'winback' && isLaundryMode)) {
+        url.searchParams.set('subtab', tab);
       } else {
         url.searchParams.delete('subtab');
       }
@@ -63,10 +73,16 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
   };
 
   useEffect(() => {
+    if (!isLaundryMode && activeSubTab === 'winback') {
+      handleSubTabChange('directory');
+    }
+  }, [isLaundryMode, activeSubTab]);
+
+  useEffect(() => {
     const checkSubTab = (e?: any) => {
       const sub = e?.detail || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subtab') : 'directory');
-      if (sub === 'debts') {
-        setActiveSubTab('debts');
+      if (sub === 'debts' || (sub === 'winback' && isLaundryMode)) {
+        setActiveSubTab(sub as any);
       } else {
         setActiveSubTab('directory');
       }
@@ -74,11 +90,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
     checkSubTab();
     window.addEventListener('popstate', checkSubTab);
     window.addEventListener('wellpos:subtab_change', checkSubTab);
+    window.addEventListener('customers-subtab', checkSubTab);
     return () => {
       window.removeEventListener('popstate', checkSubTab);
       window.removeEventListener('wellpos:subtab_change', checkSubTab);
+      window.removeEventListener('customers-subtab', checkSubTab);
     };
-  }, []);
+  }, [isLaundryMode]);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [summary, setSummary] = useState<CustomerSummaryStats | null>(null);
@@ -488,9 +506,25 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
           <Clock className="w-4 h-4" />
           <span>Buku Kasbon &amp; Piutang</span>
         </button>
+        {isLaundryMode && (
+          <button
+            type="button"
+            onClick={() => handleSubTabChange('winback')}
+            className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+              activeSubTab === 'winback'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>Pelanggan Pasif (Win-Back)</span>
+          </button>
+        )}
       </div>
 
-      {activeSubTab === 'debts' ? (
+      {activeSubTab === 'winback' && isLaundryMode ? (
+        <LaundryCustomerWinbackTab activeOutlet={activeOutlet} />
+      ) : activeSubTab === 'debts' ? (
         <CustomerDebtsTab activeOutlet={activeOutlet} />
       ) : (
         <>

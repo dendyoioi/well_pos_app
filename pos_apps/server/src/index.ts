@@ -28,6 +28,11 @@ import { promotionRouter } from './routes/promotion.routes';
 import qrMenuRouter from './routes/qr_menu.routes';
 import { attendanceRouter } from './routes/attendance.routes';
 import { laundryRouter } from './routes/laundry.routes';
+import {
+  getPublicLaundryTracking,
+  submitPublicLaundryFeedback,
+  trackGoogleReviewClick,
+} from './controllers/laundry.controller';
 import { mediaRouter } from './routes/media.routes';
 import { prisma } from './config/prisma';
 
@@ -123,6 +128,11 @@ app.use('/api/attendance', attendanceRouter);
 app.use('/api/qr-menu', qrMenuRouter);
 app.use('/api/laundry', laundryRouter);
 app.use('/api/media', mediaRouter);
+
+// Public Laundry Tracking & Feedback Routes (Direct Alias)
+app.get('/api/public/laundry/track/:invoiceNumber', getPublicLaundryTracking);
+app.post('/api/public/laundry/track/:invoiceNumber/feedback', submitPublicLaundryFeedback);
+app.patch('/api/public/laundry/track/:invoiceNumber/feedback/google-click', trackGoogleReviewClick);
 
 // Root endpoint info
 app.get('/', (_req: Request, res: Response) => {

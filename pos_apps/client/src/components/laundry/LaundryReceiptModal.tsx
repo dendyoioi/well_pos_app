@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  QrCode,
 } from 'lucide-react';
 import type { LaundryQueueOrder } from '../../types/laundry';
 import type { Outlet } from '../../types/outlet';
@@ -58,6 +59,118 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
     }
+  };
+
+  const handleDownloadQrCard = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 780;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Background kartu putih bersih
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header Background Deep Navy
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillRect(0, 0, canvas.width, 115);
+
+    // Nama Outlet
+    const storeTitle = outlet?.name || (order as any)?.outlet?.name || 'WELL POS LAUNDRY';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(storeTitle.toUpperCase(), canvas.width / 2, 50);
+
+    ctx.fillStyle = '#93c5fd';
+    ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('KARTU PELACAKAN STATUS CUCIAN', canvas.width / 2, 84);
+
+    // Badge Nomor Invoice
+    ctx.fillStyle = '#f8fafc';
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(50, 140, 500, 56, 14);
+      ctx.fill();
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else {
+      ctx.fillRect(50, 140, 500, 56);
+      ctx.strokeRect(50, 140, 500, 56);
+    }
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(order.invoiceNumber, canvas.width / 2, 176);
+
+    // Info Pelanggan
+    const custName = order.customerName ? `Pelanggan: ${order.customerName}` : '';
+    if (custName) {
+      ctx.fillStyle = '#475569';
+      ctx.font = '15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(custName, canvas.width / 2, 226);
+    }
+
+    // Teks Ajakan Scan
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('Scan untuk Lacak Status Cucian', canvas.width / 2, 265);
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(trackingUrl)}`;
+    const qrImg = new Image();
+    qrImg.crossOrigin = 'anonymous';
+
+    const triggerDownload = () => {
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `QR-Tracking-${order.invoiceNumber}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch {
+        // Fallback jika canvas CORS security mencegah toDataURL
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = qrUrl;
+        fallbackLink.download = `QR-Tracking-${order.invoiceNumber}.png`;
+        fallbackLink.target = '_blank';
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        document.body.removeChild(fallbackLink);
+      }
+    };
+
+    qrImg.onload = () => {
+      // Box bingkai putih untuk QR
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(150, 290, 300, 300);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(150, 290, 300, 300);
+      ctx.drawImage(qrImg, 160, 300, 280, 280);
+
+      // Teks URL Pelacakan
+      ctx.fillStyle = '#64748b';
+      ctx.font = '13px monospace';
+      ctx.fillText(trackingUrl, canvas.width / 2, 630);
+
+      // Footer
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Simpan kartu ini atau scan dengan kamera HP Anda', canvas.width / 2, 675);
+      ctx.fillText('Well POS Laundry • Real-time Order Tracking', canvas.width / 2, 700);
+
+      triggerDownload();
+    };
+
+    qrImg.onerror = () => {
+      triggerDownload();
+    };
+
+    qrImg.src = qrUrl;
   };
 
   const is58mm = paperSize === '58mm';
@@ -658,6 +771,15 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
               <span>Salin Link</span>
             </>
           )}
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadQrCard}
+          className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          title="Download gambar QR Code untuk dibagikan ke pelanggan"
+        >
+          <QrCode className="w-3.5 h-3.5 text-blue-900" />
+          <span>Unduh QR</span>
         </button>
         {order.customerPhone && (
           <>

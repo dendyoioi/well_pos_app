@@ -1082,6 +1082,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         quantity: item.quantity,
         unit: item.unit,
         unitPrice: item.unitPrice,
+        perfumeVariant: item.perfumeVariant || undefined,
         addons: item.addons || [],
         notes: item.isUnderMinimum
           ? `${item.notes ? `${item.notes}; ` : ''}(Timbangan fisik: ${item.actualQuantity.toFixed(2)} Kg, min order ${item.minOrderQty} Kg)`

@@ -102,6 +102,7 @@ model Tenant {
   laundryServiceBomItems LaundryServiceBomItem[]
   shiftCashDeposits ShiftCashDeposit[]
   staffCashAdvances StaffCashAdvance[]
+  laundryFeedbacks  LaundryCustomerFeedback[]
 
   @@map("tenants")
 }
@@ -247,6 +248,7 @@ model User {
   shiftCashDepositsCreated  ShiftCashDeposit[] @relation("DepositCashier")
   shiftCashDepositsVerified ShiftCashDeposit[] @relation("DepositVerifier")
   staffCashAdvances         StaffCashAdvance[] @relation("StaffCashAdvanceUser")
+  laundryFeedbacksHandled   LaundryCustomerFeedback[] @relation("FeedbackHandledBy")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -277,6 +279,7 @@ model Outlet {
   laundryDeliveryConfig Json? @map("laundry_delivery_config")
   laundryCommissionConfig Json? @map("laundry_commission_config")
   laundryDepositConfig Json? @map("laundry_deposit_config")
+  googleReviewUrl      String? @map("google_review_url")
   isActive      Boolean   @default(true) @map("is_active")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -302,6 +305,7 @@ model Outlet {
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
   shiftCashDeposits ShiftCashDeposit[]
   staffCashAdvances StaffCashAdvance[]
+  laundryFeedbacks  LaundryCustomerFeedback[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -377,6 +381,7 @@ model Customer {
   loyaltyPoints Int          @default(0) @map("loyalty_points")
   totalSpent    Decimal      @default(0) @map("total_spent") @db.Decimal(15, 2)
   visitCount    Int          @default(0) @map("visit_count")
+  lastWinbackSentAt DateTime? @map("last_winback_sent_at")
   notes         String?
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
@@ -387,6 +392,7 @@ model Customer {
   promotionUsages PromotionUsage[]
   debts           CustomerDebt[]
   laundryWallet   CustomerLaundryWallet?
+  laundryFeedbacks LaundryCustomerFeedback[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, phone])
@@ -859,6 +865,7 @@ model Order {
   laundryTransferItems LaundryTransferItem[]
   laundryStageLogs     LaundryStageLog[]
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
+  laundryFeedback      LaundryCustomerFeedback?
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -886,6 +893,7 @@ model OrderItem {
   modifiersSnapshot Json?   @map("modifiers_snapshot") // Immutable array of applied modifiers
   unit              String? @map("unit")
   pricingBasis      String? @map("pricing_basis") // 'KILOAN' | 'SATUAN'
+  perfumeVariant    String? @map("perfume_variant")
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -1831,4 +1839,34 @@ model SchemaPatch {
   appliedAt   DateTime? @default(now()) @map("applied_at")
 
   @@map("_schema_patches")
+}
+
+model LaundryCustomerFeedback {
+  id                 String    @id @default(cuid())
+  tenantId           String    @map("tenant_id")
+  outletId           String    @map("outlet_id")
+  orderId            String    @unique @map("order_id")
+  customerId         String?   @map("customer_id")
+  rating             Int
+  category           String?   // QUALITY | SPEED | SERVICE | CLEANLINESS | OTHER
+  comment            String?   @db.Text
+  photoUrl           String?   @map("photo_url")
+  isComplaint        Boolean   @default(false) @map("is_complaint")
+  redirectedToGoogle Boolean   @default(false) @map("redirected_to_google")
+  status             String    @default("OPEN") // OPEN | IN_REVIEW | RESOLVED
+  resolutionNotes    String?   @map("resolution_notes") @db.Text
+  handledById        String?   @map("handled_by_id")
+  resolvedAt         DateTime? @map("resolved_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet    Outlet    @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer  Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  handledBy User?     @relation("FeedbackHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([outletId, status, createdAt])
+  @@index([tenantId, outletId, rating])
+  @@map("laundry_customer_feedbacks")
 }

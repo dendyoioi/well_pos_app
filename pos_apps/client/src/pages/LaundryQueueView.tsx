@@ -549,8 +549,8 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                           </div>
 
                           <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                            <span className="font-semibold text-slate-600 truncate max-w-[120px]">
-                              {item.serviceName}
+                            <span className="font-semibold text-slate-600 truncate max-w-[140px]" title={item.serviceSummary || item.serviceName}>
+                              {item.serviceSummary || item.serviceName}
                             </span>
                             <span className="font-bold text-blue-950 shrink-0">
                               {item.totalWeightKg ? `${item.totalWeightKg} Kg` : `${item.totalPieces} Pcs`}

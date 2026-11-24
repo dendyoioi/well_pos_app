@@ -337,6 +337,62 @@ export class WhatsAppService {
   }
 
   /**
+   * Format pesan WhatsApp notifikasi Cucian Diterima (Drop-off) + Link Tracking
+   */
+  public formatLaundryDropoffText(data: LaundryNotificationData, trackingUrlOverride?: string): string {
+    const outletName = (data.outlet?.name || 'Well Laundry').toUpperCase();
+    const customer = data.customerName || 'Pelanggan Setia';
+    const remaining = Number(data.remainingAmount) || 0;
+    const grandTotal = Number(data.grandTotal) || 0;
+    const trackingUrl =
+      trackingUrlOverride ||
+      (process.env.FRONTEND_URL || process.env.CLIENT_URL || 'https://wellpos.id').replace(/\/$/, '') +
+        '/track/' +
+        encodeURIComponent(data.invoiceNumber);
+
+    let paymentStatusLabel = '*BELUM BAYAR* (Tagihan saat ambil)';
+    if (remaining <= 0) {
+      paymentStatusLabel = '*LUNAS* ✅';
+    } else if (remaining < grandTotal) {
+      paymentStatusLabel = `*DP / SEBAGIAN* (Sisa Rp ${remaining.toLocaleString('id-ID')})`;
+    }
+
+    const estReady = data.estimatedCompletionDate
+      ? new Date(data.estimatedCompletionDate).toLocaleDateString('id-ID', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '-';
+
+    return (
+      `*NOTIFIKASI NOTA CUCIAN DITERIMA*\n` +
+      `*${outletName}*\n` +
+      `================================\n` +
+      `Halo Kak *${customer}*, terima kasih telah mempercayakan pakaian Anda di ${data.outlet.name}! Cucian Anda telah kami terima dengan detail berikut:\n\n` +
+      `📋 *DETAIL ORDER:*\n` +
+      `• No. Nota     : *#${data.invoiceNumber}*\n` +
+      `• Layanan      : ${data.servicesSummary}\n` +
+      (data.perfume ? `• Aroma Wangi  : ${data.perfume}\n` : '') +
+      `• Estimasi Selesai : *${estReady}*\n\n` +
+      `💰 *STATUS PEMBAYARAN:*\n` +
+      `• Total Tagihan: Rp ${grandTotal.toLocaleString('id-ID')}\n` +
+      `• Status Bayar : ${paymentStatusLabel}\n\n` +
+      `🔍 *PANTAU PROGRES CUCIAN REAL-TIME:*\n` +
+      `Pelanggan dapat memantau status cuci, kering, setrika, hingga siap ambil tanpa perlu bertanya lewat WA melalui link berikut:\n` +
+      `👉 ${trackingUrl}\n\n` +
+      `📍 *LOKASI OUTLET:*\n` +
+      `${data.outlet.address || data.outlet.name}\n` +
+      (data.outlet.phone ? `Telp/WA: ${data.outlet.phone}\n` : '') +
+      `================================\n` +
+      `_Simpan pesan ini untuk kemudahan pengambilan cucian. Terima kasih!_`
+    );
+  }
+
+  /**
    * Format pesan WhatsApp notifikasi Cucian Siap Diambil
    */
   public formatLaundryReadyText(data: LaundryNotificationData, trackingUrlOverride?: string): string {
@@ -378,7 +434,7 @@ export class WhatsAppService {
   }
 
   /**
-   * Format pesan WhatsApp notifikasi Cucian Selesai Diambil (Handover)
+   * Format pesan WhatsApp notifikasi Cucian Selesai Diambil (Handover) + Rating CTA
    */
   public formatLaundryCompletedText(data: LaundryNotificationData, trackingUrlOverride?: string): string {
     const outletName = (data.outlet?.name || 'Well Laundry').toUpperCase();
@@ -398,11 +454,151 @@ export class WhatsAppService {
       `• Status       : *SELESAI & DIAMBIL* ✅\n` +
       `• Pembayaran   : *LUNAS*\n` +
       (data.servicesSummary ? `• Layanan      : ${data.servicesSummary}\n` : '') +
-      `\n🔍 Pantau progres cucian Anda: ${trackingUrl}\n` +
-      `\nSemoga Anda puas dengan hasil cucian dan keharumannya. Sampai jumpa di cucian berikutnya! ✨\n` +
+      `\n🔍 Pantau riwayat & beri rating layanan cucian Anda:\n` +
+      `👉 ${trackingUrl}\n\n` +
+      `⭐ *BAGAIMANA PENGALAMAN ANDA?*\n` +
+      `Kami sangat menghargai ulasan Anda! Mohon luangkan waktu 30 detik untuk memberikan rating kepuasan pada link di atas agar kami dapat terus meningkatkan layanan. ✨\n` +
       `================================\n` +
       `_${data.outlet.name}_`
     );
+  }
+
+  /**
+   * Format pesan WhatsApp sapaan Win-Back pelanggan pasif
+   */
+  public formatLaundryWinbackText(params: {
+    customerName: string;
+    outletName: string;
+    outletPhone?: string | null;
+    promoCode?: string | null;
+    promoDescription?: string | null;
+    customMessage?: string | null;
+  }): string {
+    const customer = params.customerName || 'Pelanggan Setia';
+    const outlet = params.outletName || 'Well Laundry';
+
+    let promoSection = '';
+    if (params.promoCode) {
+      promoSection =
+        `\n🎁 *PROMO SPESIAL UNTUK ANDA:*\n` +
+        `Gunakan kode voucher: *${params.promoCode}*\n` +
+        (params.promoDescription ? `${params.promoDescription}\n` : '');
+    }
+
+    const defaultGreeting =
+      `Halo Kak *${customer}*, apa kabar? Kami kangen melihat pakaian Anda di *${outlet}*! 😊\n\n` +
+      `Pakaian kotor atau selimut/sprei di rumah sudah mulai menumpuk? Yuk, percayakan kembali cucian Anda kepada kami untuk hasil yang bersih maksimal, higienis, dan wangi tahan lama.`;
+
+    const bodyText = params.customMessage?.trim() || defaultGreeting;
+
+    return (
+      `*SAPAAN SPESIAL DARI ${outlet.toUpperCase()}*\n` +
+      `================================\n` +
+      `${bodyText}\n` +
+      promoSection +
+      `\n📍 Hubungi / kunjungi kami di:\n` +
+      `${outlet}` +
+      (params.outletPhone ? ` | WA: ${params.outletPhone}` : '') +
+      `\n================================\n` +
+      `_Semoga hari Anda menyenangkan dan kami nantikan kehadiran cucian Anda berikutnya!_`
+    );
+  }
+
+  /**
+   * Kirim Notifikasi Sapaan Win-Back Pelanggan Pasif via WhatsApp Gateway (Fonnte API)
+   */
+  public async sendLaundryWinbackNotification(
+    targetPhone: string,
+    params: {
+      customerName: string;
+      outletName: string;
+      outletPhone?: string | null;
+      promoCode?: string | null;
+      promoDescription?: string | null;
+      customMessage?: string | null;
+      receiptConfig?: any;
+    }
+  ): Promise<WhatsAppSendResult> {
+    if (!targetPhone || !targetPhone.trim()) {
+      return {
+        status: 'error',
+        message: 'Nomor WhatsApp pelanggan tidak tersedia',
+        targetPhone: '',
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+
+    const cleanPhone = this.normalizePhone(targetPhone);
+    const { apiKey, enabled } = this.resolveApiKey(params.receiptConfig);
+    const messageText = this.formatLaundryWinbackText(params);
+
+    if (!enabled) {
+      return {
+        status: 'error',
+        message: 'Layanan WhatsApp Gateway dinonaktifkan untuk toko ini',
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+
+    if (!apiKey) {
+      return {
+        status: 'error',
+        message: 'WhatsApp Gateway belum diaktivasi di outlet ini. Silakan atur token Fonnte di Pengaturan Toko.',
+        targetPhone: cleanPhone,
+        isMock: true,
+        provider: 'FONNTE',
+      };
+    }
+
+    try {
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: cleanPhone,
+          message: messageText,
+          countryCode: '62',
+        }),
+      });
+
+      const resJson: any = await response.json();
+
+      if (response.ok && resJson.status === true) {
+        return {
+          status: 'success',
+          message: `Sapaan Win-Back WhatsApp berhasil dikirim ke +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      } else {
+        const errorMsg = resJson.reason || resJson.message || 'Gagal mengirim pesan win-back via Fonnte API';
+        return {
+          status: 'error',
+          message: `Fonnte: ${errorMsg}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      }
+    } catch (err: any) {
+      console.error('[WHATSAPP API ERROR]', err);
+      return {
+        status: 'error',
+        message: `Koneksi gateway WhatsApp terputus: ${err.message}`,
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
   }
 
   /**
@@ -410,7 +606,7 @@ export class WhatsAppService {
    */
   public async sendLaundryNotification(
     data: LaundryNotificationData,
-    type: 'READY' | 'COMPLETED',
+    type: 'DROPOFF' | 'READY' | 'COMPLETED',
     targetPhoneOverride?: string
   ): Promise<WhatsAppSendResult> {
     const rawPhone = targetPhoneOverride || data.customerPhone;
@@ -443,7 +639,9 @@ export class WhatsAppService {
       encodeURIComponent(data.invoiceNumber);
 
     const messageText =
-      type === 'READY'
+      type === 'DROPOFF'
+        ? this.formatLaundryDropoffText(data, trackingUrl)
+        : type === 'READY'
         ? this.formatLaundryReadyText(data, trackingUrl)
         : this.formatLaundryCompletedText(data, trackingUrl);
 

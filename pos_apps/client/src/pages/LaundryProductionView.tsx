@@ -527,7 +527,9 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                   {/* Info Layanan & Timbangan */}
                   <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
                     <div className="flex items-center justify-between font-bold text-slate-700">
-                      <span className="truncate max-w-[170px]">{order.serviceName}</span>
+                      <span className="truncate max-w-[180px]" title={order.serviceSummary || order.serviceName}>
+                        {order.serviceSummary || order.serviceName}
+                      </span>
                       <span className="font-mono text-blue-950 font-black shrink-0">
                         {order.totalWeightKg ? `${order.totalWeightKg} Kg` : `${order.totalPieces} Pcs`}
                       </span>

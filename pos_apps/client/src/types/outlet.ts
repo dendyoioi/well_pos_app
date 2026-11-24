@@ -136,6 +136,7 @@ export interface WhatsAppConfig {
   enabled?: boolean;
   provider?: 'FONNTE';
   autoSendOnCheckout?: boolean;
+  autoSendWaOnDropoff?: boolean;
   usePlatformGateway?: boolean;
   usePlatformFallback?: boolean;
   apiKey?: string;
@@ -164,6 +165,7 @@ export interface ReceiptConfig {
   whatsappConfig?: WhatsAppConfig;
   cupLabelConfig?: CupLabelConfig;
   laundryTerms?: string;
+  autoSendWaOnDropoff?: boolean;
 }
 
 export interface SalesChannelConfig {
@@ -288,6 +290,7 @@ export interface Outlet {
   phone?: string | null;
   isWarehouse?: boolean;
   isWorkshop?: boolean;
+  googleReviewUrl?: string | null;
   warehouseId?: string | null;
   warehouse?: Outlet | null;
   feesConfig?: OutletFee[] | null;

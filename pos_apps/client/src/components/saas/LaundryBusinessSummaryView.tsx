@@ -13,12 +13,14 @@ import {
   Users,
   ChevronDown,
   Camera,
+  Star,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Outlet } from '../../types/outlet';
 import type { User } from '../../types/auth';
 import { formatRupiah } from '../../utils/currency';
 import { toLocalDateStr } from '../../utils/date';
+import { LaundryFeedbackManagementModal } from '../laundry/LaundryFeedbackManagementModal';
 
 interface LaundryBusinessSummaryViewProps {
   activeOutlet: Outlet | null;
@@ -60,6 +62,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<any | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<HoverPoint | null>(null);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   // Hitung Tanggal Start & End berdasarkan Preset Terpilih
   const dateParams = useMemo(() => {
@@ -682,6 +685,25 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
                   {stale.over3DaysCount > 0 ? 'Perlu WA' : 'Lancar'}
                 </span>
               </div>
+
+              {/* Item 4: Audit Rating & Komplain Pelanggan */}
+              <div
+                onClick={() => setFeedbackModalOpen(true)}
+                className="p-3 rounded-2xl bg-amber-50/60 hover:bg-amber-100/60 border border-amber-200 transition-all cursor-pointer flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    <span>Rating &amp; Komplain Pelanggan</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    Pantau kepuasan ulasan pelanggan &amp; selesaikan komplain live
+                  </div>
+                </div>
+                <span className="text-[10.5px] font-black px-2 py-1 rounded-full shrink-0 bg-amber-200 text-amber-900">
+                  Audit Ulasan
+                </span>
+              </div>
             </div>
 
             <div className="pt-2">
@@ -821,6 +843,44 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
                   Semua stok deterjen, softener & parfum dalam batas aman.
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Shortcut Win-Back CRM Pelanggan Pasif */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    Pelanggan Pasif (Win-Back CRM)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Sapa kembali pelanggan yang &gt; 30 hari tidak mencuci via WhatsApp resmi toko
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'customers');
+                    url.searchParams.set('subtab', 'winback');
+                    window.history.replaceState({}, '', url.toString());
+                    window.dispatchEvent(new CustomEvent('customers-subtab', { detail: 'winback' }));
+                    window.dispatchEvent(new CustomEvent('wellpos:subtab_change', { detail: 'winback' }));
+                  }
+                  onNavigateTab?.('customers');
+                }}
+                className="py-2 px-3.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto"
+              >
+                <span>Buka Win-Back</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -1086,6 +1146,44 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
               )}
             </div>
           </div>
+
+          {/* Shortcut Win-Back CRM Pelanggan Pasif */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    Pelanggan Pasif (Win-Back CRM)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Sapa kembali pelanggan yang &gt; 30 hari tidak mencuci via WhatsApp resmi toko
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'customers');
+                    url.searchParams.set('subtab', 'winback');
+                    window.history.replaceState({}, '', url.toString());
+                    window.dispatchEvent(new CustomEvent('customers-subtab', { detail: 'winback' }));
+                    window.dispatchEvent(new CustomEvent('wellpos:subtab_change', { detail: 'winback' }));
+                  }
+                  onNavigateTab?.('customers');
+                }}
+                className="py-2 px-3.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto"
+              >
+                <span>Buka Win-Back</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1326,6 +1424,12 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
       {effectiveRole === 'OWNER' && renderOwnerDashboard()}
       {effectiveRole === 'CASHIER' && renderCashierDashboard()}
       {effectiveRole === 'PRODUCTION' && renderProductionDashboard()}
+
+      <LaundryFeedbackManagementModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        activeOutlet={activeOutlet}
+      />
     </div>
   );
 };

@@ -62,6 +62,7 @@ const createLaundryOrderSchema = z.object({
       quantity: z.number().min(0.01, 'Kuantitas/bobot minimal 0.01'),
       unit: z.string().default('KG'),
       unitPrice: z.number().min(0),
+      perfumeVariant: z.string().optional(),
       notes: z.string().optional(),
       addons: z.array(
         z.object({
@@ -717,6 +718,9 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
                 quantity: true,
                 unitPrice: true,
                 subtotal: true,
+                unit: true,
+                pricingBasis: true,
+                perfumeVariant: true,
                 notes: true,
               },
             },
@@ -737,47 +741,69 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
       skip,
     });
 
-    const formattedQueue = details.map((detail) => ({
-      id: detail.id,
-      orderId: detail.orderId,
-      invoiceNumber: detail.order.invoiceNumber,
-      orderStatus: detail.order.orderStatus,
-      status: (detail.order.orderStatus === OrderStatus.VOIDED || detail.order.orderStatus === OrderStatus.CANCELLED || detail.status === 'CANCELLED') ? 'CANCELLED' : detail.status,
-      customerName: detail.order.customer?.name || 'Pelanggan Walk-In',
-      customerPhone: detail.order.customer?.phone || null,
-      customerAddress: detail.order.customer?.address || null,
-      serviceName: detail.order.items[0]?.productName || 'Layanan Laundry',
-      totalWeightKg: detail.totalWeightKg ? Number(detail.totalWeightKg) : null,
-      totalPieces: detail.totalPieces,
-      grandTotal: Number(detail.order.totalAmount),
-      paidAmount: Number(detail.order.paidAmount || 0),
-      paymentStatus: detail.order.paymentStatus,
-      rackCode: detail.rackCode || null,
-      perfumeVariant: detail.perfumeVariant || 'Standard',
-      currentStage: detail.currentStage || 'DROP_OFF',
-      transferStatus: detail.transferStatus || 'AT_OUTLET',
-      workshopOutletId: detail.workshopOutletId || null,
-      customerNotes: detail.customerNotes || null,
-      deliveryType: detail.deliveryType || 'NONE',
-      deliveryStatus: detail.deliveryStatus || null,
-      deliveryFee: Number(detail.deliveryFee || 0),
-      deliveryZoneName: detail.deliveryZoneName || null,
-      deliveryAddress: detail.deliveryAddress || detail.order.customer?.address || null,
-      deliveryNotes: detail.deliveryNotes || null,
-      courierName: detail.courierName || null,
-      courierPhone: detail.courierPhone || null,
-      deliveredAt: detail.deliveredAt || null,
-      deliveryProofPhotoUrl: detail.deliveryProofPhotoUrl || null,
-      estimatedReadyAt: detail.estimatedReadyAt,
-      completedAt: detail.completedAt,
-      pickedUpAt: detail.pickedUpAt,
-      defects: detail.defects || null,
-      defectNotes: detail.defectNotes || null,
-      conditionPhotos: detail.conditionPhotos || null,
-      isSorted: detail.isSorted,
-      garmentCounts: detail.garmentCounts || null,
-      createdAt: detail.createdAt,
-    }));
+    const formattedQueue = details.map((detail) => {
+      const itemsCount = detail.order.items.length;
+      const primaryServiceName = detail.order.items[0]?.productName || 'Layanan Laundry';
+      const serviceSummary =
+        itemsCount > 1
+          ? `${primaryServiceName} (+${itemsCount - 1} layanan)`
+          : primaryServiceName;
+
+      return {
+        id: detail.id,
+        orderId: detail.orderId,
+        invoiceNumber: detail.order.invoiceNumber,
+        orderStatus: detail.order.orderStatus,
+        status: (detail.order.orderStatus === OrderStatus.VOIDED || detail.order.orderStatus === OrderStatus.CANCELLED || detail.status === 'CANCELLED') ? 'CANCELLED' : detail.status,
+        customerName: detail.order.customer?.name || 'Pelanggan Walk-In',
+        customerPhone: detail.order.customer?.phone || null,
+        customerAddress: detail.order.customer?.address || null,
+        serviceName: primaryServiceName,
+        serviceSummary,
+        itemsCount,
+        items: detail.order.items.map((oi) => ({
+          id: oi.id,
+          productName: oi.productName || 'Layanan Laundry',
+          quantity: oi.quantity,
+          unitPrice: Number(oi.unitPrice),
+          subtotal: Number(oi.subtotal),
+          unit: oi.unit || 'KG',
+          pricingBasis: oi.pricingBasis || 'KILOAN',
+          perfumeVariant: oi.perfumeVariant || detail.perfumeVariant || 'Standard',
+          notes: oi.notes || null,
+        })),
+        totalWeightKg: detail.totalWeightKg ? Number(detail.totalWeightKg) : null,
+        totalPieces: detail.totalPieces,
+        grandTotal: Number(detail.order.totalAmount),
+        paidAmount: Number(detail.order.paidAmount || 0),
+        paymentStatus: detail.order.paymentStatus,
+        rackCode: detail.rackCode || null,
+        perfumeVariant: detail.perfumeVariant || 'Standard',
+        currentStage: detail.currentStage || 'DROP_OFF',
+        transferStatus: detail.transferStatus || 'AT_OUTLET',
+        workshopOutletId: detail.workshopOutletId || null,
+        customerNotes: detail.customerNotes || null,
+        deliveryType: detail.deliveryType || 'NONE',
+        deliveryStatus: detail.deliveryStatus || null,
+        deliveryFee: Number(detail.deliveryFee || 0),
+        deliveryZoneName: detail.deliveryZoneName || null,
+        deliveryAddress: detail.deliveryAddress || detail.order.customer?.address || null,
+        deliveryNotes: detail.deliveryNotes || null,
+        courierName: detail.courierName || null,
+        courierPhone: detail.courierPhone || null,
+        deliveredAt: detail.deliveredAt || null,
+        deliveryProofPhotoUrl: detail.deliveryProofPhotoUrl || null,
+        estimatedReadyAt: detail.estimatedReadyAt,
+        completedAt: detail.completedAt,
+        pickedUpAt: detail.pickedUpAt,
+        defects: detail.defects || null,
+        defectNotes: detail.defectNotes || null,
+        conditionPhotos: detail.conditionPhotos || null,
+        isSorted: detail.isSorted,
+        garmentCounts: detail.garmentCounts || null,
+        createdAt: detail.createdAt,
+      };
+    });
 
     return res.status(200).json({
       status: 'success',
@@ -990,16 +1016,25 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
         notes: itemNotes || null,
         unit: normUnit,
         pricingBasis: isKiloan ? 'KILOAN' : 'SATUAN',
+        perfumeVariant: item.perfumeVariant || perfumeVariant || 'Standard',
       };
     });
 
     // Ongkos Kirim Antar-Jemput
     const effectiveDeliveryFee = isDelivery ? Number(deliveryFee || 0) : 0;
 
-    // Ambil konfigurasi loyalitas outlet
+    // Ambil konfigurasi outlet, loyalitas, dan resi
     const outletRecord = await prisma.outlet.findFirst({
       where: { id: outletId, tenantId },
-      select: { id: true, loyaltyConfig: true },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        address: true,
+        receiptConfig: true,
+        loyaltyConfig: true,
+        googleReviewUrl: true,
+      },
     });
     const loyaltyConfig = (outletRecord?.loyaltyConfig as any) || undefined;
     const isLoyaltyActive = Boolean(loyaltyConfig?.isActive);
@@ -1391,6 +1426,49 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
 
       return { ...order, laundryDetail };
     });
+
+    // =========================================================================
+    // AUTO-WA DROPOFF + LINK TRACKING (NON-BLOCKING)
+    // =========================================================================
+    if (customerPhone && customerPhone.trim() && outletRecord) {
+      try {
+        const rc = (outletRecord.receiptConfig as any) || {};
+        const isAutoWaDropoff = rc.autoSendWaOnDropoff !== false;
+        if (isAutoWaDropoff) {
+          const itemsCount = items.length;
+          const primaryServiceName = items[0]?.name || 'Layanan Laundry';
+          const serviceSummary =
+            itemsCount > 1
+              ? `${primaryServiceName} (+${itemsCount - 1} layanan)`
+              : primaryServiceName;
+
+          whatsAppService.sendLaundryNotification(
+            {
+              invoiceNumber,
+              customerName: customerName.trim(),
+              customerPhone: customerPhone.trim(),
+              outlet: {
+                name: outletRecord.name || 'Well Laundry',
+                address: outletRecord.address,
+                phone: outletRecord.phone,
+                receiptConfig: outletRecord.receiptConfig,
+              },
+              servicesSummary: serviceSummary,
+              perfume: perfumeVariant,
+              grandTotal,
+              remainingAmount: Math.max(0, grandTotal - paidAmount),
+              status: 'RECEIVED',
+              estimatedCompletionDate: estimatedReadyAt,
+            },
+            'DROPOFF'
+          ).catch((waErr: any) => {
+            console.warn('[AutoWA Dropoff] Gagal kirim WA otomatis:', waErr?.message);
+          });
+        }
+      } catch (autoWaErr: any) {
+        console.warn('[AutoWA Dropoff Trigger] Error non-blocking:', autoWaErr?.message);
+      }
+    }
 
     const responsePayload = {
       status: 'success',
@@ -2998,9 +3076,11 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
             phone: true,
             address: true,
             receiptConfig: true,
+            googleReviewUrl: true,
           },
         },
         items: true,
+        laundryFeedback: true,
         laundryDetail: {
           include: {
             stageLogs: {
@@ -3068,9 +3148,32 @@ export const getPublicLaundryTracking = async (req: Request, res: Response) => {
         items: order.items.map((oi) => ({
           name: oi.productName || 'Layanan Laundry',
           quantity: oi.quantity,
-          unitPrice: oi.unitPrice,
-          totalPrice: oi.subtotal,
+          unitPrice: Number(oi.unitPrice),
+          totalPrice: Number(oi.subtotal),
+          unit: oi.unit || 'KG',
+          pricingBasis: oi.pricingBasis || 'KILOAN',
+          perfumeVariant: oi.perfumeVariant || order.laundryDetail?.perfumeVariant || 'Standard',
         })),
+        itemsCount: order.items.length,
+        serviceSummary:
+          order.items.length > 1
+            ? `${order.items[0]?.productName || 'Layanan'} (+${order.items.length - 1} layanan)`
+            : (order.items[0]?.productName || 'Layanan Laundry'),
+        googleReviewUrl: order.outlet.googleReviewUrl || null,
+        hasFeedback: Boolean(order.laundryFeedback),
+        feedbackRating: order.laundryFeedback?.rating || null,
+        feedback: order.laundryFeedback
+          ? {
+              rating: order.laundryFeedback.rating,
+              category: order.laundryFeedback.category,
+              comment: order.laundryFeedback.comment,
+              isComplaint: order.laundryFeedback.isComplaint,
+              redirectedToGoogle: order.laundryFeedback.redirectedToGoogle,
+              status: order.laundryFeedback.status,
+              resolutionNotes: order.laundryFeedback.resolutionNotes,
+              createdAt: order.laundryFeedback.createdAt,
+            }
+          : null,
         stages: allStages,
         stageLogs: order.laundryDetail.stageLogs.map((log) => ({
           stage: log.stage,
@@ -6156,5 +6259,542 @@ export const getLaundryDashboardSummary = async (req: Request, res: Response) =>
       message: 'Gagal memuat ringkasan dashboard laundry',
       error: error?.message,
     });
+  }
+};
+
+// ==========================================
+// 17. FEEDBACK & RATING GOOGLE REVIEW (FASE A)
+// ==========================================
+
+const submitLaundryFeedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  category: z.string().optional().nullable(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+});
+
+const resolveLaundryFeedbackSchema = z.object({
+  status: z.enum(['IN_REVIEW', 'RESOLVED']),
+  resolutionNotes: z.string().optional().nullable(),
+});
+
+export const submitPublicLaundryFeedback = async (req: Request, res: Response) => {
+  try {
+    const { invoiceNumber } = req.params;
+    if (!invoiceNumber) {
+      return res.status(400).json({ status: 'error', message: 'Nomor nota invoice wajib diisi' });
+    }
+
+    const parseResult = submitLaundryFeedbackSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi form feedback gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { rating, category, comment, photoUrl } = parseResult.data;
+
+    const order = await prisma.order.findFirst({
+      where: {
+        invoiceNumber: { equals: invoiceNumber.trim(), mode: 'insensitive' },
+      },
+      include: {
+        outlet: {
+          select: {
+            id: true,
+            name: true,
+            googleReviewUrl: true,
+          },
+        },
+        laundryDetail: true,
+        laundryFeedback: true,
+      },
+    });
+
+    if (!order || !order.laundryDetail) {
+      return res.status(404).json({ status: 'error', message: 'Nota pesanan laundry tidak ditemukan' });
+    }
+
+    // Validasi status: harus READY_FOR_PICKUP atau COMPLETED
+    const allowedStages = ['READY', 'RACK_STORAGE', 'PENGEMASAN', 'READY_FOR_PICKUP', 'HANDOVER', 'COMPLETED'];
+    const currentStage = (order.laundryDetail.currentStage || '').toUpperCase();
+    const orderStatus = (order.orderStatus || '').toUpperCase();
+    const detailStatus = (order.laundryDetail.status || '').toUpperCase();
+
+    const isEligible =
+      allowedStages.includes(currentStage) ||
+      detailStatus === 'READY_FOR_PICKUP' ||
+      detailStatus === 'COMPLETED' ||
+      orderStatus === 'COMPLETED';
+
+    if (!isEligible) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Ulasan hanya dapat dikirim setelah cucian selesai diproses atau siap diambil.',
+      });
+    }
+
+    // Tolak duplikat feedback untuk order yang sama
+    if (order.laundryFeedback) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Ulasan untuk pesanan ini sudah pernah dikirim sebelumnya.',
+      });
+    }
+
+    const isComplaint = rating <= 3;
+
+    const createdFeedback = await prisma.laundryCustomerFeedback.create({
+      data: {
+        tenantId: order.tenantId,
+        outletId: order.outletId,
+        orderId: order.id,
+        customerId: order.customerId,
+        rating,
+        category: category || null,
+        comment: comment?.trim() || null,
+        photoUrl: photoUrl?.trim() || null,
+        isComplaint,
+        redirectedToGoogle: false,
+        status: 'OPEN',
+      },
+    });
+
+    const googleReviewUrl = order.outlet?.googleReviewUrl || null;
+    const shouldRedirectToGoogle = rating >= 4 && Boolean(googleReviewUrl);
+
+    return res.status(201).json({
+      status: 'success',
+      message:
+        rating >= 4
+          ? 'Terima kasih atas ulasan bintang 5 Anda!'
+          : 'Terima kasih atas masukannya. Keluhan Anda telah kami catat untuk ditindaklanjuti oleh manajemen.',
+      data: {
+        feedback: createdFeedback,
+        shouldRedirectToGoogle,
+        googleReviewUrl,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error submitPublicLaundryFeedback:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengirim ulasan/feedback laundry' });
+  }
+};
+
+export const trackGoogleReviewClick = async (req: Request, res: Response) => {
+  try {
+    const { invoiceNumber } = req.params;
+    if (!invoiceNumber) {
+      return res.status(400).json({ status: 'error', message: 'Nomor invoice wajib diisi' });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        invoiceNumber: { equals: invoiceNumber.trim(), mode: 'insensitive' },
+      },
+      include: {
+        laundryFeedback: true,
+      },
+    });
+
+    if (!order || !order.laundryFeedback) {
+      return res.status(404).json({ status: 'error', message: 'Feedback pesanan tidak ditemukan' });
+    }
+
+    await prisma.laundryCustomerFeedback.update({
+      where: { id: order.laundryFeedback.id },
+      data: { redirectedToGoogle: true },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Klik Google Review berhasil dicatat',
+    });
+  } catch (error: any) {
+    console.error('Error trackGoogleReviewClick:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mencatat klik Google Review' });
+  }
+};
+
+export const getLaundryFeedbacks = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan' });
+    }
+
+    const {
+      outletId,
+      status,
+      onlyComplaints,
+      minRating,
+      maxRating,
+      startDate,
+      endDate,
+    } = req.query;
+
+    const where: any = { tenantId };
+
+    if (outletId && outletId !== 'ALL') {
+      where.outletId = String(outletId);
+    }
+    if (status && typeof status === 'string' && status !== 'ALL') {
+      where.status = status.toUpperCase();
+    }
+    if (String(onlyComplaints) === 'true') {
+      where.isComplaint = true;
+    }
+    if (minRating || maxRating) {
+      where.rating = {};
+      if (minRating) where.rating.gte = Number(minRating);
+      if (maxRating) where.rating.lte = Number(maxRating);
+    }
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(`${startDate}T00:00:00.000+07:00`);
+      if (endDate) where.createdAt.lte = new Date(`${endDate}T23:59:59.999+07:00`);
+    }
+
+    const feedbacks = await prisma.laundryCustomerFeedback.findMany({
+      where,
+      include: {
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            totalAmount: true,
+            paidAmount: true,
+            createdAt: true,
+            items: {
+              select: {
+                productName: true,
+                quantity: true,
+                unit: true,
+              },
+            },
+          },
+        },
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        outlet: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        handledBy: {
+          select: {
+            id: true,
+            name: true,
+            userCode: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalCount = feedbacks.length;
+    const totalRatingSum = feedbacks.reduce((acc, f) => acc + f.rating, 0);
+    const averageRating = totalCount > 0 ? Number((totalRatingSum / totalCount).toFixed(1)) : 0;
+    const totalComplaints = feedbacks.filter((f) => f.isComplaint).length;
+    const openComplaints = feedbacks.filter((f) => f.isComplaint && f.status !== 'RESOLVED').length;
+    const resolvedComplaints = feedbacks.filter((f) => f.isComplaint && f.status === 'RESOLVED').length;
+    const googleRedirectCount = feedbacks.filter((f) => f.redirectedToGoogle).length;
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        feedbacks,
+        summary: {
+          totalCount,
+          averageRating,
+          totalComplaints,
+          openComplaints,
+          resolvedComplaints,
+          googleRedirectCount,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryFeedbacks:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat data feedback & komplain' });
+  }
+};
+
+export const resolveLaundryFeedback = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak ditemukan' });
+    }
+
+    const parseResult = resolveLaundryFeedbackSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi form tindak lanjut komplain gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { status, resolutionNotes } = parseResult.data;
+
+    const feedback = await prisma.laundryCustomerFeedback.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!feedback) {
+      return res.status(404).json({ status: 'error', message: 'Data komplain / feedback tidak ditemukan' });
+    }
+
+    const updated = await prisma.laundryCustomerFeedback.update({
+      where: { id },
+      data: {
+        status,
+        resolutionNotes: resolutionNotes?.trim() || null,
+        handledById: userId,
+        resolvedAt: status === 'RESOLVED' ? new Date() : null,
+      },
+      include: {
+        handledBy: { select: { id: true, name: true } },
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: status === 'RESOLVED' ? 'Komplain berhasil diselesaikan' : 'Status komplain diperbarui ke peninjauan',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error resolveLaundryFeedback:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui status komplain' });
+  }
+};
+
+// ==========================================
+// 18. PELANGGAN PASIF (WIN-BACK WA) (FASE A)
+// ==========================================
+
+const sendCustomerWinbackSchema = z.object({
+  outletId: z.string().uuid().optional(),
+  promoId: z.string().uuid().optional().nullable(),
+  customMessage: z.string().optional().nullable(),
+  force: z.boolean().optional().default(false),
+});
+
+export const getDormantLaundryCustomers = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks tenant tidak ditemukan' });
+    }
+
+    const days = Math.max(1, parseInt(req.query.inactiveDays as string) || 30);
+    const effectiveOutletId =
+      req.query.outletId && req.query.outletId !== 'ALL'
+        ? String(req.query.outletId)
+        : (req.user?.outletId || null);
+
+    const cutoffDate = new Date(Date.now() - days * 24 * 3600_000);
+
+    const rows: any = await prisma.$queryRawUnsafe(`
+      SELECT 
+        c.id AS "customerId",
+        c.name,
+        c.phone,
+        c.last_winback_sent_at AS "lastWinbackSentAt",
+        MAX(o.created_at) AS "lastOrderAt",
+        COUNT(DISTINCT o.id)::int AS "totalOrders",
+        COALESCE(SUM(o.grand_total), 0)::float AS "totalSpent"
+      FROM "customers" c
+      JOIN "orders" o ON o.customer_id = c.id
+      JOIN "laundry_order_details" lod ON lod.order_id = o.id
+      WHERE c.tenant_id = $1
+        AND c.phone IS NOT NULL AND TRIM(c.phone) <> ''
+        AND o.order_status NOT IN ('VOIDED', 'CANCELLED')
+        AND ($2::text IS NULL OR o.outlet_id = $2::text)
+      GROUP BY c.id, c.name, c.phone, c.last_winback_sent_at
+      HAVING MAX(o.created_at) <= $3
+      ORDER BY MAX(o.created_at) ASC
+      LIMIT 100
+    `, tenantId, effectiveOutletId, cutoffDate);
+
+    const nowTime = Date.now();
+    const customers = rows.map((r: any) => {
+      const lastOrderTime = new Date(r.lastOrderAt).getTime();
+      const daysSinceLastOrder = Math.max(days, Math.floor((nowTime - lastOrderTime) / (24 * 3600_000)));
+      const recentlyContacted = Boolean(
+        r.lastWinbackSentAt &&
+        (nowTime - new Date(r.lastWinbackSentAt).getTime()) < 7 * 24 * 3600_000
+      );
+      const daysSinceContact = r.lastWinbackSentAt
+        ? Math.floor((nowTime - new Date(r.lastWinbackSentAt).getTime()) / (24 * 3600_000))
+        : null;
+
+      return {
+        customerId: r.customerId,
+        name: r.name,
+        phone: r.phone,
+        lastOrderAt: r.lastOrderAt,
+        daysSinceLastOrder,
+        totalOrders: Number(r.totalOrders),
+        totalSpent: Number(r.totalSpent),
+        lastWinbackSentAt: r.lastWinbackSentAt,
+        recentlyContacted,
+        daysSinceContact,
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        customers,
+        totalDormant: customers.length,
+        inactiveDays: days,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getDormantLaundryCustomers:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil daftar pelanggan pasif' });
+  }
+};
+
+export const sendCustomerWinback = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { customerId } = req.params;
+
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Konteks autentikasi tidak ditemukan' });
+    }
+
+    const parseResult = sendCustomerWinbackSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Data kirim sapaan win-back tidak valid',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { outletId: reqOutletId, promoId, customMessage, force } = parseResult.data;
+
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, tenantId },
+    });
+
+    if (!customer) {
+      return res.status(404).json({ status: 'error', message: 'Pelanggan tidak ditemukan' });
+    }
+
+    if (!customer.phone || !customer.phone.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Pelanggan tidak memiliki nomor telepon / WhatsApp yang valid' });
+    }
+
+    // Anti-Spam Protection: cegah spam jika baru disapa dalam 7 hari terakhir (kecuali force === true)
+    if (customer.lastWinbackSentAt && !force) {
+      const daysSince = Math.floor((Date.now() - customer.lastWinbackSentAt.getTime()) / (24 * 3600_000));
+      if (daysSince < 7) {
+        return res.status(409).json({
+          status: 'error',
+          code: 'RECENTLY_CONTACTED',
+          message: `Pelanggan ini baru saja disapa ${daysSince === 0 ? 'hari ini' : daysSince + ' hari yang lalu'}. Untuk mencegah komplain spam, sapaan hanya dapat dikirim kembali setelah 7 hari.`,
+          daysSinceContact: daysSince,
+        });
+      }
+    }
+
+    // Ambil info outlet
+    const resolvedOutletId = reqOutletId || req.user?.outletId;
+    const outlet = await prisma.outlet.findFirst({
+      where: {
+        tenantId,
+        ...(resolvedOutletId ? { id: resolvedOutletId } : {}),
+      },
+      select: {
+        name: true,
+        phone: true,
+        address: true,
+        receiptConfig: true,
+      },
+    });
+
+    // Ambil info promo jika dipilih
+    let promoCode: string | null = null;
+    let promoDescription: string | null = null;
+    if (promoId) {
+      const promo = await prisma.promotion.findFirst({
+        where: { id: promoId, tenantId, isActive: true },
+      });
+      if (promo) {
+        promoCode = promo.code;
+        promoDescription =
+          promo.description ||
+          `Diskon spesial ${
+            promo.discountType === 'PERCENTAGE'
+              ? promo.discountValue + '%'
+              : 'Rp ' + Number(promo.discountValue).toLocaleString('id-ID')
+          }`;
+      }
+    }
+
+    const cleanPhone = whatsAppService.normalizePhone(customer.phone);
+    const winbackParams = {
+      customerName: customer.name,
+      outletName: outlet?.name || 'Well Laundry',
+      outletPhone: outlet?.phone || null,
+      promoCode,
+      promoDescription,
+      customMessage: customMessage || null,
+      receiptConfig: outlet?.receiptConfig,
+    };
+
+    const messageText = whatsAppService.formatLaundryWinbackText(winbackParams);
+    const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
+
+    // Coba kirim via gateway jika aktif
+    let sendResult: any = null;
+    try {
+      sendResult = await whatsAppService.sendLaundryWinbackNotification(customer.phone, winbackParams);
+    } catch (waErr: any) {
+      sendResult = {
+        status: 'error',
+        message: waErr?.message || 'Gateway WA offline',
+        isMock: true,
+      };
+    }
+
+    // Catat timestamp last_winback_sent_at
+    const now = new Date();
+    await prisma.customer.update({
+      where: { id: customer.id },
+      data: { lastWinbackSentAt: now },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message:
+        sendResult?.status === 'success'
+          ? `Sapaan berhasil dikirim via WhatsApp ke ${customer.name}`
+          : `Tautan WhatsApp siap dikirimkan untuk ${customer.name}`,
+      data: {
+        sendResult,
+        waLink,
+        lastWinbackSentAt: now,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error sendCustomerWinback:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengirim sapaan win-back pelanggan' });
   }
 };

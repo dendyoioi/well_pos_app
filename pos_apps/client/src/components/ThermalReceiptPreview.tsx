@@ -39,8 +39,8 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   paperSize = '58mm',
   onPaperSizeChange,
   showWatermark = true,
-  brandName = 'WELL POS CAFE',
-  storeName = 'Outlet Kemang Raya',
+  brandName,
+  storeName,
   address = 'Jl. Kemang Raya No. 10, Jakarta Selatan',
   phone = '0812-3456-7890',
   queueNumber = '#05',
@@ -60,6 +60,8 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
   showControls = true,
   isLaundryMode = false,
 }) => {
+  const displayBrandName = brandName || (isLaundryMode ? 'WELL POS LAUNDRY' : 'WELL POS CAFE');
+  const displayStoreName = storeName || (isLaundryMode ? 'Outlet Laundry Utama' : 'Outlet Kemang Raya');
   // Sample default items if not provided
   const sampleItems: ThermalReceiptItem[] = items || (isLaundryMode ? [
     {
@@ -89,7 +91,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
 
   const defaultSubtotal = isLaundryMode ? 37000 : 72000;
   const calculatedSubtotal = subtotal !== undefined ? subtotal : defaultSubtotal;
-  const calculatedTax = taxAmount !== undefined ? taxAmount : Math.round(calculatedSubtotal * 0.1);
+  const calculatedTax = taxAmount !== undefined ? taxAmount : (isLaundryMode ? 0 : Math.round(calculatedSubtotal * 0.1));
   const calculatedService = serviceCharge !== undefined ? serviceCharge : (isLaundryMode ? 0 : 3500);
   const calculatedGrandTotal =
     grandTotal !== undefined
@@ -156,10 +158,10 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
           {/* Header Toko */}
           <div className="text-center space-y-1">
             <div className="font-black text-sm uppercase tracking-wide text-blue-950">
-              {brandName}
+              {displayBrandName}
             </div>
             <div className="font-extrabold text-[10px] text-slate-800">
-              {storeName}
+              {displayStoreName}
             </div>
             {address && (
               <div className="text-[9px] text-slate-600 leading-snug px-2">
@@ -176,16 +178,27 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
           {/* Dotted Divider */}
           <div className="border-b border-dashed border-slate-400 my-2" />
 
-          {/* Nomor Antrean Panggilan Box (Jika diaktifkan) */}
-          {showQueueNumber && queueNumber && (
-            <div className="border-2 border-dashed border-slate-900 p-2 my-2 rounded-sm text-center bg-white/80 shadow-2xs">
-              <div className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-600">
-                NOMOR ANTRIAN
+          {/* Nomor Antrean Panggilan Box atau Blok Info Laundry (Jika diaktifkan) */}
+          {showQueueNumber && (
+            isLaundryMode ? (
+              <div className="border border-dashed border-slate-700 p-2 my-2 rounded-sm text-center bg-blue-50/50 space-y-0.5 shadow-2xs">
+                <div className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-blue-950">
+                  ESTIMASI SELESAI: 04 Okt 2026, 17:00
+                </div>
+                <div className="text-[9px] sm:text-[10px] font-extrabold text-slate-800 tracking-wide">
+                  RAK: A-02 | STATUS: LUNAS
+                </div>
               </div>
-              <div className="text-lg sm:text-xl font-black text-blue-950 tracking-wider">
-                {queueNumber}
+            ) : queueNumber ? (
+              <div className="border-2 border-dashed border-slate-900 p-2 my-2 rounded-sm text-center bg-white/80 shadow-2xs">
+                <div className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-600">
+                  NOMOR ANTRIAN
+                </div>
+                <div className="text-lg sm:text-xl font-black text-blue-950 tracking-wider">
+                  {queueNumber}
+                </div>
               </div>
-            </div>
+            ) : null
           )}
 
           {/* Order Meta Header */}
@@ -194,6 +207,11 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
               <span>No: {invoiceNumber}</span>
               <span>{timestamp}</span>
             </div>
+            {isLaundryMode && (
+              <div className="flex justify-between font-bold text-slate-800">
+                <span>Pelanggan: Ibu Siti (0812-xxxx)</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Kasir: {cashierName}</span>
               {displayTable && <span>{displayTable}</span>}
@@ -254,10 +272,23 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
               <span>{formatRupiah(calculatedGrandTotal)}</span>
             </div>
 
-            <div className="flex justify-between text-[10px] text-slate-600 pt-0.5">
-              <span>{paymentMethod}:</span>
-              <span>{formatRupiah(calculatedGrandTotal)}</span>
-            </div>
+            {isLaundryMode ? (
+              <>
+                <div className="flex justify-between text-[10px] text-slate-700 pt-0.5 font-bold">
+                  <span>BAYAR (LUNAS):</span>
+                  <span>{formatRupiah(calculatedGrandTotal)}</span>
+                </div>
+                <div className="flex justify-between text-[9px] text-slate-500">
+                  <span>SISA TAGIHAN:</span>
+                  <span>Rp 0</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between text-[10px] text-slate-600 pt-0.5">
+                <span>{paymentMethod}:</span>
+                <span>{formatRupiah(calculatedGrandTotal)}</span>
+              </div>
+            )}
           </div>
 
           {/* Dotted Divider */}
@@ -282,8 +313,10 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
 
           {/* Simulated QR Code Stamp */}
           <div className="flex flex-col items-center justify-center pt-1 text-slate-400">
-            <QrCode className="w-8 h-8 opacity-60" />
-            <span className="text-[8px] mt-0.5 tracking-widest uppercase">E-Receipt Verified</span>
+            <QrCode className="w-8 h-8 opacity-60 text-slate-600" />
+            <span className="text-[8px] mt-0.5 tracking-widest uppercase font-bold text-slate-500">
+              {isLaundryMode ? 'SCAN QR LACAK STATUS CUCIAN' : 'E-Receipt Verified'}
+            </span>
           </div>
 
           {/* Signature / Watermark */}
