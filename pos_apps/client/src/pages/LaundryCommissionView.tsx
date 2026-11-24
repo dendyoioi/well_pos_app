@@ -20,6 +20,7 @@ import {
   HandCoins,
   Wallet,
   ChevronDown,
+  TrendingUp,
 } from 'lucide-react';
 import type { User } from '../types/auth';
 import type { Outlet } from '../types/outlet';
@@ -34,6 +35,7 @@ import { formatRupiah } from '../utils/currency';
 import { TablePagination } from '../components/TablePagination';
 import { TableSkeleton } from '../components/ui/TableSkeleton';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
+import { StaffPerformanceEvaluationView } from '../components/laundry/StaffPerformanceEvaluationView';
 
 interface LaundryCommissionViewProps {
   activeOutlet: Outlet | null;
@@ -101,8 +103,15 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   const [paidOutKeys, setPaidOutKeys] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Tab Utama: Komisi Staf & Kurir vs Kasbon Karyawan (P2)
-  const [activeMainTab, setActiveMainTab] = useState<'COMMISSION' | 'CASH_ADVANCE'>('COMMISSION');
+  // Tab Utama: Komisi Staf & Kurir vs Kasbon Karyawan vs Evaluasi Performa
+  const [activeMainTab, setActiveMainTab] = useState<'COMMISSION' | 'CASH_ADVANCE' | 'PERFORMANCE'>('COMMISSION');
+
+  // Role Guard: Kembalikan tab ke COMMISSION jika user bukan Owner/Admin/Supervisor
+  useEffect(() => {
+    if (!isSupervisorOrAbove && activeMainTab === 'PERFORMANCE') {
+      setActiveMainTab('COMMISSION');
+    }
+  }, [isSupervisorOrAbove, activeMainTab]);
 
   // State Kasbon Karyawan (P2)
   const [advances, setAdvances] = useState<StaffCashAdvance[]>([]);
@@ -502,6 +511,21 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             </span>
           )}
         </button>
+
+        {isSupervisorOrAbove && (
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('PERFORMANCE')}
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              activeMainTab === 'PERFORMANCE'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 stroke-[2.5]" />
+            <span>Evaluasi Performa Staf</span>
+          </button>
+        )}
       </div>
 
       {activeMainTab === 'COMMISSION' ? (
@@ -1044,7 +1068,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         )}
       </div>
       </>
-      ) : (
+      ) : activeMainTab === 'CASH_ADVANCE' ? (
         <div className="space-y-6">
           {/* Summary KPI Cards Kasbon Karyawan */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1351,7 +1375,12 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             )}
           </div>
         </div>
-      )}
+      ) : isSupervisorOrAbove ? (
+        <StaffPerformanceEvaluationView
+          activeOutletId={activeOutlet?.id || ''}
+          currentUser={currentUser}
+        />
+      ) : null}
 
       {/* Modal Catat Kasbon Baru */}
       {showCreateAdvanceModal && (

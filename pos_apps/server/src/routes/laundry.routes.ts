@@ -61,6 +61,12 @@ import {
   createLaundryMachine,
   updateLaundryMachine,
   deleteLaundryMachine,
+  createLaundryIncident,
+  getLaundryIncidents,
+  updateLaundryIncident,
+  getStaffPerformance,
+  createStaffPerformanceReview,
+  getStaffPerformanceReviews,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -162,5 +168,15 @@ router.patch('/feedbacks/:id/resolve', authorize(Role.OWNER, Role.ADMIN, Role.SU
 // --- Modul Pelanggan Pasif & Sapaan Win-Back WA (Fase A) ---
 router.get('/customers/dormant', getDormantLaundryCustomers);
 router.post('/customers/:customerId/send-winback', sendCustomerWinback);
+
+// --- Modul Manajemen Insiden Pakaian Rusak / Hilang (Fase B) ---
+router.post('/incidents', createLaundryIncident);
+router.get('/incidents', getLaundryIncidents);
+router.patch('/incidents/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryIncident);
+
+// --- Modul Evaluasi Performa Karyawan (Fase B) ---
+router.get('/staff-performance', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getStaffPerformance);
+router.post('/staff-performance/reviews', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createStaffPerformanceReview);
+router.get('/staff-performance/reviews', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getStaffPerformanceReviews);
 
 export { router as laundryRouter };

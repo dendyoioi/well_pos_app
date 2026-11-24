@@ -732,6 +732,89 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "customer_laundry_wallets" ADD COLUMN IF NOT EXISTS "balance_expires_at" TIMESTAMP(3);
     `,
   },
+  {
+    id: '20261124_09_laundry_incident_work_shift_performance_review',
+    description: 'Menambahkan tabel laundry_incidents, work_shift_templates, staff_work_schedules, dan staff_performance_reviews',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "laundry_incidents" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+        "incident_type" VARCHAR(50) NOT NULL,
+        "item_description" TEXT NOT NULL,
+        "stage" VARCHAR(50),
+        "machine_name" VARCHAR(50),
+        "responsible_staff_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "reported_by_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+        "notes" TEXT NOT NULL,
+        "photo_urls" JSONB,
+        "estimated_compensation" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "approved_compensation" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "status" VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+        "resolution_notes" TEXT,
+        "approved_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "resolved_at" TIMESTAMP(3),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_incidents_outlet_status_created_idx" ON "laundry_incidents"("outlet_id", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "laundry_incidents_order_id_idx" ON "laundry_incidents"("order_id");
+
+      CREATE TABLE IF NOT EXISTS "work_shift_templates" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "name" VARCHAR(100) NOT NULL,
+        "start_time" VARCHAR(10) NOT NULL,
+        "end_time" VARCHAR(10) NOT NULL,
+        "is_off_day" BOOLEAN NOT NULL DEFAULT FALSE,
+        "color_hex" VARCHAR(20) NOT NULL DEFAULT '#1E3A8A',
+        "grace_minutes" INTEGER NOT NULL DEFAULT 10,
+        "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "work_shift_templates_tenant_outlet_active_idx" ON "work_shift_templates"("tenant_id", "outlet_id", "is_active");
+
+      CREATE TABLE IF NOT EXISTS "staff_work_schedules" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "user_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "shift_template_id" TEXT REFERENCES "work_shift_templates"("id") ON DELETE SET NULL,
+        "schedule_date" VARCHAR(20) NOT NULL,
+        "is_off_day" BOOLEAN NOT NULL DEFAULT FALSE,
+        "notes" TEXT,
+        "created_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "staff_work_schedules_outlet_user_date_key" UNIQUE ("outlet_id", "user_id", "schedule_date")
+      );
+      CREATE INDEX IF NOT EXISTS "staff_work_schedules_outlet_date_idx" ON "staff_work_schedules"("outlet_id", "schedule_date");
+      CREATE INDEX IF NOT EXISTS "staff_work_schedules_user_date_idx" ON "staff_work_schedules"("user_id", "schedule_date");
+
+      CREATE TABLE IF NOT EXISTS "staff_performance_reviews" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "user_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "period_start" VARCHAR(20) NOT NULL,
+        "period_end" VARCHAR(20) NOT NULL,
+        "discipline_score" DOUBLE PRECISION NOT NULL,
+        "productivity_score" DOUBLE PRECISION NOT NULL,
+        "quality_score" DOUBLE PRECISION NOT NULL,
+        "customer_score" DOUBLE PRECISION NOT NULL,
+        "overall_score" DOUBLE PRECISION NOT NULL,
+        "grade" VARCHAR(10) NOT NULL,
+        "reviewer_notes" TEXT,
+        "reviewed_by_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "staff_performance_reviews_outlet_user_period_idx" ON "staff_performance_reviews"("outlet_id", "user_id", "period_start", "period_end");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

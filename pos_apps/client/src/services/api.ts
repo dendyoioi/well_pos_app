@@ -23,6 +23,11 @@ import type {
   LaundryAutoReminderResult,
   LaundryPerfume,
   LaundryMachine,
+  LaundryIncident,
+  WorkShiftTemplate,
+  StaffWorkSchedule,
+  StaffPerformanceReview,
+  StaffPerformanceItem,
 } from '../types/laundry';
 
 const TOKEN_KEY = 'pos_auth_token';
@@ -3397,6 +3402,134 @@ export const api = {
     });
     return res.json();
   },
+
+  // --- Modul Manajemen Insiden Pakaian Rusak / Hilang (Fase B) ---
+  getLaundryIncidents: async (params?: {
+    outletId?: string;
+    status?: string;
+    incidentType?: string;
+    responsibleStaffId?: string;
+    orderId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{ status: string; data: LaundryIncident[]; message?: string }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.incidentType) query.append('incidentType', params.incidentType);
+    if (params?.responsibleStaffId) query.append('responsibleStaffId', params.responsibleStaffId);
+    if (params?.orderId) query.append('orderId', params.orderId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const res = await fetch(`/api/laundry/incidents?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createLaundryIncident: async (data: {
+    outletId: string;
+    orderId: string;
+    incidentType: string;
+    itemDescription: string;
+    stage?: string;
+    machineName?: string;
+    responsibleStaffId?: string;
+    notes?: string;
+    photoUrls?: string[];
+    estimatedCompensation?: number;
+  }): Promise<{ status: string; data?: LaundryIncident; message?: string }> => {
+    const res = await fetch('/api/laundry/incidents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateLaundryIncident: async (
+    id: string,
+    data: {
+      status?: string;
+      approvedCompensation?: number;
+      resolutionNotes?: string;
+    }
+  ): Promise<{ status: string; data?: LaundryIncident; message?: string }> => {
+    const res = await fetch(`/api/laundry/incidents/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // --- Modul Evaluasi Performa Karyawan (Fase B) ---
+  getStaffPerformance: async (params?: {
+    outletId?: string;
+    startDate?: string;
+    endDate?: string;
+    role?: string;
+  }): Promise<{
+    status: string;
+    data: {
+      period: { startDate: string; endDate: string };
+      evaluations: StaffPerformanceItem[];
+    };
+    message?: string;
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    if (params?.role) query.append('role', params.role);
+    const res = await fetch(`/api/laundry/staff-performance?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createStaffPerformanceReview: async (data: {
+    outletId: string;
+    userId: string;
+    periodStart: string;
+    periodEnd: string;
+    disciplineScore: number;
+    productivityScore: number;
+    qualityScore: number;
+    customerScore: number;
+    overallScore: number;
+    grade: string;
+    reviewerNotes?: string;
+  }): Promise<{ status: string; data?: StaffPerformanceReview; message?: string }> => {
+    const res = await fetch('/api/laundry/staff-performance/reviews', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getStaffPerformanceReviews: async (params?: {
+    outletId?: string;
+    userId?: string;
+  }): Promise<{ status: string; data: StaffPerformanceReview[]; message?: string }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.userId) query.append('userId', params.userId);
+    const res = await fetch(`/api/laundry/staff-performance/reviews?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
 };
 
 // ----------------------------------------------------
@@ -3656,6 +3789,114 @@ export const attendanceApi = {
     clientTimezone: string;
   }): Promise<any> => {
     const res = await fetch('/api/attendance/sync-timezone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // --- Modul Master Template Shift Kerja (Fase B) ---
+  getWorkShiftTemplates: async (outletId: string): Promise<{ status: string; data: WorkShiftTemplate[]; message?: string }> => {
+    const res = await fetch(`/api/attendance/shift-templates?outletId=${encodeURIComponent(outletId)}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createWorkShiftTemplate: async (data: Partial<WorkShiftTemplate> & { outletId: string }): Promise<{ status: string; data?: WorkShiftTemplate; message?: string }> => {
+    const res = await fetch('/api/attendance/shift-templates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateWorkShiftTemplate: async (id: string, data: Partial<WorkShiftTemplate>): Promise<{ status: string; data?: WorkShiftTemplate; message?: string }> => {
+    const res = await fetch(`/api/attendance/shift-templates/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deleteWorkShiftTemplate: async (id: string): Promise<{ status: string; message?: string }> => {
+    const res = await fetch(`/api/attendance/shift-templates/${id}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // --- Modul Roster Jadwal Kerja & Auto-Penjadwalan (Fase B) ---
+  getStaffWorkSchedules: async (params: {
+    outletId: string;
+    startDate: string;
+    endDate: string;
+    userId?: string;
+  }): Promise<{ status: string; data: StaffWorkSchedule[]; message?: string }> => {
+    const query = new URLSearchParams();
+    query.append('outletId', params.outletId);
+    query.append('startDate', params.startDate);
+    query.append('endDate', params.endDate);
+    if (params.userId) query.append('userId', params.userId);
+    const res = await fetch(`/api/attendance/schedules?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  bulkUpsertStaffWorkSchedules: async (data: {
+    outletId: string;
+    schedules: Array<{
+      userId: string;
+      scheduleDate: string;
+      shiftTemplateId?: string | null;
+      isOffDay?: boolean;
+      notes?: string | null;
+    }>;
+  }): Promise<{ status: string; data?: any; message?: string }> => {
+    const res = await fetch('/api/attendance/schedules/bulk-upsert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  autoGenerateStaffWorkSchedules: async (data: {
+    outletId: string;
+    startDate: string;
+    endDate: string;
+    shiftTemplateIds?: string[];
+    minStaffPerShift?: number;
+    offDaysPerWeek?: number;
+    staffIds?: string[];
+    overwriteExisting?: boolean;
+  }): Promise<{
+    status: string;
+    message?: string;
+    data?: {
+      summary: Array<{ userId: string; name: string; role: string; totalShifts: number; totalOffDays: number }>;
+      count: number;
+      schedules: StaffWorkSchedule[];
+    };
+  }> => {
+    const res = await fetch('/api/attendance/schedules/auto-generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

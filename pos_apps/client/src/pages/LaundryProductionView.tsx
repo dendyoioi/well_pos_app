@@ -22,6 +22,7 @@ import {
   X,
   Loader2,
   ChevronDown,
+  ShieldAlert,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api, authStorage } from '../services/api';
@@ -30,6 +31,8 @@ import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 import { LaundrySortingModal } from '../components/LaundrySortingModal';
 import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
 import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
+import { LaundryIncidentModal } from '../components/laundry/LaundryIncidentModal';
+import { LaundryIncidentManagementModal } from '../components/laundry/LaundryIncidentManagementModal';
 
 interface LaundryProductionViewProps {
   activeOutlet: Outlet | null;
@@ -52,6 +55,9 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   const [selectedMachines, setSelectedMachines] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [selectedOrderForIncident, setSelectedOrderForIncident] = useState<LaundryQueueOrder | null>(null);
+  const [incidentModalOpen, setIncidentModalOpen] = useState(false);
+  const [incidentManagementOpen, setIncidentManagementOpen] = useState(false);
 
   // Master Mesin (Washer / Dryer)
   const [machines, setMachines] = useState<LaundryMachine[]>([]);
@@ -385,6 +391,18 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             </button>
           )}
 
+          {canManageMachines && (
+            <button
+              type="button"
+              onClick={() => setIncidentManagementOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 active:scale-95"
+              title="Manajemen Insiden Produksi & Komplain Ganti Rugi"
+            >
+              <ShieldAlert className="w-4 h-4 text-rose-600" />
+              <span>Insiden ({orders.reduce((sum, o) => sum + (o.incidentCount || 0), 0)})</span>
+            </button>
+          )}
+
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -641,6 +659,13 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                         </span>
                       )}
 
+                      {Boolean(order.hasOpenIncident || (order.incidentCount && order.incidentCount > 0)) && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shadow-2xs">
+                          <ShieldAlert className="w-2.5 h-2.5 text-rose-600" />
+                          <span>Insiden ({order.incidentCount || 1})</span>
+                        </span>
+                      )}
+
                       {/* Badge Tahapan Aktif */}
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200">
                         {stages.find((st) => st.key === currentStage || st.id === currentStage)?.name || order.currentStage || 'Drop-off'}
@@ -788,6 +813,18 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                   )}
 
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOrderForIncident(order);
+                        setIncidentModalOpen(true);
+                      }}
+                      className="h-11 sm:h-10 min-h-[44px] px-2.5 rounded-2xl bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-800 font-extrabold text-xs flex items-center justify-center gap-1 border border-slate-200 hover:border-rose-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                      title="Lapor Pakaian Rusak / Hilang"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                      <span className="hidden sm:inline">Insiden</span>
+                    </button>
                     {(order.status === 'READY_FOR_PICKUP' || order.status === 'COMPLETED') && (
                       <button
                         type="button"
@@ -878,6 +915,32 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             fetchData();
             showToast(`Garansi cuci ulang Nota ${selectedOrderForRewash.invoiceNumber} berhasil diaktifkan!`);
           }}
+        />
+      )}
+
+      {/* Modal Lapor Insiden Produksi */}
+      {incidentModalOpen && selectedOrderForIncident && (
+        <LaundryIncidentModal
+          isOpen={incidentModalOpen}
+          onClose={() => {
+            setIncidentModalOpen(false);
+            setSelectedOrderForIncident(null);
+          }}
+          order={selectedOrderForIncident}
+          outletId={activeOutlet?.id || ''}
+          onSuccess={() => {
+            fetchData();
+            showToast('Laporan insiden berhasil dicatat');
+          }}
+        />
+      )}
+
+      {/* Modal Manajemen Insiden Produksi (Owner / Supervisor) */}
+      {incidentManagementOpen && (
+        <LaundryIncidentManagementModal
+          isOpen={incidentManagementOpen}
+          onClose={() => setIncidentManagementOpen(false)}
+          outletId={activeOutlet?.id || ''}
         />
       )}
 

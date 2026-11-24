@@ -19,6 +19,7 @@ import {
   QrCode,
   AlertOctagon,
   RotateCcw,
+  ShieldAlert,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -30,6 +31,7 @@ import { LaundryProductionKpiModal } from '../components/laundry/LaundryProducti
 import { LaundrySortingModal } from '../components/LaundrySortingModal';
 import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
 import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
+import { LaundryIncidentModal } from '../components/laundry/LaundryIncidentModal';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -87,6 +89,10 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   // State Modal Klaim Garansi Cuci Ulang (Rewash Rp 0)
   const [rewashModalOpen, setRewashModalOpen] = useState(false);
   const [selectedOrderForRewash, setSelectedOrderForRewash] = useState<LaundryQueueOrder | null>(null);
+
+  // State Modal Lapor Insiden Pakaian Rusak / Hilang
+  const [incidentModalOpen, setIncidentModalOpen] = useState(false);
+  const [selectedOrderForIncident, setSelectedOrderForIncident] = useState<LaundryQueueOrder | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -500,6 +506,13 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                                 </span>
                               )}
 
+                              {Boolean(item.hasOpenIncident || (item.incidentCount && item.incidentCount > 0)) && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shadow-2xs">
+                                  <ShieldAlert className="w-2.5 h-2.5 text-rose-600" />
+                                  <span>Insiden ({item.incidentCount || 1})</span>
+                                </span>
+                              )}
+
                               {slaStatus === 'OVERDUE' ? (
                                 <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
                                   <AlertOctagon className="w-2.5 h-2.5 text-rose-600" />
@@ -683,6 +696,20 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                               <span>Cuci Ulang (Garansi)</span>
                             </button>
                           )}
+
+                          {/* Tombol Lapor Insiden Produksi */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrderForIncident(item);
+                              setIncidentModalOpen(true);
+                            }}
+                            className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-800 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-slate-200 hover:border-rose-200 transition-all cursor-pointer active:scale-95"
+                            title="Catat Pakaian Rusak / Hilang"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Lapor Insiden</span>
+                          </button>
                         </div>
                       );
                     })
@@ -914,6 +941,27 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
             fetchRacks();
             setWaToast({
               message: `Garansi cuci ulang (Rewash Rp 0) untuk Nota ${selectedOrderForRewash.invoiceNumber} berhasil diaktifkan!`,
+              type: 'success',
+            });
+            setTimeout(() => setWaToast(null), 3500);
+          }}
+        />
+      )}
+
+      {/* Modal Lapor Insiden Produksi */}
+      {incidentModalOpen && selectedOrderForIncident && (
+        <LaundryIncidentModal
+          isOpen={incidentModalOpen}
+          onClose={() => {
+            setIncidentModalOpen(false);
+            setSelectedOrderForIncident(null);
+          }}
+          order={selectedOrderForIncident}
+          outletId={activeOutlet?.id || ''}
+          onSuccess={() => {
+            fetchOrders();
+            setWaToast({
+              message: 'Laporan insiden berhasil dicatat',
               type: 'success',
             });
             setTimeout(() => setWaToast(null), 3500);

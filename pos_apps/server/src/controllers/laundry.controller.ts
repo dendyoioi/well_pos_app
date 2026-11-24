@@ -1287,6 +1287,16 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
               },
             },
             cashier: { select: { id: true, name: true } },
+            laundryIncidents: {
+              select: {
+                id: true,
+                incidentType: true,
+                status: true,
+                itemDescription: true,
+                estimatedCompensation: true,
+                approvedCompensation: true,
+              },
+            },
           },
         },
       },
@@ -1296,6 +1306,11 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
     });
 
     const formattedQueue = details.map((detail) => {
+      const incidents = (detail.order as any).laundryIncidents || [];
+      const incidentCount = incidents.length;
+      const hasOpenIncident = incidents.some(
+        (inc: any) => inc.status === 'OPEN' || inc.status === 'INVESTIGATING'
+      );
       const itemsCount = detail.order.items.length;
       const primaryServiceName = detail.order.items[0]?.productName || 'Layanan Laundry';
       const serviceSummary =
@@ -1355,6 +1370,9 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
         conditionPhotos: detail.conditionPhotos || null,
         isSorted: detail.isSorted,
         garmentCounts: detail.garmentCounts || null,
+        incidentCount,
+        hasOpenIncident,
+        incidents,
         createdAt: detail.createdAt,
       };
     });
@@ -7539,5 +7557,656 @@ export const sendCustomerWinback = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error sendCustomerWinback:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mengirim sapaan win-back pelanggan' });
+  }
+};
+
+// ==========================================
+// 19. MANAJEMEN INSIDEN PRODUKSI (FASE B)
+// ==========================================
+
+export const createLaundryIncident = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const reportedById = req.user?.id;
+    if (!tenantId || !reportedById) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    const {
+      outletId,
+      orderId,
+      incidentType,
+      itemDescription,
+      stage,
+      machineName,
+      responsibleStaffId,
+      notes,
+      photoUrls,
+      estimatedCompensation,
+    } = req.body;
+
+    if (!orderId || !incidentType || !itemDescription) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'orderId, incidentType, dan itemDescription wajib diisi',
+      });
+    }
+
+    // Validasi orderId milik tenant & outlet terkait
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        tenantId,
+        ...(outletId ? { outletId } : {}),
+      },
+      include: {
+        customer: true,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Pesanan laundry tidak ditemukan di outlet ini',
+      });
+    }
+
+    const targetOutletId = outletId || order.outletId;
+
+    // Hitung saran otomatis estimatedCompensation sesuai klausul nota (default: Math.min(Number(order.totalAmount) * 5, 100000), atau nominal yang diisi user jika > 0)
+    let finalEstimatedComp = 0;
+    if (estimatedCompensation !== undefined && estimatedCompensation !== null && Number(estimatedCompensation) > 0) {
+      finalEstimatedComp = Number(estimatedCompensation);
+    } else {
+      finalEstimatedComp = Math.min(Number(order.totalAmount) * 5, 100000);
+    }
+
+    const incident = await prisma.laundryIncident.create({
+      data: {
+        tenantId,
+        outletId: targetOutletId,
+        orderId,
+        incidentType,
+        itemDescription: String(itemDescription).trim(),
+        stage: stage ? String(stage).trim() : null,
+        machineName: machineName ? String(machineName).trim() : null,
+        responsibleStaffId: responsibleStaffId || null,
+        reportedById,
+        notes: notes ? String(notes).trim() : '',
+        photoUrls: Array.isArray(photoUrls) ? photoUrls : [],
+        estimatedCompensation: finalEstimatedComp,
+        approvedCompensation: 0,
+        status: 'OPEN',
+      },
+      include: {
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            totalAmount: true,
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+        reportedBy: { select: { id: true, name: true, role: true } },
+        responsibleStaff: { select: { id: true, name: true, role: true } },
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Laporan insiden berhasil dicatat',
+      data: incident,
+    });
+  } catch (error: any) {
+    console.error('Error createLaundryIncident:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal mencatat laporan insiden' });
+  }
+};
+
+export const getLaundryIncidents = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    const { outletId, status, incidentType, responsibleStaffId, orderId, startDate, endDate } = req.query;
+
+    const where: any = { tenantId };
+    if (outletId && typeof outletId === 'string') {
+      where.outletId = outletId;
+    }
+    if (status && typeof status === 'string' && status !== 'ALL') {
+      where.status = status;
+    }
+    if (incidentType && typeof incidentType === 'string' && incidentType !== 'ALL') {
+      where.incidentType = incidentType;
+    }
+    if (responsibleStaffId && typeof responsibleStaffId === 'string') {
+      where.responsibleStaffId = responsibleStaffId;
+    }
+    if (orderId && typeof orderId === 'string') {
+      where.orderId = orderId;
+    }
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate && typeof startDate === 'string') {
+        where.createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
+      }
+      if (endDate && typeof endDate === 'string') {
+        where.createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+      }
+    }
+
+    const incidents = await prisma.laundryIncident.findMany({
+      where,
+      include: {
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            totalAmount: true,
+            orderStatus: true,
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+        reportedBy: { select: { id: true, name: true, role: true } },
+        responsibleStaff: { select: { id: true, name: true, role: true } },
+        approvedBy: { select: { id: true, name: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: incidents,
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryIncidents:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil daftar insiden' });
+  }
+};
+
+export const updateLaundryIncident = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    // Role check: Only OWNER, ADMIN, SUPERVISOR can approve/update incident status and compensation
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat menyetujui atau memperbarui insiden',
+      });
+    }
+
+    const { id } = req.params;
+    const { status, approvedCompensation, resolutionNotes } = req.body;
+
+    const incident = await prisma.laundryIncident.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!incident) {
+      return res.status(404).json({ status: 'error', message: 'Insiden tidak ditemukan' });
+    }
+
+    const updateData: any = {};
+    if (status) {
+      updateData.status = status;
+      if (status === 'RESOLVED' || status === 'COMPENSATED') {
+        updateData.resolvedAt = new Date();
+        updateData.approvedById = userId;
+      }
+    }
+    if (approvedCompensation !== undefined && approvedCompensation !== null) {
+      updateData.approvedCompensation = Number(approvedCompensation);
+      updateData.approvedById = userId;
+    }
+    if (resolutionNotes !== undefined) {
+      updateData.resolutionNotes = resolutionNotes ? String(resolutionNotes).trim() : null;
+    }
+
+    const updated = await prisma.laundryIncident.update({
+      where: { id },
+      data: updateData,
+      include: {
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            totalAmount: true,
+            customer: { select: { id: true, name: true, phone: true } },
+          },
+        },
+        reportedBy: { select: { id: true, name: true, role: true } },
+        responsibleStaff: { select: { id: true, name: true, role: true } },
+        approvedBy: { select: { id: true, name: true, role: true } },
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Status insiden berhasil diperbarui',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryIncident:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui insiden' });
+  }
+};
+
+// ==========================================
+// 20. EVALUASI PERFORMA KARYAWAN (FASE B)
+// ==========================================
+
+export const getStaffPerformance = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userRole = req.user?.role;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    // Role check: Only OWNER, ADMIN, SUPERVISOR
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat melihat evaluasi performa',
+      });
+    }
+
+    const { outletId, startDate, endDate, role } = req.query;
+
+    const now = new Date();
+    const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+    const startDateStr = (typeof startDate === 'string' && startDate) ? startDate : defaultStart;
+    const endDateStr = (typeof endDate === 'string' && endDate) ? endDate : defaultEnd;
+
+    const staffWhere: any = {
+      tenantId,
+      isActive: true,
+    };
+    if (outletId && typeof outletId === 'string') {
+      staffWhere.OR = [
+        { outletId },
+        { outletId: null },
+      ];
+    }
+    if (role && typeof role === 'string' && role !== 'ALL') {
+      staffWhere.role = role;
+    }
+
+    const staffMembers = await prisma.user.findMany({
+      where: staffWhere,
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        userCode: true,
+        outletId: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const evaluations = await Promise.all(
+      staffMembers.map(async (staff) => {
+        // --- 1. Kedisiplinan (25%) ---
+        const attendances = await prisma.attendance.findMany({
+          where: {
+            tenantId,
+            ...(outletId && typeof outletId === 'string' ? { outletId } : {}),
+            userId: staff.id,
+            workDate: { gte: startDateStr, lte: endDateStr },
+          },
+        });
+
+        const schedules = await prisma.staffWorkSchedule.findMany({
+          where: {
+            tenantId,
+            ...(outletId && typeof outletId === 'string' ? { outletId } : {}),
+            userId: staff.id,
+            scheduleDate: { gte: startDateStr, lte: endDateStr },
+            isOffDay: false,
+          },
+        });
+
+        const attendedDays = attendances.length;
+        const scheduledDays = schedules.length;
+        const lateAttendances = attendances.filter((a) => a.status === 'LATE');
+        const lateCount = lateAttendances.length;
+        const totalLateMinutes = attendances.reduce((acc, a) => acc + (a.lateMinutes || 0), 0);
+
+        let attendanceRate = 80;
+        if (scheduledDays > 0) {
+          attendanceRate = Math.min(100, Math.round((attendedDays / scheduledDays) * 100));
+        } else if (attendedDays > 0) {
+          attendanceRate = 100;
+        }
+
+        let disciplineScore = 80;
+        if (scheduledDays > 0 || attendedDays > 0) {
+          disciplineScore = Math.max(0, Math.min(100, attendanceRate - (lateCount * 5) - Math.round(totalLateMinutes / 10)));
+        }
+
+        // --- 2. Produktivitas (35%) ---
+        const cashierOrders = await prisma.order.findMany({
+          where: {
+            tenantId,
+            ...(outletId && typeof outletId === 'string' ? { outletId } : {}),
+            userId: staff.id,
+            createdAt: {
+              gte: new Date(`${startDateStr}T00:00:00.000Z`),
+              lte: new Date(`${endDateStr}T23:59:59.999Z`),
+            },
+            orderStatus: { notIn: [OrderStatus.CANCELLED, OrderStatus.VOIDED] },
+          },
+          select: { id: true, totalAmount: true },
+        });
+
+        const cashierOrderCount = cashierOrders.length;
+        const cashierOmzet = cashierOrders.reduce((acc, o) => acc + Number(o.totalAmount), 0);
+
+        const stageLogs = await prisma.laundryStageLog.findMany({
+          where: {
+            tenantId,
+            ...(outletId && typeof outletId === 'string' ? { order: { outletId } } : {}),
+            operatorId: staff.id,
+            createdAt: {
+              gte: new Date(`${startDateStr}T00:00:00.000Z`),
+              lte: new Date(`${endDateStr}T23:59:59.999Z`),
+            },
+          },
+          select: {
+            id: true,
+            stage: true,
+            durationMinutes: true,
+            orderId: true,
+          },
+        });
+
+        const stagesCompleted = stageLogs.length;
+        const logsWithDuration = stageLogs.filter((l) => l.durationMinutes && l.durationMinutes > 0);
+        const avgDurationMinutes =
+          logsWithDuration.length > 0
+            ? Math.round(logsWithDuration.reduce((acc, l) => acc + (l.durationMinutes || 0), 0) / logsWithDuration.length)
+            : 0;
+
+        const orderIdsFromStages = Array.from(new Set(stageLogs.map((l) => l.orderId)));
+        let totalProcessedKg = 0;
+        if (orderIdsFromStages.length > 0) {
+          const stageDetails = await prisma.laundryOrderDetail.findMany({
+            where: { orderId: { in: orderIdsFromStages } },
+            select: { totalWeightKg: true },
+          });
+          totalProcessedKg = stageDetails.reduce((acc, d) => acc + Number(d.totalWeightKg || 0), 0);
+        }
+
+        let productivityScore = 75;
+        if (staff.role === Role.CASHIER) {
+          productivityScore = cashierOrderCount >= 30 ? 100 : Math.round((cashierOrderCount / 30) * 100);
+        } else if (staff.role === Role.KITCHEN || (staff.role as any) === 'PRODUCTION') {
+          productivityScore = stagesCompleted >= 30 ? 100 : Math.round((stagesCompleted / 30) * 100);
+        } else {
+          const cashierScore = cashierOrderCount >= 30 ? 100 : Math.round((cashierOrderCount / 30) * 100);
+          const prodScore = stagesCompleted >= 30 ? 100 : Math.round((stagesCompleted / 30) * 100);
+          productivityScore = Math.max(cashierScore, prodScore, 75);
+        }
+        productivityScore = Math.min(100, Math.max(0, productivityScore));
+
+        // --- 3. Kualitas Kerja (20%) ---
+        let rewashCount = 0;
+        if (orderIdsFromStages.length > 0) {
+          const stageRewash = await prisma.laundryStageLog.count({
+            where: {
+              tenantId,
+              orderId: { in: orderIdsFromStages },
+              stage: 'REWASH',
+            },
+          });
+          const defectRewash = await prisma.laundryOrderDetail.count({
+            where: {
+              tenantId,
+              orderId: { in: orderIdsFromStages },
+              defectNotes: { contains: 'REWASH' },
+            },
+          });
+          rewashCount = Math.max(stageRewash, defectRewash);
+        }
+
+        const staffIncidents = await prisma.laundryIncident.findMany({
+          where: {
+            tenantId,
+            ...(outletId && typeof outletId === 'string' ? { outletId } : {}),
+            responsibleStaffId: staff.id,
+            createdAt: {
+              gte: new Date(`${startDateStr}T00:00:00.000Z`),
+              lte: new Date(`${endDateStr}T23:59:59.999Z`),
+            },
+          },
+          select: { id: true, incidentType: true, status: true },
+        });
+
+        const damagedCount = staffIncidents.filter((i) => i.incidentType === 'DAMAGED').length;
+        const lostCount = staffIncidents.filter((i) => i.incidentType === 'LOST').length;
+        const otherIncidents = staffIncidents.length - damagedCount - lostCount;
+        const qualityScore = Math.max(0, 100 - (rewashCount * 10) - (damagedCount * 15) - (lostCount * 20) - (otherIncidents * 5));
+
+        // --- 4. Kepuasan Pelanggan (20%) ---
+        const feedbackOrders = Array.from(new Set([...cashierOrders.map((o) => o.id), ...orderIdsFromStages]));
+        let customerScore = 80;
+        let ratingCount = 0;
+        let avgRating = 0;
+
+        if (feedbackOrders.length > 0) {
+          const feedbacks = await prisma.laundryCustomerFeedback.findMany({
+            where: {
+              tenantId,
+              orderId: { in: feedbackOrders },
+              createdAt: {
+                gte: new Date(`${startDateStr}T00:00:00.000Z`),
+                lte: new Date(`${endDateStr}T23:59:59.999Z`),
+              },
+            },
+            select: { rating: true },
+          });
+
+          if (feedbacks.length > 0) {
+            ratingCount = feedbacks.length;
+            avgRating = Math.round((feedbacks.reduce((acc, f) => acc + f.rating, 0) / feedbacks.length) * 10) / 10;
+            customerScore = Math.min(100, Math.round((avgRating / 5) * 100));
+          }
+        }
+
+        // --- Nilai Akhir & Grade ---
+        const overallScore = Math.round((0.25 * disciplineScore + 0.35 * productivityScore + 0.20 * qualityScore + 0.20 * customerScore) * 10) / 10;
+        const grade = overallScore >= 85 ? 'A' : overallScore >= 70 ? 'B' : overallScore >= 55 ? 'C' : 'D';
+
+        const latestReview = await prisma.staffPerformanceReview.findFirst({
+          where: {
+            tenantId,
+            ...(outletId && typeof outletId === 'string' ? { outletId } : {}),
+            userId: staff.id,
+            periodStart: startDateStr,
+            periodEnd: endDateStr,
+          },
+          include: {
+            reviewedBy: { select: { id: true, name: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        return {
+          user: {
+            id: staff.id,
+            name: staff.name,
+            role: staff.role,
+            userCode: staff.userCode,
+          },
+          scores: {
+            discipline: disciplineScore,
+            productivity: productivityScore,
+            quality: qualityScore,
+            customer: customerScore,
+            overall: overallScore,
+            grade,
+          },
+          metrics: {
+            attendedDays,
+            scheduledDays,
+            lateCount,
+            totalLateMinutes,
+            cashierOrderCount,
+            cashierOmzet,
+            stagesCompleted,
+            totalProcessedKg,
+            avgDurationMinutes,
+            rewashCount,
+            damagedCount,
+            lostCount,
+            ratingCount,
+            avgRating,
+          },
+          latestReview: latestReview || null,
+        };
+      })
+    );
+
+    // Urutkan leaderboard berdasarkan skor overall tertinggi
+    evaluations.sort((a, b) => b.scores.overall - a.scores.overall);
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        period: {
+          startDate: startDateStr,
+          endDate: endDateStr,
+        },
+        evaluations,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getStaffPerformance:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal mengambil evaluasi performa staf' });
+  }
+};
+
+export const createStaffPerformanceReview = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const reviewedById = req.user?.id;
+    const userRole = req.user?.role;
+    if (!tenantId || !reviewedById) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat menyimpan review performa',
+      });
+    }
+
+    const {
+      outletId,
+      userId,
+      periodStart,
+      periodEnd,
+      disciplineScore,
+      productivityScore,
+      qualityScore,
+      customerScore,
+      overallScore,
+      grade,
+      reviewerNotes,
+    } = req.body;
+
+    if (!outletId || !userId || !periodStart || !periodEnd) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'outletId, userId, periodStart, dan periodEnd wajib diisi',
+      });
+    }
+
+    const review = await prisma.staffPerformanceReview.create({
+      data: {
+        tenantId,
+        outletId,
+        userId,
+        periodStart: String(periodStart).slice(0, 10),
+        periodEnd: String(periodEnd).slice(0, 10),
+        disciplineScore: Number(disciplineScore || 0),
+        productivityScore: Number(productivityScore || 0),
+        qualityScore: Number(qualityScore || 0),
+        customerScore: Number(customerScore || 0),
+        overallScore: Number(overallScore || 0),
+        grade: String(grade || 'B'),
+        reviewerNotes: reviewerNotes ? String(reviewerNotes).trim() : null,
+        reviewedById,
+      },
+      include: {
+        user: { select: { id: true, name: true, role: true } },
+        reviewedBy: { select: { id: true, name: true } },
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Catatan evaluasi performa berhasil disimpan',
+      data: review,
+    });
+  } catch (error: any) {
+    console.error('Error createStaffPerformanceReview:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal menyimpan review performa' });
+  }
+};
+
+export const getStaffPerformanceReviews = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userRole = req.user?.role;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    if (userRole !== Role.OWNER && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat melihat riwayat review performa',
+      });
+    }
+
+    const { outletId, userId } = req.query;
+
+    const where: any = { tenantId };
+    if (outletId && typeof outletId === 'string') {
+      where.outletId = outletId;
+    }
+    if (userId && typeof userId === 'string') {
+      where.userId = userId;
+    }
+
+    const reviews = await prisma.staffPerformanceReview.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, role: true } },
+        reviewedBy: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: reviews,
+    });
+  } catch (error: any) {
+    console.error('Error getStaffPerformanceReviews:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil riwayat review performa' });
   }
 };

@@ -165,6 +165,16 @@ export interface LaundryQueueOrder {
   estimatedReadyAt?: string | null;
   completedAt?: string | null;
   pickedUpAt?: string | null;
+  incidentCount?: number;
+  hasOpenIncident?: boolean;
+  incidents?: Array<{
+    id: string;
+    incidentType: string;
+    status: string;
+    itemDescription: string;
+    estimatedCompensation: number;
+    approvedCompensation: number;
+  }>;
   createdAt: string;
   items?: Array<{
     name: string;
@@ -635,4 +645,130 @@ export interface LaundryAutoReminderResult {
   };
   staleCandidates: StaleRackReminderCandidate[];
   expiringCandidates: ExpiringQuotaReminderCandidate[];
+}
+
+export type LaundryIncidentType = 'DAMAGED' | 'LOST' | 'STAIN_REMAINING' | 'MIXED_UP';
+export type LaundryIncidentStatus = 'OPEN' | 'INVESTIGATING' | 'RESOLVED' | 'COMPENSATED';
+
+export interface LaundryIncident {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  orderId: string;
+  incidentType: LaundryIncidentType | string;
+  itemDescription: string;
+  stage?: string | null;
+  machineName?: string | null;
+  responsibleStaffId?: string | null;
+  reportedById: string;
+  notes: string;
+  photoUrls?: string[] | null;
+  estimatedCompensation: number;
+  approvedCompensation: number;
+  status: LaundryIncidentStatus | string;
+  resolutionNotes?: string | null;
+  approvedById?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order?: {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    orderStatus?: string;
+    customer?: { id?: string; name: string; phone?: string | null } | null;
+  };
+  reportedBy?: { id: string; name: string; role: string };
+  responsibleStaff?: { id: string; name: string; role: string } | null;
+  approvedBy?: { id: string; name: string; role: string } | null;
+}
+
+export interface WorkShiftTemplate {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  name: string;
+  startTime: string; // "HH:mm"
+  endTime: string; // "HH:mm"
+  isOffDay: boolean;
+  colorHex: string;
+  graceMinutes: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffWorkSchedule {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  userId: string;
+  shiftTemplateId?: string | null;
+  scheduleDate: string; // "YYYY-MM-DD"
+  isOffDay: boolean;
+  notes?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: string; name: string; role: string; userCode?: string | null };
+  shiftTemplate?: WorkShiftTemplate | null;
+}
+
+export interface StaffPerformanceScores {
+  discipline: number;
+  productivity: number;
+  quality: number;
+  customer: number;
+  overall: number;
+  grade: 'A' | 'B' | 'C' | 'D' | string;
+}
+
+export interface StaffPerformanceMetrics {
+  attendedDays: number;
+  scheduledDays: number;
+  lateCount: number;
+  totalLateMinutes: number;
+  cashierOrderCount: number;
+  cashierOmzet: number;
+  stagesCompleted: number;
+  totalProcessedKg: number;
+  avgDurationMinutes: number;
+  rewashCount: number;
+  damagedCount: number;
+  lostCount: number;
+  ratingCount: number;
+  avgRating: number;
+}
+
+export interface StaffPerformanceReview {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  userId: string;
+  periodStart: string;
+  periodEnd: string;
+  disciplineScore: number;
+  productivityScore: number;
+  qualityScore: number;
+  customerScore: number;
+  overallScore: number;
+  grade: string;
+  reviewerNotes?: string | null;
+  reviewedById: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: string; name: string; role: string };
+  reviewedBy?: { id: string; name: string };
+}
+
+export interface StaffPerformanceItem {
+  user: {
+    id: string;
+    name: string;
+    role: string;
+    userCode?: string | null;
+  };
+  scores: StaffPerformanceScores;
+  metrics: StaffPerformanceMetrics;
+  latestReview?: StaffPerformanceReview | null;
 }

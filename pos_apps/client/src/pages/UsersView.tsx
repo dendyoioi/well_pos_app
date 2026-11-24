@@ -23,12 +23,14 @@ import {
   LogOut,
   Clock,
   Crown,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 import { checkIsLaundry } from '../utils/businessType';
 import { TablePagination } from '../components/TablePagination';
 import { AttendanceReportView } from '../components/attendance/AttendanceReportView';
+import { StaffShiftScheduleView } from '../components/attendance/StaffShiftScheduleView';
 import type { RolePermissions } from '../types/auth';
 import type { Outlet } from '../types/outlet';
 
@@ -89,7 +91,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   const [pageSize, setPageSize] = useState<number>(10);
 
   // Full-Page View Mode: 'LIST' or 'FORM' (Zero Stacked Modals)
-  const [mainTab, setMainTab] = useState<'USERS' | 'ATTENDANCE'>('USERS');
+  const [mainTab, setMainTab] = useState<'USERS' | 'ATTENDANCE' | 'SCHEDULES'>('USERS');
   const [viewMode, setViewMode] = useState<'LIST' | 'FORM'>('LIST');
   const [formMode, setFormMode] = useState<'CREATE' | 'EDIT'>('CREATE');
   const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
@@ -1051,10 +1053,28 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           <Clock className="w-3.5 h-3.5" />
           <span>Rekapitulasi Absensi &amp; Jam Kerja</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('SCHEDULES')}
+          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            mainTab === 'SCHEDULES'
+              ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-transparent'
+          }`}
+        >
+          <CalendarIcon className="w-3.5 h-3.5" />
+          <span>Jadwal Shift Kerja</span>
+        </button>
       </div>
 
       {mainTab === 'ATTENDANCE' ? (
         <AttendanceReportView />
+      ) : mainTab === 'SCHEDULES' ? (
+        <StaffShiftScheduleView
+          activeOutletId={activeOutlet?.id || ''}
+          currentUser={authStorage.getUser() as any}
+        />
       ) : (
         <>
           {/* Metric Cards */}

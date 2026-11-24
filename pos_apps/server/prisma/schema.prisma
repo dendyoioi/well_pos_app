@@ -105,6 +105,10 @@ model Tenant {
   laundryFeedbacks  LaundryCustomerFeedback[]
   laundryPerfumes   LaundryPerfume[]
   laundryMachines   LaundryMachine[]
+  laundryIncidents  LaundryIncident[]
+  workShiftTemplates WorkShiftTemplate[]
+  staffWorkSchedules StaffWorkSchedule[]
+  staffPerformanceReviews StaffPerformanceReview[]
 
   @@map("tenants")
 }
@@ -251,6 +255,13 @@ model User {
   shiftCashDepositsVerified ShiftCashDeposit[] @relation("DepositVerifier")
   staffCashAdvances         StaffCashAdvance[] @relation("StaffCashAdvanceUser")
   laundryFeedbacksHandled   LaundryCustomerFeedback[] @relation("FeedbackHandledBy")
+  reportedIncidents         LaundryIncident[]          @relation("IncidentReportedBy")
+  responsibleIncidents      LaundryIncident[]          @relation("IncidentResponsibleStaff")
+  approvedIncidents         LaundryIncident[]          @relation("IncidentApprovedBy")
+  staffWorkSchedules        StaffWorkSchedule[]        @relation("StaffWorkScheduleUser")
+  createdWorkSchedules      StaffWorkSchedule[]        @relation("StaffWorkScheduleCreatedBy")
+  performanceReviews        StaffPerformanceReview[]   @relation("StaffPerformanceUser")
+  givenPerformanceReviews   StaffPerformanceReview[]   @relation("StaffPerformanceReviewer")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -310,6 +321,10 @@ model Outlet {
   laundryFeedbacks  LaundryCustomerFeedback[]
   laundryPerfumes   LaundryPerfume[]
   laundryMachines   LaundryMachine[]
+  laundryIncidents  LaundryIncident[]
+  workShiftTemplates WorkShiftTemplate[]
+  staffWorkSchedules StaffWorkSchedule[]
+  staffPerformanceReviews StaffPerformanceReview[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -871,6 +886,7 @@ model Order {
   laundryStageLogs     LaundryStageLog[]
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
   laundryFeedback      LaundryCustomerFeedback?
+  laundryIncidents     LaundryIncident[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -1920,4 +1936,112 @@ model LaundryMachine {
   @@unique([outletId, code])
   @@index([tenantId, outletId])
   @@map("laundry_machines")
+}
+
+model LaundryIncident {
+  id                    String    @id @default(cuid())
+  tenantId              String    @map("tenant_id")
+  outletId              String    @map("outlet_id")
+  orderId               String    @map("order_id")
+  incidentType          String    @map("incident_type") // DAMAGED | LOST | STAIN_REMAINING | MIXED_UP
+  itemDescription       String    @map("item_description")
+  stage                 String?   // SORTING | WASHING | DRYING | IRONING | PACKING | RACK_STORAGE
+  machineName           String?   @map("machine_name")
+  responsibleStaffId    String?   @map("responsible_staff_id")
+  reportedById          String    @map("reported_by_id")
+  notes                 String    @db.Text
+  photoUrls             Json?     @map("photo_urls") // array of uploaded photo URLs
+  estimatedCompensation Decimal   @default(0) @map("estimated_compensation") @db.Decimal(15, 2)
+  approvedCompensation  Decimal   @default(0) @map("approved_compensation") @db.Decimal(15, 2)
+  status                String    @default("OPEN") // OPEN | INVESTIGATING | RESOLVED | COMPENSATED
+  resolutionNotes       String?   @map("resolution_notes") @db.Text
+  approvedById          String?   @map("approved_by_id")
+  resolvedAt            DateTime? @map("resolved_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant           Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet           Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reportedBy       User    @relation("IncidentReportedBy", fields: [reportedById], references: [id], onDelete: Restrict)
+  responsibleStaff User?   @relation("IncidentResponsibleStaff", fields: [responsibleStaffId], references: [id], onDelete: SetNull)
+  approvedBy       User?   @relation("IncidentApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([outletId, status, createdAt])
+  @@index([orderId])
+  @@map("laundry_incidents")
+}
+
+model WorkShiftTemplate {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  outletId     String   @map("outlet_id")
+  name         String
+  startTime    String   @map("start_time") // "HH:mm"
+  endTime      String   @map("end_time")   // "HH:mm"
+  isOffDay     Boolean  @default(false) @map("is_off_day")
+  colorHex     String   @default("#1E3A8A") @map("color_hex")
+  graceMinutes Int      @default(10) @map("grace_minutes")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet    Outlet               @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  schedules StaffWorkSchedule[]
+
+  @@index([tenantId, outletId, isActive])
+  @@map("work_shift_templates")
+}
+
+model StaffWorkSchedule {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  outletId        String   @map("outlet_id")
+  userId          String   @map("user_id")
+  shiftTemplateId String?  @map("shift_template_id")
+  scheduleDate    String   @map("schedule_date") // "YYYY-MM-DD"
+  isOffDay        Boolean  @default(false) @map("is_off_day")
+  notes           String?
+  createdById     String?  @map("created_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet        Outlet             @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user          User               @relation("StaffWorkScheduleUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy     User?              @relation("StaffWorkScheduleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  shiftTemplate WorkShiftTemplate? @relation(fields: [shiftTemplateId], references: [id], onDelete: SetNull)
+
+  @@unique([outletId, userId, scheduleDate])
+  @@index([outletId, scheduleDate])
+  @@index([userId, scheduleDate])
+  @@map("staff_work_schedules")
+}
+
+model StaffPerformanceReview {
+  id                 String   @id @default(cuid())
+  tenantId           String   @map("tenant_id")
+  outletId           String   @map("outlet_id")
+  userId             String   @map("user_id")
+  periodStart        String   @map("period_start") // YYYY-MM-DD
+  periodEnd          String   @map("period_end")   // YYYY-MM-DD
+  disciplineScore    Float    @map("discipline_score")
+  productivityScore  Float    @map("productivity_score")
+  qualityScore       Float    @map("quality_score")
+  customerScore      Float    @map("customer_score")
+  overallScore       Float    @map("overall_score")
+  grade              String   // A | B | C | D
+  reviewerNotes      String?  @map("reviewer_notes") @db.Text
+  reviewedById       String   @map("reviewed_by_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet     Outlet @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user       User   @relation("StaffPerformanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User   @relation("StaffPerformanceReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([outletId, userId, periodStart, periodEnd])
+  @@map("staff_performance_reviews")
 }
