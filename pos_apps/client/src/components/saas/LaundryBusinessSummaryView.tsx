@@ -21,6 +21,7 @@ import type { User } from '../../types/auth';
 import { formatRupiah } from '../../utils/currency';
 import { toLocalDateStr } from '../../utils/date';
 import { LaundryFeedbackManagementModal } from '../laundry/LaundryFeedbackManagementModal';
+import { PerformanceAnalyticsContainer } from '../laundry/analytics/PerformanceAnalyticsContainer';
 
 interface LaundryBusinessSummaryViewProps {
   activeOutlet: Outlet | null;
@@ -128,12 +129,19 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
     }
   }, [activeOutlet?.id, activeOutlet?.isWarehouse, dateParams]);
 
+  // Deteksi role performance intelligence (Owner, Admin, Supervisor)
+  const isPerformanceRole = useMemo(() => {
+    const r = (currentUser?.role || '').toUpperCase();
+    return ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(r);
+  }, [currentUser?.role]);
+
   useEffect(() => {
+    if (isPerformanceRole) return; // Role Owner/Admin/Supervisor menggunakan modul PerformanceAnalyticsContainer (Zero Double-Fetch)
     loadDashboard();
     const handleOrderEvent = () => loadDashboard();
     window.addEventListener('wellpos:laundry_order_created', handleOrderEvent);
     return () => window.removeEventListener('wellpos:laundry_order_created', handleOrderEvent);
-  }, [loadDashboard]);
+  }, [loadDashboard, isPerformanceRole]);
 
   // Role Mode: Dari respon backend atau fallback dari context user
   const effectiveRole = useMemo((): 'OWNER' | 'CASHIER' | 'PRODUCTION' => {
@@ -144,8 +152,8 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
     return 'OWNER';
   }, [dashboardData?.roleMode, currentUser?.role]);
 
-  // Render Skeleton saat loading awal
-  if (loading && !dashboardData) {
+  // Render Skeleton saat loading awal (khusus role non-performance seperti CASHIER & PRODUCTION)
+  if (!isPerformanceRole && loading && !dashboardData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[420px] p-8 text-slate-500 space-y-3">
         <Loader2 className="w-9 h-9 animate-spin text-blue-900" />
@@ -1419,6 +1427,25 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
   // =========================================================================
   // RENDER UTAMA BERDASARKAN ROLE
   // =========================================================================
+  if (isPerformanceRole) {
+    return (
+      <div className="space-y-4">
+        <PerformanceAnalyticsContainer
+          activeOutlet={activeOutlet}
+          currentUser={currentUser}
+          onOpenPos={onOpenPos}
+          onNavigateTab={onNavigateTab}
+          onOpenFeedbackModal={() => setFeedbackModalOpen(true)}
+        />
+        <LaundryFeedbackManagementModal
+          isOpen={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+          activeOutlet={activeOutlet}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {effectiveRole === 'OWNER' && renderOwnerDashboard()}

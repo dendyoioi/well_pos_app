@@ -27,6 +27,7 @@ import { stockTransferRouter } from './routes/stock_transfer.routes';
 import { promotionRouter } from './routes/promotion.routes';
 import qrMenuRouter from './routes/qr_menu.routes';
 import { attendanceRouter } from './routes/attendance.routes';
+import { laundryAnalyticsRouter } from './routes/laundry_analytics.routes';
 import { laundryRouter } from './routes/laundry.routes';
 import {
   getPublicLaundryTracking,
@@ -126,6 +127,7 @@ app.use('/api/reports', reportRouter);
 app.use('/api/users', userRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/qr-menu', qrMenuRouter);
+app.use('/api/laundry/analytics', laundryAnalyticsRouter);
 app.use('/api/laundry', laundryRouter);
 app.use('/api/media', mediaRouter);
 

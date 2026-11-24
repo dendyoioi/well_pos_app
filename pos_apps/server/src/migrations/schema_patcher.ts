@@ -815,6 +815,18 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "staff_performance_reviews_outlet_user_period_idx" ON "staff_performance_reviews"("outlet_id", "user_id", "period_start", "period_end");
     `,
   },
+  {
+    id: '20261124_10_laundry_analytics_composite_indexes',
+    description: 'Menambahkan 6 composite indexes untuk query performa analitik laundry dashboard (Wave 1)',
+    sql: `
+      CREATE INDEX IF NOT EXISTS "idx_orders_analytics_perf" ON "orders"("tenant_id", "outlet_id", "created_at", "order_status");
+      CREATE INDEX IF NOT EXISTS "idx_order_items_pricing_basis" ON "order_items"("order_id", "pricing_basis", "laundry_service_id");
+      CREATE INDEX IF NOT EXISTS "idx_payment_tx_cash_in" ON "payment_transactions"("tenant_id", "outlet_id", "status", "payment_method", "created_at");
+      CREATE INDEX IF NOT EXISTS "idx_laundry_details_sla_stage" ON "laundry_order_details"("order_id", "current_stage", "estimated_ready_at", "completed_at");
+      CREATE INDEX IF NOT EXISTS "idx_stage_logs_machine_perf" ON "laundry_stage_logs"("order_id", "stage", "machine_name", "completed_at");
+      CREATE INDEX IF NOT EXISTS "idx_inventory_ledgers_consumption" ON "inventory_ledgers"("tenant_id", "movement_type", "created_at");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;
