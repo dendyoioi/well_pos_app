@@ -326,7 +326,10 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                       <span className="text-[10px] text-blue-700 font-semibold">Pilih cepat atau ketik manual</span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {(nextStage.key === 'WASHING' ? ['W1', 'W2', 'W3', 'W4'] : ['D1', 'D2', 'D3', 'D4']).map((chip) => (
+                      {(nextStage.key === 'WASHING'
+                        ? ['W-01', 'W-02', 'W-03', 'W-04']
+                        : ['D-01', 'D-02', 'D-03', 'D-04']
+                      ).map((chip) => (
                         <button
                           key={chip}
                           type="button"
@@ -343,7 +346,7 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                     </div>
                     <input
                       type="text"
-                      placeholder={nextStage.key === 'WASHING' ? 'Contoh: W1 atau Washer-02' : 'Contoh: D1 atau Dryer-03'}
+                      placeholder={nextStage.key === 'WASHING' ? 'Contoh: W-01 atau Washer-02' : 'Contoh: D-01 atau Dryer-03'}
                       value={machineName}
                       onChange={(e) => setMachineName(e.target.value)}
                       className="w-full px-3 py-1.5 text-xs rounded-xl border border-blue-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-mono font-bold uppercase"
