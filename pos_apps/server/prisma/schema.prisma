@@ -103,6 +103,8 @@ model Tenant {
   shiftCashDeposits ShiftCashDeposit[]
   staffCashAdvances StaffCashAdvance[]
   laundryFeedbacks  LaundryCustomerFeedback[]
+  laundryPerfumes   LaundryPerfume[]
+  laundryMachines   LaundryMachine[]
 
   @@map("tenants")
 }
@@ -306,6 +308,8 @@ model Outlet {
   shiftCashDeposits ShiftCashDeposit[]
   staffCashAdvances StaffCashAdvance[]
   laundryFeedbacks  LaundryCustomerFeedback[]
+  laundryPerfumes   LaundryPerfume[]
+  laundryMachines   LaundryMachine[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -621,6 +625,7 @@ model InventoryItem {
   purchaseOrderItems    PurchaseOrderItem[]
   stockTransferItems    StockTransferItem[]
   laundryBomItems       LaundryServiceBomItem[]
+  laundryPerfumes       LaundryPerfume[]
 
   @@unique([tenantId, itemCode])
   @@index([tenantId, isActive])
@@ -894,6 +899,8 @@ model OrderItem {
   unit              String? @map("unit")
   pricingBasis      String? @map("pricing_basis") // 'KILOAN' | 'SATUAN'
   perfumeVariant    String? @map("perfume_variant")
+  laundryServiceId  String? @map("laundry_service_id")
+  addonsSnapshot    Json?   @map("addons_snapshot")
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -1714,6 +1721,7 @@ model CustomerLaundryWallet {
   balanceAmount  Decimal   @default(0) @map("balance_amount") @db.Decimal(15, 2)
   quotaKg        Decimal   @default(0) @map("quota_kg") @db.Decimal(12, 3)
   quotaExpiresAt DateTime? @map("quota_expires_at")
+  balanceExpiresAt DateTime? @map("balance_expires_at")
   lastExpiryReminderSentAt DateTime? @map("last_expiry_reminder_sent_at")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -1869,4 +1877,47 @@ model LaundryCustomerFeedback {
   @@index([outletId, status, createdAt])
   @@index([tenantId, outletId, rating])
   @@map("laundry_customer_feedbacks")
+}
+
+model LaundryPerfume {
+  id              String         @id @default(cuid())
+  tenantId        String         @map("tenant_id")
+  outletId        String?        @map("outlet_id")
+  name            String
+  extraPrice      Decimal        @default(0) @map("extra_price") @db.Decimal(15, 2)
+  inventoryItemId String?        @map("inventory_item_id")
+  usageQtyPerUnit Decimal        @default(0) @map("usage_qty_per_unit") @db.Decimal(12, 4)
+  usageBasis      String         @default("PER_KG") @map("usage_basis") // "PER_KG" | "PER_ORDER"
+  isActive        Boolean        @default(true) @map("is_active")
+  isDefault       Boolean        @default(false) @map("is_default")
+  sortOrder       Int            @default(0) @map("sort_order")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet          Outlet?        @relation(fields: [outletId], references: [id], onDelete: SetNull)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isActive, sortOrder])
+  @@map("laundry_perfumes")
+}
+
+model LaundryMachine {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  outletId    String   @map("outlet_id")
+  code        String
+  name        String
+  machineType String   @map("machine_type") // "WASHER" | "DRYER"
+  capacityKg  Decimal? @map("capacity_kg") @db.Decimal(10, 2)
+  status      String   @default("ACTIVE") // "ACTIVE" | "MAINTENANCE" | "INACTIVE"
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet      Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@unique([outletId, code])
+  @@index([tenantId, outletId])
+  @@map("laundry_machines")
 }

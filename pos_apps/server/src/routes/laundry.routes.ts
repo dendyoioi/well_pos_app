@@ -53,6 +53,14 @@ import {
   resolveLaundryFeedback,
   getDormantLaundryCustomers,
   sendCustomerWinback,
+  getLaundryPerfumes,
+  createLaundryPerfume,
+  updateLaundryPerfume,
+  deleteLaundryPerfume,
+  getLaundryMachines,
+  createLaundryMachine,
+  updateLaundryMachine,
+  deleteLaundryMachine,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -81,9 +89,21 @@ router.put('/services/:id/bom', saveLaundryServiceBom);
 router.put('/services/:id', updateLaundryService);
 router.delete('/services/:id', deleteLaundryService);
 
+// --- Master Varian Parfum & Takaran BoM ---
+router.get('/perfumes', getLaundryPerfumes);
+router.post('/perfumes', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createLaundryPerfume);
+router.put('/perfumes/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryPerfume);
+router.delete('/perfumes/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), deleteLaundryPerfume);
+
 // --- Master Rak & Titik Simpan Laundry ---
 router.get('/racks', getLaundryRacks);
 router.post('/racks', createLaundryRack);
+
+// --- Master Mesin Produksi Laundry (Washer & Dryer) ---
+router.get('/machines', getLaundryMachines);
+router.post('/machines', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createLaundryMachine);
+router.patch('/machines/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryMachine);
+router.delete('/machines/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), deleteLaundryMachine);
 
 // --- Operasional Antrean & Transaksi Laundry ---
 router.get('/orders', getLaundryOrders);
@@ -99,6 +119,8 @@ router.post('/orders/:id/sort', saveLaundrySortingData);
 // --- Dompet Laundry Pelanggan (Deposit Saldo & Kuota Kiloan) ---
 router.get('/customers/:customerId/wallet', getCustomerLaundryWallet);
 router.post('/customers/:customerId/wallet/topup', topupCustomerLaundryWallet);
+router.get('/wallet/:customerId', getCustomerLaundryWallet);
+router.post('/wallet/:customerId/topup', topupCustomerLaundryWallet);
 router.get('/deposit-config', getLaundryDepositConfig);
 router.put('/deposit-config', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryDepositConfig);
 

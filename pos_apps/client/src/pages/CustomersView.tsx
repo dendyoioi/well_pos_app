@@ -30,7 +30,7 @@ import { customerApi, api, authStorage } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
 import type { Outlet } from '../types/outlet';
 import { checkIsLaundry } from '../utils/businessType';
-import { WhatsAppInput, EmptyState, TableSkeleton } from '../components/ui';
+import { WhatsAppInput, CurrencyInput, EmptyState, TableSkeleton } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
 import { CustomerDebtsTab } from '../components/CustomerDebtsTab';
@@ -140,6 +140,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
     expiryPolicy: 'ACCUMULATE',
   });
 
+  // Aktivasi deposit saat pendaftaran pelanggan baru di Backoffice
+  const [activateDepositOnCreate, setActivateDepositOnCreate] = useState(false);
+  const [createDepositType, setCreateDepositType] = useState<'BALANCE' | 'QUOTA_KG'>('BALANCE');
+  const [createDepositAmount, setCreateDepositAmount] = useState<number>(100000);
+  const [createDepositBonusAmount, setCreateDepositBonusAmount] = useState<number>(0);
+  const [createDepositPricePaid, setCreateDepositPricePaid] = useState<number>(100000);
+  const [createDepositKg, setCreateDepositKg] = useState<number>(10);
+  const [createDepositQuotaBonusKg, setCreateDepositQuotaBonusKg] = useState<number>(0);
+  const [createDepositPaymentMethod, setCreateDepositPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [createDepositValidityDays, setCreateDepositValidityDays] = useState<'30' | '60' | '90' | 'UNLIMITED'>('30');
+
   const handleOpenTopupModal = async () => {
     setShowLaundryTopupModal(true);
     try {
@@ -157,25 +168,17 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
     if (!selectedCustomer) return;
     try {
       setSubmittingTopup(true);
-      let expiresAt: string | undefined = undefined;
-      if (topupType === 'QUOTA_KG' && topupValidityDays !== 'UNLIMITED') {
-        const d = new Date();
-        d.setDate(d.getDate() + Number(topupValidityDays));
-        expiresAt = d.toISOString();
-      }
-
       const res = await api.topupCustomerLaundryWallet(selectedCustomer.id, {
         type: topupType,
         amount: topupType === 'BALANCE' ? Number(topupAmount) : undefined,
         bonusAmount: topupType === 'BALANCE' && Number(topupBonusAmount) > 0 ? Number(topupBonusAmount) : undefined,
         kg: topupType === 'QUOTA_KG' ? Number(topupKg) : undefined,
         quotaBonusKg: topupType === 'QUOTA_KG' && Number(topupQuotaBonusKg) > 0 ? Number(topupQuotaBonusKg) : undefined,
-        pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupAmount),
+        pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupPricePaid || topupAmount),
         paymentMethod: topupPaymentMethod,
         outletId: activeOutlet?.id,
         validityDays: topupValidityDays !== 'UNLIMITED' ? Number(topupValidityDays) : undefined,
         expiryPolicy: depositConfig.expiryPolicy,
-        quotaExpiresAt: expiresAt,
         notes: `Top-up Backoffice ${activeOutlet?.name || 'Toko'}`,
       });
 
@@ -290,6 +293,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
       code: '',
     });
     setFormError(null);
+    setActivateDepositOnCreate(false);
+    if (isLaundryMode && activeOutlet?.id) {
+      api.getLaundryDepositConfig(activeOutlet.id).then((res) => {
+        if (res.status === 'success' && res.data?.config) {
+          setDepositConfig(res.data.config);
+        }
+      }).catch(() => {});
+    }
     setIsFormModalOpen(true);
   };
 
@@ -424,8 +435,30 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
       } else {
         const res = await customerApi.createCustomer(formData);
         if (res.status === 'success') {
+          const newCustomer = res.data;
+          let depositToast = '';
+          if (isLaundryMode && activateDepositOnCreate && newCustomer?.id && activeOutlet?.id) {
+            try {
+              await api.topupCustomerLaundryWallet(newCustomer.id, {
+                type: createDepositType,
+                amount: createDepositType === 'BALANCE' ? Number(createDepositAmount) : undefined,
+                bonusAmount: createDepositType === 'BALANCE' && Number(createDepositBonusAmount) > 0 ? Number(createDepositBonusAmount) : undefined,
+                kg: createDepositType === 'QUOTA_KG' ? Number(createDepositKg) : undefined,
+                quotaBonusKg: createDepositType === 'QUOTA_KG' && Number(createDepositQuotaBonusKg) > 0 ? Number(createDepositQuotaBonusKg) : undefined,
+                pricePaid: Number(createDepositPricePaid),
+                paymentMethod: createDepositPaymentMethod,
+                outletId: activeOutlet.id,
+                validityDays: createDepositValidityDays !== 'UNLIMITED' ? Number(createDepositValidityDays) : undefined,
+                expiryPolicy: depositConfig.expiryPolicy,
+                notes: `Aktivasi Paket saat Pendaftaran Pelanggan Backoffice (${activeOutlet.name})`,
+              });
+              depositToast = ` & paket ${createDepositType === 'BALANCE' ? 'saldo deposit' : 'kuota'} berhasil diaktifkan!`;
+            } catch (err: any) {
+              console.error('Failed to activate deposit on create:', err);
+            }
+          }
           setIsFormModalOpen(false);
-          dialog.toast('Pelanggan baru berhasil ditambahkan!', 'success');
+          dialog.toast(`Pelanggan baru berhasil ditambahkan${depositToast}!`, 'success');
           fetchCustomers();
         } else {
           setFormError(res.message || 'Gagal menambah pelanggan');
@@ -1075,6 +1108,180 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                     className="w-full h-10 px-3.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white"
                   />
                 </div>
+
+                {!editingCustomer && isLaundryMode && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={activateDepositOnCreate}
+                        onChange={(e) => setActivateDepositOnCreate(e.target.checked)}
+                        className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 border-slate-300"
+                      />
+                      <span className="font-extrabold text-blue-950 text-xs flex items-center gap-1.5">
+                        <Wallet className="w-4 h-4 text-emerald-600" />
+                        <span>Sekaligus Aktivasi Paket Deposit Saldo / Kuota Kiloan</span>
+                      </span>
+                    </label>
+
+                    {activateDepositOnCreate && (
+                      <div className="mt-3 p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-3">
+                        {/* Tipe Top-up: Saldo atau Kuota */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCreateDepositType('BALANCE');
+                              setCreateDepositPricePaid(100000);
+                              setCreateDepositAmount(100000);
+                              setCreateDepositBonusAmount(0);
+                            }}
+                            className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${
+                              createDepositType === 'BALANCE'
+                                ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <Wallet className="w-3.5 h-3.5" />
+                              <span>Deposit Saldo</span>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCreateDepositType('QUOTA_KG');
+                              setCreateDepositPricePaid(70000);
+                              setCreateDepositKg(10);
+                              setCreateDepositQuotaBonusKg(0);
+                            }}
+                            className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${
+                              createDepositType === 'QUOTA_KG'
+                                ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Paket Kuota (Kg)</span>
+                            </div>
+                          </button>
+                        </div>
+
+                        {createDepositType === 'BALANCE' ? (
+                          <div className="space-y-2">
+                            {depositConfig.packages.filter((p) => p.type === 'BALANCE').length > 0 && (
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {depositConfig.packages
+                                  .filter((p) => p.type === 'BALANCE')
+                                  .map((pkg) => (
+                                    <button
+                                      key={pkg.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setCreateDepositAmount(Number(pkg.balanceAmount || pkg.price));
+                                        setCreateDepositBonusAmount(Number(pkg.bonusAmount || 0));
+                                        setCreateDepositPricePaid(Number(pkg.price));
+                                        if (pkg.validityDays) setCreateDepositValidityDays(String(pkg.validityDays) as any);
+                                      }}
+                                      className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                        createDepositPricePaid === Number(pkg.price) && createDepositAmount === Number(pkg.balanceAmount || pkg.price)
+                                          ? 'bg-blue-900 text-white border-blue-900 font-bold'
+                                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      <div className="font-extrabold text-[11px] truncate">{pkg.name}</div>
+                                      <div className="text-[10px]">Rp {Number(pkg.price).toLocaleString('id-ID')}</div>
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                            <CurrencyInput
+                              label="Nominal Saldo Diterima (Rp) *"
+                              value={createDepositAmount}
+                              onChange={(val) => {
+                                setCreateDepositAmount(val);
+                                setCreateDepositPricePaid(val);
+                              }}
+                              min={0}
+                              placeholder="100.000"
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {depositConfig.packages.filter((p) => p.type === 'QUOTA_KG').length > 0 && (
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {depositConfig.packages
+                                  .filter((p) => p.type === 'QUOTA_KG')
+                                  .map((pkg) => (
+                                    <button
+                                      key={pkg.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setCreateDepositKg(Number(pkg.quotaKg));
+                                        setCreateDepositQuotaBonusKg(Number(pkg.quotaBonusKg || 0));
+                                        setCreateDepositPricePaid(Number(pkg.price));
+                                        if (pkg.validityDays) setCreateDepositValidityDays(String(pkg.validityDays) as any);
+                                      }}
+                                      className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                        createDepositPricePaid === Number(pkg.price) && createDepositKg === Number(pkg.quotaKg)
+                                          ? 'bg-purple-900 text-white border-purple-900 font-bold'
+                                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      <div className="font-extrabold text-[11px] truncate">{pkg.name}</div>
+                                      <div className="text-[10px]">{pkg.quotaKg} Kg (Rp {Number(pkg.price).toLocaleString('id-ID')})</div>
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-700 mb-1">Kuota (Kg) *</label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  step={0.5}
+                                  value={createDepositKg}
+                                  onChange={(e) => setCreateDepositKg(Number(e.target.value) || 0)}
+                                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-bold bg-white"
+                                />
+                              </div>
+                              <CurrencyInput
+                                label="Harga Beli (Rp) *"
+                                value={createDepositPricePaid}
+                                onChange={(val) => setCreateDepositPricePaid(val)}
+                                min={0}
+                                placeholder="70.000"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pilihan Metode Bayar Top-up */}
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">Metode Bayar Top-up *</label>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {(['CASH', 'QRIS', 'TRANSFER'] as const).map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setCreateDepositPaymentMethod(m)}
+                                className={`py-1.5 text-center text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                  createDepositPaymentMethod === m
+                                    ? 'bg-blue-900 text-white border-blue-900'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                }`}
+                              >
+                                {m === 'CASH' ? 'Tunai' : m}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Sticky Action Footer */}
@@ -1518,7 +1725,13 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                           <Wallet className="w-4 h-4 text-amber-300" />
                           <span>Saldo Deposit Laundry</span>
                         </span>
-                        <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>
+                        {selectedCustomer.laundryWallet?.balanceExpiresAt ? (
+                          <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">
+                            s/d {new Date(selectedCustomer.laundryWallet.balanceExpiresAt).toLocaleDateString('id-ID')}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>
+                        )}
                       </div>
                       <div className="text-2xl font-black font-mono mt-1">
                         Rp {Number(selectedCustomer.laundryWallet?.balanceAmount || 0).toLocaleString('id-ID')}
@@ -1708,12 +1921,22 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                     <span className="text-sm font-black text-slate-900">
                       Rp {Number(selectedCustomer.laundryWallet?.balanceAmount || 0).toLocaleString('id-ID')}
                     </span>
+                    {selectedCustomer.laundryWallet?.balanceExpiresAt && (
+                      <span className="text-[9.5px] text-slate-400 block">
+                        Kedaluwarsa: {new Date(selectedCustomer.laundryWallet.balanceExpiresAt).toLocaleDateString('id-ID')}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 font-bold block">Kuota Kiloan Saat Ini</span>
                     <span className="text-sm font-black text-purple-900">
                       {Number(selectedCustomer.laundryWallet?.quotaKg || 0)} Kg
                     </span>
+                    {selectedCustomer.laundryWallet?.quotaExpiresAt && (
+                      <span className="text-[9.5px] text-slate-400 block">
+                        Kedaluwarsa: {new Date(selectedCustomer.laundryWallet.quotaExpiresAt).toLocaleDateString('id-ID')}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1778,6 +2001,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                                 type="button"
                                 onClick={() => {
                                   setTopupAmount(String(pkg.balanceAmount || pkg.price));
+                                  setTopupPricePaid(String(pkg.price));
                                   setTopupBonusAmount(String(pkg.bonusAmount || 0));
                                   if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
                                 }}
@@ -1802,17 +2026,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                       </div>
                     )}
 
-                    <label className="block text-xs font-bold text-slate-700">
-                      Nominal Top-up Saldo (Rp)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={1000}
-                      step={1000}
+                    <CurrencyInput
+                      label="Nominal Top-up Saldo (Rp) *"
                       value={topupAmount}
-                      onChange={(e) => setTopupAmount(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs"
+                      onChange={(numericVal) => {
+                        setTopupAmount(String(numericVal));
+                        setTopupPricePaid(String(numericVal));
+                      }}
+                      min={0}
+                      placeholder="100.000"
                     />
                   </div>
                 ) : (

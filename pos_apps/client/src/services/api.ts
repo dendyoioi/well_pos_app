@@ -21,6 +21,8 @@ import type {
   LaundryCommissionReport,
   StaffCashAdvance,
   LaundryAutoReminderResult,
+  LaundryPerfume,
+  LaundryMachine,
 } from '../types/laundry';
 
 const TOKEN_KEY = 'pos_auth_token';
@@ -3313,6 +3315,85 @@ export const api = {
         ...authHeader(),
       },
       body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getLaundryPerfumes: async (includeInactive?: boolean): Promise<{ status: string; data: LaundryPerfume[]; message?: string }> => {
+    const res = await fetch(`/api/laundry/perfumes${includeInactive ? '?includeInactive=true' : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createLaundryPerfume: async (data: Partial<LaundryPerfume>): Promise<{ status: string; data?: LaundryPerfume; message?: string }> => {
+    const res = await fetch('/api/laundry/perfumes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateLaundryPerfume: async (id: string, data: Partial<LaundryPerfume>): Promise<{ status: string; data?: LaundryPerfume; message?: string }> => {
+    const res = await fetch(`/api/laundry/perfumes/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deleteLaundryPerfume: async (id: string): Promise<{ status: string; message?: string }> => {
+    const res = await fetch(`/api/laundry/perfumes/${id}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  getLaundryMachines: async (outletId?: string): Promise<{ status: string; data: LaundryMachine[]; message?: string }> => {
+    const query = outletId ? `?outletId=${outletId}` : '';
+    const res = await fetch(`/api/laundry/machines${query}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createLaundryMachine: async (data: Partial<LaundryMachine>): Promise<{ status: string; data?: LaundryMachine; message?: string }> => {
+    const res = await fetch('/api/laundry/machines', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateLaundryMachine: async (id: string, data: Partial<LaundryMachine>): Promise<{ status: string; data?: LaundryMachine; message?: string }> => {
+    const res = await fetch(`/api/laundry/machines/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deleteLaundryMachine: async (id: string): Promise<{ status: string; message?: string }> => {
+    const res = await fetch(`/api/laundry/machines/${id}`, {
+      method: 'DELETE',
+      headers: authHeader(),
     });
     return res.json();
   },

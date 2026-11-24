@@ -49,11 +49,12 @@ import type {
   CustomerLaundryWallet,
   LaundryDeliveryConfig,
   LaundryDeliveryType,
+  LaundryPerfume,
 } from '../types/laundry';
 import type { Shift } from '../types/shift';
 import type { Promotion } from '../types/promotion';
 import { api, customerApi, attendanceApi } from '../services/api';
-import { WhatsAppInput } from '../components/ui';
+import { WhatsAppInput, CurrencyInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
 import { StartShiftModal } from '../components/StartShiftModal';
 import { CloseShiftModal } from '../components/CloseShiftModal';
@@ -104,16 +105,6 @@ interface CartItem {
   }>;
 }
 
-const PERFUME_OPTIONS = [
-  'Lavender',
-  'Ocean Fresh',
-  'Akasia',
-  'Snappy',
-  'Sakura',
-  'Downy Black',
-  'Tanpa Parfum',
-];
-
 const QUICK_NOTES = [
   'Pisahkan Pakaian Putih',
   'Ada Noda di Kerah',
@@ -156,6 +147,16 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [newCustAddress, setNewCustAddress] = useState('');
   const [newCustLandmark, setNewCustLandmark] = useState('');
   const [savingNewCustomer, setSavingNewCustomer] = useState(false);
+  const [activateDepositOnRegister, setActivateDepositOnRegister] = useState(false);
+  const [regTopupType, setRegTopupType] = useState<'BALANCE' | 'QUOTA_KG'>('BALANCE');
+  const [, setRegPackageId] = useState<string>('');
+  const [regAmount, setRegAmount] = useState<number>(100000);
+  const [regBonusAmount, setRegBonusAmount] = useState<number>(0);
+  const [regKg, setRegKg] = useState<number>(10);
+  const [regQuotaBonusKg, setRegQuotaBonusKg] = useState<number>(0);
+  const [regPricePaid, setRegPricePaid] = useState<number>(100000);
+  const [regPaymentMethod, setRegPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
+  const [regValidityDays, setRegValidityDays] = useState<'30' | '60' | '90' | 'UNLIMITED'>('30');
 
   // Customer-First Guardrail: Pelanggan WAJIB diisi sebelum memilih layanan
   const isCustomerFilled = Boolean(customerName.trim().length >= 2);
@@ -169,6 +170,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [itemWeightKg, setItemWeightKg] = useState('3.0');
   const [itemPieces, setItemPieces] = useState('10');
   const [itemPerfume, setItemPerfume] = useState('Lavender');
+  const [perfumes, setPerfumes] = useState<LaundryPerfume[]>([]);
   const [itemNotes, setItemNotes] = useState('');
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
 
@@ -399,6 +401,13 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     fetchServices();
     fetchCustomers();
     loadCurrentShift();
+    api.getLaundryPerfumes()
+      .then((res) => {
+        if (res.status === 'success' && Array.isArray(res.data)) {
+          setPerfumes(res.data.filter((p: LaundryPerfume) => p.isActive));
+        }
+      })
+      .catch(() => {});
     if (activeOutlet?.id) {
       try {
         const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -411,6 +420,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
             .catch(() => {});
         }
       } catch {}
+      api
+        .getLaundryDepositConfig(activeOutlet.id)
+        .then((res) => {
+          if (res.status === 'success' && res.data?.config) {
+            setDepositConfig(res.data.config);
+          }
+        })
+        .catch(() => {});
       api
         .getLaundryDeliveryConfig(activeOutlet.id)
         .then((res) => {
@@ -523,13 +540,42 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         const created = res.data;
         setCustomersList((prev) => [created, ...prev]);
         handleSelectCustomer(created);
+
+        let depositSuccessMsg = '';
+        if (activateDepositOnRegister && activeOutlet) {
+          try {
+            await api.topupCustomerLaundryWallet(created.id, {
+              type: regTopupType,
+              amount: regTopupType === 'BALANCE' ? Number(regAmount) : undefined,
+              bonusAmount: regTopupType === 'BALANCE' && Number(regBonusAmount) > 0 ? Number(regBonusAmount) : undefined,
+              kg: regTopupType === 'QUOTA_KG' ? Number(regKg) : undefined,
+              quotaBonusKg: regTopupType === 'QUOTA_KG' && Number(regQuotaBonusKg) > 0 ? Number(regQuotaBonusKg) : undefined,
+              pricePaid: Number(regPricePaid),
+              paymentMethod: regPaymentMethod,
+              outletId: activeOutlet.id,
+              validityDays: regValidityDays !== 'UNLIMITED' ? Number(regValidityDays) : undefined,
+              expiryPolicy: depositConfig.expiryPolicy,
+              notes: `Aktivasi Paket saat Pendaftaran Pelanggan Baru (${activeOutlet.name})`,
+            });
+            const wRes = await api.getCustomerLaundryWallet(created.id);
+            if (wRes.status === 'success' && wRes.data) {
+              setCustomerWallet(wRes.data);
+            }
+            loadCurrentShift();
+            depositSuccessMsg = ` & paket ${regTopupType === 'BALANCE' ? 'saldo deposit' : 'kuota'} berhasil diaktifkan!`;
+          } catch (tErr: any) {
+            console.error('Failed to activate deposit on register:', tErr);
+          }
+        }
+
         setQuickAddModalOpen(false);
         setNewCustName('');
         setNewCustPhone('');
         setNewCustAddress('');
         setNewCustLandmark('');
+        setActivateDepositOnRegister(false);
         setFeedbackToast({
-          message: `🎉 Pelanggan baru "${created.name}" berhasil didaftarkan & dipilih!`,
+          message: `🎉 Pelanggan baru "${created.name}" berhasil didaftarkan${depositSuccessMsg}!`,
           type: 'success',
         });
       } else {
@@ -567,25 +613,17 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     }
     setProcessingTopup(true);
     try {
-      let expiresAt: string | undefined = undefined;
-      if (topupType === 'QUOTA_KG' && topupValidityDays !== 'UNLIMITED') {
-        const d = new Date();
-        d.setDate(d.getDate() + Number(topupValidityDays));
-        expiresAt = d.toISOString();
-      }
-
       const res = await api.topupCustomerLaundryWallet(selectedCustomerId, {
         type: topupType,
         amount: topupType === 'BALANCE' ? Number(topupAmount) : undefined,
         bonusAmount: topupType === 'BALANCE' && Number(topupBonusAmount) > 0 ? Number(topupBonusAmount) : undefined,
         kg: topupType === 'QUOTA_KG' ? Number(topupKg) : undefined,
         quotaBonusKg: topupType === 'QUOTA_KG' && Number(topupQuotaBonusKg) > 0 ? Number(topupQuotaBonusKg) : undefined,
-        pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupAmount),
+        pricePaid: topupType === 'QUOTA_KG' ? Number(topupPricePaid) : Number(topupPricePaid || topupAmount),
         paymentMethod: topupPaymentMethod,
         outletId: activeOutlet.id,
         validityDays: topupValidityDays !== 'UNLIMITED' ? Number(topupValidityDays) : undefined,
         expiryPolicy: depositConfig.expiryPolicy,
-        quotaExpiresAt: expiresAt,
         notes: `Top-up kasir ${activeOutlet.name}`,
       });
 
@@ -690,7 +728,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     const hasMinRule = rawMin > 1;
     setItemWeightKg(hasMinRule ? String(rawMin) : isWeightOrArea ? '3.0' : '1.0');
     setItemPieces(unitUpper === 'KG' ? '10' : '1');
-    setItemPerfume('Lavender');
+    setItemPerfume(perfumes.length > 0 ? perfumes[0].name : 'Standard');
     setItemNotes('');
     setSelectedAddonIds([]);
     setModalOpen(true);
@@ -772,8 +810,22 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         });
       }
     });
+
+    const matchedPerfume = perfumes.find((p) => p.name.toLowerCase() === itemPerfume.toLowerCase());
+    if (matchedPerfume && Number(matchedPerfume.extraPrice) > 0) {
+      const extra = Number(matchedPerfume.extraPrice);
+      total += extra;
+      items.push({
+        id: `perfume-${matchedPerfume.id}`,
+        name: `Parfum Premium (${matchedPerfume.name})`,
+        price: extra,
+        unit: 'PER_ORDER',
+        total: extra,
+      });
+    }
+
     return { total, items };
-  }, [selectedAddonIds, availableAddons, modalCalculatedPrice.billedQty]);
+  }, [selectedAddonIds, availableAddons, modalCalculatedPrice.billedQty, itemPerfume, perfumes]);
 
   // Tambahkan item dari modal ke keranjang
   const handleAddToCart = (e: React.FormEvent) => {
@@ -2691,29 +2743,44 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 </div>
               )}
 
-              {/* Aroma Parfum */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-900" />
-                  Pilihan Aroma Parfum Wangi
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {PERFUME_OPTIONS.map((pf) => (
-                    <button
-                      key={pf}
-                      type="button"
-                      onClick={() => setItemPerfume(pf)}
-                      className={`px-2 py-1.5 rounded-lg text-xs font-medium border text-left transition-all cursor-pointer ${
-                        itemPerfume === pf
-                          ? 'bg-blue-900 border-blue-900 text-white font-bold shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      {pf}
-                    </button>
-                  ))}
+              {/* Aroma Parfum: Hanya tampil jika ada varian parfum aktif di toko */}
+              {perfumes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-900" />
+                    Pilihan Aroma Parfum Wangi
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {perfumes.map((pf) => {
+                      const isSelected = itemPerfume.toLowerCase() === pf.name.toLowerCase();
+                      const extra = pf.extraPrice ? Number(pf.extraPrice) : 0;
+                      return (
+                        <button
+                          key={pf.name}
+                          type="button"
+                          onClick={() => setItemPerfume(pf.name)}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium border text-left transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                            isSelected
+                              ? 'bg-blue-900 border-blue-900 text-white font-bold shadow-2xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="truncate">{pf.name}</span>
+                          {extra > 0 && (
+                            <span
+                              className={`text-[9.5px] px-1 py-0.5 rounded font-black shrink-0 ${
+                                isSelected ? 'bg-amber-400 text-blue-950' : 'bg-amber-100 text-amber-900'
+                              }`}
+                            >
+                              +Rp {extra.toLocaleString('id-ID')}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Layanan Tambahan & Treatment Khusus (Add-ons) */}
               {availableAddons.length > 0 && (
@@ -3156,6 +3223,181 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs"
                   />
                 </div>
+
+                {/* Opsi Tambahan: Sekaligus Aktivasi Paket Deposit Saldo / Kuota Kiloan */}
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={activateDepositOnRegister}
+                      onChange={(e) => setActivateDepositOnRegister(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-900 border-slate-300"
+                    />
+                    <span className="font-extrabold text-blue-950 text-xs flex items-center gap-1.5">
+                      <Wallet className="w-4 h-4 text-emerald-600" />
+                      <span>Sekaligus Aktivasi Paket Deposit Saldo / Kuota Kiloan</span>
+                    </span>
+                  </label>
+
+                  {activateDepositOnRegister && (
+                    <div className="mt-3 p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-3">
+                      {/* Tipe Top-up: Saldo atau Kuota */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegTopupType('BALANCE');
+                            setRegPricePaid(100000);
+                            setRegAmount(100000);
+                            setRegBonusAmount(0);
+                          }}
+                          className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${
+                            regTopupType === 'BALANCE'
+                              ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            <Wallet className="w-3.5 h-3.5" />
+                            <span>Deposit Saldo</span>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegTopupType('QUOTA_KG');
+                            setRegPricePaid(70000);
+                            setRegKg(10);
+                            setRegQuotaBonusKg(0);
+                          }}
+                          className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${
+                            regTopupType === 'QUOTA_KG'
+                              ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Paket Kuota (Kg)</span>
+                          </div>
+                        </button>
+                      </div>
+
+                      {regTopupType === 'BALANCE' ? (
+                        <div className="space-y-2">
+                          {depositConfig.packages.filter((p) => p.type === 'BALANCE').length > 0 && (
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {depositConfig.packages
+                                .filter((p) => p.type === 'BALANCE')
+                                .map((pkg) => (
+                                  <button
+                                    key={pkg.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setRegPackageId(pkg.id);
+                                      setRegAmount(Number(pkg.balanceAmount || pkg.price));
+                                      setRegBonusAmount(Number(pkg.bonusAmount || 0));
+                                      setRegPricePaid(Number(pkg.price));
+                                      if (pkg.validityDays) setRegValidityDays(String(pkg.validityDays) as any);
+                                    }}
+                                    className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                      regPricePaid === Number(pkg.price) && regAmount === Number(pkg.balanceAmount || pkg.price)
+                                        ? 'bg-blue-900 text-white border-blue-900 font-bold'
+                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    <div className="font-extrabold text-[11px] truncate">{pkg.name}</div>
+                                    <div className="text-[10px]">Rp {Number(pkg.price).toLocaleString('id-ID')}</div>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+                          <CurrencyInput
+                            label="Nominal Saldo Diterima (Rp) *"
+                            value={regAmount}
+                            onChange={(val) => {
+                              setRegAmount(val);
+                              setRegPricePaid(val);
+                            }}
+                            min={0}
+                            placeholder="100.000"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {depositConfig.packages.filter((p) => p.type === 'QUOTA_KG').length > 0 && (
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {depositConfig.packages
+                                .filter((p) => p.type === 'QUOTA_KG')
+                                .map((pkg) => (
+                                  <button
+                                    key={pkg.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setRegPackageId(pkg.id);
+                                      setRegKg(Number(pkg.quotaKg));
+                                      setRegQuotaBonusKg(Number(pkg.quotaBonusKg || 0));
+                                      setRegPricePaid(Number(pkg.price));
+                                      if (pkg.validityDays) setRegValidityDays(String(pkg.validityDays) as any);
+                                    }}
+                                    className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                                      regPricePaid === Number(pkg.price) && regKg === Number(pkg.quotaKg)
+                                        ? 'bg-purple-900 text-white border-purple-900 font-bold'
+                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    <div className="font-extrabold text-[11px] truncate">{pkg.name}</div>
+                                    <div className="text-[10px]">{pkg.quotaKg} Kg (Rp {Number(pkg.price).toLocaleString('id-ID')})</div>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">Kuota (Kg) *</label>
+                              <input
+                                type="number"
+                                min={1}
+                                step={0.5}
+                                value={regKg}
+                                onChange={(e) => setRegKg(Number(e.target.value) || 0)}
+                                className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-bold bg-white"
+                              />
+                            </div>
+                            <CurrencyInput
+                              label="Harga Beli (Rp) *"
+                              value={regPricePaid}
+                              onChange={(val) => setRegPricePaid(val)}
+                              min={0}
+                              placeholder="70.000"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pilihan Metode Bayar Top-up */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">Metode Bayar Top-up *</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(['CASH', 'QRIS', 'TRANSFER'] as const).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setRegPaymentMethod(m)}
+                              className={`py-1.5 text-center text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                regPaymentMethod === m
+                                  ? 'bg-blue-900 text-white border-blue-900'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {m === 'CASH' ? 'Tunai' : m}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Sticky Footer Form */}
@@ -3219,6 +3461,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     <span className="text-sm font-black text-slate-900">
                       Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
                     </span>
+                    {customerWallet?.balanceExpiresAt && (
+                      <span className="text-[9.5px] text-slate-400 block">
+                        Kedaluwarsa: {new Date(customerWallet.balanceExpiresAt).toLocaleDateString('id-ID')}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 font-bold block">Kuota Kiloan Aktif</span>
@@ -3294,6 +3541,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                                 type="button"
                                 onClick={() => {
                                   setTopupAmount(String(pkg.balanceAmount || pkg.price));
+                                  setTopupPricePaid(String(pkg.price));
                                   setTopupBonusAmount(String(pkg.bonusAmount || 0));
                                   if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
                                 }}
@@ -3318,17 +3566,15 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                       </div>
                     )}
 
-                    <label className="block text-xs font-bold text-slate-700">
-                      Nominal Top-up Saldo (Rp)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={1000}
-                      step={1000}
+                    <CurrencyInput
+                      label="Nominal Top-up Saldo (Rp) *"
                       value={topupAmount}
-                      onChange={(e) => setTopupAmount(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs"
+                      onChange={(numericVal) => {
+                        setTopupAmount(String(numericVal));
+                        setTopupPricePaid(String(numericVal));
+                      }}
+                      min={0}
+                      placeholder="100.000"
                     />
                     <div className="grid grid-cols-4 gap-1.5">
                       {[50000, 100000, 200000, 500000].map((amt) => (
@@ -3337,6 +3583,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                           type="button"
                           onClick={() => {
                             setTopupAmount(String(amt));
+                            setTopupPricePaid(String(amt));
                             setTopupBonusAmount('0');
                           }}
                           className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${

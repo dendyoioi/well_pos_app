@@ -207,7 +207,7 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Kode Bahan (Opsional)
@@ -217,25 +217,25 @@ export const CreateIngredientModal: React.FC<CreateIngredientModalProps> = ({
                   value={itemCode}
                   onChange={(e) => setItemCode(e.target.value)}
                   placeholder="Auto jika kosong (RAW-001)"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                  className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Satuan Dasar / Base Unit (Takaran Pakai) <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 whitespace-nowrap">
+                  Satuan Dasar (Takaran Pakai) <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <select
                     value={canonicalUom}
                     onChange={(e) => setCanonicalUom(e.target.value)}
-                    className="w-full h-11 sm:h-10 pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all appearance-none cursor-pointer"
+                    className="w-full h-10 pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all appearance-none cursor-pointer"
                   >
-                    <option value="ML">ML (Mililiter - Cairan deterjen, parfum, softener)</option>
-                    <option value="GRAM">GRAM (Gram - Bubuk deterjen, soda ash, oxy)</option>
-                    <option value="PCS">PCS (Satuan - Hanger, plastik packing, tag label)</option>
-                    <option value="LITER">LITER</option>
-                    <option value="KG">KG (Kilogram)</option>
+                    <option value="ML">ML — Mililiter (Cairan)</option>
+                    <option value="GRAM">GRAM — Gram (Bubuk)</option>
+                    <option value="PCS">PCS — Satuan (Plastik/Hanger)</option>
+                    <option value="LITER">LITER — Liter</option>
+                    <option value="KG">KG — Kilogram</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                 </div>

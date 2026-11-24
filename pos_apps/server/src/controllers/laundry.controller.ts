@@ -57,6 +57,7 @@ const createLaundryOrderSchema = z.object({
   items: z.array(
     z.object({
       serviceId: z.string().optional(),
+      laundryServiceId: z.string().optional(),
       name: z.string().min(1),
       category: z.string().optional().default('KILOAN'),
       quantity: z.number().min(0.01, 'Kuantitas/bobot minimal 0.01'),
@@ -516,6 +517,326 @@ export const saveLaundryServiceBom = async (req: Request, res: Response) => {
 };
 
 // ==========================================
+// 2B. LAUNDRY PERFUMES CONTROLLER
+// ==========================================
+
+export const getLaundryPerfumes = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const includeInactive = req.query.includeInactive === 'true';
+
+    let perfumes = await prisma.laundryPerfume.findMany({
+      where: {
+        tenantId,
+        ...(includeInactive ? {} : { isActive: true }),
+      },
+      include: {
+        inventoryItem: {
+          select: {
+            id: true,
+            name: true,
+            itemCode: true,
+            canonicalUom: true,
+            averageCost: true,
+          },
+        },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    if (perfumes.length === 0) {
+      const defaultPerfumes = [
+        { name: 'Lavender', extraPrice: new Prisma.Decimal(0), isDefault: true, sortOrder: 1, usageBasis: 'PER_KG' },
+        { name: 'Ocean Fresh', extraPrice: new Prisma.Decimal(0), isDefault: false, sortOrder: 2, usageBasis: 'PER_KG' },
+        { name: 'Akasia', extraPrice: new Prisma.Decimal(0), isDefault: false, sortOrder: 3, usageBasis: 'PER_KG' },
+        { name: 'Snappy', extraPrice: new Prisma.Decimal(0), isDefault: false, sortOrder: 4, usageBasis: 'PER_KG' },
+        { name: 'Sakura', extraPrice: new Prisma.Decimal(0), isDefault: false, sortOrder: 5, usageBasis: 'PER_KG' },
+        { name: 'Tanpa Parfum', extraPrice: new Prisma.Decimal(0), isDefault: false, sortOrder: 6, usageBasis: 'PER_KG' },
+      ];
+
+      for (const p of defaultPerfumes) {
+        await prisma.laundryPerfume.create({
+          data: {
+            ...p,
+            tenantId,
+          },
+        });
+      }
+
+      perfumes = await prisma.laundryPerfume.findMany({
+        where: {
+          tenantId,
+          ...(includeInactive ? {} : { isActive: true }),
+        },
+        include: {
+          inventoryItem: {
+            select: {
+              id: true,
+              name: true,
+              itemCode: true,
+              canonicalUom: true,
+              averageCost: true,
+            },
+          },
+        },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      });
+    }
+
+    const formatted = perfumes.map((p) => {
+      const qty = Number(p.usageQtyPerUnit);
+      return {
+        id: p.id,
+        name: p.name,
+        extraPrice: Number(p.extraPrice),
+        inventoryItemId: p.inventoryItemId,
+        usageQtyPerUnit: qty,
+        usageBasis: p.usageBasis,
+        dosageMl: qty,
+        dosageUnit: p.usageBasis,
+        isActive: p.isActive,
+        isDefault: p.isDefault,
+        sortOrder: p.sortOrder,
+        outletId: p.outletId,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        inventoryItem: p.inventoryItem ? {
+          id: p.inventoryItem.id,
+          name: p.inventoryItem.name,
+          sku: p.inventoryItem.itemCode,
+          canonicalUom: p.inventoryItem.canonicalUom,
+          averageCost: Number(p.inventoryItem.averageCost || 0),
+        } : null,
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryPerfumes:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil data parfum laundry' });
+  }
+};
+
+export const createLaundryPerfume = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menambah varian parfum' });
+    }
+
+    const {
+      name,
+      extraPrice = 0,
+      inventoryItemId,
+      usageQtyPerUnit,
+      dosageMl,
+      usageBasis,
+      dosageUnit,
+      isActive = true,
+      isDefault = false,
+      sortOrder = 0,
+      outletId,
+    } = req.body;
+
+    const resolvedQty = usageQtyPerUnit !== undefined ? usageQtyPerUnit : (dosageMl !== undefined ? dosageMl : 0);
+    const resolvedBasis = usageBasis !== undefined ? usageBasis : (dosageUnit !== undefined ? dosageUnit : 'PER_KG');
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Nama parfum wajib diisi' });
+    }
+
+    if (inventoryItemId) {
+      const inv = await prisma.inventoryItem.findFirst({
+        where: { id: inventoryItemId, tenantId },
+      });
+      if (!inv) {
+        return res.status(400).json({ status: 'error', message: 'Bahan baku yang dipilih tidak valid' });
+      }
+    }
+
+    if (isDefault) {
+      await prisma.laundryPerfume.updateMany({
+        where: { tenantId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    const perfume = await prisma.laundryPerfume.create({
+      data: {
+        tenantId,
+        outletId: outletId || null,
+        name: name.trim(),
+        extraPrice: new Prisma.Decimal(Math.max(0, Number(extraPrice || 0))),
+        inventoryItemId: inventoryItemId || null,
+        usageQtyPerUnit: new Prisma.Decimal(Math.max(0, Number(resolvedQty || 0))),
+        usageBasis: ['PER_KG', 'PER_ORDER'].includes(resolvedBasis) ? resolvedBasis : 'PER_KG',
+        isActive: Boolean(isActive),
+        isDefault: Boolean(isDefault),
+        sortOrder: Number(sortOrder || 0),
+      },
+      include: {
+        inventoryItem: {
+          select: { id: true, name: true, itemCode: true, canonicalUom: true },
+        },
+      },
+    });
+
+    const createdQty = Number(perfume.usageQtyPerUnit);
+    return res.status(201).json({
+      status: 'success',
+      message: 'Varian parfum berhasil ditambahkan',
+      data: {
+        ...perfume,
+        extraPrice: Number(perfume.extraPrice),
+        usageQtyPerUnit: createdQty,
+        dosageMl: createdQty,
+        dosageUnit: perfume.usageBasis,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error createLaundryPerfume:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal membuat varian parfum' });
+  }
+};
+
+export const updateLaundryPerfume = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah varian parfum' });
+    }
+
+    const existing = await prisma.laundryPerfume.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Parfum tidak ditemukan' });
+    }
+
+    const {
+      name,
+      extraPrice,
+      inventoryItemId,
+      usageQtyPerUnit,
+      dosageMl,
+      usageBasis,
+      dosageUnit,
+      isActive,
+      isDefault,
+      sortOrder,
+      outletId,
+    } = req.body;
+
+    const resolvedQty = usageQtyPerUnit !== undefined ? usageQtyPerUnit : dosageMl;
+    const resolvedBasis = usageBasis !== undefined ? usageBasis : dosageUnit;
+
+    if (inventoryItemId) {
+      const inv = await prisma.inventoryItem.findFirst({
+        where: { id: inventoryItemId, tenantId },
+      });
+      if (!inv) {
+        return res.status(400).json({ status: 'error', message: 'Bahan baku yang dipilih tidak valid' });
+      }
+    }
+
+    if (isDefault) {
+      await prisma.laundryPerfume.updateMany({
+        where: { tenantId, isDefault: true, id: { not: id } },
+        data: { isDefault: false },
+      });
+    }
+
+    const updated = await prisma.laundryPerfume.update({
+      where: { id },
+      data: {
+        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(extraPrice !== undefined ? { extraPrice: new Prisma.Decimal(Math.max(0, Number(extraPrice || 0))) } : {}),
+        ...(inventoryItemId !== undefined ? { inventoryItemId: inventoryItemId || null } : {}),
+        ...(resolvedQty !== undefined ? { usageQtyPerUnit: new Prisma.Decimal(Math.max(0, Number(resolvedQty || 0))) } : {}),
+        ...(resolvedBasis !== undefined ? { usageBasis: ['PER_KG', 'PER_ORDER'].includes(resolvedBasis) ? resolvedBasis : 'PER_KG' } : {}),
+        ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+        ...(isDefault !== undefined ? { isDefault: Boolean(isDefault) } : {}),
+        ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) } : {}),
+        ...(outletId !== undefined ? { outletId: outletId || null } : {}),
+      },
+      include: {
+        inventoryItem: {
+          select: { id: true, name: true, itemCode: true, canonicalUom: true },
+        },
+      },
+    });
+
+    const updatedQty = Number(updated.usageQtyPerUnit);
+    return res.status(200).json({
+      status: 'success',
+      message: 'Varian parfum berhasil diperbarui',
+      data: {
+        ...updated,
+        extraPrice: Number(updated.extraPrice),
+        usageQtyPerUnit: updatedQty,
+        dosageMl: updatedQty,
+        dosageUnit: updated.usageBasis,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryPerfume:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui varian parfum' });
+  }
+};
+
+export const deleteLaundryPerfume = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menghapus varian parfum' });
+    }
+
+    const existing = await prisma.laundryPerfume.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Parfum tidak ditemukan' });
+    }
+
+    await prisma.laundryPerfume.delete({
+      where: { id },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Varian parfum berhasil dihapus',
+    });
+  } catch (error: any) {
+    console.error('Error deleteLaundryPerfume:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menghapus varian parfum' });
+  }
+};
+
+// ==========================================
 // 3. LAUNDRY RACKS CONTROLLER
 // ==========================================
 
@@ -678,6 +999,239 @@ export const createLaundryRack = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error createLaundryRack:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mendaftarkan rak laundry baru' });
+  }
+};
+
+// ==========================================
+// 3B. LAUNDRY MACHINES CONTROLLER
+// ==========================================
+
+export const getLaundryMachines = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    let outletId = (req.query.outletId as string) || (req.user as any)?.outletId;
+    if (!outletId) {
+      const firstOutlet = await prisma.outlet.findFirst({
+        where: { tenantId, isActive: true },
+        select: { id: true },
+      });
+      outletId = firstOutlet?.id;
+    }
+
+    if (!outletId) {
+      return res.status(404).json({ status: 'error', message: 'Outlet tidak ditemukan' });
+    }
+
+    let machines = await prisma.laundryMachine.findMany({
+      where: { tenantId, outletId },
+      orderBy: [{ machineType: 'desc' }, { code: 'asc' }],
+    });
+
+    // Auto-seed mesin awal jika kosong
+    if (machines.length === 0) {
+      const defaultMachines = [
+        { code: 'W-01', name: 'Mesin Cuci W-01', machineType: 'WASHER' as const, capacityKg: new Prisma.Decimal(8), status: 'ACTIVE' },
+        { code: 'W-02', name: 'Mesin Cuci W-02', machineType: 'WASHER' as const, capacityKg: new Prisma.Decimal(8), status: 'ACTIVE' },
+        { code: 'W-03', name: 'Mesin Cuci W-03', machineType: 'WASHER' as const, capacityKg: new Prisma.Decimal(8), status: 'ACTIVE' },
+        { code: 'W-04', name: 'Mesin Cuci W-04', machineType: 'WASHER' as const, capacityKg: new Prisma.Decimal(8), status: 'ACTIVE' },
+        { code: 'D-01', name: 'Mesin Pengering D-01', machineType: 'DRYER' as const, capacityKg: new Prisma.Decimal(9), status: 'ACTIVE' },
+        { code: 'D-02', name: 'Mesin Pengering D-02', machineType: 'DRYER' as const, capacityKg: new Prisma.Decimal(9), status: 'ACTIVE' },
+        { code: 'D-03', name: 'Mesin Pengering D-03', machineType: 'DRYER' as const, capacityKg: new Prisma.Decimal(9), status: 'ACTIVE' },
+        { code: 'D-04', name: 'Mesin Pengering D-04', machineType: 'DRYER' as const, capacityKg: new Prisma.Decimal(9), status: 'ACTIVE' },
+      ];
+
+      for (const m of defaultMachines) {
+        await prisma.laundryMachine.create({
+          data: {
+            ...m,
+            tenantId,
+            outletId,
+          },
+        });
+      }
+
+      machines = await prisma.laundryMachine.findMany({
+        where: { tenantId, outletId },
+        orderBy: [{ machineType: 'desc' }, { code: 'asc' }],
+      });
+    }
+
+    const formatted = machines.map((m) => ({
+      id: m.id,
+      outletId: m.outletId,
+      code: m.code,
+      name: m.name,
+      machineType: m.machineType,
+      capacityKg: m.capacityKg ? Number(m.capacityKg) : null,
+      status: m.status,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    }));
+
+    return res.status(200).json({
+      status: 'success',
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryMachines:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil data mesin produksi' });
+  }
+};
+
+export const createLaundryMachine = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menambah mesin' });
+    }
+
+    const { outletId, code, name, machineType, capacityKg, status = 'ACTIVE' } = req.body;
+
+    if (!outletId) {
+      return res.status(400).json({ status: 'error', message: 'Outlet wajib ditentukan' });
+    }
+    if (!code || !code.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Kode mesin wajib diisi' });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Nama mesin wajib diisi' });
+    }
+    if (!['WASHER', 'DRYER'].includes(machineType)) {
+      return res.status(400).json({ status: 'error', message: 'Tipe mesin harus WASHER atau DRYER' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const existing = await prisma.laundryMachine.findFirst({
+      where: { outletId, code: cleanCode },
+    });
+    if (existing) {
+      return res.status(400).json({ status: 'error', message: `Kode mesin ${cleanCode} sudah digunakan di outlet ini` });
+    }
+
+    const machine = await prisma.laundryMachine.create({
+      data: {
+        tenantId,
+        outletId,
+        code: cleanCode,
+        name: name.trim(),
+        machineType,
+        capacityKg: capacityKg ? new Prisma.Decimal(Number(capacityKg)) : null,
+        status: ['ACTIVE', 'MAINTENANCE', 'INACTIVE'].includes(status) ? status : 'ACTIVE',
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Mesin produksi berhasil ditambahkan',
+      data: {
+        ...machine,
+        capacityKg: machine.capacityKg ? Number(machine.capacityKg) : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error createLaundryMachine:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal membuat mesin produksi' });
+  }
+};
+
+export const updateLaundryMachine = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah mesin' });
+    }
+
+    const existing = await prisma.laundryMachine.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Mesin tidak ditemukan' });
+    }
+
+    const { code, name, machineType, capacityKg, status } = req.body;
+
+    let cleanCode = existing.code;
+    if (code && code.trim().toUpperCase() !== existing.code) {
+      cleanCode = code.trim().toUpperCase();
+      const duplicate = await prisma.laundryMachine.findFirst({
+        where: { outletId: existing.outletId, code: cleanCode, id: { not: id } },
+      });
+      if (duplicate) {
+        return res.status(400).json({ status: 'error', message: `Kode mesin ${cleanCode} sudah digunakan di outlet ini` });
+      }
+    }
+
+    const updated = await prisma.laundryMachine.update({
+      where: { id },
+      data: {
+        code: cleanCode,
+        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(machineType !== undefined && ['WASHER', 'DRYER'].includes(machineType) ? { machineType } : {}),
+        ...(capacityKg !== undefined ? { capacityKg: capacityKg ? new Prisma.Decimal(Number(capacityKg)) : null } : {}),
+        ...(status !== undefined && ['ACTIVE', 'MAINTENANCE', 'INACTIVE'].includes(status) ? { status } : {}),
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Data mesin berhasil diperbarui',
+      data: {
+        ...updated,
+        capacityKg: updated.capacityKg ? Number(updated.capacityKg) : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryMachine:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui data mesin' });
+  }
+};
+
+export const deleteLaundryMachine = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menghapus mesin' });
+    }
+
+    const existing = await prisma.laundryMachine.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Mesin tidak ditemukan' });
+    }
+
+    await prisma.laundryMachine.delete({
+      where: { id },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Mesin berhasil dihapus',
+    });
+  } catch (error: any) {
+    console.error('Error deleteLaundryMachine:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menghapus mesin' });
   }
 };
 
@@ -1017,6 +1571,8 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
         unit: normUnit,
         pricingBasis: isKiloan ? 'KILOAN' : 'SATUAN',
         perfumeVariant: item.perfumeVariant || perfumeVariant || 'Standard',
+        laundryServiceId: item.laundryServiceId || item.serviceId || null,
+        addonsSnapshot: item.addons && item.addons.length > 0 ? (item.addons as any) : undefined,
       };
     });
 
@@ -1350,6 +1906,9 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
           });
           if (!wallet || Number(wallet.balanceAmount) < paidAmount) {
             throw new BusinessValidationError(`Saldo deposit pelanggan tidak mencukupi (Sisa: Rp ${Number(wallet?.balanceAmount || 0).toLocaleString('id-ID')}, Butuh: Rp ${paidAmount.toLocaleString('id-ID')})`);
+          }
+          if (wallet.balanceExpiresAt && new Date(wallet.balanceExpiresAt) < new Date()) {
+            throw new BusinessValidationError('Masa berlaku saldo deposit pelanggan telah kedaluwarsa');
           }
           const balanceBefore = Number(wallet.balanceAmount);
           const balanceAfter = balanceBefore - paidAmount;
@@ -2317,31 +2876,7 @@ export async function deductLaundryOrderBom(
     return { deducted: false, reason: 'NO_ITEMS' };
   }
 
-  // 2. Cari semua layanan laundry yang cocok dengan nama item di order
-  const itemNames = orderItems.map((i: any) => i.productName);
-  const matchedServices = await tx.laundryService.findMany({
-    where: {
-      tenantId,
-      name: { in: itemNames },
-    },
-    include: {
-      bomItems: {
-        include: {
-          inventoryItem: true,
-        },
-      },
-    },
-  });
-
-  if (matchedServices.length === 0) {
-    await tx.laundryOrderDetail.update({
-      where: { id: detail.id },
-      data: { isBomDeducted: true, bomDeductedAt: new Date() },
-    });
-    return { deducted: false, reason: 'NO_MATCHED_SERVICES' };
-  }
-
-  // 3. Resolusi lokasi penyimpanan (default storage location outlet)
+  // 2. Resolusi lokasi penyimpanan (default storage location outlet)
   let storageLoc = await tx.storageLocation.findFirst({
     where: { tenantId, outletId: detail.outletId, isActive: true },
     orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
@@ -2358,13 +2893,115 @@ export async function deductLaundryOrderBom(
     });
   }
 
-  // 4. Hitung total konsumsi per inventoryItem
+  // 3. Cari layanan laundry utama (via laundryServiceId terlebih dahulu, fallback ke nama item)
+  const serviceIds = orderItems.map((i: any) => i.laundryServiceId).filter(Boolean);
+  const itemNames = orderItems.map((i: any) => i.productName);
+
+  const matchedServices = await tx.laundryService.findMany({
+    where: {
+      tenantId,
+      OR: [
+        ...(serviceIds.length > 0 ? [{ id: { in: serviceIds } }] : []),
+        { name: { in: itemNames } },
+      ],
+    },
+    include: {
+      bomItems: {
+        include: {
+          inventoryItem: true,
+        },
+      },
+    },
+  });
+
+  // 4. Cari juga add-on dari addonsSnapshot pada order items
+  const allAddons: Array<{ addon: any; parentItemQty: number; parentItemUnit: string }> = [];
+  for (const item of orderItems) {
+    let addons = (item.addonsSnapshot as any) || [];
+    if (typeof addons === 'string') {
+      try { addons = JSON.parse(addons); } catch (_) { addons = []; }
+    }
+    if (Array.isArray(addons)) {
+      for (const addon of addons) {
+        allAddons.push({
+          addon,
+          parentItemQty: Number(item.quantity || 1),
+          parentItemUnit: item.unit || 'PCS',
+        });
+      }
+    }
+  }
+
+  let matchedAddonServices: any[] = [];
+  const addonIds = allAddons.map((a) => a.addon.id).filter(Boolean);
+  const addonNames = allAddons.map((a) => a.addon.name).filter(Boolean);
+  if (addonIds.length > 0 || addonNames.length > 0) {
+    matchedAddonServices = await tx.laundryService.findMany({
+      where: {
+        tenantId,
+        OR: [
+          ...(addonIds.length > 0 ? [{ id: { in: addonIds } }] : []),
+          { name: { in: addonNames } },
+        ],
+      },
+      include: {
+        bomItems: {
+          include: {
+            inventoryItem: true,
+          },
+        },
+      },
+    });
+  }
+
+  // 5. Cari master parfum untuk tenant ini
+  const perfumes = await tx.laundryPerfume.findMany({
+    where: { tenantId, isActive: true },
+    include: { inventoryItem: true },
+  });
+
   const consumptionMap = new Map<string, { qty: number; avgCost: number; itemName: string; uom: string; serviceNames: string[] }>();
 
+  // Helper untuk menambah ke consumptionMap
+  const addConsumption = (
+    inventoryItemId: string,
+    qty: number,
+    avgCost: number,
+    itemName: string,
+    uom: string,
+    sourceName: string,
+    isPerOrder = false
+  ) => {
+    if (qty <= 0) return;
+    const existing = consumptionMap.get(inventoryItemId);
+    if (existing) {
+      if (!isPerOrder) {
+        existing.qty += qty;
+      }
+      if (!existing.serviceNames.includes(sourceName)) {
+        existing.serviceNames.push(sourceName);
+      }
+    } else {
+      consumptionMap.set(inventoryItemId, {
+        qty,
+        avgCost,
+        itemName,
+        uom,
+        serviceNames: [sourceName],
+      });
+    }
+  };
+
+  // A. Hitung BoM Layanan Utama
   for (const service of matchedServices) {
     if (!service.bomItems || service.bomItems.length === 0) continue;
 
-    const matchingOrderItems = orderItems.filter((i: any) => i.productName === service.name);
+    const matchingOrderItems = orderItems.filter((i: any) =>
+      (i.laundryServiceId && i.laundryServiceId === service.id) ||
+      (!i.laundryServiceId && i.productName.toLowerCase() === service.name.toLowerCase())
+    );
+    if (matchingOrderItems.length === 0) continue;
+
     const orderItemQty = matchingOrderItems.reduce((acc: number, cur: any) => acc + Number(cur.quantity || 1), 0);
     const effectiveUnits = (service.unit === 'KG' && detail.totalWeightKg && Number(detail.totalWeightKg) > 0)
       ? Number(detail.totalWeightKg)
@@ -2372,34 +3009,91 @@ export async function deductLaundryOrderBom(
 
     for (const bom of service.bomItems) {
       const perUnitQty = Number(bom.quantityPerUnit);
-      let consumedQty = 0;
-      if (bom.consumptionBasis === 'PER_ORDER') {
-        consumedQty = perUnitQty; // Flat 1x per nota
-      } else {
-        consumedQty = perUnitQty * effectiveUnits;
-      }
+      const isPerOrder = bom.consumptionBasis === 'PER_ORDER';
+      const consumedQty = isPerOrder ? perUnitQty : perUnitQty * effectiveUnits;
 
-      const existing = consumptionMap.get(bom.inventoryItemId);
-      if (existing) {
-        if (bom.consumptionBasis !== 'PER_ORDER') {
-          existing.qty += consumedQty;
-        }
-        if (!existing.serviceNames.includes(service.name)) {
-          existing.serviceNames.push(service.name);
-        }
-      } else {
-        consumptionMap.set(bom.inventoryItemId, {
-          qty: consumedQty,
-          avgCost: Number(bom.inventoryItem.averageCost || 0),
-          itemName: bom.inventoryItem.name,
-          uom: bom.inventoryItem.canonicalUom,
-          serviceNames: [service.name],
-        });
-      }
+      addConsumption(
+        bom.inventoryItemId,
+        consumedQty,
+        Number(bom.inventoryItem.averageCost || 0),
+        bom.inventoryItem.name,
+        bom.inventoryItem.canonicalUom,
+        service.name,
+        isPerOrder
+      );
     }
   }
 
-  // 5. Potong stok dan buat ledger
+  // B. Hitung BoM Add-on
+  for (const { addon, parentItemQty } of allAddons) {
+    const addonService = matchedAddonServices.find((s) =>
+      (addon.id && s.id === addon.id) ||
+      (addon.name && s.name.toLowerCase() === addon.name.toLowerCase())
+    );
+    if (!addonService || !addonService.bomItems || addonService.bomItems.length === 0) continue;
+
+    const isPerUnit = ['PER_KG', 'PER_UNIT', 'KG'].includes((addon.unit || '').toUpperCase());
+    const effectiveUnits = isPerUnit ? parentItemQty : 1;
+
+    for (const bom of addonService.bomItems) {
+      const perUnitQty = Number(bom.quantityPerUnit);
+      const isPerOrder = bom.consumptionBasis === 'PER_ORDER';
+      const consumedQty = isPerOrder ? perUnitQty : perUnitQty * effectiveUnits;
+
+      addConsumption(
+        bom.inventoryItemId,
+        consumedQty,
+        Number(bom.inventoryItem.averageCost || 0),
+        bom.inventoryItem.name,
+        bom.inventoryItem.canonicalUom,
+        `Add-on: ${addon.name}`,
+        isPerOrder
+      );
+    }
+  }
+
+  // C. Hitung Auto-Potong Parfum
+  const processedPerOrderPerfumes = new Set<string>();
+  for (const item of orderItems) {
+    const chosenPerfumeName = (item.perfumeVariant || detail.perfumeVariant || '').trim();
+    if (!chosenPerfumeName || chosenPerfumeName.toLowerCase() === 'tanpa parfum') continue;
+
+    const perfume = perfumes.find((p) => p.name.toLowerCase() === chosenPerfumeName.toLowerCase());
+    if (!perfume || !perfume.inventoryItemId || !perfume.inventoryItem || Number(perfume.usageQtyPerUnit) <= 0) continue;
+
+    const isPerOrder = perfume.usageBasis === 'PER_ORDER';
+    if (isPerOrder && processedPerOrderPerfumes.has(perfume.id)) {
+      continue;
+    }
+    if (isPerOrder) {
+      processedPerOrderPerfumes.add(perfume.id);
+    }
+
+    const itemWeightOrQty = item.unit === 'KG'
+      ? Number(item.quantity || (detail.totalWeightKg ? Number(detail.totalWeightKg) : 1))
+      : 1;
+    const consumedQty = isPerOrder ? Number(perfume.usageQtyPerUnit) : Number(perfume.usageQtyPerUnit) * itemWeightOrQty;
+
+    addConsumption(
+      perfume.inventoryItemId,
+      consumedQty,
+      Number(perfume.inventoryItem.averageCost || 0),
+      perfume.inventoryItem.name,
+      perfume.inventoryItem.canonicalUom,
+      `Parfum: ${perfume.name}`,
+      isPerOrder
+    );
+  }
+
+  if (consumptionMap.size === 0) {
+    await tx.laundryOrderDetail.update({
+      where: { id: detail.id },
+      data: { isBomDeducted: true, bomDeductedAt: new Date() },
+    });
+    return { deducted: false, reason: 'NO_BOM_CONFIGURED' };
+  }
+
+  // 6. Potong stok di InventoryBalance dan catat InventoryLedger
   for (const [inventoryItemId, data] of consumptionMap.entries()) {
     if (data.qty <= 0) continue;
 
@@ -2450,7 +3144,7 @@ export async function deductLaundryOrderBom(
     });
   }
 
-  // 6. Tandai detail bahwa BoM sudah dipotong
+  // Tandai detail bahwa BoM sudah dipotong
   await tx.laundryOrderDetail.update({
     where: { id: detail.id },
     data: {
@@ -3303,6 +3997,7 @@ export const getCustomerLaundryWallet = async (req: Request, res: Response) => {
         status: 'success',
         data: {
           balanceAmount: 0,
+          balanceExpiresAt: null,
           quotaKg: 0,
           quotaExpiresAt: null,
           ledgers: [],
@@ -3315,6 +4010,7 @@ export const getCustomerLaundryWallet = async (req: Request, res: Response) => {
       data: {
         id: wallet.id,
         balanceAmount: Number(wallet.balanceAmount),
+        balanceExpiresAt: wallet.balanceExpiresAt,
         quotaKg: Number(wallet.quotaKg),
         quotaExpiresAt: wallet.quotaExpiresAt,
         ledgers: wallet.ledgers.map((l) => ({
@@ -3390,7 +4086,9 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
       return res.status(400).json({ status: 'error', message: 'Outlet aktif wajib disertakan' });
     }
 
-    const paidNominal = type === 'BALANCE' ? Number(amount) : Number(pricePaid || 0);
+    const paidNominal = type === 'BALANCE'
+      ? (pricePaid !== undefined && pricePaid !== null ? Number(pricePaid) : Number(amount))
+      : Number(pricePaid || 0);
 
     // Cari shift kasir aktif jika ada
     const activeShift = shiftId
@@ -3430,29 +4128,46 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
       let kgAfter = kgBefore;
       let ledgerType = 'TOPUP_BALANCE';
 
+      let resolvedBalanceExpiry: Date | null = null;
+      let resolvedQuotaExpiry: Date | null = null;
+
       if (type === 'BALANCE') {
         deltaAmount = Number(amount) + Number(bonusAmount || 0);
         balanceAfter = balanceBefore + deltaAmount;
         ledgerType = 'TOPUP_BALANCE';
+
+        if (req.body.balanceExpiresAt) {
+          resolvedBalanceExpiry = new Date(req.body.balanceExpiresAt);
+        } else if (validityDays && Number(validityDays) > 0) {
+          const days = Number(validityDays);
+          const policy = expiryPolicy || 'ACCUMULATE';
+          const now = new Date();
+          if (policy === 'ACCUMULATE' && wallet.balanceExpiresAt && new Date(wallet.balanceExpiresAt) > now) {
+            resolvedBalanceExpiry = new Date(wallet.balanceExpiresAt);
+            resolvedBalanceExpiry.setDate(resolvedBalanceExpiry.getDate() + days);
+          } else {
+            resolvedBalanceExpiry = new Date(now);
+            resolvedBalanceExpiry.setDate(resolvedBalanceExpiry.getDate() + days);
+          }
+        }
       } else {
         deltaKg = Number(kg) + Number(quotaBonusKg || 0);
         kgAfter = kgBefore + deltaKg;
         ledgerType = 'TOPUP_QUOTA_KG';
-      }
 
-      let resolvedExpiry: Date | null = null;
-      if (quotaExpiresAt) {
-        resolvedExpiry = new Date(quotaExpiresAt);
-      } else if (validityDays && Number(validityDays) > 0) {
-        const days = Number(validityDays);
-        const policy = expiryPolicy || 'ACCUMULATE';
-        const now = new Date();
-        if (policy === 'ACCUMULATE' && wallet.quotaExpiresAt && new Date(wallet.quotaExpiresAt) > now) {
-          resolvedExpiry = new Date(wallet.quotaExpiresAt);
-          resolvedExpiry.setDate(resolvedExpiry.getDate() + days);
-        } else {
-          resolvedExpiry = new Date(now);
-          resolvedExpiry.setDate(resolvedExpiry.getDate() + days);
+        if (quotaExpiresAt) {
+          resolvedQuotaExpiry = new Date(quotaExpiresAt);
+        } else if (validityDays && Number(validityDays) > 0) {
+          const days = Number(validityDays);
+          const policy = expiryPolicy || 'ACCUMULATE';
+          const now = new Date();
+          if (policy === 'ACCUMULATE' && wallet.quotaExpiresAt && new Date(wallet.quotaExpiresAt) > now) {
+            resolvedQuotaExpiry = new Date(wallet.quotaExpiresAt);
+            resolvedQuotaExpiry.setDate(resolvedQuotaExpiry.getDate() + days);
+          } else {
+            resolvedQuotaExpiry = new Date(now);
+            resolvedQuotaExpiry.setDate(resolvedQuotaExpiry.getDate() + days);
+          }
         }
       }
 
@@ -3462,7 +4177,8 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
         data: {
           balanceAmount: balanceAfter,
           quotaKg: kgAfter,
-          ...(resolvedExpiry ? { quotaExpiresAt: resolvedExpiry } : {}),
+          ...(resolvedBalanceExpiry ? { balanceExpiresAt: resolvedBalanceExpiry } : {}),
+          ...(resolvedQuotaExpiry ? { quotaExpiresAt: resolvedQuotaExpiry } : {}),
         },
       });
 
@@ -4270,8 +4986,9 @@ export const updateLaundryCommissionConfig = async (req: Request, res: Response)
     }
 
     const { outletId, config } = req.body;
+    const src = config && typeof config === 'object' ? { ...req.body, ...config } : req.body;
 
-    let targetOutletId = outletId;
+    let targetOutletId = outletId || src.outletId;
     if (!targetOutletId) {
       const firstOutlet = await prisma.outlet.findFirst({
         where: { tenantId, isActive: true },
@@ -4291,15 +5008,41 @@ export const updateLaundryCommissionConfig = async (req: Request, res: Response)
       return res.status(404).json({ status: 'error', message: 'Outlet tidak ditemukan atau akses ditolak' });
     }
 
+    const existingConfig = (outlet.laundryCommissionConfig as any) || {};
+
+    const washRate = src.washingPerKg !== undefined
+      ? Math.max(0, Math.round(Number(src.washingPerKg || 0)))
+      : (src.washPerKg !== undefined ? Math.max(0, Math.round(Number(src.washPerKg || 0))) : Number(existingConfig.washingPerKg || existingConfig.washPerKg || 0));
+
+    const dryRate = src.dryingPerKg !== undefined
+      ? Math.max(0, Math.round(Number(src.dryingPerKg || 0)))
+      : (src.dryPerKg !== undefined ? Math.max(0, Math.round(Number(src.dryPerKg || 0))) : Number(existingConfig.dryingPerKg || existingConfig.dryPerKg || 0));
+
+    const ironRate = src.ironingPerKg !== undefined
+      ? Math.max(0, Math.round(Number(src.ironingPerKg || 0)))
+      : (src.ironPerKg !== undefined ? Math.max(0, Math.round(Number(src.ironPerKg || 0))) : Number(existingConfig.ironingPerKg || existingConfig.ironPerKg || 0));
+
+    const isProdEnabled = src.productionCommissionEnabled !== undefined
+      ? Boolean(src.productionCommissionEnabled)
+      : (src.enabled !== undefined ? Boolean(src.enabled) : (existingConfig.productionCommissionEnabled ?? existingConfig.enabled ?? true));
+
     const cleanConfig = {
-      enabled: config?.enabled !== false,
-      washingPerKg: Math.max(0, Math.round(Number(config?.washingPerKg || 0))),
-      dryingPerKg: Math.max(0, Math.round(Number(config?.dryingPerKg || 0))),
-      ironingPerKg: Math.max(0, Math.round(Number(config?.ironingPerKg || 0))),
-      packingPerOrder: Math.max(0, Math.round(Number(config?.packingPerOrder || 0))),
-      deliveryPerTrip: Math.max(0, Math.round(Number(config?.deliveryPerTrip || 0))),
-      pickupPerTrip: Math.max(0, Math.round(Number(config?.pickupPerTrip || 0))),
-      rewashPenaltyPerCase: Math.max(0, Math.round(Number(config?.rewashPenaltyPerCase || 0))),
+      ...existingConfig,
+      enabled: isProdEnabled,
+      productionCommissionEnabled: isProdEnabled,
+      washingPerKg: washRate,
+      washPerKg: washRate,
+      dryingPerKg: dryRate,
+      dryPerKg: dryRate,
+      ironingPerKg: ironRate,
+      ironPerKg: ironRate,
+      packingPerOrder: src.packingPerOrder !== undefined ? Math.max(0, Math.round(Number(src.packingPerOrder || 0))) : Number(existingConfig.packingPerOrder || 0),
+      deliveryPerTrip: src.deliveryPerTrip !== undefined ? Math.max(0, Math.round(Number(src.deliveryPerTrip || 0))) : Number(existingConfig.deliveryPerTrip || 0),
+      pickupPerTrip: src.pickupPerTrip !== undefined ? Math.max(0, Math.round(Number(src.pickupPerTrip || 0))) : Number(existingConfig.pickupPerTrip || 0),
+      rewashPenaltyPerCase: src.rewashPenaltyPerCase !== undefined ? Math.max(0, Math.round(Number(src.rewashPenaltyPerCase || 0))) : Number(existingConfig.rewashPenaltyPerCase || 0),
+      cashierCommissionEnabled: src.cashierCommissionEnabled !== undefined ? Boolean(src.cashierCommissionEnabled) : Boolean(existingConfig.cashierCommissionEnabled),
+      cashierCommissionBasis: src.cashierCommissionBasis || existingConfig.cashierCommissionBasis || 'PAID_ONLY',
+      cashierCommissionTiers: src.cashierCommissionTiers || existingConfig.cashierCommissionTiers || [],
     };
 
     const updated = await prisma.outlet.update({

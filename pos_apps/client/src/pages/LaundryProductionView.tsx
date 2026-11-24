@@ -15,10 +15,17 @@ import {
   AlertOctagon,
   RotateCcw,
   Archive,
+  Wrench,
+  Plus,
+  Trash2,
+  Edit2,
+  X,
+  Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
-import { api } from '../services/api';
-import type { LaundryQueueOrder, ProductionStageDefinition } from '../types/laundry';
+import { api, authStorage } from '../services/api';
+import type { LaundryQueueOrder, ProductionStageDefinition, LaundryMachine } from '../types/laundry';
 import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 import { LaundrySortingModal } from '../components/LaundrySortingModal';
 import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
@@ -46,6 +53,23 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
 
+  // Master Mesin (Washer / Dryer)
+  const [machines, setMachines] = useState<LaundryMachine[]>([]);
+  const [loadingMachines, setLoadingMachines] = useState(false);
+  const [manageMachinesModalOpen, setManageMachinesModalOpen] = useState(false);
+  const [editingMachine, setEditingMachine] = useState<LaundryMachine | null>(null);
+  const [machineFormCode, setMachineFormCode] = useState('');
+  const [machineFormName, setMachineFormName] = useState('');
+  const [machineFormType, setMachineFormType] = useState<'WASHER' | 'DRYER'>('WASHER');
+  const [machineFormCapacity, setMachineFormCapacity] = useState('10');
+  const [machineFormStatus, setMachineFormStatus] = useState<'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'>('ACTIVE');
+  const [savingMachine, setSavingMachine] = useState(false);
+
+  const currentUser = authStorage.getUser();
+  const canManageMachines = Boolean(
+    currentUser && ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role)
+  );
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setFeedback({ message, type });
     setTimeout(() => setFeedback(null), 3000);
@@ -54,9 +78,10 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [ordersRes, stagesRes] = await Promise.all([
+      const [ordersRes, stagesRes, machinesRes] = await Promise.all([
         api.getLaundryOrders(activeOutlet?.id),
         api.getLaundryStageSettings ? api.getLaundryStageSettings().catch(() => null) : Promise.resolve(null),
+        api.getLaundryMachines(activeOutlet?.id).catch(() => null),
       ]);
 
       if (ordersRes.status === 'success' && Array.isArray(ordersRes.data)) {
@@ -65,10 +90,102 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
       if (stagesRes && stagesRes.status === 'success' && Array.isArray(stagesRes.data)) {
         setStages(stagesRes.data);
       }
+      if (machinesRes && machinesRes.status === 'success' && Array.isArray(machinesRes.data)) {
+        setMachines(machinesRes.data);
+      }
     } catch (err: any) {
       console.error('Error fetching production data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshMachines = async () => {
+    try {
+      setLoadingMachines(true);
+      const res = await api.getLaundryMachines(activeOutlet?.id);
+      if (res.status === 'success' && Array.isArray(res.data)) {
+        setMachines(res.data);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoadingMachines(false);
+    }
+  };
+
+  const handleSaveMachine = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!machineFormCode.trim() || !machineFormName.trim()) {
+      alert('Kode dan nama mesin wajib diisi');
+      return;
+    }
+    setSavingMachine(true);
+    try {
+      if (editingMachine) {
+        const res = await api.updateLaundryMachine(editingMachine.id, {
+          name: machineFormName.trim(),
+          machineType: machineFormType,
+          capacityKg: parseFloat(machineFormCapacity) || 10,
+          status: machineFormStatus,
+        });
+        if (res.status === 'success') {
+          showToast(`Mesin ${machineFormCode} berhasil diperbarui!`);
+          refreshMachines();
+          setEditingMachine(null);
+          setMachineFormCode('');
+          setMachineFormName('');
+        } else {
+          alert(res.message || 'Gagal memperbarui mesin');
+        }
+      } else {
+        const res = await api.createLaundryMachine({
+          outletId: activeOutlet?.id,
+          code: machineFormCode.trim().toUpperCase(),
+          name: machineFormName.trim(),
+          machineType: machineFormType,
+          capacityKg: parseFloat(machineFormCapacity) || 10,
+          status: machineFormStatus,
+        });
+        if (res.status === 'success') {
+          showToast(`Mesin baru ${machineFormCode} berhasil ditambahkan!`);
+          refreshMachines();
+          setMachineFormCode('');
+          setMachineFormName('');
+        } else {
+          alert(res.message || 'Gagal menambahkan mesin');
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan sistem');
+    } finally {
+      setSavingMachine(false);
+    }
+  };
+
+  const handleToggleMachineStatus = async (machine: LaundryMachine) => {
+    const nextStatus = machine.status === 'ACTIVE' ? 'MAINTENANCE' : 'ACTIVE';
+    try {
+      const res = await api.updateLaundryMachine(machine.id, { status: nextStatus });
+      if (res.status === 'success') {
+        showToast(`Status mesin ${machine.code} diubah menjadi ${nextStatus === 'ACTIVE' ? 'Aktif' : 'Maintenance'}`);
+        refreshMachines();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengubah status mesin');
+    }
+  };
+
+  const handleDeleteMachine = async (machine: LaundryMachine) => {
+    if (!confirm(`Yakin ingin menghapus mesin ${machine.code} (${machine.name})?`)) return;
+    try {
+      const res = await api.deleteLaundryMachine(machine.id);
+      if (res.status === 'success') {
+        showToast(`Mesin ${machine.code} berhasil dihapus`);
+        refreshMachines();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus mesin');
     }
   };
 
@@ -247,6 +364,26 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             <QrCode className="w-4 h-4 text-blue-200" />
             <span>Scan QR / Barcode Nota</span>
           </button>
+
+          {canManageMachines && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMachine(null);
+                setMachineFormCode('');
+                setMachineFormName('');
+                setMachineFormType('WASHER');
+                setMachineFormCapacity('10');
+                setMachineFormStatus('ACTIVE');
+                setManageMachinesModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 active:scale-95"
+              title="Kelola Master Nomor & Status Mesin Outlet"
+            >
+              <Wrench className="w-4 h-4 text-slate-500" />
+              <span>Kelola Mesin ({machines.length})</span>
+            </button>
+          )}
 
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -608,26 +745,44 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
                         </span>
                       </div>
                       <div className="grid grid-cols-4 gap-1.5">
-                        {(isWashing
-                          ? ['W-01', 'W-02', 'W-03', 'W-04']
-                          : ['D-01', 'D-02', 'D-03', 'D-04']
-                        ).map((m) => {
-                          const isSelected = currentMachineTag === m;
-                          return (
-                            <button
-                              key={m}
-                              type="button"
-                              onClick={() => setSelectedMachines((prev) => ({ ...prev, [order.id]: m }))}
-                              className={`py-1.5 text-center font-mono font-black text-xs rounded-xl transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'bg-blue-900 text-white shadow-xs'
-                                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                              }`}
-                            >
-                              {m}
-                            </button>
-                          );
-                        })}
+                        {(() => {
+                          const targetType = isWashing ? 'WASHER' : 'DRYER';
+                          const filtered = machines.filter((m) => m.machineType === targetType);
+                          const machineList = filtered.length > 0
+                            ? filtered
+                            : (isWashing
+                                ? ['W-01', 'W-02', 'W-03', 'W-04']
+                                : ['D-01', 'D-02', 'D-03', 'D-04']
+                              ).map((code) => ({ id: code, code, name: code, machineType: targetType, status: 'ACTIVE' as const }));
+
+                          return machineList.map((m) => {
+                            const isSelected = currentMachineTag === m.code;
+                            const isMaintenance = m.status === 'MAINTENANCE';
+                            return (
+                              <button
+                                key={m.id || m.code}
+                                type="button"
+                                disabled={isMaintenance}
+                                onClick={() => setSelectedMachines((prev) => ({ ...prev, [order.id]: m.code }))}
+                                className={`py-1.5 text-center font-mono font-black text-xs rounded-xl transition-all cursor-pointer relative ${
+                                  isSelected
+                                    ? 'bg-blue-900 text-white shadow-xs'
+                                    : isMaintenance
+                                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                }`}
+                                title={isMaintenance ? `${m.code} sedang servis / maintenance` : m.name}
+                              >
+                                {m.code}
+                                {isMaintenance && (
+                                  <span className="block text-[8px] font-sans font-bold text-rose-500 leading-none">
+                                    Servis
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}
@@ -724,6 +879,242 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             showToast(`Garansi cuci ulang Nota ${selectedOrderForRewash.invoiceNumber} berhasil diaktifkan!`);
           }}
         />
+      )}
+
+      {/* Modal Kelola Mesin Outlet (Washer & Dryer) */}
+      {manageMachinesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
+            {/* Header Modal */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-blue-100 border border-blue-200 text-blue-900 flex items-center justify-center font-bold">
+                  <Wrench className="w-4 h-4 text-blue-900" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Kelola Mesin Cuci &amp; Pengering
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Master nomor mesin operasional &amp; status perawatan / servis
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setManageMachinesModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
+              {/* Form Tambah / Edit Mesin */}
+              <form onSubmit={handleSaveMachine} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-slate-900 text-xs">
+                    {editingMachine ? `Edit Mesin ${editingMachine.code}` : '+ Tambah Mesin Baru'}
+                  </span>
+                  {editingMachine && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingMachine(null);
+                        setMachineFormCode('');
+                        setMachineFormName('');
+                      }}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 font-bold cursor-pointer"
+                    >
+                      Batal Edit
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Kode Mesin *</label>
+                    <input
+                      type="text"
+                      required
+                      disabled={Boolean(editingMachine)}
+                      placeholder="Misal: W-05"
+                      value={machineFormCode}
+                      onChange={(e) => setMachineFormCode(e.target.value.toUpperCase())}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold bg-white uppercase disabled:bg-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Nama / Merk *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Misal: Washer LG 15 Kg"
+                      value={machineFormName}
+                      onChange={(e) => setMachineFormName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-semibold bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Jenis Mesin *</label>
+                    <div className="relative">
+                      <select
+                        value={machineFormType}
+                        onChange={(e) => setMachineFormType(e.target.value as any)}
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-bold bg-white appearance-none pr-8 cursor-pointer"
+                      >
+                        <option value="WASHER">Washer (Cuci)</option>
+                        <option value="DRYER">Dryer (Kering)</option>
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Kapasitas (Kg)</label>
+                    <input
+                      type="number"
+                      step={0.5}
+                      min={1}
+                      value={machineFormCapacity}
+                      onChange={(e) => setMachineFormCapacity(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-bold bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-bold text-slate-600">Status Awal:</label>
+                    <div className="relative">
+                      <select
+                        value={machineFormStatus}
+                        onChange={(e) => setMachineFormStatus(e.target.value as any)}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 font-bold bg-white appearance-none pr-7 cursor-pointer"
+                      >
+                        <option value="ACTIVE">Aktif (Bisa Dipakai)</option>
+                        <option value="MAINTENANCE">Maintenance / Servis</option>
+                        <option value="INACTIVE">Nonaktif</option>
+                      </select>
+                      <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={savingMachine}
+                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    {savingMachine ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    <span>{editingMachine ? 'Simpan Perubahan' : 'Tambah Mesin'}</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Daftar Mesin Saat Ini */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                  <span>Daftar Mesin Outlet ({machines.length} Unit)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Klik tombol status untuk mengubah Aktif / Maintenance</span>
+                </div>
+
+                {loadingMachines ? (
+                  <div className="p-8 text-center text-slate-400">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-900" />
+                    <span>Memuat daftar mesin...</span>
+                  </div>
+                ) : machines.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                    Belum ada mesin terdaftar. Mesin standar akan dibuat otomatis saat pertama kali dibuka.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {machines.map((m) => {
+                      const isMaintenance = m.status === 'MAINTENANCE';
+                      return (
+                        <div
+                          key={m.id}
+                          className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2 ${
+                            isMaintenance
+                              ? 'bg-amber-50/60 border-amber-200'
+                              : 'bg-white border-slate-200 shadow-2xs'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-black text-xs text-blue-950 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                {m.code}
+                              </span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                m.machineType === 'WASHER' ? 'bg-blue-50 text-blue-800' : 'bg-purple-50 text-purple-800'
+                              }`}>
+                                {m.machineType === 'WASHER' ? 'Washer' : 'Dryer'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {Number(m.capacityKg)} Kg
+                              </span>
+                            </div>
+                            <div className="font-extrabold text-xs text-slate-800 truncate mt-0.5">
+                              {m.name}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMachineStatus(m)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-all ${
+                                isMaintenance
+                                  ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
+                                  : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                              }`}
+                              title="Klik untuk ubah status mesin"
+                            >
+                              {isMaintenance ? 'Servis' : 'Aktif'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMachine(m);
+                                setMachineFormCode(m.code);
+                                setMachineFormName(m.name);
+                                setMachineFormType(m.machineType);
+                                setMachineFormCapacity(String(m.capacityKg));
+                                setMachineFormStatus(m.status);
+                              }}
+                              className="p-1 rounded-lg text-slate-400 hover:text-blue-900 hover:bg-slate-100 cursor-pointer"
+                              title="Edit Mesin"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMachine(m)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 cursor-pointer"
+                              title="Hapus Mesin"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setManageMachinesModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-950 text-white font-bold text-xs cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Feedback */}

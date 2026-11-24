@@ -18,7 +18,7 @@ import {
   Scale,
   ChevronDown,
 } from 'lucide-react';
-import type { LaundryQueueOrder, LaundryStageLog, LaundryProductionStageKey } from '../../types/laundry';
+import type { LaundryQueueOrder, LaundryStageLog, LaundryProductionStageKey, LaundryMachine } from '../../types/laundry';
 import { LAUNDRY_11_STAGES } from '../../types/laundry';
 import { api } from '../../services/api';
 
@@ -43,6 +43,7 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
   const [pickedUpByName, setPickedUpByName] = useState('');
   const [handoverPaymentMethod, setHandoverPaymentMethod] = useState<'CASH' | 'QRIS' | 'TRANSFER'>('CASH');
   const [machineName, setMachineName] = useState('');
+  const [machines, setMachines] = useState<LaundryMachine[]>([]);
   const [advancing, setAdvancing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -67,6 +68,13 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
       setTargetRackCode(order.rackCode || 'RAK-A1');
       setPickedUpByName(order.customerName || '');
       fetchStageLogs();
+      api.getLaundryMachines()
+        .then((res) => {
+          if (res.status === 'success' && Array.isArray(res.data)) {
+            setMachines(res.data);
+          }
+        })
+        .catch(() => {});
     }
   }, [isOpen, order?.orderId]);
 
@@ -326,23 +334,39 @@ export const LaundryStageTrackerModal: React.FC<LaundryStageTrackerModalProps> =
                       <span className="text-[10px] text-blue-700 font-semibold">Pilih cepat atau ketik manual</span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {(nextStage.key === 'WASHING'
-                        ? ['W-01', 'W-02', 'W-03', 'W-04']
-                        : ['D-01', 'D-02', 'D-03', 'D-04']
-                      ).map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => setMachineName(chip)}
-                          className={`px-3 py-1 text-xs font-black rounded-lg border transition-all cursor-pointer ${
-                            machineName === chip
-                              ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                              : 'bg-white text-blue-900 border-blue-200 hover:bg-blue-100'
-                          }`}
-                        >
-                          {chip}
-                        </button>
-                      ))}
+                      {(() => {
+                        const targetType = nextStage.key === 'WASHING' ? 'WASHER' : 'DRYER';
+                        const filtered = machines.filter((m) => m.machineType === targetType);
+                        const list = filtered.length > 0
+                          ? filtered
+                          : (nextStage.key === 'WASHING'
+                              ? ['W-01', 'W-02', 'W-03', 'W-04']
+                              : ['D-01', 'D-02', 'D-03', 'D-04']
+                            ).map((c) => ({ id: c, code: c, name: c, machineType: targetType, status: 'ACTIVE' as const }));
+
+                        return list.map((m) => {
+                          const isMaintenance = m.status === 'MAINTENANCE';
+                          return (
+                            <button
+                              key={m.id || m.code}
+                              type="button"
+                              disabled={isMaintenance}
+                              onClick={() => setMachineName(m.code)}
+                              className={`px-3 py-1 text-xs font-black rounded-lg border transition-all cursor-pointer ${
+                                machineName === m.code
+                                  ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                                  : isMaintenance
+                                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                                  : 'bg-white text-blue-900 border-blue-200 hover:bg-blue-100'
+                              }`}
+                              title={isMaintenance ? `${m.code} sedang servis` : m.name}
+                            >
+                              <span>{m.code}</span>
+                              {isMaintenance && <span className="ml-1 text-[8px] text-rose-500 font-sans">(Servis)</span>}
+                            </button>
+                          );
+                        });
+                      })()}
                     </div>
                     <input
                       type="text"

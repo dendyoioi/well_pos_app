@@ -690,6 +690,48 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "laundry_customer_feedbacks_tenant_outlet_rating_idx" ON "laundry_customer_feedbacks"("tenant_id", "outlet_id", "rating");
     `,
   },
+  {
+    id: '20261124_08_laundry_perfume_machine_service_addons_wallet',
+    description: 'Menambahkan tabel laundry_perfumes, laundry_machines, kolom laundry_service_id & addons_snapshot pada order_items, dan balance_expires_at pada customer_laundry_wallets',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "laundry_perfumes" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT REFERENCES "outlets"("id") ON DELETE SET NULL,
+        "name" VARCHAR(100) NOT NULL,
+        "extra_price" DECIMAL(15, 2) NOT NULL DEFAULT 0,
+        "inventory_item_id" TEXT REFERENCES "inventory_items"("id") ON DELETE SET NULL,
+        "usage_qty_per_unit" DECIMAL(12, 4) NOT NULL DEFAULT 0,
+        "usage_basis" VARCHAR(20) NOT NULL DEFAULT 'PER_KG',
+        "is_active" BOOLEAN NOT NULL DEFAULT TRUE,
+        "is_default" BOOLEAN NOT NULL DEFAULT FALSE,
+        "sort_order" INTEGER NOT NULL DEFAULT 0,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_perfumes_tenant_active_sort_idx" ON "laundry_perfumes"("tenant_id", "is_active", "sort_order");
+
+      ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "laundry_service_id" TEXT;
+      ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "addons_snapshot" JSONB;
+
+      CREATE TABLE IF NOT EXISTS "laundry_machines" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "code" VARCHAR(50) NOT NULL,
+        "name" VARCHAR(100) NOT NULL,
+        "machine_type" VARCHAR(20) NOT NULL,
+        "capacity_kg" DECIMAL(10, 2),
+        "status" VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "laundry_machines_outlet_code_key" UNIQUE ("outlet_id", "code")
+      );
+      CREATE INDEX IF NOT EXISTS "laundry_machines_tenant_outlet_idx" ON "laundry_machines"("tenant_id", "outlet_id");
+
+      ALTER TABLE "customer_laundry_wallets" ADD COLUMN IF NOT EXISTS "balance_expires_at" TIMESTAMP(3);
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

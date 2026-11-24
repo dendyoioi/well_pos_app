@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Sparkles,
     Plus,
+    X,
     Search,
     Clock,
     Info,
@@ -26,11 +27,13 @@ import {
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
-import type { LaundryService, ProductionStageDefinition } from '../types/laundry';
+import type { LaundryService, ProductionStageDefinition, LaundryPerfume } from '../types/laundry';
 import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 import { TablePagination } from '../components/TablePagination';
 import { LaundryStageSettingsModal } from '../components/LaundryStageSettingsModal';
 import { LaundryServiceBomModal } from '../components/laundry/LaundryServiceBomModal';
+import { CurrencyInput } from '../components/ui';
+import type { RecipeInventoryItem } from '../types/recipe';
 
 interface LaundryServicesViewProps {
     activeOutlet: Outlet | null;
@@ -198,8 +201,121 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     const [services, setServices] = useState<LaundryService[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Tab Utama: Layanan Utama vs Layanan Tambahan (Add-ons) vs Paket Deposit
-    const [activeMainTab, setActiveMainTab] = useState<'SERVICES' | 'ADDONS' | 'DEPOSIT_PACKAGES'>('SERVICES');
+    // Tab Utama: Layanan Utama vs Layanan Tambahan (Add-ons) vs Paket Deposit vs Parfum & Aroma
+    const [activeMainTab, setActiveMainTab] = useState<'SERVICES' | 'ADDONS' | 'DEPOSIT_PACKAGES' | 'PERFUMES'>('SERVICES');
+
+    // Tab 4: Master Parfum & Aroma
+    const [perfumes, setPerfumes] = useState<LaundryPerfume[]>([]);
+    const [loadingPerfumes, setLoadingPerfumes] = useState(false);
+    const [availableIngredients, setAvailableIngredients] = useState<RecipeInventoryItem[]>([]);
+    const [showPerfumeModal, setShowPerfumeModal] = useState(false);
+    const [editingPerfumeId, setEditingPerfumeId] = useState<string | null>(null);
+    const [perfumeName, setPerfumeName] = useState('');
+    const [perfumeExtraPrice, setPerfumeExtraPrice] = useState<number>(0);
+    const [perfumeInventoryItemId, setPerfumeInventoryItemId] = useState<string>('');
+    const [perfumeUsageQty, setPerfumeUsageQty] = useState<string>('15');
+    const [perfumeUsageBasis, setPerfumeUsageBasis] = useState<'PER_KG' | 'PER_ORDER'>('PER_KG');
+    const [perfumeIsDefault, setPerfumeIsDefault] = useState<boolean>(false);
+    const [perfumeIsActive, setPerfumeIsActive] = useState<boolean>(true);
+    const [savingPerfume, setSavingPerfume] = useState<boolean>(false);
+
+    const fetchPerfumes = async () => {
+        try {
+            setLoadingPerfumes(true);
+            const [perfRes, ingRes] = await Promise.all([
+                api.getLaundryPerfumes(true),
+                api.getRecipeInventoryItems(activeOutlet?.id, 'all').catch(() => ({ status: 'error', data: [] })),
+            ]);
+            if (perfRes.status === 'success' && Array.isArray(perfRes.data)) {
+                setPerfumes(perfRes.data);
+            }
+            if (ingRes.status === 'success' && Array.isArray(ingRes.data)) {
+                setAvailableIngredients(ingRes.data);
+            }
+        } catch (err) {
+            console.error('Gagal memuat master parfum:', err);
+        } finally {
+            setLoadingPerfumes(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeMainTab === 'PERFUMES') {
+            fetchPerfumes();
+        }
+    }, [activeMainTab, activeOutlet?.id]);
+
+    const handleOpenAddPerfume = () => {
+        setEditingPerfumeId(null);
+        setPerfumeName('');
+        setPerfumeExtraPrice(0);
+        setPerfumeInventoryItemId('');
+        setPerfumeUsageQty('15');
+        setPerfumeUsageBasis('PER_KG');
+        setPerfumeIsDefault(false);
+        setPerfumeIsActive(true);
+        setShowPerfumeModal(true);
+    };
+
+    const handleOpenEditPerfume = (p: LaundryPerfume) => {
+        setEditingPerfumeId(p.id);
+        setPerfumeName(p.name);
+        setPerfumeExtraPrice(Number(p.extraPrice || 0));
+        setPerfumeInventoryItemId(p.inventoryItemId || '');
+        setPerfumeUsageQty(String(p.usageQtyPerUnit || 0));
+        setPerfumeUsageBasis(p.usageBasis === 'PER_ORDER' ? 'PER_ORDER' : 'PER_KG');
+        setPerfumeIsDefault(Boolean(p.isDefault));
+        setPerfumeIsActive(Boolean(p.isActive));
+        setShowPerfumeModal(true);
+    };
+
+    const handleSavePerfumeSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setSavingPerfume(true);
+            const payload: any = {
+                name: perfumeName.trim(),
+                extraPrice: Number(perfumeExtraPrice || 0),
+                inventoryItemId: perfumeInventoryItemId || null,
+                usageQtyPerUnit: Math.max(0, parseFloat(perfumeUsageQty) || 0),
+                usageBasis: perfumeUsageBasis,
+                isDefault: perfumeIsDefault,
+                isActive: perfumeIsActive,
+                outletId: activeOutlet?.id,
+            };
+
+            if (editingPerfumeId) {
+                await api.updateLaundryPerfume(editingPerfumeId, payload);
+            } else {
+                await api.createLaundryPerfume(payload);
+            }
+            setShowPerfumeModal(false);
+            fetchPerfumes();
+        } catch (err: any) {
+            alert(err?.message || 'Gagal menyimpan varian parfum');
+        } finally {
+            setSavingPerfume(false);
+        }
+    };
+
+    const handleDeletePerfume = async (id: string, name: string) => {
+        if (!confirm(`Hapus varian parfum "${name}"?`)) return;
+        try {
+            await api.deleteLaundryPerfume(id);
+            fetchPerfumes();
+        } catch (err: any) {
+            alert(err?.message || 'Gagal menghapus parfum');
+        }
+    };
+
+    const handleTogglePerfumeActive = async (p: LaundryPerfume) => {
+        try {
+            await api.updateLaundryPerfume(p.id, { isActive: !p.isActive });
+            fetchPerfumes();
+        } catch (err: any) {
+            alert(err?.message || 'Gagal mengubah status parfum');
+        }
+    };
 
     // Konfigurasi Paket Deposit & Kuota (Bagian B.6)
     const [depositConfig, setDepositConfig] = useState<{
@@ -807,6 +923,21 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                     <Coins className="w-4 h-4 text-amber-500" />
                     <span>Paket Deposit &amp; Kuota</span>
                 </button>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActiveMainTab('PERFUMES');
+                        setSearchQuery('');
+                    }}
+                    className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === 'PERFUMES'
+                        ? 'bg-white text-indigo-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                >
+                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <span>Parfum &amp; Aroma ({perfumes.length})</span>
+                </button>
             </div>
 
             {/* 3. WORKSPACE KONTEN UTAMA */}
@@ -1194,7 +1325,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         </div>
                     )}
                 </div>
-            ) : (
+            ) : activeMainTab === 'DEPOSIT_PACKAGES' ? (
                 /* ================= TAB 3: PAKET DEPOSIT & MASA AKTIF ================= */
                 <div className="space-y-4">
                     {/* Feedback Toast */}
@@ -1410,6 +1541,162 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         </div>
                     )}
                 </div>
+            ) : (
+                /* ================= TAB 4: MASTER PARFUM & AROMA ================= */
+                <div className="space-y-4">
+                    {/* Banner & Tombol Tambah Parfum */}
+                    <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-900 text-white flex items-center justify-center font-bold shrink-0">
+                                    <Sparkles className="w-5 h-5 text-indigo-300" />
+                                </div>
+                                <div>
+                                    <h4 className="font-extrabold text-sm text-slate-900">
+                                        Varian Parfum &amp; Aroma Laundry
+                                    </h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed">
+                                        Atur aroma parfum yang tampil saat kasir drop-off, tentukan tarif tambahan (+Rp), dan tautkan ke stok bahan baku untuk auto-potong BoM.
+                                    </p>
+                                    <div className="mt-2 text-[11px] font-medium text-indigo-950 bg-indigo-50/80 border border-indigo-200/60 rounded-xl px-3 py-1.5 inline-flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                        <span>
+                                            <strong>Kontrol Tampilan Kasir:</strong> Gunakan tombol status <strong>Aktif / Nonaktif</strong> di bawah untuk memilih aroma yang boleh tampil di kasir. Jika usaha laundry Anda tidak menyediakan opsi pilihan aroma bagi pelanggan, cukup nonaktifkan semua varian parfum agar bagian pilihan parfum di terminal kasir otomatis disembunyikan sepenuhnya.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleOpenAddPerfume}
+                                className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                            >
+                                <Plus className="w-4 h-4 stroke-[3]" />
+                                <span>Tambah Varian Parfum</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Grid Daftar Parfum */}
+                    {loadingPerfumes ? (
+                        <div className="p-16 text-center text-slate-400 text-xs font-semibold animate-pulse">
+                            Memuat daftar varian parfum...
+                        </div>
+                    ) : perfumes.length === 0 ? (
+                        <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-3">
+                            <Sparkles className="w-10 h-10 text-slate-300 mx-auto" />
+                            <h4 className="font-extrabold text-sm text-slate-800">Belum Ada Varian Parfum</h4>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                Tambahkan varian aroma parfum (misal: Lavender, Ocean Fresh, Snappy) agar kasir dapat memilih aroma wangi pakaian pelanggan.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleOpenAddPerfume}
+                                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                                Tambah Varian Pertama
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {perfumes.map((p) => {
+                                const hasExtra = Number(p.extraPrice || 0) > 0;
+                                const isLinked = Boolean(p.inventoryItemId && p.inventoryItem);
+                                return (
+                                    <div
+                                        key={p.id}
+                                        className={`p-4 rounded-3xl bg-white border transition-all flex flex-col justify-between gap-3 shadow-xs ${
+                                            p.isActive ? 'border-slate-200 hover:border-slate-300' : 'border-slate-200 bg-slate-50/60 opacity-70'
+                                        }`}
+                                    >
+                                        <div className="space-y-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h5 className="font-black text-sm text-slate-900">{p.name}</h5>
+                                                    {p.isDefault && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-900">
+                                                            Aroma Standar
+                                                        </span>
+                                                    )}
+                                                    {!p.isActive && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
+                                                            Nonaktif
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    {hasExtra ? (
+                                                        <span className="text-xs font-black text-blue-900 bg-blue-50 px-2 py-1 rounded-lg border border-blue-200/60">
+                                                            +Rp {Number(p.extraPrice).toLocaleString('id-ID')}
+                                                            <span className="text-[10px] font-normal text-slate-500"> {p.usageBasis === 'PER_KG' ? '/Kg' : '/Nota'}</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/60">
+                                                            Gratis (Standar)
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Info BoM Tautan Bahan Baku */}
+                                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                                                <div className="flex items-center justify-between text-slate-700">
+                                                    <span className="text-[11px] font-bold text-slate-500">Tautan Bahan Baku:</span>
+                                                    <span className="font-bold text-[11px] truncate max-w-[150px]">
+                                                        {isLinked ? p.inventoryItem?.name : 'Belum Ditautkan'}
+                                                    </span>
+                                                </div>
+                                                {isLinked && (
+                                                    <div className="flex items-center justify-between text-[11px] text-slate-600">
+                                                        <span>Takaran Auto-BoM:</span>
+                                                        <span className="font-bold text-blue-950">
+                                                            {Number(p.usageQtyPerUnit || 0)} {p.inventoryItem?.canonicalUom || 'ML'} {p.usageBasis === 'PER_KG' ? '/Kg' : '/Nota'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTogglePerfumeActive(p)}
+                                                className={`text-xs font-bold px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
+                                                    p.isActive
+                                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                                        : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {p.isActive ? 'Aktif' : 'Nonaktif'}
+                                            </button>
+
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenEditPerfume(p)}
+                                                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-900 hover:bg-blue-50 border border-slate-200 cursor-pointer transition-colors"
+                                                    title="Edit varian parfum"
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeletePerfume(p.id, p.name)}
+                                                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 cursor-pointer transition-colors"
+                                                    title="Hapus varian parfum"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Modal Form Tambah / Edit Paket Deposit */}
@@ -1490,17 +1777,13 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                                        Harga Beli Pelanggan (Rp) <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
+                                    <CurrencyInput
+                                        label="Harga Beli Pelanggan (Rp) *"
                                         required
                                         min={1000}
-                                        step={1000}
                                         value={pkgPrice}
-                                        onChange={(e) => setPkgPrice(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                        onChange={(numVal) => setPkgPrice(String(numVal))}
+                                        placeholder="Contoh: Rp 175.000"
                                     />
                                 </div>
 
@@ -1535,30 +1818,22 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                 ) : (
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1">
-                                                Saldo Pokok (Rp) <span className="text-rose-500">*</span>
-                                            </label>
-                                            <input
-                                                type="number"
+                                            <CurrencyInput
+                                                label="Saldo Pokok (Rp) *"
                                                 required
                                                 min={1000}
-                                                step={1000}
                                                 value={pkgBalanceAmount}
-                                                onChange={(e) => setPkgBalanceAmount(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                                onChange={(numVal) => setPkgBalanceAmount(String(numVal))}
+                                                placeholder="Contoh: Rp 100.000"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1">
-                                                Bonus Saldo (Rp)
-                                            </label>
-                                            <input
-                                                type="number"
+                                            <CurrencyInput
+                                                label="Bonus Saldo (Rp)"
                                                 min={0}
-                                                step={1000}
                                                 value={pkgBonusAmount}
-                                                onChange={(e) => setPkgBonusAmount(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                                onChange={(numVal) => setPkgBonusAmount(String(numVal))}
+                                                placeholder="Contoh: Rp 10.000"
                                             />
                                         </div>
                                     </div>
@@ -1613,6 +1888,178 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Form Tambah / Edit Parfum */}
+            {showPerfumeModal && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
+                    <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-fadeIn">
+                        {/* Header */}
+                        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-indigo-900 text-white flex items-center justify-center font-bold shadow-xs">
+                                    <Sparkles className="w-5 h-5 text-indigo-300" />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-slate-900 text-sm">
+                                        {editingPerfumeId ? 'Edit Varian Parfum' : 'Tambah Varian Parfum Baru'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        Nama aroma, tarif ekstra, dan takaran auto-potong stok BoM
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPerfumeModal(false)}
+                                className="text-slate-400 hover:text-slate-600 text-base font-bold p-1 cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Form Body */}
+                        <form
+                            id="perfume-form"
+                            onSubmit={handleSavePerfumeSubmit}
+                            className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1"
+                        >
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Nama Aroma Parfum <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Contoh: Lavender, Ocean Fresh, Akasia, Snappy..."
+                                    value={perfumeName}
+                                    onChange={(e) => setPerfumeName(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-bold text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                                />
+                            </div>
+
+                            <div>
+                                <CurrencyInput
+                                    label="Tarif Ekstra Kasir (Rp)"
+                                    value={perfumeExtraPrice}
+                                    onChange={(numVal) => setPerfumeExtraPrice(numVal)}
+                                    placeholder="0 jika gratis / termasuk paket"
+                                    helperText="Kosongkan atau isi 0 jika parfum termasuk paket standar."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Tautan Bahan Baku Gudang (Auto-BoM)
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={perfumeInventoryItemId}
+                                        onChange={(e) => setPerfumeInventoryItemId(e.target.value)}
+                                        className="w-full h-10 pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">-- Tidak Ditautkan (Hanya Catatan Kasir) --</option>
+                                        {availableIngredients.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name} ({item.canonicalUom})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Pilih bahan parfum dari stok gudang agar stok otomatis berkurang saat pakaian dicuci.
+                                </p>
+                            </div>
+
+                            {perfumeInventoryItemId && (
+                                <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                Takaran Pakai
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={0.1}
+                                                step={0.1}
+                                                required
+                                                value={perfumeUsageQty}
+                                                onChange={(e) => setPerfumeUsageQty(e.target.value)}
+                                                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-900"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                Basis Pemakaian
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={perfumeUsageBasis}
+                                                    onChange={(e) => setPerfumeUsageBasis(e.target.value as any)}
+                                                    className="w-full h-10 pl-3 pr-8 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer"
+                                                >
+                                                    <option value="PER_KG">Per Kg Cucian</option>
+                                                    <option value="PER_ORDER">Per Nota / Transaksi</option>
+                                                </select>
+                                                <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 pt-1">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={perfumeIsDefault}
+                                        onChange={(e) => setPerfumeIsDefault(e.target.checked)}
+                                        className="w-4 h-4 text-blue-900 rounded border-slate-300 focus:ring-blue-900"
+                                    />
+                                    <span className="text-xs font-bold text-slate-800">
+                                        Jadikan pilihan aroma default saat kasir buka transaksi
+                                    </span>
+                                </label>
+
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={perfumeIsActive}
+                                        onChange={(e) => setPerfumeIsActive(e.target.checked)}
+                                        className="w-4 h-4 text-blue-900 rounded border-slate-300 focus:ring-blue-900"
+                                    />
+                                    <span className="text-xs font-bold text-slate-800">
+                                        Status Aktif (Tampil di kasir)
+                                    </span>
+                                </label>
+                            </div>
+                        </form>
+
+                        {/* Sticky Action Footer */}
+                        <div
+                            className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-end gap-2"
+                            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setShowPerfumeModal(false)}
+                                disabled={savingPerfume}
+                                className="py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="perfume-form"
+                                disabled={savingPerfume || !perfumeName.trim()}
+                                className="py-2.5 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                {savingPerfume ? 'Menyimpan...' : 'Simpan Varian Parfum'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

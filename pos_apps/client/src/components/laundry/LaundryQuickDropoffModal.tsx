@@ -28,6 +28,7 @@ import type {
   CustomerLaundryWallet,
   LaundryDeliveryConfig,
   LaundryDeliveryType,
+  LaundryPerfume,
 } from '../../types/laundry';
 import { api, customerApi } from '../../services/api';
 import { WhatsAppInput, CurrencyInput } from '../ui';
@@ -43,15 +44,6 @@ interface LaundryQuickDropoffModalProps {
   onOrderCreated: (order: LaundryQueueOrder) => void;
   onOpenFullPos?: () => void;
 }
-
-const PERFUME_OPTIONS = [
-  'Lavender',
-  'Ocean Fresh',
-  'Akasia',
-  'Snappy',
-  'Sakura',
-  'Tanpa Parfum',
-];
 
 const QUICK_SPOT_NOTES = [
   'Pisahkan Putih',
@@ -90,6 +82,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   const [weightKg, setWeightKg] = useState<number>(3.0);
   const [totalPieces, setTotalPieces] = useState<number>(8);
   const [perfumeVariant, setPerfumeVariant] = useState<string>('Lavender');
+  const [perfumesList, setPerfumesList] = useState<LaundryPerfume[]>([]);
   const [selectedSpotNotes, setSelectedSpotNotes] = useState<string[]>([]);
   const [customNotes, setCustomNotes] = useState('');
 
@@ -162,7 +155,8 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       activeOutlet?.id
         ? api.getLaundryDeliveryConfig(activeOutlet.id).catch(() => ({ status: 'error', data: null }))
         : Promise.resolve({ status: 'error', data: null }),
-    ]).then(([srvRes, custRes, delRes]) => {
+      api.getLaundryPerfumes().catch(() => ({ status: 'error', data: [] })),
+    ]).then(([srvRes, custRes, delRes, perfRes]) => {
       if (!mounted) return;
       if (srvRes.status === 'success' && Array.isArray(srvRes.data)) {
         setServices(srvRes.data);
@@ -189,6 +183,16 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
         if (delRes.data.zones && delRes.data.zones.length > 0) {
           setDeliveryZoneId(delRes.data.zones[0].id);
         }
+      }
+      if (perfRes.status === 'success' && Array.isArray(perfRes.data) && perfRes.data.length > 0) {
+        setPerfumesList(perfRes.data);
+        const defPerfume = perfRes.data.find((p: LaundryPerfume) => p.isDefault) || perfRes.data[0];
+        if (defPerfume) {
+          setPerfumeVariant(defPerfume.name);
+        }
+      } else {
+        setPerfumesList([]);
+        setPerfumeVariant('Standard');
       }
       setLoadingServices(false);
     });
@@ -319,6 +323,14 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     const billed = isKiloan ? (underMin ? minQty : weightKg) : weightKg;
     const total = billed * Number(currentService.price);
 
+    const selectedPerfume = perfumesList.find((p) => p.name.toLowerCase() === perfumeVariant.toLowerCase());
+    let perfumeExtra = 0;
+    if (selectedPerfume && Number(selectedPerfume.extraPrice) > 0) {
+      const extra = Number(selectedPerfume.extraPrice);
+      perfumeExtra = selectedPerfume.usageBasis === 'PER_KG' ? Math.round(extra * billed) : extra;
+    }
+    const finalSubtotal = total + perfumeExtra;
+
     let effectiveFee = 0;
     let free = false;
 
@@ -329,7 +341,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       const multiplier = deliveryType === 'PICKUP_AND_DELIVERY' ? (deliveryConfig?.roundTripMultiplier || 1.8) : 1;
       const calculatedFee = Math.round(baseFee * multiplier);
 
-      if (deliveryConfig?.freeDeliveryMinAmount && total >= Number(deliveryConfig.freeDeliveryMinAmount)) {
+      if (deliveryConfig?.freeDeliveryMinAmount && finalSubtotal >= Number(deliveryConfig.freeDeliveryMinAmount)) {
         free = true;
         effectiveFee = 0;
       } else if (deliveryConfig?.freeDeliveryMinWeightKg && weightKg >= Number(deliveryConfig.freeDeliveryMinWeightKg)) {
@@ -344,12 +356,12 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       billedQty: billed,
       isUnderMinimum: underMin,
       minOrderQty: minQty,
-      subtotal: total,
+      subtotal: finalSubtotal,
       deliveryFee: effectiveFee,
       isFreeDelivery: free,
-      grandTotal: total + effectiveFee,
+      grandTotal: finalSubtotal + effectiveFee,
     };
-  }, [currentService, weightKg, deliveryType, deliveryZoneId, deliveryConfig]);
+  }, [currentService, weightKg, deliveryType, deliveryZoneId, deliveryConfig, perfumeVariant, perfumesList]);
 
   // Submission Handler
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -408,6 +420,22 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       const zones = deliveryConfig?.zones || [];
       const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
 
+      const selectedPerfume = perfumesList.find((p) => p.name.toLowerCase() === perfumeVariant.toLowerCase());
+      const perfumeExtra = (selectedPerfume && Number(selectedPerfume.extraPrice) > 0)
+        ? (selectedPerfume.usageBasis === 'PER_KG' ? Math.round(Number(selectedPerfume.extraPrice) * billedQty) : Number(selectedPerfume.extraPrice))
+        : 0;
+
+      const addons: any[] = [];
+      if (perfumeExtra > 0 && selectedPerfume) {
+        addons.push({
+          id: selectedPerfume.id,
+          name: `Parfum: ${selectedPerfume.name}`,
+          price: Number(selectedPerfume.extraPrice),
+          unit: selectedPerfume.usageBasis === 'PER_KG' ? 'PER_KG' : 'FLAT',
+          total: perfumeExtra,
+        });
+      }
+
       const payload = {
         outletId: activeOutlet.id,
         customerId: selectedCustomer?.id || undefined,
@@ -428,7 +456,8 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             quantity: Number(billedQty),
             unit: currentService.unit || 'Kg',
             unitPrice: Number(currentService.price),
-            addons: [],
+            perfumeVariant: perfumeVariant || 'Lavender',
+            addons,
             notes: isUnderMinimum
               ? `${compiledNotes ? `${compiledNotes}; ` : ''}(Timbangan fisik: ${weightKg.toFixed(1)} Kg, min order ${minOrderQty} Kg)`
               : compiledNotes || undefined,
@@ -914,29 +943,41 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
 
           {/* ── 2.4 SECTION: PILIHAN PARFUM & SPOT CATATAN ───────────────────── */}
           <div className="space-y-3 pt-1">
-            {/* Pilihan Aroma Parfum */}
-            <div>
-              <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-blue-900" />
-                Aroma Parfum Laundry
-              </label>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {PERFUME_OPTIONS.map((perfume) => (
-                  <button
-                    key={perfume}
-                    type="button"
-                    onClick={() => setPerfumeVariant(perfume)}
-                    className={`py-1.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      perfumeVariant === perfume
-                        ? 'bg-indigo-900 text-white border-indigo-900 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {perfume}
-                  </button>
-                ))}
+            {/* Pilihan Aroma Parfum: Hanya tampil jika ada varian parfum aktif di toko */}
+            {perfumesList.length > 0 && (
+              <div>
+                <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-900" />
+                  Aroma Parfum Laundry
+                </label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {perfumesList.map((perfume) => {
+                    const isSelected = perfumeVariant.toLowerCase() === perfume.name.toLowerCase();
+                    return (
+                      <button
+                        key={perfume.id || perfume.name}
+                        type="button"
+                        onClick={() => setPerfumeVariant(perfume.name)}
+                        className={`py-1.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{perfume.name}</span>
+                        {Number(perfume.extraPrice || 0) > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${
+                            isSelected ? 'bg-blue-800 text-blue-100' : 'bg-blue-100 text-blue-900'
+                          }`}>
+                            +Rp {Number(perfume.extraPrice).toLocaleString('id-ID')}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quick Spotting Notes & Khusus */}
             <div>
@@ -1246,22 +1287,33 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
           </div>
         </form>
 
+        {/* Banner peringatan jika nama pelanggan belum diisi (di luar baris footer agar tidak menjepit nominal) */}
+        {!customerName.trim() && (
+          <div className="bg-amber-50 border-t border-amber-200/80 px-4 sm:px-6 py-2 flex items-center justify-between gap-2 shrink-0 text-amber-800 text-xs font-bold">
+            <span className="flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Isi nama pelanggan untuk menyimpan transaksi</span>
+            </span>
+            <span className="text-[11px] text-amber-600 font-medium hidden sm:inline">Wajib untuk cetak nota &amp; tag pakaian</span>
+          </div>
+        )}
+
         {/* ── 3. STICKY ACTION FOOTER (IPHONE SAFE AREA COMPLIANT) ─────────── */}
         <div
           className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
         >
-          <div className="flex items-center justify-between sm:block w-full sm:w-auto">
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between sm:justify-start gap-4 shrink-0 w-full sm:w-auto">
+            <div className="shrink-0">
+              <div className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500">
                 Total Tagihan
               </div>
-              <div className="text-xl sm:text-2xl font-black text-blue-950 font-mono">
+              <div className="text-lg sm:text-xl font-black text-blue-950 tabular-nums whitespace-nowrap shrink-0">
                 Rp {grandTotal.toLocaleString('id-ID')}
               </div>
             </div>
             {deliveryType !== 'NONE' && (
-              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${
                 deliveryFee === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-900'
               }`}>
                 {deliveryFee === 0 ? '✓ Bebas Ongkir' : `+ Ongkir Rp ${deliveryFee.toLocaleString('id-ID')}`}
@@ -1269,18 +1321,12 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
             )}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {!customerName.trim() && (
-              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
-                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span>Isi nama pelanggan untuk simpan</span>
-              </span>
-            )}
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              className="py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors cursor-pointer shrink-0"
             >
               Batal
             </button>
@@ -1288,7 +1334,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
               type="submit"
               form="quick-dropoff-form"
               onClick={handleSubmitOrder}
-              disabled={submitting || !currentService}
+              disabled={submitting || !currentService || !customerName.trim()}
               className="flex-1 sm:flex-none py-2.5 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-xs shadow-md shadow-blue-950/20 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
               title={!customerName.trim() ? 'Isi nama pelanggan untuk menyimpan' : 'Simpan transaksi dan cetak tag thermal'}
             >

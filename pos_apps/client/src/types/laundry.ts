@@ -349,9 +349,46 @@ export interface CustomerLaundryWalletLedger {
 export interface CustomerLaundryWallet {
   id?: string;
   balanceAmount: number;
+  balanceExpiresAt?: string | null;
   quotaKg: number;
   quotaExpiresAt?: string | null;
   ledgers?: CustomerLaundryWalletLedger[];
+}
+
+export interface LaundryPerfume {
+  id: string;
+  tenantId: string;
+  outletId?: string | null;
+  name: string;
+  extraPrice: number;
+  inventoryItemId?: string | null;
+  usageQtyPerUnit: number;
+  usageBasis: 'PER_KG' | 'PER_ORDER' | string;
+  isActive: boolean;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+  inventoryItem?: {
+    id: string;
+    name: string;
+    sku?: string | null;
+    canonicalUom: string;
+    averageCost?: number;
+  } | null;
+}
+
+export interface LaundryMachine {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  code: string;
+  name: string;
+  machineType: 'WASHER' | 'DRYER';
+  capacityKg?: number | null;
+  status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type LaundryDeliveryType =
