@@ -10,6 +10,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface LowStockItem {
   itemId: string;
@@ -80,14 +81,11 @@ export async function getInventoryAnalytics(
   const { tenantId, outletId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  const outletSlFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND sl.outlet_id = ${outletId}` : Prisma.empty;
-  const outletPoFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND po.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLodFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lod.outlet_id = ${outletId}` : Prisma.empty;
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletSlFilter = scope.sqlFilter('sl.outlet_id');
+  const outletPoFilter = scope.sqlFilter('po.outlet_id');
+  const outletLodFilter = scope.sqlFilter('lod.outlet_id');
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
 
   // 1. Total Berat Cucian (Tonnage) dan Valid Orders dalam Periode
   const tonnageRows = await prisma.$queryRaw<any[]>`

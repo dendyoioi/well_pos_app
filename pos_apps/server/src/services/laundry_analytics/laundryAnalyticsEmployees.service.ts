@@ -10,6 +10,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 import { getFinancialAnalytics } from './laundryAnalyticsFinancial.service';
 
 export interface EmployeeLeaderboardItem {
@@ -88,20 +89,14 @@ export async function getEmployeesAnalytics(
   const { tenantId, outletId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  const outletUserFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND u.outlet_id = ${outletId}` : Prisma.empty;
-  const outletAttFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND a.outlet_id = ${outletId}` : Prisma.empty;
-  const outletSchedFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND sws.outlet_id = ${outletId}` : Prisma.empty;
-  const outletRevFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND spr.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLslFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLiFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND li.outlet_id = ${outletId}` : Prisma.empty;
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletUserFilter = scope.sqlFilter('u.outlet_id');
+  const outletAttFilter = scope.sqlFilter('a.outlet_id');
+  const outletSchedFilter = scope.sqlFilter('sws.outlet_id');
+  const outletRevFilter = scope.sqlFilter('spr.outlet_id');
+  const outletLslFilter = scope.sqlFilter('o.outlet_id');
+  const outletLiFilter = scope.sqlFilter('li.outlet_id');
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
 
   // Tanggal dalam format YYYY-MM-DD (WIB aman tanpa pergeseran hari UTC)
   const startDateStr = dateRange.formattedRange.start;
@@ -387,7 +382,7 @@ export async function getEmployeesAnalytics(
       AND a.work_date = sws.schedule_date
       AND a.clock_in IS NOT NULL
     WHERE wst.tenant_id = ${tenantId}
-      ${outletId !== 'ALL' ? Prisma.sql`AND wst.outlet_id = ${outletId}` : Prisma.empty}
+      ${scope.sqlFilter('wst.outlet_id')}
       AND wst.is_active = true
     GROUP BY wst.id, wst.name, wst.start_time, wst.end_time
     ORDER BY wst.start_time ASC;

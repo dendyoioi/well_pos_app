@@ -45,10 +45,12 @@ import {
   FileText,
   Printer,
   Award,
+  Building2,
 } from 'lucide-react';
 import type { User } from '../../types/auth';
 import type { Outlet } from '../../types/outlet';
 import type { LaundryQueueOrder } from '../../types/laundry';
+import type { BusinessItem } from '../../types/business';
 import { api, type PlatformNotification } from '../../services/api';
 import { FloatingGuideWidget } from '../ui/FloatingGuideWidget';
 import { PwaInstallButton } from '../PwaInstallBanner';
@@ -122,6 +124,8 @@ interface BackofficeLayoutProps {
   onOpenGuide?: (sectionId?: string) => void;
   onLogout: () => void;
   children: React.ReactNode;
+  activeBusiness?: BusinessItem | null;
+  onOpenOwnerPortal?: (tab?: 'businesses' | 'tokens' | 'invoices') => void;
 }
 
 export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
@@ -134,11 +138,16 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
   onOpenGuide,
   onLogout,
   children,
+  activeBusiness,
+  onOpenOwnerPortal,
 }) => {
   // Deteksi Mode Industri Laundry & Dry Clean
   const isLaundryMode = React.useMemo(() => {
+    if (activeBusiness) {
+      return activeBusiness.vertical === 'LAUNDRY';
+    }
     return checkIsLaundry(activeOutlet, user);
-  }, [activeOutlet, user]);
+  }, [activeBusiness, activeOutlet, user]);
 
   // Hak Akses Panduan: Hanya Owner dan Supervisor yang dapat mengakses SOP / Panduan
   const canViewGuide = user && (user.role === 'OWNER' || user.role === 'ADMIN' || user.role === 'SUPERVISOR');
@@ -1679,6 +1688,24 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
           <div className="h-5 w-px bg-slate-200 hidden sm:block" />
 
+          {/* Tombol Akses Owner Portal & Multi-Bisnis (Khusus OWNER) */}
+          {user.role === 'OWNER' && onOpenOwnerPortal && (
+            <button
+              type="button"
+              onClick={() => onOpenOwnerPortal('businesses')}
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+              title="Buka Owner Portal & Kelola Bisnis"
+            >
+              <Building2 className="w-3.5 h-3.5 text-blue-800 shrink-0" />
+              <span className="hidden sm:inline">Owner Portal</span>
+              {activeBusiness && (
+                <span className="hidden xl:inline text-[10px] bg-blue-200 text-blue-950 px-1.5 py-0.5 rounded font-black max-w-[100px] truncate">
+                  {activeBusiness.name}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Store & Warehouse Dropdown Selector */}
           {(() => {
             const storeOutlets = outlets.filter((o) => !o.isWarehouse);
@@ -1811,7 +1838,22 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                       )}
 
                       {/* Kelola Toko & Pengaturan */}
-                      <div className="pt-1.5 border-t border-slate-100">
+                      <div className="pt-1.5 border-t border-slate-100 space-y-1">
+                        {user.role === 'OWNER' && onOpenOwnerPortal && (
+                          <button
+                            onClick={() => {
+                              setStoreDropdownOpen(false);
+                              onOpenOwnerPortal('businesses');
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl text-indigo-950 bg-indigo-50/70 hover:bg-indigo-100 font-bold flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Building2 className="w-3.5 h-3.5 text-indigo-700" />
+                              <span>Ganti Bisnis (Owner Portal)</span>
+                            </span>
+                            <span className="text-[10px] text-indigo-700 font-black">↗</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setStoreDropdownOpen(false);
@@ -2222,6 +2264,26 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Shortcut Ganti Bisnis di Mobile Drawer */}
+          {user.role === 'OWNER' && onOpenOwnerPortal && (
+            <div className="p-3 bg-indigo-50/60 border-b border-indigo-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileDrawerOpen(false);
+                  onOpenOwnerPortal('businesses');
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-white border border-indigo-200 text-indigo-950 font-bold text-xs flex items-center justify-between shadow-xs hover:bg-indigo-50 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-700" />
+                  <span>Ganti Bisnis (Owner Portal)</span>
+                </span>
+                <span className="text-[10px] text-indigo-700 font-black">↗</span>
+              </button>
+            </div>
+          )}
 
           {/* Quick Primary Action: ⚡ Buka Terminal Kasir / Terima Cucian */}
           {activeOutlet && !activeOutlet.isWarehouse && (

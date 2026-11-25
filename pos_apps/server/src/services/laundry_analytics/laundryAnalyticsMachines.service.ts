@@ -11,6 +11,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface MachineUtilizationItem {
   machineId: string;
@@ -94,10 +95,9 @@ export async function getMachinesAnalytics(
   const { tenantId, outletId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  const outletLmFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lm.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLslFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletLmFilter = scope.sqlFilter('lm.outlet_id');
+  const outletLslFilter = scope.sqlFilter('o.outlet_id');
 
   // 1. Ambil daftar seluruh unit mesin terdaftar
   const machineRows = await prisma.$queryRaw<any[]>`
@@ -160,8 +160,7 @@ export async function getMachinesAnalytics(
   }
 
   // 3. Query laundry_machine_maintenance_logs untuk downtime & biaya servis
-  const maintenanceOutletFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lmml.outlet_id = ${outletId}` : Prisma.empty;
+  const maintenanceOutletFilter = scope.sqlFilter('lmml.outlet_id');
   const maintenanceRows = await prisma.$queryRaw<any[]>`
     SELECT 
       lmml.machine_id,
@@ -203,8 +202,7 @@ export async function getMachinesAnalytics(
   }
 
   // 4. Query operational_expenses untuk beban utilitas (ELECTRICITY, WATER, MAINTENANCE)
-  const opexOutletFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND oe.outlet_id = ${outletId}` : Prisma.empty;
+  const opexOutletFilter = scope.sqlFilter('oe.outlet_id');
   const utilityOpexRows = await prisma.$queryRaw<any[]>`
     SELECT 
       COALESCE(SUM(oe.amount), 0) as total_utility_amount

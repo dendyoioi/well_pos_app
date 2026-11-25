@@ -9,6 +9,7 @@
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export const DRILLDOWN_TYPES = [
   'ORDERS_BY_DATE',
@@ -90,12 +91,10 @@ export async function getDrilldownAnalytics(
   const offset = (page - 1) * limit;
 
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLodFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lod.outlet_id = ${outletId}` : Prisma.empty;
-  const outletDebtFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND cd.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
+  const outletLodFilter = scope.sqlFilter('lod.outlet_id');
+  const outletDebtFilter = scope.sqlFilter('cd.outlet_id');
 
   let totalItems = 0;
   let items: any[] = [];
@@ -222,7 +221,7 @@ export async function getDrilldownAnalytics(
         FROM payment_transactions pt
         JOIN orders o ON pt.order_id = o.id
         WHERE pt.tenant_id = ${tenantId}
-          ${outletId !== 'ALL' ? Prisma.sql`AND pt.outlet_id = ${outletId}` : Prisma.empty}
+          ${scope.sqlFilter('pt.outlet_id')}
           ${methodCond}
           AND pt.created_at >= ${dateRange.startDate}
           AND pt.created_at <= ${dateRange.endDate}
@@ -244,7 +243,7 @@ export async function getDrilldownAnalytics(
         JOIN orders o ON pt.order_id = o.id
         LEFT JOIN customers c ON o.customer_id = c.id
         WHERE pt.tenant_id = ${tenantId}
-          ${outletId !== 'ALL' ? Prisma.sql`AND pt.outlet_id = ${outletId}` : Prisma.empty}
+          ${scope.sqlFilter('pt.outlet_id')}
           ${methodCond}
           AND pt.created_at >= ${dateRange.startDate}
           AND pt.created_at <= ${dateRange.endDate}

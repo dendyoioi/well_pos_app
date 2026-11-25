@@ -15,6 +15,7 @@ import {
   FinancialAnalyticsParams,
   FinancialMetricComparison,
 } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope, LaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface SalesAnalyticsResult {
   meta: {
@@ -129,10 +130,11 @@ async function fetchPeriodSalesTotals(
   tenantId: string,
   outletId: string | 'ALL',
   start: Date,
-  end: Date
+  end: Date,
+  scope?: LaundryOutletScope
 ) {
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
+  const effectiveScope = scope || (await resolveLaundryOutletScope(tenantId, outletId));
+  const outletOrderFilter = effectiveScope.sqlFilter('o.outlet_id');
 
   // Orders summary (valid, cancelled, voided)
   const rows = await prisma.$queryRaw<any[]>`
@@ -209,15 +211,14 @@ export async function getSalesAnalytics(
   const { tenantId, outletId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLodFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lod.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
+  const outletLodFilter = scope.sqlFilter('lod.outlet_id');
 
   // 1. Kueri Ringkasan Penjualan Periode Berjalan vs Lalu
   const [curr, prev] = await Promise.all([
-    fetchPeriodSalesTotals(tenantId, outletId, dateRange.startDate, dateRange.endDate),
-    fetchPeriodSalesTotals(tenantId, outletId, dateRange.prevStartDate, dateRange.prevEndDate),
+    fetchPeriodSalesTotals(tenantId, outletId, dateRange.startDate, dateRange.endDate, scope),
+    fetchPeriodSalesTotals(tenantId, outletId, dateRange.prevStartDate, dateRange.prevEndDate, scope),
   ]);
 
   // 2. Split Omzet Kiloan vs Satuan

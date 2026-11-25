@@ -954,6 +954,130 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "persistent_alerts_tenant_id_rule_key_status_idx" ON "persistent_alerts"("tenant_id", "rule_key", "status");
     `,
   },
+  {
+    id: '20261125_01_owner_portal_business_entity',
+    description: 'Menambahkan tabel businesses, kolom outlets.business_id, dan idempotent backfill untuk pemisahan multi-bisnis (Owner Portal Batch 1)',
+    sql: `
+      DO $$ BEGIN
+        CREATE TYPE "BusinessVerticalMode" AS ENUM ('FNB', 'RETAIL', 'LAUNDRY');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      CREATE TABLE IF NOT EXISTS "businesses" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "name" TEXT NOT NULL,
+        "slug" TEXT NOT NULL,
+        "vertical" "BusinessVerticalMode" NOT NULL DEFAULT 'FNB',
+        "sub_category" TEXT,
+        "logo_url" TEXT,
+        "is_active" BOOLEAN NOT NULL DEFAULT true,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "businesses_tenant_id_slug_key" ON "businesses"("tenant_id", "slug");
+      CREATE INDEX IF NOT EXISTS "businesses_tenant_id_vertical_is_active_idx" ON "businesses"("tenant_id", "vertical", "is_active");
+
+      ALTER TABLE "outlets" ADD COLUMN IF NOT EXISTS "business_id" TEXT;
+
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'outlets_business_id_fkey'
+        ) THEN
+          ALTER TABLE "outlets" ADD CONSTRAINT "outlets_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+        END IF;
+      END $$;
+
+      CREATE INDEX IF NOT EXISTS "outlets_tenant_id_business_id_idx" ON "outlets"("tenant_id", "business_id");
+
+      DO $$
+      DECLARE
+        rec RECORD;
+        v_business_id TEXT;
+        v_vertical "BusinessVerticalMode";
+        v_name TEXT;
+        v_slug TEXT;
+      BEGIN
+        FOR rec IN
+          SELECT DISTINCT
+            o.tenant_id,
+            COALESCE(t.business_name, 'Bisnis Utama') AS tenant_name,
+            COALESCE(t.slug, 'main') AS tenant_slug,
+            CASE
+              WHEN (o.industries::text ILIKE '%LAUNDRY%' OR o.name ILIKE '%Laundry%') THEN 'LAUNDRY'::"BusinessVerticalMode"
+              WHEN t.business_vertical = 'RETAIL' THEN 'RETAIL'::"BusinessVerticalMode"
+              WHEN t.business_vertical = 'FNB' THEN 'FNB'::"BusinessVerticalMode"
+              WHEN t.business_vertical = 'SERVICES' THEN 'RETAIL'::"BusinessVerticalMode"
+              ELSE 'FNB'::"BusinessVerticalMode"
+            END AS computed_vertical
+          FROM outlets o
+          JOIN tenants t ON o.tenant_id = t.id
+          WHERE o.business_id IS NULL
+        LOOP
+          v_vertical := rec.computed_vertical;
+          
+          IF v_vertical = 'LAUNDRY' THEN
+            v_name := rec.tenant_name || ' Laundry';
+            v_slug := rec.tenant_slug || '-laundry';
+          ELSIF v_vertical = 'RETAIL' THEN
+            v_name := rec.tenant_name || ' Retail';
+            v_slug := rec.tenant_slug || '-retail';
+          ELSE
+            v_name := rec.tenant_name;
+            v_slug := rec.tenant_slug || '-fnb';
+          END IF;
+
+          SELECT id INTO v_business_id
+          FROM businesses
+          WHERE tenant_id = rec.tenant_id AND slug = v_slug
+          LIMIT 1;
+
+          IF v_business_id IS NULL THEN
+            v_business_id := gen_random_uuid()::text;
+            INSERT INTO businesses (id, tenant_id, name, slug, vertical, is_active, created_at, updated_at)
+            VALUES (v_business_id, rec.tenant_id, v_name, v_slug, v_vertical, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (tenant_id, slug) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+            RETURNING id INTO v_business_id;
+          END IF;
+
+          UPDATE outlets
+          SET business_id = v_business_id
+          WHERE tenant_id = rec.tenant_id
+            AND business_id IS NULL
+            AND (
+              (v_vertical = 'LAUNDRY' AND (industries::text ILIKE '%LAUNDRY%' OR name ILIKE '%Laundry%'))
+              OR
+              (v_vertical <> 'LAUNDRY' AND NOT (industries::text ILIKE '%LAUNDRY%' OR name ILIKE '%Laundry%'))
+            );
+        END LOOP;
+      END $$;
+
+      DO $$
+      DECLARE
+        rec RECORD;
+        v_bus_id TEXT;
+      BEGIN
+        FOR rec IN
+          SELECT o.id, o.tenant_id, COALESCE(t.business_name, 'Bisnis Utama') AS bname, COALESCE(t.slug, 'main') AS bslug
+          FROM outlets o
+          LEFT JOIN tenants t ON o.tenant_id = t.id
+          WHERE o.business_id IS NULL
+        LOOP
+          SELECT id INTO v_bus_id FROM businesses WHERE tenant_id = rec.tenant_id LIMIT 1;
+          IF v_bus_id IS NULL THEN
+            v_bus_id := gen_random_uuid()::text;
+            INSERT INTO businesses (id, tenant_id, name, slug, vertical, is_active, created_at, updated_at)
+            VALUES (v_bus_id, rec.tenant_id, rec.bname, rec.bslug || '-default', 'FNB', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (tenant_id, slug) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+            RETURNING id INTO v_bus_id;
+          END IF;
+          UPDATE outlets SET business_id = v_bus_id WHERE id = rec.id;
+        END LOOP;
+      END $$;
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

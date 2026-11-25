@@ -10,6 +10,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export const CANONICAL_STAGES = [
   'DROP_OFF',
@@ -103,18 +104,17 @@ export async function getOperationsAnalytics(
   const { tenantId, outletId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLodFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lod.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLiFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND li.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLslFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
+  const outletLodFilter = scope.sqlFilter('lod.outlet_id');
+  const outletLiFilter = scope.sqlFilter('li.outlet_id');
+  const outletLslFilter = scope.sqlFilter('o.outlet_id');
   const outletManifestFilter =
-    outletId !== 'ALL'
+    !scope.isAll && outletId
       ? Prisma.sql`AND (ltm.source_outlet_id = ${outletId} OR ltm.target_outlet_id = ${outletId})`
-      : Prisma.empty;
+      : scope.laundryOutletIds.length > 0
+      ? Prisma.sql`AND (ltm.source_outlet_id IN (${Prisma.join(scope.laundryOutletIds)}) OR ltm.target_outlet_id IN (${Prisma.join(scope.laundryOutletIds)}))`
+      : Prisma.sql`AND 1 = 0`;
 
   // 1. Ringkasan Produksi (Total Orders, Weight, Pieces)
   const prodSummaryRows = await prisma.$queryRaw<any[]>`

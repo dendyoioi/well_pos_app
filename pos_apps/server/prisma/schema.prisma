@@ -114,6 +114,7 @@ model Tenant {
   machineMaintenanceLogs LaundryMachineMaintenanceLog[]
   alertRuleConfigs      AlertRuleConfig[]
   persistentAlerts      PersistentAlert[]
+  businesses            Business[]
 
   @@map("tenants")
 }
@@ -339,9 +340,12 @@ model Outlet {
   machineMaintenanceLogs LaundryMachineMaintenanceLog[]
   alertRuleConfigs      AlertRuleConfig[]
   persistentAlerts      PersistentAlert[]
+  businessId            String?           @map("business_id")
+  business              Business?         @relation(fields: [businessId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
+  @@index([tenantId, businessId])
   @@map("outlets")
 }
 
@@ -2200,4 +2204,34 @@ model PersistentAlert {
   @@index([tenantId, outletId, status, createdAt])
   @@index([tenantId, ruleKey, status])
   @@map("persistent_alerts")
+}
+
+// ==========================================
+// 19. OWNER PORTAL & MULTI-BUSINESS ENTITY
+// ==========================================
+
+enum BusinessVerticalMode {
+  FNB
+  RETAIL
+  LAUNDRY
+}
+
+model Business {
+  id          String               @id @default(uuid())
+  tenantId    String               @map("tenant_id")
+  name        String
+  slug        String
+  vertical    BusinessVerticalMode @default(FNB)
+  subCategory String?              @map("sub_category")
+  logoUrl     String?              @map("logo_url")
+  isActive    Boolean              @default(true) @map("is_active")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlets Outlet[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, vertical, isActive])
+  @@map("businesses")
 }

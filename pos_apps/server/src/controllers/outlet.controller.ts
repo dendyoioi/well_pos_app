@@ -6,6 +6,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { storageService } from '../services/storage.service';
 import { locationDualWriteService } from '../services/dual_write';
+import { clearLaundryOutletScopeCache } from '../services/laundry_analytics/laundryOutletScope.helper';
 
 // Skema Biaya Dinamis Outlet
 const feeItemSchema = z
@@ -45,6 +46,7 @@ const createOutletSchema = z.object({
   warehouseId: z.string().uuid().nullable().optional(),
   feesConfig: z.array(feeItemSchema).optional(),
   industries: z.array(z.string()).optional(),
+  businessId: z.string().uuid().optional().nullable(),
 });
 
 const updateOutletSchema = z.object({
@@ -56,6 +58,7 @@ const updateOutletSchema = z.object({
   isActive: z.boolean().optional(),
   googleReviewUrl: z.string().optional().nullable(),
   industries: z.array(z.string()).optional(),
+  businessId: z.string().uuid().optional().nullable(),
   receiptConfig: z.object({
     paperSize: z.enum(['58mm', '80mm']).default('58mm'),
     footerText: z.string().optional(),
@@ -109,40 +112,44 @@ export const getOutlets = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
 
+    const { businessId } = req.query;
     const now = Date.now();
     const cached = outletsCache.get(tenantId);
+    let allOutlets: any[];
+
     if (cached && cached.expiresAt > now) {
-      return res.status(200).json({
-        status: 'success',
-        data: cached.data,
+      allOutlets = cached.data;
+    } else {
+      allOutlets = await prisma.outlet.findMany({
+        where: { tenantId },
+        include: {
+          _count: {
+            select: {
+              users: true,
+              orders: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (outletsCache.size >= OUTLETS_CACHE_MAX_ENTRIES) {
+        const oldestKey = outletsCache.keys().next().value;
+        if (oldestKey) outletsCache.delete(oldestKey);
+      }
+      outletsCache.set(tenantId, {
+        data: allOutlets,
+        expiresAt: now + OUTLETS_CACHE_TTL_MS,
       });
     }
 
-    const outlets = await prisma.outlet.findMany({
-      where: { tenantId },
-      include: {
-        _count: {
-          select: {
-            users: true,
-            orders: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    if (outletsCache.size >= OUTLETS_CACHE_MAX_ENTRIES) {
-      const oldestKey = outletsCache.keys().next().value;
-      if (oldestKey) outletsCache.delete(oldestKey);
-    }
-    outletsCache.set(tenantId, {
-      data: outlets,
-      expiresAt: now + OUTLETS_CACHE_TTL_MS,
-    });
+    const data = businessId
+      ? allOutlets.filter((o: any) => o.businessId === businessId)
+      : allOutlets;
 
     return res.status(200).json({
       status: 'success',
-      data: outlets,
+      data,
     });
   } catch (error) {
     console.error('Error saat mengambil daftar outlet:', error);
@@ -220,7 +227,32 @@ export const createOutlet = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, address, phone, isWarehouse, warehouseId, feesConfig } = parseResult.data;
+    const { name, address, phone, isWarehouse, warehouseId, feesConfig, industries, businessId } = parseResult.data;
+
+    // Guardrail: Validasi businessId jika dikirimkan
+    let targetBusiness: any = null;
+    if (businessId) {
+      targetBusiness = await prisma.business.findFirst({
+        where: { id: businessId, tenantId },
+      });
+      if (!targetBusiness) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Bisnis yang dipilih tidak valid atau tidak ditemukan.',
+        });
+      }
+    }
+
+    let effectiveIndustries = industries;
+    if ((!effectiveIndustries || effectiveIndustries.length === 0) && targetBusiness) {
+      if (targetBusiness.vertical === 'LAUNDRY') {
+        effectiveIndustries = ['LAUNDRY'];
+      } else if (targetBusiness.vertical === 'FNB') {
+        effectiveIndustries = ['FOOD_AND_BEVERAGE'];
+      } else {
+        effectiveIndustries = ['RETAIL'];
+      }
+    }
 
     // Guardrail: Jika outlet adalah gudang, tidak boleh memiliki warehouseId
     const effectiveWarehouseId = isWarehouse ? null : warehouseId;
@@ -317,6 +349,18 @@ export const createOutlet = async (req: Request, res: Response) => {
         outlet.warehouseId = effectiveWarehouseId;
       }
 
+      if (businessId || effectiveIndustries) {
+        await tx.outlet.update({
+          where: { id: outlet.id },
+          data: {
+            ...(businessId && { businessId }),
+            ...(effectiveIndustries && { industries: effectiveIndustries }),
+          },
+        });
+        if (businessId) outlet.businessId = businessId;
+        if (effectiveIndustries) outlet.industries = effectiveIndustries;
+      }
+
       // Duplikasi master produk ke OutletProduct cabang baru (stok awal 0)
       // serta sinkronisasi inventory_balances (0) di default storage location
       const tenantProducts = await tx.$queryRawUnsafe<any[]>(
@@ -358,6 +402,7 @@ export const createOutlet = async (req: Request, res: Response) => {
     });
 
     invalidateOutletsCache(tenantId);
+    clearLaundryOutletScopeCache(tenantId);
 
     return res.status(201).json({
       status: 'success',
@@ -447,12 +492,26 @@ export const updateOutlet = async (req: Request, res: Response) => {
       }
     }
 
+    // Guardrail: Validasi businessId jika dikirimkan
+    if (updateData.businessId) {
+      const targetBusiness = await prisma.business.findFirst({
+        where: { id: updateData.businessId, tenantId },
+      });
+      if (!targetBusiness) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Bisnis yang dipilih tidak valid atau tidak ditemukan.',
+        });
+      }
+    }
+
     const updated = await prisma.outlet.update({
       where: { id },
       data: updateData as any,
     });
 
     invalidateOutletsCache(tenantId);
+    clearLaundryOutletScopeCache(tenantId);
 
     return res.status(200).json({
       status: 'success',

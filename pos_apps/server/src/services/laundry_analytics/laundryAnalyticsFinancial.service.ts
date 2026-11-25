@@ -13,6 +13,7 @@ import {
   ResolvedDateRange,
   calculatePercentChange,
 } from './dateRangeResolver.service';
+import { resolveLaundryOutletScope, LaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface FinancialAnalyticsParams {
   tenantId: string;
@@ -163,24 +164,17 @@ async function fetchPeriodFinancialTotals(
   tenantId: string,
   outletId: string | 'ALL',
   start: Date,
-  end: Date
+  end: Date,
+  scope?: LaundryOutletScope
 ) {
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletPtFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND pt.outlet_id = ${outletId}` : Prisma.empty;
-  const outletCdpFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND cdp.outlet_id = ${outletId}` : Prisma.empty;
-  const outletClwlFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND clwl.outlet_id = ${outletId}` : Prisma.empty;
-  const outletCmFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND cm.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLiFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND li.outlet_id = ${outletId}` : Prisma.empty;
-  const outletStorageFilter =
-    outletId !== 'ALL'
-      ? Prisma.sql`JOIN storage_locations sl ON il.storage_location_id = sl.id AND sl.outlet_id = ${outletId}`
-      : Prisma.empty;
+  const effectiveScope = scope || (await resolveLaundryOutletScope(tenantId, outletId));
+  const outletOrderFilter = effectiveScope.sqlFilter('o.outlet_id');
+  const outletPtFilter = effectiveScope.sqlFilter('pt.outlet_id');
+  const outletCdpFilter = effectiveScope.sqlFilter('cdp.outlet_id');
+  const outletClwlFilter = effectiveScope.sqlFilter('clwl.outlet_id');
+  const outletCmFilter = effectiveScope.sqlFilter('cm.outlet_id');
+  const outletLiFilter = effectiveScope.sqlFilter('li.outlet_id');
+  const outletStorageFilter = effectiveScope.storageLocationJoin('il.storage_location_id');
 
   // 1. Accrual Orders
   const orderSummaryRows = await db.$queryRaw<any[]>`
@@ -315,8 +309,7 @@ async function fetchPeriodFinancialTotals(
   const incidentExpense = toNum(incidentRows[0]?.incident_expense);
 
   // 4c. Fixed OPEX (operational_expenses)
-  const outletOeFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND oe.outlet_id = ${outletId}` : Prisma.empty;
+  const outletOeFilter = effectiveScope.sqlFilter('oe.outlet_id');
 
   const fixedOpexRows = await db.$queryRaw<any[]>`
     SELECT 
@@ -377,20 +370,20 @@ export async function getFinancialAnalytics(
   const { tenantId, outletId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  const outletPtFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND pt.outlet_id = ${outletId}` : Prisma.empty;
-  const outletCdFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND cd.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletPtFilter = scope.sqlFilter('pt.outlet_id');
+  const outletCdFilter = scope.sqlFilter('cd.outlet_id');
 
   // Jalankan kueri periode berjalan dan periode sebelumnya secara paralel
   const [curr, prev] = await Promise.all([
-    fetchPeriodFinancialTotals(prisma, tenantId, outletId, dateRange.startDate, dateRange.endDate),
+    fetchPeriodFinancialTotals(prisma, tenantId, outletId, dateRange.startDate, dateRange.endDate, scope),
     fetchPeriodFinancialTotals(
       prisma,
       tenantId,
       outletId,
       dateRange.prevStartDate,
-      dateRange.prevEndDate
+      dateRange.prevEndDate,
+      scope
     ),
   ]);
 
@@ -454,7 +447,7 @@ export async function getFinancialAnalytics(
       COALESCE(SUM(o.grand_total), 0) as daily_accrual
     FROM orders o
     WHERE o.tenant_id = ${tenantId}
-      ${outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty}
+      ${scope.sqlFilter('o.outlet_id')}
       AND o.created_at >= ${dateRange.startDate}
       AND o.created_at <= ${dateRange.endDate}
       AND (o.order_status IS NULL OR o.order_status NOT IN ('VOIDED', 'CANCELLED'))
@@ -481,7 +474,7 @@ export async function getFinancialAnalytics(
       COALESCE(SUM(cm.amount), 0) as daily_opex
     FROM cash_movements cm
     WHERE cm.tenant_id = ${tenantId}
-      ${outletId !== 'ALL' ? Prisma.sql`AND cm.outlet_id = ${outletId}` : Prisma.empty}
+      ${scope.sqlFilter('cm.outlet_id')}
       AND cm.type = 'CASH_OUT'
       AND cm.created_at >= ${dateRange.startDate}
       AND cm.created_at <= ${dateRange.endDate}
@@ -495,7 +488,7 @@ export async function getFinancialAnalytics(
       COALESCE(SUM(oe.amount), 0) as daily_fixed_opex
     FROM operational_expenses oe
     WHERE oe.tenant_id = ${tenantId}
-      ${outletId !== 'ALL' ? Prisma.sql`AND oe.outlet_id = ${outletId}` : Prisma.empty}
+      ${scope.sqlFilter('oe.outlet_id')}
       AND oe.expense_date >= ${dateRange.startDate}
       AND oe.expense_date <= ${dateRange.endDate}
     GROUP BY tx_date;

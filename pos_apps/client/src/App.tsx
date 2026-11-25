@@ -1,8 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { api, authStorage, platformStorage } from './services/api';
+import { api, authStorage, platformStorage, businessApi } from './services/api';
 import type { User } from './types/auth';
+import type { BusinessItem } from './types/business';
 import { DialogProvider } from './context/DialogContext';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { PullToRefresh } from './components/PullToRefresh';
@@ -25,6 +26,9 @@ const MaintenancePage = lazy(() =>
 const PublicLaundryTrackingPage = lazy(() =>
   import('./pages/PublicLaundryTrackingPage').then((m) => ({ default: m.PublicLaundryTrackingPage }))
 );
+const OwnerPortalPage = lazy(() =>
+  import('./pages/OwnerPortalPage').then((m) => ({ default: m.OwnerPortalPage }))
+);
 
 const ViewLoadingFallback = () => (
   <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -39,10 +43,18 @@ const ViewLoadingFallback = () => (
 
 // Path URL rahasia khusus akses portal Superadmin Platform (Mencegah brute force / scan bot)
 export const SUPERADMIN_SECRET_HASH = '#hq-gate-99';
+export const ACTIVE_BUSINESS_KEY = 'wellpos_active_business_id';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
+
+  // State khusus Sesi OWNER & Multi-Business Hub
+  const [activeBusiness, setActiveBusiness] = useState<BusinessItem | null>(null);
+  const [initialOutletId, setInitialOutletId] = useState<string | undefined>(undefined);
+  const [showOwnerPortal, setShowOwnerPortal] = useState(false);
+  const [ownerPortalTab, setOwnerPortalTab] = useState<'businesses' | 'tokens' | 'invoices'>('businesses');
+  const [loadingOwnerBusinesses, setLoadingOwnerBusinesses] = useState(false);
 
   // View routing: 'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track'
   const [trackInvoice, setTrackInvoice] = useState<string>(() => {
@@ -203,6 +215,10 @@ export const App: React.FC = () => {
       if (eventType === 'merchant') {
         const hadActiveSession = Boolean(user || authStorage.getToken());
         authStorage.clearSession();
+        sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
+        setActiveBusiness(null);
+        setInitialOutletId(undefined);
+        setShowOwnerPortal(false);
         setUser(null);
         if (!hadActiveSession) return; // Jangan munculkan modal jika sebelumnya memang belum login
       } else {
@@ -225,6 +241,10 @@ export const App: React.FC = () => {
         customEvent.detail?.message ||
         'Sesi login perangkat Anda telah dicabut oleh pemilik toko demi keamanan akun. Silakan login kembali.';
       authStorage.clearSession();
+      sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
+      setActiveBusiness(null);
+      setInitialOutletId(undefined);
+      setShowOwnerPortal(false);
       setUser(null);
       setSessionModalState({
         isOpen: true,
@@ -283,6 +303,76 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Smart Routing Khusus Akun OWNER: Evaluasi Bisnis & Tentukan Halaman Awal
+  useEffect(() => {
+    if (user?.role === 'OWNER') {
+      let isMounted = true;
+      setLoadingOwnerBusinesses(true);
+
+      businessApi
+        .getBusinesses()
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.status === 'success' && Array.isArray(res.data)) {
+            const list = res.data;
+            if (list.length === 0) {
+              // 0 Bisnis: Arahkan ke Owner Portal untuk membuat bisnis pertama
+              setActiveBusiness(null);
+              setShowOwnerPortal(true);
+              sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
+            } else if (list.length === 1) {
+              // 1 Bisnis: Auto-select langsung masuk Dashboard bisnis (tanpa tambah 1 klik)
+              setActiveBusiness(list[0]);
+              setShowOwnerPortal(false);
+              sessionStorage.setItem(ACTIVE_BUSINESS_KEY, list[0].id);
+            } else {
+              // >= 2 Bisnis: Cek sessionStorage untuk auto-resume bisnis aktif
+              const savedBizId = sessionStorage.getItem(ACTIVE_BUSINESS_KEY);
+              const found = list.find((b) => b.id === savedBizId);
+              if (found) {
+                setActiveBusiness(found);
+                setShowOwnerPortal(false);
+              } else {
+                // Belum memilih -> Tampilkan Owner Portal
+                setActiveBusiness(null);
+                setShowOwnerPortal(true);
+              }
+            }
+          } else {
+            setShowOwnerPortal(false);
+          }
+        })
+        .catch((err) => {
+          console.warn('[App] Gagal memuat bisnis owner:', err);
+          if (isMounted) setShowOwnerPortal(false);
+        })
+        .finally(() => {
+          if (isMounted) setLoadingOwnerBusinesses(false);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      // Role NON-OWNER: JANGAN pernah render OwnerPortalPage dan JANGAN fetch bisnis
+      setActiveBusiness(null);
+      setShowOwnerPortal(false);
+      setLoadingOwnerBusinesses(false);
+    }
+  }, [user?.role, user?.tenantId]);
+
+  const handleSelectBusiness = (business: BusinessItem, outletId?: string) => {
+    sessionStorage.setItem(ACTIVE_BUSINESS_KEY, business.id);
+    setActiveBusiness(business);
+    setInitialOutletId(outletId);
+    setShowOwnerPortal(false);
+  };
+
+  const handleOpenOwnerPortal = (tab: 'businesses' | 'tokens' | 'invoices' = 'businesses') => {
+    setOwnerPortalTab(tab);
+    setShowOwnerPortal(true);
+  };
+
   const handleLoginSuccess = (loggedInUser: User) => {
     setUser(loggedInUser);
     window.location.hash = 'pos';
@@ -290,6 +380,10 @@ export const App: React.FC = () => {
 
   const handleLogout = () => {
     authStorage.clearSession();
+    sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
+    setActiveBusiness(null);
+    setInitialOutletId(undefined);
+    setShowOwnerPortal(false);
     setUser(null);
     setViewMode('pos-login');
     window.location.hash = 'pos';
@@ -375,11 +469,27 @@ export const App: React.FC = () => {
                   </button>
                 </div>
               )}
-              <DashboardPage
-                user={user}
-                onLogout={handleLogout}
-                onUserChange={(updatedUser) => setUser(updatedUser)}
-              />
+              {user.role === 'OWNER' && loadingOwnerBusinesses ? (
+                <ViewLoadingFallback />
+              ) : user.role === 'OWNER' && showOwnerPortal ? (
+                <Suspense fallback={<ViewLoadingFallback />}>
+                  <OwnerPortalPage
+                    user={user}
+                    initialTab={ownerPortalTab}
+                    onSelectBusiness={handleSelectBusiness}
+                    onLogout={handleLogout}
+                  />
+                </Suspense>
+              ) : (
+                <DashboardPage
+                  user={user}
+                  activeBusiness={activeBusiness}
+                  initialOutletId={initialOutletId}
+                  onOpenOwnerPortal={user.role === 'OWNER' ? handleOpenOwnerPortal : undefined}
+                  onLogout={handleLogout}
+                  onUserChange={(updatedUser) => setUser(updatedUser)}
+                />
+              )}
             </div>
           ) : viewMode === 'superadmin' ? (
             /* LEVEL 1: SUPERADMIN PLATFORM DASHBOARD */

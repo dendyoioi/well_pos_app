@@ -39,6 +39,7 @@ import {
 import type { User, UserRole } from '../types/auth';
 import type { Outlet, OutletFee } from '../types/outlet';
 import type { Order } from '../types/order';
+import type { BusinessItem } from '../types/business';
 import { ProductsView } from './ProductsView';
 import { InventoryView } from './InventoryView';
 import { PosTerminalView } from './PosTerminalView';
@@ -102,6 +103,9 @@ interface DashboardPageProps {
   user: User;
   onLogout: () => void;
   onUserChange?: (user: User) => void;
+  activeBusiness?: BusinessItem | null;
+  initialOutletId?: string;
+  onOpenOwnerPortal?: (tab?: 'businesses' | 'tokens' | 'invoices') => void;
 }
 
 type TabKey =
@@ -303,7 +307,14 @@ const DEFAULT_TAB: Record<UserRole, TabKey> = {
   WAITER: 'pos',
 };
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, onUserChange: _onUserChange }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({
+  user,
+  onLogout,
+  onUserChange: _onUserChange,
+  activeBusiness,
+  initialOutletId,
+  onOpenOwnerPortal,
+}) => {
   // Dukungan URL query param ?tab=xxx untuk deep linking dan navigasi instan
   const [activeTab, setActiveTab] = useState<TabKey>(() => {
     if (typeof window !== 'undefined') {
@@ -342,11 +353,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
     setActiveTab('guide');
   };
 
-  // Fetch all outlets belonging to this store's tenant
+  // Fetch all outlets belonging to this store's tenant / active business
   const fetchOutlets = async () => {
     try {
       setLoadingOutlets(true);
-      const res = await api.getOutlets();
+      const res = await api.getOutlets(activeBusiness?.id);
       if (res.status === 'success' && res.data) {
         setOutlets(res.data);
         if (res.data.length > 0) {
@@ -357,10 +368,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
               if (userOutlet) return userOutlet;
             }
 
-            // Jika outlet yang saat ini aktif valid dan BUKAN gudang, pertahankan
+            // Jika outlet yang saat ini aktif valid dan BUKAN gudang, pertahankan (agar tidak snap-back saat refetch/edit outlet)
             if (current && !current.isWarehouse) {
               const found = res.data.find((o: Outlet) => o.id === current.id && !o.isWarehouse);
               if (found) return found;
+            }
+
+            // Prioritas: Jika initialOutletId diberikan dan cocok (misal navigasi baru dari Owner Portal), gunakan itu
+            if (initialOutletId) {
+              const matchedInitial = res.data.find((o: Outlet) => o.id === initialOutletId);
+              if (matchedInitial) return matchedInitial;
             }
 
             // Prioritas: Toko penjualan yang cocok dengan penugasan outlet user
@@ -386,7 +403,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
   useEffect(() => {
     fetchOutlets();
-  }, [user.id, user.tenantId, user.outletId, user.role]);
+  }, [user.id, user.tenantId, user.outletId, user.role, activeBusiness?.id, initialOutletId]);
+
+  // Reset tab ke default saat berpindah workspace bisnis
+  useEffect(() => {
+    if (activeBusiness?.id) {
+      setActiveTab(DEFAULT_TAB[user.role] || 'overview');
+    }
+  }, [activeBusiness?.id, user.role]);
 
   const handleOutletSelect = (outletId: string) => {
     const selected = outlets.find((o) => o.id === outletId);
@@ -559,8 +583,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
 
   // Deteksi Vertikal Mode Laundry
   const isLaundryMode = React.useMemo(() => {
+    if (activeBusiness) {
+      return activeBusiness.vertical === 'LAUNDRY';
+    }
     return checkIsLaundry(activeOutlet, user);
-  }, [activeOutlet, user]);
+  }, [activeBusiness, activeOutlet, user]);
 
   const allowedTabs = React.useMemo(() => {
     const baseTabs = ROLE_TABS[user.role] || ['pos'];
@@ -633,6 +660,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
         onTabChange={(tab) => setActiveTab(tab)}
         onOpenGuide={handleOpenGuide}
         onLogout={onLogout}
+        activeBusiness={activeBusiness}
+        onOpenOwnerPortal={onOpenOwnerPortal}
       >
         <Suspense fallback={<ViewTabFallback />}>
           {activeTab === 'pos' ? (
@@ -860,6 +889,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                 handleOutletSelect(id);
               }}
               onOutletsUpdated={fetchOutlets}
+              activeBusiness={activeBusiness}
             />
           ) : activeTab === 'guide' ? (
             <UserGuideView
@@ -2389,6 +2419,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
                 handleOutletSelect(id);
               }}
               onOutletsUpdated={fetchOutlets}
+              activeBusiness={activeBusiness}
             />
           ) : activeTab === 'guide' ? (
             <div className="max-w-6xl mx-auto p-4 sm:p-6">

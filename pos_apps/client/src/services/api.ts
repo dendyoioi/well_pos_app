@@ -29,6 +29,12 @@ import type {
   StaffPerformanceReview,
   StaffPerformanceItem,
 } from '../types/laundry';
+import type {
+  BusinessItem,
+  CreateBusinessPayload,
+  UpdateBusinessPayload,
+  OwnerTokenSummary,
+} from '../types/business';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -2049,8 +2055,9 @@ export const api = {
   // ----------------------------------------------------
   // OUTLET TOKO (OUTLETS) & BIAYA DINAMIS
   // ----------------------------------------------------
-  getOutlets: async (): Promise<{ status: string; data: Outlet[]; message?: string }> => {
-    const res = await fetch('/api/outlets', {
+  getOutlets: async (businessId?: string): Promise<{ status: string; data: Outlet[]; message?: string }> => {
+    const url = businessId ? `/api/outlets?businessId=${encodeURIComponent(businessId)}` : '/api/outlets';
+    const res = await fetch(url, {
       headers: authHeader(),
     });
     return res.json();
@@ -2069,6 +2076,8 @@ export const api = {
     phone?: string;
     isWarehouse?: boolean;
     feesConfig?: OutletFee[];
+    businessId?: string | null;
+    industries?: string[];
   }): Promise<{ status: string; data?: Outlet; message?: string }> => {
     const res = await fetch('/api/outlets', {
       method: 'POST',
@@ -3526,6 +3535,83 @@ export const api = {
     if (params?.outletId) query.append('outletId', params.outletId);
     if (params?.userId) query.append('userId', params.userId);
     const res = await fetch(`/api/laundry/staff-performance/reviews?${query.toString()}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
+  // OWNER PORTAL & MULTI-BUSINESS HUB
+  // ----------------------------------------------------
+  getBusinesses: async (): Promise<{ status: string; data: BusinessItem[]; message?: string }> => {
+    return businessApi.getBusinesses();
+  },
+  createBusiness: async (
+    data: CreateBusinessPayload
+  ): Promise<{ status: string; data: { business: BusinessItem; outlet: any }; message?: string }> => {
+    return businessApi.createBusiness(data);
+  },
+  updateBusiness: async (
+    id: string,
+    data: UpdateBusinessPayload
+  ): Promise<{ status: string; data: BusinessItem; message?: string }> => {
+    return businessApi.updateBusiness(id, data);
+  },
+  getBusinessTokenSummary: async (): Promise<{
+    status: string;
+    data: OwnerTokenSummary;
+    message?: string;
+  }> => {
+    return businessApi.getBusinessTokenSummary();
+  },
+};
+
+// ----------------------------------------------------
+// OWNER PORTAL & MULTI-BUSINESS HUB API CLIENT
+// ----------------------------------------------------
+export const businessApi = {
+  getBusinesses: async (): Promise<{ status: string; data: BusinessItem[]; message?: string }> => {
+    const res = await fetch('/api/businesses', {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createBusiness: async (
+    data: CreateBusinessPayload
+  ): Promise<{ status: string; data: { business: BusinessItem; outlet: any }; message?: string }> => {
+    const res = await fetch('/api/businesses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  updateBusiness: async (
+    id: string,
+    data: UpdateBusinessPayload
+  ): Promise<{ status: string; data: BusinessItem; message?: string }> => {
+    const res = await fetch(`/api/businesses/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  getBusinessTokenSummary: async (): Promise<{
+    status: string;
+    data: OwnerTokenSummary;
+    message?: string;
+  }> => {
+    const res = await fetch('/api/businesses/token-summary', {
       headers: authHeader(),
     });
     return res.json();

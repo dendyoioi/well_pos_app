@@ -9,6 +9,7 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 import {
   getFinancialAnalytics,
   FinancialAnalyticsParams,
@@ -184,18 +185,12 @@ export async function getExecutiveOverview(
   // 1. Ambil data finansial melalui getFinancialAnalytics agar angka 100% konsisten
   const financial = await getFinancialAnalytics(params);
 
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLiFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND li.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLcfFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lcf.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLodFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lod.outlet_id = ${outletId}` : Prisma.empty;
-  const outletStorageFilter =
-    outletId !== 'ALL'
-      ? Prisma.sql`JOIN storage_locations sl ON ib.storage_location_id = sl.id AND sl.outlet_id = ${outletId}`
-      : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
+  const outletLiFilter = scope.sqlFilter('li.outlet_id');
+  const outletLcfFilter = scope.sqlFilter('lcf.outlet_id');
+  const outletLodFilter = scope.sqlFilter('lod.outlet_id');
+  const outletStorageFilter = scope.storageLocationJoin('ib.storage_location_id');
 
   // 2. Kueri Operasional Periode Berjalan
   const orderOpRows = await prisma.$queryRaw<any[]>`
@@ -519,8 +514,7 @@ export async function getExecutiveOverview(
   const [yearStr, monthStr] = dateRange.formattedRange.start.split('-');
   const periodYear = Number(yearStr);
   const periodMonth = Number(monthStr);
-  const targetOutletFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND obt.outlet_id = ${outletId}` : Prisma.empty;
+  const targetOutletFilter = scope.sqlFilter('obt.outlet_id');
 
   const targetRows = await prisma.$queryRaw<any[]>`
     SELECT 

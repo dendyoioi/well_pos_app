@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
 import { calculateHealthScore } from './laundryAnalyticsOverview.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface BenchmarkOutletItem {
   outletId: string;
@@ -90,7 +91,9 @@ export async function getBenchmarkAnalytics(
   const { tenantId, dateRange } = params;
   const timezone = params.timezone || dateRange.timezone || 'Asia/Jakarta';
 
-  // 1. Ambil seluruh outlet aktif milik tenant
+  const scope = await resolveLaundryOutletScope(tenantId, 'ALL');
+
+  // 1. Ambil seluruh outlet aktif milik tenant (khusus bertipe Laundry)
   const outletRows = await prisma.$queryRaw<any[]>`
     SELECT 
       o.id as outlet_id,
@@ -98,8 +101,13 @@ export async function getBenchmarkAnalytics(
       o.name as outlet_name,
       COALESCE(o.is_workshop, false) as is_workshop
     FROM outlets o
+    LEFT JOIN businesses b ON o.business_id = b.id
     WHERE o.tenant_id = ${tenantId}
       AND o.is_active = true
+      AND (
+        b.vertical = 'LAUNDRY'
+        OR o.industries::text ILIKE '%LAUNDRY%'
+      )
     ORDER BY o.name ASC;
   `;
 
@@ -113,6 +121,7 @@ export async function getBenchmarkAnalytics(
     FROM orders o
     LEFT JOIN laundry_order_details lod ON o.id = lod.order_id
     WHERE o.tenant_id = ${tenantId}
+      ${scope.sqlFilter('o.outlet_id')}
       AND o.created_at >= ${dateRange.startDate}
       AND o.created_at <= ${dateRange.endDate}
     GROUP BY o.outlet_id;
@@ -126,6 +135,7 @@ export async function getBenchmarkAnalytics(
     FROM refunds r
     JOIN orders o ON r.order_id = o.id
     WHERE r.tenant_id = ${tenantId}
+      ${scope.sqlFilter('o.outlet_id')}
       AND r.created_at >= ${dateRange.startDate}
       AND r.created_at <= ${dateRange.endDate}
     GROUP BY o.outlet_id;
@@ -169,6 +179,7 @@ export async function getBenchmarkAnalytics(
     FROM laundry_order_details lod
     JOIN orders o ON lod.order_id = o.id
     WHERE lod.tenant_id = ${tenantId}
+      ${scope.sqlFilter('lod.outlet_id')}
       AND lod.estimated_ready_at IS NOT NULL
       AND lod.estimated_ready_at >= ${dateRange.startDate}
       AND lod.estimated_ready_at <= ${dateRange.endDate}
@@ -192,6 +203,7 @@ export async function getBenchmarkAnalytics(
       COUNT(CASE WHEN lcf.is_complaint = true THEN 1 END)::int as complaint_count
     FROM laundry_customer_feedbacks lcf
     WHERE lcf.tenant_id = ${tenantId}
+      ${scope.sqlFilter('lcf.outlet_id')}
       AND lcf.created_at >= ${dateRange.startDate}
       AND lcf.created_at <= ${dateRange.endDate}
     GROUP BY lcf.outlet_id;
@@ -212,6 +224,7 @@ export async function getBenchmarkAnalytics(
       COUNT(li.id)::int as incident_count
     FROM laundry_incidents li
     WHERE li.tenant_id = ${tenantId}
+      ${scope.sqlFilter('li.outlet_id')}
       AND li.created_at >= ${dateRange.startDate}
       AND li.created_at <= ${dateRange.endDate}
     GROUP BY li.outlet_id;
@@ -230,6 +243,7 @@ export async function getBenchmarkAnalytics(
     JOIN inventory_items ii ON il.inventory_item_id = ii.id
     JOIN storage_locations sl ON il.storage_location_id = sl.id
     WHERE il.tenant_id = ${tenantId}
+      ${scope.sqlFilter('sl.outlet_id')}
       AND il.movement_type = 'PRODUCTION_CONSUMPTION'
       AND il.created_at >= ${dateRange.startDate}
       AND il.created_at <= ${dateRange.endDate}
@@ -247,6 +261,7 @@ export async function getBenchmarkAnalytics(
       COALESCE(SUM(cm.amount), 0) as petty_cash_out
     FROM cash_movements cm
     WHERE cm.tenant_id = ${tenantId}
+      ${scope.sqlFilter('cm.outlet_id')}
       AND cm.type = 'CASH_OUT'
       AND cm.created_at >= ${dateRange.startDate}
       AND cm.created_at <= ${dateRange.endDate}
@@ -263,6 +278,7 @@ export async function getBenchmarkAnalytics(
       COALESCE(SUM(li.approved_compensation), 0) as incident_compensation
     FROM laundry_incidents li
     WHERE li.tenant_id = ${tenantId}
+      ${scope.sqlFilter('li.outlet_id')}
       AND li.created_at >= ${dateRange.startDate}
       AND li.created_at <= ${dateRange.endDate}
       AND li.status = 'COMPENSATED'
@@ -280,6 +296,7 @@ export async function getBenchmarkAnalytics(
       COALESCE(SUM(oe.amount), 0) as fixed_opex
     FROM operational_expenses oe
     WHERE oe.tenant_id = ${tenantId}
+      ${scope.sqlFilter('oe.outlet_id')}
       AND oe.expense_date >= ${dateRange.startDate}
       AND oe.expense_date <= ${dateRange.endDate}
     GROUP BY oe.outlet_id;
@@ -304,6 +321,7 @@ export async function getBenchmarkAnalytics(
       COALESCE(obt.target_new_customers, 0) as target_new_customers
     FROM outlet_business_targets obt
     WHERE obt.tenant_id = ${tenantId}
+      ${scope.sqlFilter('obt.outlet_id')}
       AND obt.period_year = ${periodYear}
       AND obt.period_month = ${periodMonth};
   `;
@@ -372,20 +390,20 @@ export async function getBenchmarkAnalytics(
     const t = targetMap.get(oid);
     const targetObj = t
       ? {
-          targetRevenue: toNum(t.target_revenue),
-          targetProfit: toNum(t.target_profit),
-          targetWeightKg: toNum(t.target_weight_kg),
-          targetOrdersCount: Number(t.target_orders_count || 0),
-          targetNewCustomers: Number(t.target_new_customers || 0),
-          revenueAchievementPercent:
-            toNum(t.target_revenue) > 0
-              ? Number(((s.netRevenue / toNum(t.target_revenue)) * 100).toFixed(1))
-              : 0,
-          weightAchievementPercent:
-            toNum(t.target_weight_kg) > 0
-              ? Number(((s.weightKg / toNum(t.target_weight_kg)) * 100).toFixed(1))
-              : 0,
-        }
+        targetRevenue: toNum(t.target_revenue),
+        targetProfit: toNum(t.target_profit),
+        targetWeightKg: toNum(t.target_weight_kg),
+        targetOrdersCount: Number(t.target_orders_count || 0),
+        targetNewCustomers: Number(t.target_new_customers || 0),
+        revenueAchievementPercent:
+          toNum(t.target_revenue) > 0
+            ? Number(((s.netRevenue / toNum(t.target_revenue)) * 100).toFixed(1))
+            : 0,
+        weightAchievementPercent:
+          toNum(t.target_weight_kg) > 0
+            ? Number(((s.weightKg / toNum(t.target_weight_kg)) * 100).toFixed(1))
+            : 0,
+      }
       : null;
 
     benchmarkOutlets.push({

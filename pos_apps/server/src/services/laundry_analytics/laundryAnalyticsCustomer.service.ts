@@ -10,6 +10,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { FinancialAnalyticsParams } from './laundryAnalyticsFinancial.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface CustomerAnalyticsParams extends FinancialAnalyticsParams {
   dormantDays?: number;
@@ -103,12 +104,10 @@ export async function getCustomerAnalytics(
     ? 30
     : Math.min(365, Math.max(7, Math.round(rawDormant)));
 
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
-  const outletLcfFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND lcf.outlet_id = ${outletId}` : Prisma.empty;
-  const outletClwlFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND clwl.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
+  const outletLcfFilter = scope.sqlFilter('lcf.outlet_id');
+  const outletClwlFilter = scope.sqlFilter('clwl.outlet_id');
 
   // 1. Total Pelanggan Terdaftar di Tenant
   const totalCustRow = await prisma.customer.count({

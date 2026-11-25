@@ -27,17 +27,20 @@ import { WhatsAppInput } from '../components/ui';
 import { TablePagination } from '../components/TablePagination';
 import { checkIsLaundry } from '../utils/businessType';
 import type { Outlet, OutletFee } from '../types/outlet';
+import type { BusinessItem } from '../types/business';
 
 interface OutletsViewProps {
   activeOutletId?: string;
   onSelectActiveOutlet?: (outletId: string) => void;
   onOutletsUpdated?: () => void;
+  activeBusiness?: BusinessItem | null;
 }
 
 export const OutletsView: React.FC<OutletsViewProps> = ({
   activeOutletId,
   onSelectActiveOutlet,
   onOutletsUpdated,
+  activeBusiness,
 }) => {
   const dialog = useDialog();
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -58,9 +61,23 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   const [pageSize, setPageSize] = useState(10);
 
   const isLaundryMode = React.useMemo(() => {
+    if (activeBusiness) {
+      return activeBusiness.vertical === 'LAUNDRY';
+    }
     const currentUser = authStorage.getUser();
     return checkIsLaundry(outlets.find((o) => o.id === activeOutletId) || outlets[0], currentUser);
-  }, [outlets, activeOutletId]);
+  }, [activeBusiness, outlets, activeOutletId]);
+
+  const getOutletVerticalBadge = (outlet: Outlet) => {
+    const vertical = activeBusiness?.vertical || (outlet as any).business?.vertical;
+    if (vertical === 'LAUNDRY' || (!vertical && checkIsLaundry(outlet, authStorage.getUser()))) {
+      return outlet.isWorkshop ? '🏭 Workshop Laundry' : '🧺 Outlet Laundry';
+    }
+    if (vertical === 'FNB') {
+      return '☕ Outlet F&B';
+    }
+    return '🏪 Outlet Retail';
+  };
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -81,7 +98,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
   const fetchOutlets = async () => {
     setLoading(true);
     try {
-      const res = await api.getOutlets();
+      const res = await api.getOutlets(activeBusiness?.id);
       if (res.status === 'success' && res.data) {
         setOutlets(res.data);
       }
@@ -94,7 +111,9 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
 
   useEffect(() => {
     fetchOutlets();
+  }, [activeBusiness?.id]);
 
+  useEffect(() => {
     // Sinkronisasi data Company ID / profile terbaru secara live dari server
     api.getProfile().then((res) => {
       if (res.status === 'success' && res.data?.tenant?.slug) {
@@ -110,7 +129,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           });
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // Filter murni toko penjualan & daftar gudang logistik untuk pilihan pasokan
@@ -159,6 +178,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
         phone: formData.phone.trim() || undefined,
         isWarehouse: false,
         warehouseId: formData.warehouseId || null,
+        businessId: activeBusiness?.id,
       } as any);
 
       if (res.status === 'success') {
@@ -383,11 +403,10 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setStatusFilter('ALL');
               setCurrentPage(1);
             }}
-            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${
-              statusFilter === 'ALL'
-                ? 'bg-white text-blue-950 shadow-xs font-black'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${statusFilter === 'ALL'
+              ? 'bg-white text-blue-950 shadow-xs font-black'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             Semua ({stores.length})
           </button>
@@ -397,11 +416,10 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setStatusFilter('ACTIVE');
               setCurrentPage(1);
             }}
-            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${
-              statusFilter === 'ACTIVE'
-                ? 'bg-white text-emerald-800 shadow-xs font-black'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${statusFilter === 'ACTIVE'
+              ? 'bg-white text-emerald-800 shadow-xs font-black'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             ● Aktif ({stores.filter((s) => s.isActive).length})
           </button>
@@ -411,11 +429,10 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               setStatusFilter('INACTIVE');
               setCurrentPage(1);
             }}
-            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${
-              statusFilter === 'INACTIVE'
-                ? 'bg-white text-rose-800 shadow-xs font-black'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`h-8 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center ${statusFilter === 'INACTIVE'
+              ? 'bg-white text-rose-800 shadow-xs font-black'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             ○ Nonaktif ({stores.filter((s) => !s.isActive).length})
           </button>
@@ -492,20 +509,18 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             return (
               <div
                 key={outlet.id}
-                className={`bg-white rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
-                  isCurrentlyActive
-                    ? 'border-blue-900 ring-2 ring-blue-900/10'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`bg-white rounded-3xl border transition-all flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${isCurrentlyActive
+                  ? 'border-blue-900 ring-2 ring-blue-900/10'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 {/* Header Card */}
                 <div className="p-5 sm:p-6 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shrink-0 ${
-                          isCurrentlyActive ? 'bg-blue-900' : 'bg-slate-800'
-                        }`}
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shrink-0 ${isCurrentlyActive ? 'bg-blue-900' : 'bg-slate-800'
+                          }`}
                       >
                         <Store className="w-5 h-5" />
                       </div>
@@ -515,14 +530,13 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                         </h3>
                         <div className="flex items-center gap-1.5 flex-wrap mt-1">
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-800 border-blue-200">
-                            🏪 Toko Kasir
+                            {getOutletVerticalBadge(outlet)}
                           </span>
                           <span
-                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                              outlet.isActive
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border-rose-200'
-                            }`}
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${outlet.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}
                           >
                             {outlet.isActive ? '● Aktif' : '○ Nonaktif'}
                           </span>
@@ -625,11 +639,10 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                         defaultTaxFees.map((f) => (
                           <span
                             key={f.id}
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${
-                              f.isActive
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                : 'bg-slate-100 text-slate-400 border-slate-200 line-through'
-                            }`}
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${f.isActive
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-slate-100 text-slate-400 border-slate-200 line-through'
+                              }`}
                           >
                             {f.name.split(' ')[0]}: {f.type === 'PERCENTAGE' ? `${f.rate}%` : `Rp ${f.rate}`}
                           </span>
@@ -925,14 +938,12 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
                       role="switch"
                       aria-checked={formData.isActive}
                       onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                        formData.isActive ? 'bg-blue-900' : 'bg-slate-300'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${formData.isActive ? 'bg-blue-900' : 'bg-slate-300'
+                        }`}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                          formData.isActive ? 'translate-x-5' : 'translate-x-0'
-                        }`}
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                          }`}
                       />
                     </button>
                   </div>

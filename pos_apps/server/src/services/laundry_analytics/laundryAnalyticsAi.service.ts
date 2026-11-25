@@ -16,6 +16,7 @@ import { getExecutiveOverview } from './laundryAnalyticsOverview.service';
 import { getOperationsAnalytics } from './laundryAnalyticsOperations.service';
 import { getInventoryAnalytics } from './laundryAnalyticsInventory.service';
 import { getSalesAnalytics } from './laundryAnalyticsSales.service';
+import { resolveLaundryOutletScope } from './laundryOutletScope.helper';
 
 export interface DataStamp {
   periodLabel: string;
@@ -289,8 +290,8 @@ export async function getAiForecast(
   const { tenantId, outletId } = params;
   const timezone = params.timezone || 'Asia/Jakarta';
 
-  const outletOrderFilter =
-    outletId !== 'ALL' ? Prisma.sql`AND o.outlet_id = ${outletId}` : Prisma.empty;
+  const scope = await resolveLaundryOutletScope(tenantId, outletId);
+  const outletOrderFilter = scope.sqlFilter('o.outlet_id');
 
   // Awal bulan kalender berjalan di zona waktu outlet
   const now = new Date();
