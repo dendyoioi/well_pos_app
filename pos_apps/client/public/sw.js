@@ -3,7 +3,7 @@
  * Caches application shell for ultra-fast startup (<200ms) on POS devices.
  */
 
-const CACHE_NAME = 'wellpos-cache-v1';
+const CACHE_NAME = 'wellpos-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -101,7 +101,11 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
         return fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
+          if (
+            networkResponse &&
+            networkResponse.status === 200 &&
+            !(networkResponse.headers.get('content-type') || '').includes('text/html')
+          ) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
           }

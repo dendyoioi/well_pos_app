@@ -34,6 +34,23 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
     recordClientError(error, 'React.ErrorBoundary', {
       componentStack: errorInfo.componentStack,
     });
+
+    // Auto-recovery jika chunk lama gagal dimuat setelah deploy baru di Vercel/PWA
+    const message = error?.message || '';
+    const isChunkError =
+      message.includes('Failed to fetch dynamically imported module') ||
+      message.includes('Importing a module script failed') ||
+      message.includes('Loading chunk');
+
+    if (isChunkError && typeof window !== 'undefined') {
+      const RELOAD_KEY = 'wellpos_chunk_reload_at';
+      const lastReload = Number(sessionStorage.getItem(RELOAD_KEY) || '0');
+      const now = Date.now();
+      if (now - lastReload > 15000) {
+        sessionStorage.setItem(RELOAD_KEY, String(now));
+        window.location.reload();
+      }
+    }
   }
 
   handleCopyReport = () => {
