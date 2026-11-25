@@ -24,6 +24,8 @@ import {
     Calendar,
     ShieldCheck,
     Check,
+    Tags,
+    History,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -32,6 +34,8 @@ import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 import { TablePagination } from '../components/TablePagination';
 import { LaundryStageSettingsModal } from '../components/LaundryStageSettingsModal';
 import { LaundryServiceBomModal } from '../components/laundry/LaundryServiceBomModal';
+import { OutletServicePricingModal } from '../components/laundry/OutletServicePricingModal';
+import { ServicePriceHistoryModal } from '../components/laundry/ServicePriceHistoryModal';
 import { CurrencyInput } from '../components/ui';
 import type { RecipeInventoryItem } from '../types/recipe';
 
@@ -200,6 +204,11 @@ const STANDARD_UNITS = [
 export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ activeOutlet }) => {
     const [services, setServices] = useState<LaundryService[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // State Modal Tarif Khusus Cabang & Riwayat Harga (Core Phase 1)
+    const [outletPricingModalOpen, setOutletPricingModalOpen] = useState(false);
+    const [priceHistoryModalOpen, setPriceHistoryModalOpen] = useState(false);
+    const [priceHistoryTarget, setPriceHistoryTarget] = useState<{ id: string; name: string } | null>(null);
 
     // Tab Utama: Layanan Utama vs Layanan Tambahan (Add-ons) vs Paket Deposit vs Parfum & Aroma
     const [activeMainTab, setActiveMainTab] = useState<'SERVICES' | 'ADDONS' | 'DEPOSIT_PACKAGES' | 'PERFUMES'>('SERVICES');
@@ -540,7 +549,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
         try {
             setLoading(true);
             const [res, stagesRes] = await Promise.all([
-                api.getLaundryServices(),
+                api.getLaundryServices(activeOutlet?.id),
                 api.getLaundryStageSettings ? api.getLaundryStageSettings().catch(() => null) : Promise.resolve(null),
             ]);
 
@@ -846,6 +855,17 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap sm:flex-nowrap shrink-0">
                     {activeMainTab === 'SERVICES' ? (
                         <>
+                            {activeOutlet && (
+                                <button
+                                    type="button"
+                                    onClick={() => setOutletPricingModalOpen(true)}
+                                    className="w-full sm:w-auto h-10 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs sm:text-sm shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                                    title="Atur tarif khusus untuk cabang aktif yang berbeda dari master"
+                                >
+                                    <Tags className="w-4 h-4 text-amber-700" />
+                                    <span>Tarif Cabang</span>
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => setShowStageSettingsModal(true)}
@@ -1063,6 +1083,17 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                                     <div className="flex items-center gap-1">
                                                         <button
                                                             type="button"
+                                                            onClick={() => {
+                                                                setPriceHistoryTarget({ id: service.id, name: service.name });
+                                                                setPriceHistoryModalOpen(true);
+                                                            }}
+                                                            className="p-1 rounded-lg text-slate-400 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                                                            title="Lihat Riwayat Perubahan Harga"
+                                                        >
+                                                            <History className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
                                                             onClick={() => handleToggleActive(service)}
                                                             className={`p-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${service.isActive
                                                                 ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
@@ -1113,6 +1144,11 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                                             Rp {Number(service.price).toLocaleString('id-ID')}
                                                             <span className="text-xs font-semibold text-slate-500"> / {service.unit}</span>
                                                         </div>
+                                                        {(service as any).priceOverride != null && (
+                                                            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded-md block mt-0.5">
+                                                                Tarif Cabang (Master: Rp {Number((service as any).basePrice).toLocaleString('id-ID')})
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     <div className="text-right">
@@ -2608,6 +2644,34 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                     showToast('Takaran bahan cuci (BoM) berhasil disimpan!');
                 }}
             />
+
+            {/* Modal Tarif Khusus Cabang (Core Phase 1) */}
+            {outletPricingModalOpen && activeOutlet && (
+                <OutletServicePricingModal
+                    isOpen={outletPricingModalOpen}
+                    onClose={() => setOutletPricingModalOpen(false)}
+                    activeOutletId={activeOutlet.id}
+                    activeOutletName={activeOutlet.name}
+                    onSaved={() => {
+                        fetchServices();
+                        showToast('Tarif khusus cabang berhasil diperbarui!');
+                    }}
+                />
+            )}
+
+            {/* Modal Riwayat Perubahan Harga (Core Phase 1) */}
+            {priceHistoryModalOpen && priceHistoryTarget && (
+                <ServicePriceHistoryModal
+                    isOpen={priceHistoryModalOpen}
+                    onClose={() => {
+                        setPriceHistoryModalOpen(false);
+                        setPriceHistoryTarget(null);
+                    }}
+                    serviceId={priceHistoryTarget.id}
+                    serviceName={priceHistoryTarget.name}
+                    activeOutletId={activeOutlet?.id}
+                />
+            )}
 
             {/* Floating Toast Feedback */}
             {feedback && (

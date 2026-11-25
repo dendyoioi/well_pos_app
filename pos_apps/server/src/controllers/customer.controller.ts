@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { PaymentStatus, PointTxType, CustomerDebtStatus, PaymentMethod } from '@prisma/client';
+import { PaymentStatus, PointTxType, CustomerDebtStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { loyaltyService } from '../services/loyalty.service';
 
@@ -12,6 +12,8 @@ const customerSchema = z.object({
   address: z.string().max(500, 'Alamat terlalu panjang').optional().nullable(),
   notes: z.string().max(1000, 'Catatan terlalu panjang').optional().nullable(),
   code: z.string().max(50, 'Kode member terlalu panjang').optional().nullable(),
+  laundryPreferences: z.any().optional().nullable(),
+  secondaryPhones: z.array(z.string()).max(3, 'Maksimal 3 nomor telepon sekunder').optional().nullable(),
 });
 
 /**
@@ -339,7 +341,7 @@ export const createCustomer = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, phone, email, address, notes, code } = parseResult.data;
+    const { name, phone, email, address, notes, code, laundryPreferences, secondaryPhones } = parseResult.data;
 
     // Cek duplikasi nomor telepon pada tenant yang sama jika nomor diisi
     if (phone && phone.trim()) {
@@ -373,6 +375,19 @@ export const createCustomer = async (req: Request, res: Response) => {
         phone: phone?.trim() || null,
         email: email?.trim() || null,
         address: address?.trim() || null,
+        notes: notes?.trim() || null,
+        laundryPreferences:
+          laundryPreferences === null
+            ? Prisma.JsonNull
+            : laundryPreferences !== undefined
+            ? (laundryPreferences as any)
+            : undefined,
+        secondaryPhones:
+          secondaryPhones === null
+            ? Prisma.JsonNull
+            : secondaryPhones !== undefined
+            ? (secondaryPhones as any)
+            : undefined,
       },
     });
 
@@ -424,7 +439,7 @@ export const updateCustomer = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, phone, email, address, notes, code } = parseResult.data;
+    const { name, phone, email, address, notes, code, laundryPreferences, secondaryPhones } = parseResult.data;
 
     // Cek duplikasi nomor telepon jika diubah
     if (phone && phone.trim() && phone.trim() !== existing.phone) {
@@ -452,6 +467,19 @@ export const updateCustomer = async (req: Request, res: Response) => {
         phone: phone !== undefined ? (phone?.trim() || null) : existing.phone,
         email: email !== undefined ? (email?.trim() || null) : existing.email,
         address: address !== undefined ? (address?.trim() || null) : existing.address,
+        notes: notes !== undefined ? (notes?.trim() || null) : existing.notes,
+        ...(laundryPreferences !== undefined
+          ? {
+              laundryPreferences:
+                laundryPreferences === null ? Prisma.JsonNull : (laundryPreferences as any),
+            }
+          : {}),
+        ...(secondaryPhones !== undefined
+          ? {
+              secondaryPhones:
+                secondaryPhones === null ? Prisma.JsonNull : (secondaryPhones as any),
+            }
+          : {}),
       },
     });
 

@@ -628,6 +628,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return filtered;
   }, [user.role, isLaundryMode]);
 
+  // Listener event navigasi tab lintas komponen / window
+  useEffect(() => {
+    const handleNav = (e: any) => {
+      if (e.detail && allowedTabs.includes(e.detail)) {
+        setActiveTab(e.detail);
+      }
+    };
+    window.addEventListener('wellpos:navigate_tab', handleNav);
+    return () => window.removeEventListener('wellpos:navigate_tab', handleNav);
+  }, [allowedTabs]);
+
   // Hanya Admin & Supervisor yang berhak berpindah toko (Multi-Outlet Switcher)
   const canSwitchOutlet = user.role === 'ADMIN' || user.role === 'SUPERVISOR';
 

@@ -25,6 +25,7 @@ import {
   Receipt,
   Clock,
   ChevronDown,
+  Sliders,
 } from 'lucide-react';
 import { customerApi, api, authStorage } from '../services/api';
 import type { Customer, CustomerFormData, CustomerSummaryStats, CustomerPointLedger } from '../types/customer';
@@ -35,6 +36,8 @@ import { TablePagination } from '../components/TablePagination';
 import { useDialog } from '../context/DialogContext';
 import { CustomerDebtsTab } from '../components/CustomerDebtsTab';
 import { LaundryCustomerWinbackTab } from '../components/laundry/LaundryCustomerWinbackTab';
+import { CustomerPreferenceBadges } from '../components/laundry/CustomerPreferenceBadges';
+import { CustomerPreferenceModal } from '../components/laundry/CustomerPreferenceModal';
 
 interface CustomersViewProps {
   activeOutlet?: Outlet | null;
@@ -104,6 +107,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
   const [search, setSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [preferenceTarget, setPreferenceTarget] = useState<{ id: string; name: string; phone?: string | null } | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -770,22 +774,32 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                       {/* Kontak & WhatsApp */}
                       <td className="py-3.5 px-4">
                         {c.phone ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-slate-700 font-semibold">{c.phone}</span>
-                            {waLink && (
-                              <a
-                                href={waLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Kirim Pesan WhatsApp"
-                                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-xs"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                              </a>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-slate-700 font-semibold">{c.phone}</span>
+                              {waLink && (
+                                <a
+                                  href={waLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Kirim Pesan WhatsApp"
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-xs"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                            {isLaundryMode && (c as any).laundryPreferences && (
+                              <CustomerPreferenceBadges preferences={(c as any).laundryPreferences} />
                             )}
                           </div>
                         ) : (
-                          <span className="text-slate-300 text-xs italic">Tanpa No. HP</span>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-slate-300 text-xs italic">Tanpa No. HP</span>
+                            {isLaundryMode && (c as any).laundryPreferences && (
+                              <CustomerPreferenceBadges preferences={(c as any).laundryPreferences} />
+                            )}
+                          </div>
                         )}
                       </td>
 
@@ -849,6 +863,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {isLaundryMode && (
+                            <button
+                              onClick={() => setPreferenceTarget({ id: c.id, name: c.name, phone: c.phone })}
+                              title="Atur Preferensi Laundry & Nomor Alternatif"
+                              className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
+                            >
+                              <Sliders className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenEdit(c)}
                             title="Edit Data Pelanggan"
@@ -967,6 +990,16 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                       <Eye className="w-3.5 h-3.5" />
                       <span>Detail</span>
                     </button>
+                    {isLaundryMode && (
+                      <button
+                        onClick={() => setPreferenceTarget({ id: c.id, name: c.name, phone: c.phone })}
+                        className="h-9 px-3 text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        title="Atur Preferensi Laundry"
+                      >
+                        <Sliders className="w-3.5 h-3.5" />
+                        <span>Preferensi</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => handleOpenEdit(c)}
                       className="h-9 px-3 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
@@ -2164,6 +2197,20 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal Preferensi & Nomor Alternatif Pelanggan Laundry (Core Phase 1) */}
+      {preferenceTarget && (
+        <CustomerPreferenceModal
+          isOpen={true}
+          onClose={() => setPreferenceTarget(null)}
+          customerId={preferenceTarget.id}
+          customerName={preferenceTarget.name}
+          customerPhone={preferenceTarget.phone}
+          onSaved={() => {
+            fetchCustomers();
+          }}
+        />
       )}
         </>
       )}

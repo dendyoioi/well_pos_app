@@ -1078,6 +1078,90 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       END $$;
     `,
   },
+  {
+    id: '20261126_01_laundry_core_phase1_precision',
+    description: 'Menambahkan customer laundry_preferences & secondary_phones, initial & final weight, QC checklist, laundry_lost_and_found, laundry_service_outlet_prices, dan laundry_service_price_histories (Laundry Core Phase 1)',
+    sql: `
+      ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "laundry_preferences" JSONB;
+      ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "secondary_phones" JSONB;
+
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "initial_weight_kg" NUMERIC(10,3);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "final_weight_kg" NUMERIC(10,3);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "weight_diff_reason" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "qc_checklist" JSONB;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "qc_after_photos" JSONB;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "qc_status" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "qc_checked_at" TIMESTAMPTZ;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "qc_checked_by_id" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "qc_checked_by_name" TEXT;
+
+      UPDATE "laundry_order_details"
+      SET "initial_weight_kg" = "total_weight_kg"
+      WHERE "initial_weight_kg" IS NULL AND "total_weight_kg" IS NOT NULL;
+
+      CREATE TABLE IF NOT EXISTS "laundry_lost_and_found" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "order_id" TEXT REFERENCES "orders"("id") ON DELETE SET NULL,
+        "customer_id" TEXT REFERENCES "customers"("id") ON DELETE SET NULL,
+        "item_category" TEXT NOT NULL DEFAULT 'POCKET_ITEM',
+        "item_name" TEXT NOT NULL,
+        "description" TEXT,
+        "photo_url" TEXT,
+        "storage_location" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'FOUND',
+        "found_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "found_by_name" TEXT,
+        "claimed_by_name" TEXT,
+        "returned_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "returned_at" TIMESTAMPTZ,
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "laundry_lost_and_found_tenant_id_outlet_id_status_created_at_idx"
+        ON "laundry_lost_and_found"("tenant_id", "outlet_id", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "laundry_lost_and_found_tenant_id_order_id_idx"
+        ON "laundry_lost_and_found"("tenant_id", "order_id");
+
+      CREATE TABLE IF NOT EXISTS "laundry_service_outlet_prices" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE RESTRICT,
+        "laundry_service_id" TEXT NOT NULL REFERENCES "laundry_services"("id") ON DELETE CASCADE,
+        "price_override" NUMERIC(15,2),
+        "express_multiplier_override" NUMERIC(5,2),
+        "is_available" BOOLEAN NOT NULL DEFAULT true,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_service_outlet_prices_outlet_id_laundry_service_id_key"
+        ON "laundry_service_outlet_prices"("outlet_id", "laundry_service_id");
+      CREATE INDEX IF NOT EXISTS "laundry_service_outlet_prices_tenant_id_outlet_id_idx"
+        ON "laundry_service_outlet_prices"("tenant_id", "outlet_id");
+
+      CREATE TABLE IF NOT EXISTS "laundry_service_price_histories" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE RESTRICT,
+        "laundry_service_id" TEXT NOT NULL REFERENCES "laundry_services"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT REFERENCES "outlets"("id") ON DELETE SET NULL,
+        "old_price" NUMERIC(15,2) NOT NULL,
+        "new_price" NUMERIC(15,2) NOT NULL,
+        "reason" TEXT,
+        "changed_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "changed_by_name" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "laundry_service_price_histories_tenant_id_laundry_service_id_created_at_idx"
+        ON "laundry_service_price_histories"("tenant_id", "laundry_service_id", "created_at");
+      CREATE INDEX IF NOT EXISTS "laundry_service_price_histories_tenant_id_outlet_id_idx"
+        ON "laundry_service_price_histories"("tenant_id", "outlet_id");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

@@ -115,6 +115,9 @@ model Tenant {
   alertRuleConfigs      AlertRuleConfig[]
   persistentAlerts      PersistentAlert[]
   businesses            Business[]
+  laundryLostAndFounds         LaundryLostAndFound[]
+  laundryServiceOutletPrices   LaundryServiceOutletPrice[]
+  laundryServicePriceHistories LaundryServicePriceHistory[]
 
   @@map("tenants")
 }
@@ -272,6 +275,9 @@ model User {
   createdOutletTargets       OutletBusinessTarget[]        @relation("OutletTargetCreatedBy")
   createdMachineMaintenances LaundryMachineMaintenanceLog[] @relation("MachineMaintenanceCreatedBy")
   resolvedPersistentAlerts   PersistentAlert[]              @relation("PersistentAlertResolvedBy")
+  foundLostAndFoundItems       LaundryLostAndFound[]          @relation("LostAndFoundFoundBy")
+  returnedLostAndFoundItems    LaundryLostAndFound[]          @relation("LostAndFoundReturnedBy")
+  changedLaundryPriceHistories LaundryServicePriceHistory[]   @relation("LaundryPriceHistoryChangedBy")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -342,6 +348,9 @@ model Outlet {
   persistentAlerts      PersistentAlert[]
   businessId            String?           @map("business_id")
   business              Business?         @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  laundryLostAndFounds         LaundryLostAndFound[]
+  laundryServiceOutletPrices   LaundryServiceOutletPrice[]
+  laundryServicePriceHistories LaundryServicePriceHistory[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -419,6 +428,8 @@ model Customer {
   totalSpent    Decimal      @default(0) @map("total_spent") @db.Decimal(15, 2)
   visitCount    Int          @default(0) @map("visit_count")
   lastWinbackSentAt DateTime? @map("last_winback_sent_at")
+  laundryPreferences Json?     @map("laundry_preferences")
+  secondaryPhones    Json?     @map("secondary_phones")
   notes         String?
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
@@ -430,6 +441,7 @@ model Customer {
   debts           CustomerDebt[]
   laundryWallet   CustomerLaundryWallet?
   laundryFeedbacks LaundryCustomerFeedback[]
+  lostAndFoundItems LaundryLostAndFound[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, phone])
@@ -905,6 +917,7 @@ model Order {
   customerLaundryWalletLedgers CustomerLaundryWalletLedger[]
   laundryFeedback      LaundryCustomerFeedback?
   laundryIncidents     LaundryIncident[]
+  lostAndFoundItems    LaundryLostAndFound[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -1602,6 +1615,8 @@ model LaundryService {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   bomItems LaundryServiceBomItem[]
+  outletPrices   LaundryServiceOutletPrice[]
+  priceHistories LaundryServicePriceHistory[]
 
   @@index([tenantId, category, isActive])
   @@map("laundry_services")
@@ -1637,6 +1652,15 @@ model LaundryOrderDetail {
   currentStage     String    @default("DROP_OFF") @map("current_stage") // 11 Stages: DROP_OFF, TAGGING, SORTING, SPOTTING, WASHING, DRYING, IRONING, FOLDING, PACKING, RACK_STORAGE, HANDOVER
   rackCode         String?   @map("rack_code")
   totalWeightKg    Decimal?  @map("total_weight_kg") @db.Decimal(10, 3)
+  initialWeightKg  Decimal?  @map("initial_weight_kg") @db.Decimal(10, 3)
+  finalWeightKg    Decimal?  @map("final_weight_kg") @db.Decimal(10, 3)
+  weightDiffReason String?   @map("weight_diff_reason")
+  qcChecklist      Json?     @map("qc_checklist")
+  qcAfterPhotos    Json?     @map("qc_after_photos")
+  qcStatus         String?   @map("qc_status") // 'PENDING' | 'PASSED' | 'REWASH_REQUIRED'
+  qcCheckedAt      DateTime? @map("qc_checked_at")
+  qcCheckedById    String?   @map("qc_checked_by_id")
+  qcCheckedByName  String?   @map("qc_checked_by_name")
   totalPieces      Int       @default(0) @map("total_pieces")
   perfumeVariant   String?   @map("perfume_variant")
   transferStatus   String?   @default("AT_OUTLET") @map("transfer_status") // 'AT_OUTLET', 'IN_TRANSIT_TO_WORKSHOP', 'AT_WORKSHOP', 'IN_TRANSIT_TO_OUTLET'
@@ -2234,4 +2258,83 @@ model Business {
   @@unique([tenantId, slug])
   @@index([tenantId, vertical, isActive])
   @@map("businesses")
+}
+
+// ==========================================
+// 20. LAUNDRY CORE ENGINE — PHASE 1 PRECISION
+// ==========================================
+
+model LaundryLostAndFound {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  outletId        String    @map("outlet_id")
+  orderId         String?   @map("order_id")
+  customerId      String?   @map("customer_id")
+  itemCategory    String    @default("POCKET_ITEM") @map("item_category") // 'POCKET_ITEM' | 'UNCLAIMED_GARMENT'
+  itemName        String    @map("item_name")
+  description     String?   @db.Text
+  photoUrl        String?   @map("photo_url")
+  storageLocation String?   @map("storage_location")
+  status          String    @default("FOUND") @map("status") // 'FOUND' | 'NOTIFIED' | 'RETURNED' | 'DISPOSED'
+  foundById       String?   @map("found_by_id")
+  foundByName     String?   @map("found_by_name")
+  claimedByName   String?   @map("claimed_by_name")
+  returnedById    String?   @map("returned_by_id")
+  returnedAt      DateTime? @map("returned_at")
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet     Outlet    @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  order      Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  foundBy    User?     @relation("LostAndFoundFoundBy", fields: [foundById], references: [id], onDelete: SetNull)
+  returnedBy User?     @relation("LostAndFoundReturnedBy", fields: [returnedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, status, createdAt])
+  @@index([tenantId, orderId])
+  @@map("laundry_lost_and_found")
+}
+
+model LaundryServiceOutletPrice {
+  id                        String   @id @default(uuid())
+  tenantId                  String   @map("tenant_id")
+  outletId                  String   @map("outlet_id")
+  laundryServiceId          String   @map("laundry_service_id")
+  priceOverride             Decimal? @map("price_override") @db.Decimal(15, 2)
+  expressMultiplierOverride Decimal? @map("express_multiplier_override") @db.Decimal(5, 2)
+  isAvailable               Boolean  @default(true) @map("is_available")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  outlet         Outlet         @relation(fields: [outletId], references: [id], onDelete: Restrict)
+  laundryService LaundryService @relation(fields: [laundryServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([outletId, laundryServiceId])
+  @@index([tenantId, outletId])
+  @@map("laundry_service_outlet_prices")
+}
+
+model LaundryServicePriceHistory {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  laundryServiceId String   @map("laundry_service_id")
+  outletId         String?  @map("outlet_id") // NULL = perubahan harga master tenant
+  oldPrice         Decimal  @map("old_price") @db.Decimal(15, 2)
+  newPrice         Decimal  @map("new_price") @db.Decimal(15, 2)
+  reason           String?
+  changedById      String?  @map("changed_by_id")
+  changedByName    String?  @map("changed_by_name")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  laundryService LaundryService @relation(fields: [laundryServiceId], references: [id], onDelete: Cascade)
+  outlet         Outlet?        @relation(fields: [outletId], references: [id], onDelete: SetNull)
+  changedBy      User?          @relation("LaundryPriceHistoryChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, laundryServiceId, createdAt])
+  @@index([tenantId, outletId])
+  @@map("laundry_service_price_histories")
 }

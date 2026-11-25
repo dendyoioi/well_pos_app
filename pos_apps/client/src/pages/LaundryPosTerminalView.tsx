@@ -41,6 +41,7 @@ import {
   Star,
   CloudUpload,
   RefreshCw,
+  Sliders,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import type {
@@ -56,6 +57,8 @@ import type { Promotion } from '../types/promotion';
 import { api, customerApi, attendanceApi } from '../services/api';
 import { WhatsAppInput, CurrencyInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
+import { CustomerPreferenceBadges } from '../components/laundry/CustomerPreferenceBadges';
+import { CustomerPreferenceModal } from '../components/laundry/CustomerPreferenceModal';
 import { StartShiftModal } from '../components/StartShiftModal';
 import { CloseShiftModal } from '../components/CloseShiftModal';
 import { XReportModal } from '../components/XReportModal';
@@ -134,6 +137,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [customersList, setCustomersList] = useState<any[]>([]);
+  const [prefModalOpen, setPrefModalOpen] = useState(false);
 
   // Layanan yang tertunda (diklik saat kasir belum input nama pelanggan)
   const [pendingService, setPendingService] = useState<LaundryService | null>(null);
@@ -261,9 +265,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const fetchServices = async () => {
     try {
       setLoadingServices(true);
-      const res = await api.getLaundryServices();
+      const res = await api.getLaundryServices(activeOutlet?.id);
       if (res.status === 'success' && Array.isArray(res.data)) {
-        setServices(res.data);
+        const availableServices = res.data.filter((s: any) => s.isAvailableAtOutlet !== false);
+        setServices(availableServices);
       }
     } catch {
       // Abaikan jika offline
@@ -409,6 +414,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       })
       .catch(() => {});
     if (activeOutlet?.id) {
+      fetchServices();
       try {
         const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (clientTz && clientTz !== activeOutlet.timezone) {
@@ -1378,29 +1384,43 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     : 'Klik layanan untuk input nama'}
                 </div>
                 {selectedCustomerId && (
-                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                    {loadingWallet ? (
-                      <span className="text-[9.5px] text-slate-400 flex items-center gap-1">
-                        <Loader2 className="w-3 h-3 animate-spin text-blue-900" />
-                        <span>Memuat dompet...</span>
-                      </span>
-                    ) : (
-                      <>
-                        <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
-                          Saldo: Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {loadingWallet ? (
+                        <span className="text-[9.5px] text-slate-400 flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin text-blue-900" />
+                          <span>Memuat dompet...</span>
                         </span>
-                        <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200">
-                          Kuota: {Number(customerWallet?.quotaKg || 0)} Kg
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setTopupModalOpen(true)}
-                          className="text-[9.5px] font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors"
-                          title="Top-up saldo atau kuota pelanggan"
-                        >
-                          + Top-up
-                        </button>
-                      </>
+                      ) : (
+                        <>
+                          <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
+                            Saldo: Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                          </span>
+                          <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200">
+                            Kuota: {Number(customerWallet?.quotaKg || 0)} Kg
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setTopupModalOpen(true)}
+                            className="text-[9.5px] font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors"
+                            title="Top-up saldo atau kuota pelanggan"
+                          >
+                            + Top-up
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPrefModalOpen(true)}
+                            className="text-[9.5px] font-black text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors flex items-center gap-1"
+                            title="Atur preferensi laundry & nomor alternatif pelanggan"
+                          >
+                            <Sliders className="w-2.5 h-2.5 text-blue-800" />
+                            <span>Preferensi</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {selectedCustomer?.laundryPreferences && (
+                      <CustomerPreferenceBadges preferences={selectedCustomer.laundryPreferences} />
                     )}
                   </div>
                 )}
@@ -3863,6 +3883,26 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         order={completedOrder}
         outlet={activeOutlet}
       />
+
+      {/* 7. Modal Preferensi & Nomor Alternatif Pelanggan (Core Phase 1) */}
+      {prefModalOpen && selectedCustomerId && (
+        <CustomerPreferenceModal
+          isOpen={prefModalOpen}
+          onClose={() => setPrefModalOpen(false)}
+          customerId={selectedCustomerId}
+          customerName={customerName}
+          customerPhone={customerPhone}
+          onSaved={(updated) => {
+            if (selectedCustomer) {
+              setSelectedCustomer((prev: any) => ({
+                ...prev,
+                laundryPreferences: updated.laundryPreferences,
+                secondaryPhones: updated.secondaryPhones,
+              }));
+            }
+          }}
+        />
+      )}
 
       {/* Floating Feedback Toast */}
       {feedbackToast && (

@@ -20,6 +20,7 @@ import {
   AlertOctagon,
   RotateCcw,
   ShieldAlert,
+  PackageSearch,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -32,6 +33,8 @@ import { LaundrySortingModal } from '../components/LaundrySortingModal';
 import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
 import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
 import { LaundryIncidentModal } from '../components/laundry/LaundryIncidentModal';
+import { LaundryQcAndWeightModal } from '../components/laundry/LaundryQcAndWeightModal';
+import { LaundryLostAndFoundDrawer } from '../components/laundry/LaundryLostAndFoundDrawer';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -93,6 +96,13 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   // State Modal Lapor Insiden Pakaian Rusak / Hilang
   const [incidentModalOpen, setIncidentModalOpen] = useState(false);
   const [selectedOrderForIncident, setSelectedOrderForIncident] = useState<LaundryQueueOrder | null>(null);
+
+  // State Modal QC Checklist & Berat Final (Core Phase 1)
+  const [qcModalOpen, setQcModalOpen] = useState(false);
+  const [selectedOrderForQc, setSelectedOrderForQc] = useState<LaundryQueueOrder | null>(null);
+
+  // State Drawer Lost & Found (Core Phase 1)
+  const [lostAndFoundOpen, setLostAndFoundOpen] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -341,6 +351,16 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           >
             <Award className="w-4 h-4 text-amber-700" />
             <span>Penilaian Staf (KPI)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLostAndFoundOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer whitespace-nowrap"
+            title="Inventaris Barang Temuan di Saku & Pakaian Tak Bertuan (Lost & Found)"
+          >
+            <PackageSearch className="w-4 h-4 text-purple-700" />
+            <span>Lost &amp; Found</span>
           </button>
 
           <button
@@ -629,6 +649,27 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                             </div>
                           )}
 
+                          {/* Status Badges: QC Checklist & Berat Final (Core Phase 1) */}
+                          {((item as any).qcStatus || (item as any).finalWeightKg != null) && (
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                              {(item as any).qcStatus === 'PASSED' && (
+                                <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  ✅ QC Lolos
+                                </span>
+                              )}
+                              {(item as any).qcStatus === 'REWASH_REQUIRED' && (
+                                <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                  🔄 Perlu Rewash
+                                </span>
+                              )}
+                              {(item as any).finalWeightKg != null && (
+                                <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                  ⚖️ Akhir: {(item as any).finalWeightKg} kg
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {item.transferStatus && item.transferStatus !== 'AT_OUTLET' && (
                             <div className="px-2 py-0.5 rounded-md bg-purple-50 border border-purple-200 text-purple-900 text-[9.5px] font-bold flex items-center gap-1">
                               <Truck className="w-3 h-3 text-purple-700" />
@@ -680,6 +721,20 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                               <span>{sendingWaOrderId === item.orderId ? 'Mengirim...' : 'Kirim WA Siap Ambil'}</span>
                             </button>
                           )}
+
+                          {/* Tombol QC Checklist & Berat Final (Core Phase 1) with Touch Target >= 44px */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrderForQc(item);
+                              setQcModalOpen(true);
+                            }}
+                            className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-900 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-blue-200 transition-all cursor-pointer active:scale-95"
+                            title="QC Checklist Pasca-Proses & Timbang Berat Final"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-700" />
+                            <span>QC &amp; Berat Final</span>
+                          </button>
 
                           {/* Tombol Cuci Ulang Garansi (Khusus Status Siap Ambil / Selesai) with Touch Target >= 44px */}
                           {(item.status === 'READY_FOR_PICKUP' || item.status === 'COMPLETED') && (
@@ -966,6 +1021,35 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
             });
             setTimeout(() => setWaToast(null), 3500);
           }}
+        />
+      )}
+
+      {/* Modal QC Checklist Pasca-Cuci & Berat Final (Core Phase 1) */}
+      {qcModalOpen && selectedOrderForQc && (
+        <LaundryQcAndWeightModal
+          isOpen={qcModalOpen}
+          onClose={() => {
+            setQcModalOpen(false);
+            setSelectedOrderForQc(null);
+          }}
+          orderId={selectedOrderForQc.orderId}
+          invoiceNumber={selectedOrderForQc.invoiceNumber}
+          customerName={selectedOrderForQc.customerName}
+          initialWeightKg={(selectedOrderForQc as any).initialWeightKg ?? selectedOrderForQc.totalWeightKg}
+          finalWeightKg={(selectedOrderForQc as any).finalWeightKg}
+          currentQcChecklist={(selectedOrderForQc as any).qcChecklist}
+          currentQcStatus={(selectedOrderForQc as any).qcStatus}
+          onSaved={() => fetchOrders()}
+        />
+      )}
+
+      {/* Drawer Lost & Found (Core Phase 1) */}
+      {activeOutlet && (
+        <LaundryLostAndFoundDrawer
+          isOpen={lostAndFoundOpen}
+          onClose={() => setLostAndFoundOpen(false)}
+          activeOutletId={activeOutlet.id}
+          activeOutletName={activeOutlet.name}
         />
       )}
 

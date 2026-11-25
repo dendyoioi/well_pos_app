@@ -35,6 +35,18 @@ import type {
   UpdateBusinessPayload,
   OwnerTokenSummary,
 } from '../types/business';
+import type {
+  CustomerLaundryPreferences,
+  CustomerPreferencesResponse,
+  QcChecklistData,
+  OrderWeightUpdateResponse,
+  OrderQcUpdateResponse,
+  LaundryLostAndFoundItem,
+  OutletServicePricingItem,
+  LaundryServicePriceHistoryItem,
+  LostAndFoundCategory,
+  LostAndFoundStatus,
+} from '../types/laundry_core';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -2665,8 +2677,9 @@ export const api = {
   // ==========================================
   // MODUL POS LAUNDRY & DRY CLEAN (EPIC-30)
   // ==========================================
-  getLaundryServices: async (): Promise<any> => {
-    const res = await fetch('/api/laundry/services', { headers: authHeader() });
+  getLaundryServices: async (outletId?: string): Promise<any> => {
+    const query = outletId ? `?outletId=${outletId}` : '';
+    const res = await fetch(`/api/laundry/services${query}`, { headers: authHeader() });
     return res.json();
   },
 
@@ -3993,4 +4006,197 @@ export const attendanceApi = {
     return res.json();
   },
 };
+
+// ============================================================================
+// LAUNDRY CORE ENGINE — PHASE 1 PRECISION API CLIENT
+// ============================================================================
+export const laundryCoreApi = {
+  // A. Preferensi Pelanggan & Nomor Alternatif
+  getCustomerPreferences: async (
+    customerId: string
+  ): Promise<{ status: string; data: CustomerPreferencesResponse; message?: string }> => {
+    const res = await fetch(`/api/laundry/core/customers/${customerId}/preferences`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateCustomerPreferences: async (
+    customerId: string,
+    payload: {
+      laundryPreferences?: CustomerLaundryPreferences;
+      secondaryPhones?: string[];
+    }
+  ): Promise<{ status: string; data: CustomerPreferencesResponse; message?: string }> => {
+    const res = await fetch(`/api/laundry/core/customers/${customerId}/preferences`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // B. Berat Awal vs Berat Final & QC Checklist
+  updateOrderWeight: async (
+    orderId: string,
+    payload: {
+      finalWeightKg: number;
+      weightDiffReason?: string;
+      syncTotalWeight?: boolean;
+    }
+  ): Promise<{ status: string; data: OrderWeightUpdateResponse; message?: string }> => {
+    const res = await fetch(`/api/laundry/core/orders/${orderId}/weight`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  updateOrderQc: async (
+    orderId: string,
+    payload: {
+      qcStatus: 'PASSED' | 'REWASH_REQUIRED';
+      qcChecklist: QcChecklistData;
+      qcAfterPhotos?: string[];
+    }
+  ): Promise<{ status: string; data: OrderQcUpdateResponse; message?: string }> => {
+    const res = await fetch(`/api/laundry/core/orders/${orderId}/qc`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // C. Lost & Found
+  getLostAndFound: async (params?: {
+    outletId?: string;
+    status?: string;
+    itemCategory?: string;
+    search?: string;
+  }): Promise<{ status: string; data: LaundryLostAndFoundItem[]; message?: string }> => {
+    const query = new URLSearchParams();
+    if (params?.outletId) query.append('outletId', params.outletId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.itemCategory) query.append('itemCategory', params.itemCategory);
+    if (params?.search) query.append('search', params.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`/api/laundry/core/lost-and-found${queryString}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createLostAndFound: async (payload: {
+    outletId: string;
+    orderId?: string | null;
+    customerId?: string | null;
+    itemCategory: LostAndFoundCategory;
+    itemName: string;
+    description?: string | null;
+    photoUrl?: string | null;
+    storageLocation?: string | null;
+    notes?: string | null;
+  }): Promise<{ status: string; data: LaundryLostAndFoundItem; message?: string }> => {
+    const res = await fetch('/api/laundry/core/lost-and-found', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  updateLostAndFound: async (
+    id: string,
+    payload: {
+      status?: LostAndFoundStatus;
+      claimedByName?: string | null;
+      storageLocation?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{ status: string; data: LaundryLostAndFoundItem; message?: string }> => {
+    const res = await fetch(`/api/laundry/core/lost-and-found/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // D. Outlet Pricing & Price History
+  getOutletServicesPricing: async (
+    outletId: string
+  ): Promise<{
+    status: string;
+    data: { outletId: string; outletName: string; services: OutletServicePricingItem[] };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/laundry/core/services/outlet-prices?outletId=${outletId}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  setOutletServicePrice: async (
+    serviceId: string,
+    payload: {
+      outletId: string;
+      priceOverride: number | null;
+      expressMultiplierOverride?: number | null;
+      isAvailable?: boolean;
+      reason?: string;
+    }
+  ): Promise<{
+    status: string;
+    data: {
+      serviceId: string;
+      outletId: string;
+      basePrice: number;
+      oldEffectivePrice: number;
+      newEffectivePrice: number;
+      priceOverride: number | null;
+      isAvailable: boolean;
+    };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/laundry/core/services/${serviceId}/outlet-price`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getServicePriceHistory: async (
+    serviceId: string,
+    outletId?: string
+  ): Promise<{ status: string; data: LaundryServicePriceHistoryItem[]; message?: string }> => {
+    const query = outletId ? `?outletId=${outletId}` : '';
+    const res = await fetch(`/api/laundry/core/services/${serviceId}/price-history${query}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+};
+
 

@@ -198,13 +198,46 @@ export const getLaundryServices = async (req: Request, res: Response) => {
       });
     }
 
+    const outletId = (req.query.outletId as string) || (req.user?.outletId as string);
+    let outletPricesMap = new Map<string, any>();
+    if (outletId && outletId !== 'ALL') {
+      const outletPrices = await prisma.laundryServiceOutletPrice.findMany({
+        where: { tenantId, outletId },
+      });
+      for (const op of outletPrices) {
+        outletPricesMap.set(op.laundryServiceId, op);
+      }
+    }
+
     const formattedServices = services.map((s: any) => {
       const bomItemsCount = s.bomItems?.length || 0;
       const estimatedBomCost = (s.bomItems || []).reduce((acc: number, item: any) => {
         return acc + Math.round(Number(item.quantityPerUnit) * Number(item.inventoryItem?.averageCost || 0));
       }, 0);
+
+      const op = outletPricesMap.get(s.id);
+      const basePrice = Number(s.price);
+      const priceOverride = op?.priceOverride != null ? Number(op.priceOverride) : null;
+      const effectivePrice = priceOverride != null ? priceOverride : basePrice;
+
+      const baseExpressMultiplier = Number(s.expressMultiplier);
+      const expressMultiplierOverride =
+        op?.expressMultiplierOverride != null ? Number(op.expressMultiplierOverride) : null;
+      const effectiveExpressMultiplier =
+        expressMultiplierOverride != null ? expressMultiplierOverride : baseExpressMultiplier;
+
+      const isAvailableAtOutlet = op != null ? op.isAvailable : s.isActive;
+
       return {
         ...s,
+        basePrice,
+        priceOverride,
+        effectivePrice,
+        price: effectivePrice,
+        baseExpressMultiplier,
+        expressMultiplierOverride,
+        effectiveExpressMultiplier,
+        isAvailableAtOutlet,
         bomItemsCount,
         estimatedBomCost,
       };
@@ -292,6 +325,25 @@ export const updateLaundryService = async (req: Request, res: Response) => {
       where: { id },
       data: parseResult.data,
     });
+
+    if (parseResult.data.price !== undefined && Number(parseResult.data.price) !== Number(existing.price)) {
+      try {
+        await prisma.laundryServicePriceHistory.create({
+          data: {
+            tenantId,
+            laundryServiceId: id,
+            outletId: null, // Perubahan master price
+            oldPrice: existing.price,
+            newPrice: new Prisma.Decimal(parseResult.data.price),
+            reason: (req.body.reason as string) || 'Pembaruan tarif master laundry',
+            changedById: req.user?.id || null,
+            changedByName: req.user?.name || 'Owner/Admin',
+          },
+        });
+      } catch (errPriceHist) {
+        console.error('Gagal mencatat history harga master:', errPriceHist);
+      }
+    }
 
     return res.status(200).json({
       status: 'success',
@@ -1373,6 +1425,16 @@ export const getLaundryOrders = async (req: Request, res: Response) => {
         incidentCount,
         hasOpenIncident,
         incidents,
+        // Laundry Core Phase 1: Operational Precision Fields
+        initialWeightKg: detail.initialWeightKg ? Number(detail.initialWeightKg) : (detail.totalWeightKg ? Number(detail.totalWeightKg) : null),
+        finalWeightKg: detail.finalWeightKg ? Number(detail.finalWeightKg) : null,
+        weightDiffKg:
+          detail.finalWeightKg && (detail.initialWeightKg || detail.totalWeightKg)
+            ? Math.round((Number(detail.finalWeightKg) - Number(detail.initialWeightKg || detail.totalWeightKg)) * 1000) / 1000
+            : null,
+        weightDiffReason: detail.weightDiffReason || null,
+        qcStatus: detail.qcStatus || null,
+        qcChecklist: detail.qcChecklist || null,
         createdAt: detail.createdAt,
       };
     });
@@ -1812,6 +1874,7 @@ export const createLaundryOrder = async (req: Request, res: Response) => {
           status: 'RECEIVED',
           currentStage: 'DROP_OFF',
           totalWeightKg: totalWeightKg > 0 ? totalWeightKg : null,
+          initialWeightKg: totalWeightKg > 0 ? totalWeightKg : null,
           totalPieces,
           perfumeVariant,
           estimatedReadyAt,
