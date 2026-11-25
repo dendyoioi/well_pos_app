@@ -28,6 +28,11 @@ import type {
   MachineMaintenanceResult,
   CreateMachineMaintenancePayload,
   UpdateMachineMaintenancePayload,
+  PersistentAlertItem,
+  PersistentAlertsResult,
+  AlertRuleConfigItem,
+  UpsertAlertRulePayload,
+  EvaluateAlertsResult,
 } from '../types/laundryAnalytics';
 
 const BASE_PATH = `${API_BASE_URL}/api/laundry/analytics`;
@@ -464,3 +469,68 @@ export async function deleteMachineMaintenanceLog(
     method: 'DELETE',
   });
 }
+
+// 17. Persistent Alerts & Rules Engine (Wave 3A)
+export async function fetchPersistentAlerts(
+  params?: {
+    outletId?: string;
+    status?: string;
+    severity?: string;
+    page?: number;
+    limit?: number;
+  },
+  signal?: AbortSignal
+): Promise<PersistentAlertsResult> {
+  const qs = buildQueryString(params);
+  return request<PersistentAlertsResult>(`${BASE_PATH}/alerts${qs}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export async function evaluatePersistentAlerts(
+  payload: {
+    outletId: string;
+    preset?: string;
+    triggerWa?: boolean;
+  }
+): Promise<EvaluateAlertsResult> {
+  return request<EvaluateAlertsResult>(`${BASE_PATH}/alerts/evaluate`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePersistentAlertStatus(
+  id: string,
+  payload: {
+    status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'IGNORED' | string;
+    resolutionNotes?: string;
+  }
+): Promise<PersistentAlertItem> {
+  return request<PersistentAlertItem>(`${BASE_PATH}/alerts/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchAlertRules(
+  outletId?: string,
+  signal?: AbortSignal
+): Promise<AlertRuleConfigItem[]> {
+  const qs = buildQueryString({ outletId });
+  return request<AlertRuleConfigItem[]>(`${BASE_PATH}/alert-rules${qs}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export async function upsertAlertRule(
+  payload: UpsertAlertRulePayload
+): Promise<AlertRuleConfigItem> {
+  return request<AlertRuleConfigItem>(`${BASE_PATH}/alert-rules`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+

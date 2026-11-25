@@ -13,6 +13,7 @@ import * as laundryAnalyticsController from '../controllers/laundry_analytics.co
 import * as opexController from '../controllers/operational_expense.controller';
 import * as targetController from '../controllers/outlet_target.controller';
 import * as maintController from '../controllers/machine_maintenance.controller';
+import * as alertController from '../controllers/persistent_alert.controller';
 
 const router = Router();
 
@@ -64,6 +65,19 @@ router.get('/machine-maintenance', authorize(Role.OWNER, Role.ADMIN, Role.SUPERV
 router.post('/machine-maintenance', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), maintController.createMachineMaintenanceLog);
 router.patch('/machine-maintenance/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), maintController.updateMachineMaintenanceLog);
 router.delete('/machine-maintenance/:id', authorize(Role.OWNER, Role.ADMIN), maintController.deleteMachineMaintenanceLog);
+
+// =========================================================================
+// WAVE 3A: PERSISTENT ALERTING & RULES ENGINE
+// =========================================================================
+
+// 1. Persistent Alerts (GET/PATCH: OWNER, ADMIN, SUPERVISOR; EVALUATE: OWNER & ADMIN)
+router.get('/alerts', alertController.getPersistentAlerts);
+router.post('/alerts/evaluate', authorize(Role.OWNER, Role.ADMIN), alertController.evaluateAlerts);
+router.patch('/alerts/:id/status', alertController.updateAlertStatus);
+
+// 2. Alert Rules Configuration (GET: OWNER & ADMIN; PUT: Khusus OWNER)
+router.get('/alert-rules', authorize(Role.OWNER, Role.ADMIN), alertController.getAlertRules);
+router.put('/alert-rules', authorize(Role.OWNER), alertController.upsertAlertRule);
 
 export { router as laundryAnalyticsRouter };
 export default router;

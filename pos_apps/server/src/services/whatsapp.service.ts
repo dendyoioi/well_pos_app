@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { prisma } from '../config/prisma';
 
 export interface OrderWhatsAppData {
   invoiceNumber: string;
@@ -68,6 +69,7 @@ export interface PlatformWhatsAppConfig {
 
 export interface WhatsAppSendResult {
   status: 'success' | 'error';
+  success?: boolean;
   message: string;
   targetPhone: string;
   isMock: boolean;
@@ -952,6 +954,142 @@ export class WhatsAppService {
       return {
         status: 'error',
         message: `Gagal menguji koneksi Fonnte: ${err.message}`,
+      };
+    }
+  }
+
+  /**
+   * Kirim Notifikasi Peringatan Dini Kritis ke WhatsApp Owner (Laundry Performance Intelligence)
+   */
+  public async sendOwnerAlertNotification(data: {
+    tenantId: string;
+    outletId?: string;
+    ownerPhone: string;
+    outletName: string;
+    severity: string;
+    title: string;
+    message: string;
+    metricValue: number;
+    thresholdValue: number;
+  }): Promise<WhatsAppSendResult> {
+    try {
+      if (!data.ownerPhone || !data.ownerPhone.trim()) {
+        return {
+          status: 'error',
+          success: false,
+          message: 'Nomor WhatsApp Owner tidak tersedia',
+          targetPhone: '',
+          isMock: false,
+          provider: 'FONNTE',
+        };
+      }
+
+      const cleanPhone = this.normalizePhone(data.ownerPhone);
+
+      // Ambil konfigurasi receiptConfig outlet / tenant untuk resolusi token WA
+      let receiptConfig: any = null;
+      try {
+        if (data.outletId) {
+          const outlet = await prisma.outlet.findUnique({
+            where: { id: data.outletId },
+            select: { receiptConfig: true },
+          });
+          receiptConfig = outlet?.receiptConfig;
+        }
+        if (!receiptConfig && data.tenantId) {
+          const outletFallback = await prisma.outlet.findFirst({
+            where: { tenantId: data.tenantId },
+            select: { receiptConfig: true },
+          });
+          receiptConfig = outletFallback?.receiptConfig;
+        }
+      } catch (dbErr) {
+        console.warn('[WHATSAPP OWNER ALERT] Gagal membaca receiptConfig outlet:', dbErr);
+      }
+
+      const { apiKey, enabled } = this.resolveApiKey(receiptConfig);
+
+      if (!enabled) {
+        return {
+          status: 'error',
+          success: false,
+          message: 'Layanan WhatsApp Gateway dinonaktifkan untuk toko ini',
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+        };
+      }
+
+      const sevBadge = (data.severity || 'CRITICAL').toUpperCase() === 'CRITICAL' ? '🚨 [PERINGATAN KRITIS]' : '⚠️ [PERINGATAN OUTLET]';
+      const formattedMetric = typeof data.metricValue === 'number' ? Number(data.metricValue).toLocaleString('id-ID') : data.metricValue;
+      const formattedThreshold = typeof data.thresholdValue === 'number' ? Number(data.thresholdValue).toLocaleString('id-ID') : data.thresholdValue;
+
+      const messageText =
+        `${sevBadge} — ${data.outletName.toUpperCase()}\n` +
+        `*${data.title}*\n\n` +
+        `${data.message}\n\n` +
+        `• Nilai Terdeteksi : *${formattedMetric}*\n` +
+        `• Batas Ambang     : *${formattedThreshold}*\n\n` +
+        `Waktu: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}\n` +
+        `_Pesan otomatis dikirim oleh Laundry Performance Intelligence (Well POS)_`;
+
+      if (!apiKey) {
+        console.log(`[WHATSAPP MOCK/UNCONFIGURED] Owner alert ke ${cleanPhone}:\n${messageText}`);
+        return {
+          status: 'success',
+          success: true,
+          message: `(Mock) Notifikasi WhatsApp Owner tercatat untuk +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: true,
+          provider: 'FONNTE',
+        };
+      }
+
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: cleanPhone,
+          message: messageText,
+          countryCode: '62',
+        }),
+      });
+
+      const resJson: any = await response.json();
+      if (response.ok && resJson.status === true) {
+        return {
+          status: 'success',
+          success: true,
+          message: `Peringatan WhatsApp Owner berhasil dikirim ke +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      } else {
+        const errorMsg = resJson.reason || resJson.message || 'Gagal mengirim pesan via Fonnte API';
+        return {
+          status: 'error',
+          success: false,
+          message: `Fonnte: ${errorMsg}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      }
+    } catch (err: any) {
+      console.error('[WHATSAPP OWNER ALERT ERROR]', err);
+      return {
+        status: 'error',
+        success: false,
+        message: `Koneksi gateway WhatsApp terputus: ${err.message}`,
+        targetPhone: data.ownerPhone || '',
+        isMock: false,
+        provider: 'FONNTE',
       };
     }
   }

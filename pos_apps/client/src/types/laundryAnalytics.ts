@@ -893,3 +893,85 @@ export interface UpdateMachineMaintenancePayload {
   notes?: string;
   status?: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | string;
 }
+
+// =========================================================================
+// WAVE 3A: PERSISTENT ALERTING & RULES ENGINE TYPES
+// =========================================================================
+
+export interface PersistentAlertItem {
+  id: string;
+  tenantId: string;
+  outletId: string;
+  ruleKey: string;
+  severity: 'WARNING' | 'CRITICAL';
+  title: string;
+  message: string;
+  metricValue: number;
+  thresholdValue: number;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'IGNORED';
+  waNotifiedAt: string | null;
+  resolvedAt: string | null;
+  resolvedById: string | null;
+  resolutionNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  outlet?: {
+    id: string;
+    name: string;
+  };
+  resolvedBy?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface PersistentAlertsSummary {
+  openCriticalCount: number;
+  openWarningCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+  totalOpen: number;
+}
+
+export interface PersistentAlertsResult {
+  alerts: PersistentAlertItem[];
+  summary: PersistentAlertsSummary;
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export interface AlertRuleConfigItem {
+  id?: string;
+  tenantId?: string;
+  outletId?: string | null;
+  ruleKey: string;
+  label: string;
+  unit: string;
+  operator: 'LT' | 'GT' | 'GTE';
+  isFinancial: boolean;
+  warningThreshold: number;
+  criticalThreshold: number;
+  isEnabled: boolean;
+  notificationChannels: string[];
+}
+
+export interface UpsertAlertRulePayload {
+  outletId?: string | null;
+  ruleKey: string;
+  warningThreshold: number;
+  criticalThreshold: number;
+  isEnabled: boolean;
+  notificationChannels: string[];
+}
+
+export interface EvaluateAlertsResult {
+  evaluatedRulesCount: number;
+  createdCount: number;
+  updatedCount: number;
+  waSentCount: number;
+  alerts: any[];
+}

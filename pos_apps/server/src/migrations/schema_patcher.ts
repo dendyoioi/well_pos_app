@@ -910,6 +910,50 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "laundry_incidents_tenant_id_machine_id_idx" ON "laundry_incidents"("tenant_id", "machine_id");
     `,
   },
+  {
+    id: '20261124_12_laundry_owner_dashboard_wave3a_alerting',
+    description: 'Menambahkan tabel alert_rule_configs dan persistent_alerts untuk sistem peringatan dini persisten (Wave 3A)',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "alert_rule_configs" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "rule_key" TEXT NOT NULL,
+        "warning_threshold" DECIMAL(12, 2) NOT NULL,
+        "critical_threshold" DECIMAL(12, 2) NOT NULL,
+        "is_enabled" BOOLEAN NOT NULL DEFAULT true,
+        "notification_channels" JSONB,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "alert_rule_configs_tenant_id_outlet_id_rule_key_key" ON "alert_rule_configs"("tenant_id", "outlet_id", "rule_key") WHERE "outlet_id" IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS "alert_rule_configs_tenant_global_rule_key" ON "alert_rule_configs"("tenant_id", "rule_key") WHERE "outlet_id" IS NULL;
+      CREATE INDEX IF NOT EXISTS "alert_rule_configs_tenant_id_is_enabled_idx" ON "alert_rule_configs"("tenant_id", "is_enabled");
+
+      CREATE TABLE IF NOT EXISTS "persistent_alerts" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "rule_key" TEXT NOT NULL,
+        "severity" TEXT NOT NULL DEFAULT 'WARNING',
+        "title" TEXT NOT NULL,
+        "message" TEXT NOT NULL,
+        "metric_value" DECIMAL(15, 2) NOT NULL,
+        "threshold_value" DECIMAL(15, 2) NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'OPEN',
+        "wa_notified_at" TIMESTAMP(3),
+        "resolved_at" TIMESTAMP(3),
+        "resolved_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "resolution_notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "persistent_alerts_tenant_id_outlet_id_status_created_at_idx" ON "persistent_alerts"("tenant_id", "outlet_id", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "persistent_alerts_tenant_id_rule_key_status_idx" ON "persistent_alerts"("tenant_id", "rule_key", "status");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

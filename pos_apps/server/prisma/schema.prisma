@@ -109,9 +109,11 @@ model Tenant {
   workShiftTemplates WorkShiftTemplate[]
   staffWorkSchedules StaffWorkSchedule[]
   staffPerformanceReviews StaffPerformanceReview[]
-  operationalExpenses OperationalExpense[]
+  operationalExpenses   OperationalExpense[]
   outletBusinessTargets OutletBusinessTarget[]
   machineMaintenanceLogs LaundryMachineMaintenanceLog[]
+  alertRuleConfigs      AlertRuleConfig[]
+  persistentAlerts      PersistentAlert[]
 
   @@map("tenants")
 }
@@ -268,6 +270,7 @@ model User {
   createdOperationalExpenses OperationalExpense[]          @relation("OperationalExpenseCreatedBy")
   createdOutletTargets       OutletBusinessTarget[]        @relation("OutletTargetCreatedBy")
   createdMachineMaintenances LaundryMachineMaintenanceLog[] @relation("MachineMaintenanceCreatedBy")
+  resolvedPersistentAlerts   PersistentAlert[]              @relation("PersistentAlertResolvedBy")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -331,9 +334,11 @@ model Outlet {
   workShiftTemplates WorkShiftTemplate[]
   staffWorkSchedules StaffWorkSchedule[]
   staffPerformanceReviews StaffPerformanceReview[]
-  operationalExpenses OperationalExpense[]
+  operationalExpenses   OperationalExpense[]
   outletBusinessTargets OutletBusinessTarget[]
   machineMaintenanceLogs LaundryMachineMaintenanceLog[]
+  alertRuleConfigs      AlertRuleConfig[]
+  persistentAlerts      PersistentAlert[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -2148,4 +2153,51 @@ model LaundryMachineMaintenanceLog {
   @@index([tenantId, outletId, machineId, startDate])
   @@index([tenantId, status])
   @@map("laundry_machine_maintenance_logs")
+}
+
+model AlertRuleConfig {
+  id                   String   @id @default(uuid())
+  tenantId             String   @map("tenant_id")
+  outletId             String?  @map("outlet_id") // NULL = berlaku global untuk semua outlet tenant
+  ruleKey              String   @map("rule_key") // PROFIT_MARGIN, SLA_ON_TIME, REWASH_RATE, INCIDENT_RATE, MACHINE_UTILIZATION, CUSTOMER_RATING, DORMANT_SURGE, LOW_STOCK, HIGH_RECEIVABLES, CASH_DISCREPANCY
+  warningThreshold     Decimal  @map("warning_threshold") @db.Decimal(12, 2)
+  criticalThreshold    Decimal  @map("critical_threshold") @db.Decimal(12, 2)
+  isEnabled            Boolean  @default(true) @map("is_enabled")
+  notificationChannels Json?    @map("notification_channels") // default ["IN_APP"] atau ["IN_APP", "WHATSAPP"]
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet Outlet? @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, outletId, ruleKey])
+  @@index([tenantId, isEnabled])
+  @@map("alert_rule_configs")
+}
+
+model PersistentAlert {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  outletId        String    @map("outlet_id")
+  ruleKey         String    @map("rule_key")
+  severity        String    @default("WARNING") // WARNING | CRITICAL
+  title           String
+  message         String    @db.Text
+  metricValue     Decimal   @map("metric_value") @db.Decimal(15, 2)
+  thresholdValue  Decimal   @map("threshold_value") @db.Decimal(15, 2)
+  status          String    @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | IGNORED
+  waNotifiedAt    DateTime? @map("wa_notified_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  resolvedById    String?   @map("resolved_by_id")
+  resolutionNotes String?   @map("resolution_notes") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet     Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  resolvedBy User?   @relation("PersistentAlertResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, status, createdAt])
+  @@index([tenantId, ruleKey, status])
+  @@map("persistent_alerts")
 }

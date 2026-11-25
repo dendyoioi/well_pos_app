@@ -15,15 +15,25 @@ import {
   Plus,
   Layers,
   MessageSquare,
+  Bell,
 } from 'lucide-react';
+import { api } from '../../../services/api';
 import type { Outlet } from '../../../types/outlet';
 import type { User } from '../../../types/auth';
-import type { ExecutiveOverviewResult, DrilldownType } from '../../../types/laundryAnalytics';
-import { fetchLaundryOverview } from '../../../services/laundryAnalyticsApi';
+import type {
+  ExecutiveOverviewResult,
+  DrilldownType,
+  PersistentAlertsSummary,
+} from '../../../types/laundryAnalytics';
+import {
+  fetchLaundryOverview,
+  fetchPersistentAlerts,
+} from '../../../services/laundryAnalyticsApi';
 import { useAnalyticsFilter } from './useAnalyticsFilter';
 import { GlobalAnalyticsFilterBar } from './GlobalAnalyticsFilterBar';
 import { ExecutiveOverviewLevel1 } from './ExecutiveOverviewLevel1';
 import { DrillDownInspectionDrawer } from './DrillDownInspectionDrawer';
+import { PersistentAlertCenterModal } from './modals/PersistentAlertCenterModal';
 
 // Lazy-loaded 9 Sub-Tabs for optimal code-splitting
 const FinancialAnalyticsTab = React.lazy(() =>
@@ -97,6 +107,57 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
   const [overviewData, setOverviewData] = useState<ExecutiveOverviewResult | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+
+  // Persistent Alerts Center Modal & Badge State (Wave 3A)
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
+  const [availableOutlets, setAvailableOutlets] = useState<Array<{ id: string; name: string }>>([]);
+  const [alertSummary, setAlertSummary] = useState<PersistentAlertsSummary>({
+    openCriticalCount: 0,
+    openWarningCount: 0,
+    inProgressCount: 0,
+    resolvedCount: 0,
+    totalOpen: 0,
+  });
+
+  // Ambil daftar outlet untuk modal selector
+  useEffect(() => {
+    let isMounted = true;
+    api
+      .getOutlets()
+      .then((res: any) => {
+        if (isMounted && res?.data) {
+          setAvailableOutlets(res.data.map((o: any) => ({ id: o.id, name: o.name })));
+        }
+      })
+      .catch(() => {
+        if (isMounted && activeOutlet) {
+          setAvailableOutlets([{ id: activeOutlet.id, name: activeOutlet.name }]);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [activeOutlet]);
+
+  // Load Alert Summary for Header Bell Badge
+  const loadAlertSummary = useCallback(() => {
+    fetchPersistentAlerts({
+      outletId: outletId === 'ALL' ? undefined : outletId,
+      limit: 1,
+    })
+      .then((res) => {
+        if (res?.summary) {
+          setAlertSummary(res.summary);
+        }
+      })
+      .catch((err) => {
+        console.warn('[LOAD ALERT SUMMARY ERROR]', err);
+      });
+  }, [outletId]);
+
+  useEffect(() => {
+    loadAlertSummary();
+  }, [loadAlertSummary]);
 
   // Single Drawer Inspection State (Zero Stacked Modals Policy)
   const [drawerState, setDrawerState] = useState<DrawerState>({
@@ -274,6 +335,26 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
 
         {/* Quick Actions Bar */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Bell Icon Alert Center Button (Wave 3A) */}
+          <button
+            type="button"
+            onClick={() => setIsAlertModalOpen(true)}
+            className="relative inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+            title="Pusat Peringatan & Ambang Batas"
+          >
+            <Bell className="w-4 h-4 text-blue-900" />
+            <span className="hidden sm:inline">Peringatan</span>
+            {alertSummary.openCriticalCount > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse">
+                {alertSummary.openCriticalCount}
+              </span>
+            ) : alertSummary.openWarningCount > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-white">
+                {alertSummary.openWarningCount}
+              </span>
+            ) : null}
+          </button>
+
           {onOpenPos && (
             <button
               type="button"
@@ -482,6 +563,21 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
         endDate={endDate}
         contextParams={drawerState.contextParams}
         userRole={userRole}
+      />
+
+      {/* 7. Persistent Alert Center Modal (Wave 3A) */}
+      <PersistentAlertCenterModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        activeOutletId={outletId}
+        outlets={availableOutlets}
+        isOwner={isOwner}
+        canSwitchOutlet={canSwitchOutlet}
+        userRole={userRole}
+        onSuccess={() => {
+          loadAlertSummary();
+          loadOverview();
+        }}
       />
     </div>
   );
