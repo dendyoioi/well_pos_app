@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import {
   Store,
   LogOut,
@@ -445,17 +445,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout, on
     }
   };
 
-  const handleUpdateOutletFees = (updatedFees: OutletFee[]) => {
-    if (!activeOutlet) return;
-    const updated = { ...activeOutlet, feesConfig: updatedFees };
-    setActiveOutlet(updated);
-    setOutlets((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
-  };
+  const handleUpdateOutletFees = useCallback((updatedFees: OutletFee[]) => {
+    setActiveOutlet((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, feesConfig: updatedFees };
+      setOutlets((outletsPrev) => outletsPrev.map((o) => (o.id === updated.id ? updated : o)));
+      return updated;
+    });
+  }, []);
 
-  const handleOutletUpdated = (updatedOutlet: Outlet) => {
+  const handleOutletUpdated = useCallback((updatedOutlet: Outlet) => {
     setActiveOutlet(updatedOutlet);
     setOutlets((prev) => prev.map((o) => (o.id === updatedOutlet.id ? updatedOutlet : o)));
-  };
+  }, []);
 
   // Sesuaikan tab aktif bila user switch role atau outlet gudang aktif
   useEffect(() => {

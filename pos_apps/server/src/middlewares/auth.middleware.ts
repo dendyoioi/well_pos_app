@@ -12,6 +12,35 @@ interface JwtPayloadDecoded {
   tokenVersion?: number;
 }
 
+interface CachedUserAuth {
+  user: {
+    id: string;
+    email: string | null;
+    name: string;
+    role: Role;
+    outletId: string | null;
+    tenantId: string;
+    isActive: boolean;
+    tokenVersion: number;
+  };
+  expiresAt: number;
+}
+
+const USER_AUTH_CACHE_TTL_MS = 30 * 1000; // 30 detik
+const USER_AUTH_CACHE_MAX_ENTRIES = 1000;
+const userAuthCache = new Map<string, CachedUserAuth>();
+
+/**
+ * Invalidate in-memory auth cache for a specific user, or all users if userId is omitted.
+ */
+export const invalidateUserAuthCache = (userId?: string): void => {
+  if (userId) {
+    userAuthCache.delete(userId);
+  } else {
+    userAuthCache.clear();
+  }
+};
+
 /**
  * Middleware untuk memverifikasi JWT token di header Authorization (Bearer <token>)
  */
@@ -47,22 +76,42 @@ export const authenticate = async (
       });
     }
 
-    // Pastikan user masih aktif di database dan periksa versi token (session revocation)
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        outletId: true,
-        tenantId: true,
-        isActive: true,
-        tokenVersion: true,
-      },
-    });
+    // Pastikan user masih aktif di database dan periksa versi token (dengan in-memory TTL cache 30 detik)
+    const now = Date.now();
+    const cached = userAuthCache.get(decoded.userId);
+    let user: CachedUserAuth['user'] | null = null;
+
+    if (cached && cached.expiresAt > now) {
+      user = cached.user;
+    } else {
+      user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          outletId: true,
+          tenantId: true,
+          isActive: true,
+          tokenVersion: true,
+        },
+      });
+
+      if (user) {
+        if (userAuthCache.size >= USER_AUTH_CACHE_MAX_ENTRIES) {
+          const oldestKey = userAuthCache.keys().next().value;
+          if (oldestKey) userAuthCache.delete(oldestKey);
+        }
+        userAuthCache.set(decoded.userId, {
+          user,
+          expiresAt: now + USER_AUTH_CACHE_TTL_MS,
+        });
+      }
+    }
 
     if (!user || !user.isActive) {
+      userAuthCache.delete(decoded.userId);
       return res.status(401).json({
         status: 'error',
         message: 'Akun pengguna tidak aktif atau tidak ditemukan',
@@ -71,6 +120,7 @@ export const authenticate = async (
 
     // Periksa apakah sesi perangkat telah dicabut (force logout / session revoked)
     if (decoded.tokenVersion !== undefined && decoded.tokenVersion < user.tokenVersion) {
+      userAuthCache.delete(decoded.userId);
       return res.status(401).json({
         status: 'error',
         code: 'SESSION_REVOKED',

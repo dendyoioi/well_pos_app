@@ -6,15 +6,29 @@ export const healthRouter = Router();
 
 /**
  * @route GET /api/health
- * @desc Memeriksa status kesehatan server dan konektivitas database
+ * @desc Memeriksa status kesehatan server Express (Liveness).
+ * Jika query param ?db=true disertakan, lakukan uji konektivitas database eksplisit.
  */
-healthRouter.get('/', async (_req: Request, res: Response) => {
+healthRouter.get('/', async (req: Request, res: Response) => {
+  const checkDb = req.query.db === 'true';
+
+  if (!checkDb) {
+    // Mode Liveness Cepat: Menghemat kuota egress & mencegah Neon terbangun dari auto-suspend
+    return res.status(200).json({
+      status: 'ok',
+      message: 'POS API Server berjalan normal',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  }
+
   try {
-    // Uji koneksi ringan ke database
+    // Uji koneksi database eksplisit
     await prisma.$queryRaw`SELECT 1`;
 
     return res.status(200).json({
       status: 'ok',
+      database: 'connected',
       message: 'POS API Server & Database berjalan normal',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
@@ -23,6 +37,36 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
     console.error('[HealthCheck] Database error:', error);
     return res.status(503).json({
       status: 'error',
+      database: 'disconnected',
+      message: 'Gagal terhubung ke database PostgreSQL',
+      error: process.env.NODE_ENV === 'development'
+        ? (error instanceof Error ? error.message : 'Unknown error')
+        : undefined,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * @route GET /api/health/db
+ * @desc Endpoint khusus untuk deep healthcheck konektivitas database
+ */
+healthRouter.get('/db', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+
+    return res.status(200).json({
+      status: 'ok',
+      database: 'connected',
+      message: 'POS API Server & Database berjalan normal',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  } catch (error) {
+    console.error('[HealthCheck] Database error:', error);
+    return res.status(503).json({
+      status: 'error',
+      database: 'disconnected',
       message: 'Gagal terhubung ke database PostgreSQL',
       error: process.env.NODE_ENV === 'development'
         ? (error instanceof Error ? error.message : 'Unknown error')

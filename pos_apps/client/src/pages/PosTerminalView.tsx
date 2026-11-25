@@ -608,6 +608,17 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [outletFees, setOutletFees] = useState<OutletFee[]>([]);
   const [isRefreshingFees, setIsRefreshingFees] = useState<boolean>(false);
 
+  // Simpan callback onOutletFeesUpdated di dalam useRef agar referensi refreshOutletFees stabil
+  const onOutletFeesUpdatedRef = useRef(onOutletFeesUpdated);
+  useEffect(() => {
+    onOutletFeesUpdatedRef.current = onOutletFeesUpdated;
+  }, [onOutletFeesUpdated]);
+
+  const activeOutletFeesRef = useRef(activeOutlet?.feesConfig);
+  useEffect(() => {
+    activeOutletFeesRef.current = activeOutlet?.feesConfig;
+  }, [activeOutlet?.feesConfig]);
+
   const refreshOutletFees = useCallback(async (silent = true) => {
     if (!activeOutlet?.id) return;
     try {
@@ -618,7 +629,13 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         if (found) {
           const normalized = normalizeOutletFees(found.feesConfig);
           setOutletFees(normalized);
-          onOutletFeesUpdated?.(normalized);
+
+          // Perbandingan JSON sebelum memanggil onOutletFeesUpdated agar tidak memicu re-render jika identik
+          const currentFeesJson = JSON.stringify(normalizeOutletFees(activeOutletFeesRef.current));
+          const newFeesJson = JSON.stringify(normalized);
+          if (currentFeesJson !== newFeesJson) {
+            onOutletFeesUpdatedRef.current?.(normalized);
+          }
         }
       }
     } catch (err) {
@@ -626,11 +643,16 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
     } finally {
       if (!silent) setIsRefreshingFees(false);
     }
-  }, [activeOutlet?.id, onOutletFeesUpdated]);
+  }, [activeOutlet?.id]);
+
+  const lastFetchedOutletIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setOutletFees(normalizeOutletFees(activeOutlet?.feesConfig));
-    refreshOutletFees(true);
+    if (activeOutlet?.id && lastFetchedOutletIdRef.current !== activeOutlet.id) {
+      lastFetchedOutletIdRef.current = activeOutlet.id;
+      refreshOutletFees(true);
+    }
   }, [activeOutlet?.id, refreshOutletFees]);
 
   // Hold Orders State

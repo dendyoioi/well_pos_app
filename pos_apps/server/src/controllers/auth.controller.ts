@@ -12,6 +12,7 @@ import {
   sendPasswordResetOtpEmail,
   sendPasswordChangedNotificationEmail,
 } from '../services/mail.service';
+import { invalidateUserAuthCache } from '../middlewares/auth.middleware';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment. Jika tidak ada, server gagal startup secara eksplisit.
 // Generate dengan: openssl rand -hex 64
@@ -880,6 +881,8 @@ export const confirmPasswordReset = async (req: Request, res: Response) => {
         passwordHash: newPasswordHash,
       },
     });
+
+    invalidateUserAuthCache();
 
     // 7. Ambil profil user untuk email konfirmasi
     const userAccount = await prisma.user.findFirst({

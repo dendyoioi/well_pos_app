@@ -78,6 +78,26 @@ const updateOutletSchema = z.object({
   }).optional(),
 });
 
+interface CachedOutlets {
+  data: any[];
+  expiresAt: number;
+}
+
+const OUTLETS_CACHE_TTL_MS = 60 * 1000; // 60 detik
+const OUTLETS_CACHE_MAX_ENTRIES = 500;
+const outletsCache = new Map<string, CachedOutlets>();
+
+/**
+ * Invalidate in-memory outlets cache for a specific tenant, or all tenants if tenantId is omitted.
+ */
+export const invalidateOutletsCache = (tenantId?: string): void => {
+  if (tenantId) {
+    outletsCache.delete(tenantId);
+  } else {
+    outletsCache.clear();
+  }
+};
+
 /**
  * Controller: Ambil Seluruh Cabang Toko (Tenant Outlets)
  * @route GET /api/outlets
@@ -87,6 +107,15 @@ export const getOutlets = async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId || req.tenantId;
     if (!tenantId) {
       return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const now = Date.now();
+    const cached = outletsCache.get(tenantId);
+    if (cached && cached.expiresAt > now) {
+      return res.status(200).json({
+        status: 'success',
+        data: cached.data,
+      });
     }
 
     const outlets = await prisma.outlet.findMany({
@@ -100,6 +129,15 @@ export const getOutlets = async (req: Request, res: Response) => {
         },
       },
       orderBy: { createdAt: 'asc' },
+    });
+
+    if (outletsCache.size >= OUTLETS_CACHE_MAX_ENTRIES) {
+      const oldestKey = outletsCache.keys().next().value;
+      if (oldestKey) outletsCache.delete(oldestKey);
+    }
+    outletsCache.set(tenantId, {
+      data: outlets,
+      expiresAt: now + OUTLETS_CACHE_TTL_MS,
     });
 
     return res.status(200).json({
@@ -319,6 +357,8 @@ export const createOutlet = async (req: Request, res: Response) => {
       return outlet;
     });
 
+    invalidateOutletsCache(tenantId);
+
     return res.status(201).json({
       status: 'success',
       message: `Toko / Outlet "${newOutlet.name}" berhasil dibuat`,
@@ -412,6 +452,8 @@ export const updateOutlet = async (req: Request, res: Response) => {
       data: updateData as any,
     });
 
+    invalidateOutletsCache(tenantId);
+
     return res.status(200).json({
       status: 'success',
       message: 'Informasi toko / outlet berhasil diperbarui',
@@ -502,6 +544,8 @@ export const updateOutletFees = async (req: Request, res: Response) => {
       );
     }
 
+    invalidateOutletsCache(tenantId);
+
     return res.status(200).json({
       status: 'success',
       message: 'Konfigurasi biaya & pajak berhasil diperbarui',
@@ -543,6 +587,9 @@ export const updateOutletChannels = async (req: Request, res: Response) => {
       JSON.stringify(channelsConfig),
       id
     );
+
+    const tenantId = req.user?.tenantId || req.tenantId;
+    invalidateOutletsCache(tenantId);
 
     return res.status(200).json({
       status: 'success',
@@ -624,6 +671,8 @@ export const updateOutletPaymentConfig = async (req: Request, res: Response) => 
       JSON.stringify(paymentConfig),
       id
     );
+
+    invalidateOutletsCache(tenantId);
 
     return res.status(200).json({
       status: 'success',

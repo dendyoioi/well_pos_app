@@ -137,7 +137,7 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
     return () => {
       isMounted = false;
     };
-  }, [activeOutlet]);
+  }, [activeOutlet?.id]);
 
   // Load Alert Summary for Header Bell Badge
   const loadAlertSummary = useCallback(() => {

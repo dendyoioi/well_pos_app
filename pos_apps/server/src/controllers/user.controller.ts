@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { userDualWriteService } from '../services/dual_write';
+import { invalidateUserAuthCache } from '../middlewares/auth.middleware';
 
 function mapToSystemRole(roleInput?: string): Role {
   if (!roleInput) return Role.CASHIER;
@@ -357,6 +358,8 @@ export const updateUser = async (req: Request, res: Response) => {
       pin: pin !== undefined ? (pin || null) : null,
     };
 
+    invalidateUserAuthCache(id);
+
     return res.status(200).json({
       status: 'success',
       message: 'Data staf berhasil diperbarui',
@@ -430,6 +433,7 @@ export const deleteUser = async (req: Request, res: Response) => {
         where: { id },
         data: { isActive: false },
       });
+      invalidateUserAuthCache(id);
       return res.status(200).json({
         status: 'success',
         message: 'Akun staf telah dinonaktifkan (arsip tersimpan untuk audit)',
@@ -440,6 +444,7 @@ export const deleteUser = async (req: Request, res: Response) => {
     await prisma.user.delete({
       where: { id },
     });
+    invalidateUserAuthCache(id);
 
     return res.status(200).json({
       status: 'success',
@@ -714,6 +719,8 @@ export const revokeUserSession = async (req: Request, res: Response) => {
       await userDualWriteService.revokeUserSession(tx, id, tenantId);
     });
 
+    invalidateUserAuthCache(id);
+
     return res.status(200).json({
       status: 'success',
       message: `Sesi login perangkat untuk staf "${targetUser.name}" berhasil dicabut. Perangkat staf akan langsung logout pada permintaan berikutnya.`,
@@ -754,6 +761,8 @@ export const revokeAllSessions = async (req: Request, res: Response) => {
         excludeCurrent ? currentUserId : undefined
       );
     });
+
+    invalidateUserAuthCache();
 
     return res.status(200).json({
       status: 'success',
