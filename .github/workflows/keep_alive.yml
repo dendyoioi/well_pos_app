@@ -13,12 +13,29 @@ jobs:
     steps:
       - name: Send HTTP Ping to Render
         run: |
-          echo "Sending keep-alive ping to Well POS Render backend..."
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" https://wellpos-api-dev.onrender.com/api/health)
+          URL="https://wellpos-api-dev.onrender.com/api/health"
+          echo "Sending keep-alive ping to Well POS Render backend ($URL)..."
+
+          ping_backend() {
+            curl -s --max-time 60 -w "\nHTTP_STATUS:%{http_code}" "$URL" || echo -e "\nHTTP_STATUS:000"
+          }
+
+          RESPONSE=$(ping_backend)
           echo "$RESPONSE"
-          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
-          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
-            echo "✅ Ping sukses! Server Render tetap terjaga dan aktif."
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | tail -n1 | cut -d':' -f2 | tr -d ' ')
+
+          if ! [[ "$STATUS" =~ ^[0-9]+$ ]] || [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 400 ]; then
+            echo "⚠️ Percobaan 1 gagal (HTTP status: $STATUS). Mengantisipasi cold start Render (~50s), menunggu 15 detik sebelum retry..."
+            sleep 15
+            echo "Mengirim ping retry ke Render backend..."
+            RESPONSE=$(ping_backend)
+            echo "$RESPONSE"
+            STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | tail -n1 | cut -d':' -f2 | tr -d ' ')
+          fi
+
+          if [[ "$STATUS" =~ ^[0-9]+$ ]] && [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "✅ Ping sukses! Server Render tetap terjaga dan aktif (HTTP $STATUS)."
           else
-            echo "⚠️ Status response: $STATUS"
+            echo "❌ Ping gagal setelah retry! HTTP status: $STATUS"
+            exit 1
           fi
