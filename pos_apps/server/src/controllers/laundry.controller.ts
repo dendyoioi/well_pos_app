@@ -7887,6 +7887,13 @@ export const createLaundryIncident = async (req: Request, res: Response) => {
       });
     }
 
+    if (estimatedCompensation !== undefined && estimatedCompensation !== null && (isNaN(Number(estimatedCompensation)) || Number(estimatedCompensation) < 0)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nilai estimasi kompensasi tidak boleh negatif',
+      });
+    }
+
     // Validasi orderId milik tenant & outlet terkait
     const order = await prisma.order.findFirst({
       where: {

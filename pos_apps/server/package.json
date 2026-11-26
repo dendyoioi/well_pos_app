@@ -26,7 +26,12 @@
     "db:remote:patch": "tsx scripts/exec_remote_sql.ts --patch",
     "db:remote:sql": "tsx scripts/exec_remote_sql.ts --sql",
     "db:backup": "tsx scripts/backup_remote_db.ts",
-    "db:pull:live": "tsx scripts/sync_remote_to_local.ts"
+    "db:pull:live": "tsx scripts/sync_remote_to_local.ts",
+    "qa:auth-users": "tsx src/qa/suite_auth_users.ts",
+    "qa:laundry-core": "tsx src/qa/suite_laundry_core.ts",
+    "qa:enterprise": "tsx src/qa/suite_enterprise.ts",
+    "qa:mobile-ui": "tsx src/qa/suite_mobile_ui.ts",
+    "qa:all": "tsx src/qa/run_all_qa.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
