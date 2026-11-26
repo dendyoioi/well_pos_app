@@ -69,6 +69,18 @@ import type {
   NotificationChannel,
   PickupRequestStatus,
 } from '../types/laundry_core3';
+import type {
+  PurchaseRequestRecord,
+  PurchaseRequestSummary,
+  SupplierInvoiceRecord,
+  SupplierInvoicePaymentRecord,
+  SupplierInvoiceSummary,
+  StaffOvertimeRecord,
+  StaffLeaveRecord,
+  StaffPayrollSlipRecord,
+  PayrollSummary,
+  GlobalAuditLogRecord,
+} from '../types/enterprise_core4';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -4599,6 +4611,390 @@ export const laundryCore3Api = {
     return res.json();
   },
 };
+
+export const enterpriseCore4Api = {
+  // A. Procurement 6-Stage
+  getPurchaseRequests: async (params?: { outletId?: string; status?: string; search?: string }): Promise<{
+    status: string;
+    data: PurchaseRequestRecord[];
+    summary: PurchaseRequestSummary;
+    message?: string;
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/enterprise/core4/procurement/requests${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createPurchaseRequest: async (payload: {
+    outletId: string;
+    storageLocationId?: string | null;
+    priority?: 'NORMAL' | 'URGENT';
+    neededByDate?: string | null;
+    notes?: string | null;
+    items: Array<{
+      inventoryItemId: string;
+      quantityRequested?: number;
+      quantity?: number;
+      estimatedUnitCost?: number;
+      unitCost?: number;
+      notes?: string | null;
+    }>;
+  }): Promise<{ status: string; data: PurchaseRequestRecord; message?: string }> => {
+    const res = await fetch('/api/enterprise/core4/procurement/requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  reviewPurchaseRequest: async (
+    id: string,
+    payload: { status?: 'APPROVED' | 'REJECTED'; decision?: 'APPROVED' | 'REJECTED'; rejectionReason?: string | null }
+  ): Promise<{ status: string; data: PurchaseRequestRecord; message?: string }> => {
+    const res = await fetch(`/api/enterprise/core4/procurement/requests/${id}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  convertToPurchaseOrder: async (
+    id: string,
+    payload: {
+      supplierId: string;
+      storageLocationId?: string | null;
+      expectedDeliveryDate?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{
+    status: string;
+    data: { purchaseRequest: PurchaseRequestRecord; purchaseOrder: any };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/enterprise/core4/procurement/requests/${id}/convert-to-po`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getSupplierInvoices: async (params?: {
+    outletId?: string;
+    status?: string;
+    supplierId?: string;
+    search?: string;
+  }): Promise<{
+    status: string;
+    data: SupplierInvoiceRecord[];
+    summary: SupplierInvoiceSummary;
+    message?: string;
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    if (params?.supplierId) searchParams.append('supplierId', params.supplierId);
+    if (params?.search) searchParams.append('search', params.search);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/enterprise/core4/procurement/invoices${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createSupplierInvoice: async (payload: {
+    outletId?: string;
+    supplierId?: string;
+    purchaseOrderId?: string | null;
+    invoiceNumber?: string;
+    supplierInvoiceRef?: string | null;
+    invoiceDate?: string;
+    dueDate?: string | null;
+    amount?: number;
+    subtotal?: number;
+    taxAmount?: number;
+    discountAmount?: number;
+    totalAmount?: number;
+    notes?: string | null;
+  }): Promise<{ status: string; data: SupplierInvoiceRecord; message?: string }> => {
+    const res = await fetch('/api/enterprise/core4/procurement/invoices', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  paySupplierInvoice: async (
+    id: string,
+    payload: {
+      amount: number;
+      paymentMethod?: string;
+      referenceNumber?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{
+    status: string;
+    data: { payment: SupplierInvoicePaymentRecord; invoice: SupplierInvoiceRecord };
+    message?: string;
+  }> => {
+    const res = await fetch(`/api/enterprise/core4/procurement/invoices/${id}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // B. Workforce Enterprise
+  getOvertimeRequests: async (params?: {
+    outletId?: string;
+    status?: string;
+    userId?: string;
+    month?: string;
+  }): Promise<{
+    status: string;
+    data: StaffOvertimeRecord[];
+    summary: { totalRequests: number; pendingCount: number; approvedHours: number; totalApprovedPay: number };
+    message?: string;
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    if (params?.userId) searchParams.append('userId', params.userId);
+    if (params?.month) searchParams.append('month', params.month);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/enterprise/core4/workforce/overtimes${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createOvertimeRequest: async (payload: {
+    outletId?: string;
+    userId?: string;
+    workDate?: string;
+    overtimeDate?: string;
+    startTime?: string;
+    endTime?: string;
+    hours?: number;
+    durationHours?: number;
+    hourlyRate?: number;
+    reason?: string | null;
+  }): Promise<{ status: string; data: StaffOvertimeRecord; message?: string }> => {
+    const res = await fetch('/api/enterprise/core4/workforce/overtimes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  reviewOvertimeRequest: async (
+    id: string,
+    payload: { status?: 'APPROVED' | 'REJECTED'; decision?: 'APPROVED' | 'REJECTED'; rejectionReason?: string | null }
+  ): Promise<{ status: string; data: StaffOvertimeRecord; message?: string }> => {
+    const res = await fetch(`/api/enterprise/core4/workforce/overtimes/${id}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getLeaveRequests: async (params?: {
+    outletId?: string;
+    status?: string;
+    userId?: string;
+    leaveType?: string;
+  }): Promise<{
+    status: string;
+    data: StaffLeaveRecord[];
+    summary: { totalRequests: number; pendingCount: number; approvedDays: number };
+    message?: string;
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    if (params?.userId) searchParams.append('userId', params.userId);
+    if (params?.leaveType) searchParams.append('leaveType', params.leaveType);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/enterprise/core4/workforce/leaves${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createLeaveRequest: async (payload: {
+    outletId?: string;
+    userId?: string;
+    leaveType?: string;
+    startDate: string;
+    endDate: string;
+    totalDays?: number;
+    durationDays?: number;
+    reason?: string | null;
+  }): Promise<{ status: string; data: StaffLeaveRecord; message?: string }> => {
+    const res = await fetch('/api/enterprise/core4/workforce/leaves', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  reviewLeaveRequest: async (
+    id: string,
+    payload: { status?: 'APPROVED' | 'REJECTED'; decision?: 'APPROVED' | 'REJECTED'; rejectionReason?: string | null }
+  ): Promise<{ status: string; data: StaffLeaveRecord; message?: string }> => {
+    const res = await fetch(`/api/enterprise/core4/workforce/leaves/${id}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getPayrollSlips: async (params?: {
+    outletId?: string;
+    periodYear?: number;
+    periodMonth?: number;
+    userId?: string;
+    status?: string;
+  }): Promise<{
+    status: string;
+    data: StaffPayrollSlipRecord[];
+    summary: PayrollSummary;
+    message?: string;
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.periodYear) searchParams.append('periodYear', String(params.periodYear));
+    if (params?.periodMonth) searchParams.append('periodMonth', String(params.periodMonth));
+    if (params?.userId) searchParams.append('userId', params.userId);
+    if (params?.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/enterprise/core4/workforce/payroll${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  generatePayrollSlip: async (payload: {
+    outletId: string;
+    userId: string;
+    periodYear: number;
+    periodMonth: number;
+    baseSalary?: number;
+    allowances?: number;
+    commissionPay?: number;
+    bonusAmount?: number;
+    cashAdvanceDeduction?: number;
+    deductions?: number;
+    otherDeduction?: number;
+    autoPullOvertime?: boolean;
+    autoPullCashAdvance?: boolean;
+    notes?: string | null;
+  }): Promise<{ status: string; data: StaffPayrollSlipRecord; message?: string }> => {
+    const res = await fetch('/api/enterprise/core4/workforce/payroll/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  updatePayrollSlipStatus: async (
+    id: string,
+    payload: {
+      status: 'FINALIZED' | 'PAID';
+      paymentMethod?: string | null;
+      paymentReference?: string | null;
+      paidAt?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{ status: string; data: StaffPayrollSlipRecord; message?: string }> => {
+    const res = await fetch(`/api/enterprise/core4/workforce/payroll/${id}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // C. Global Audit Trail
+  getGlobalAuditLogs: async (params?: {
+    outletId?: string;
+    module?: string;
+    action?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    status: string;
+    data: GlobalAuditLogRecord[];
+    total: number;
+    limit: number;
+    offset: number;
+    summary: Record<string, number>;
+    message?: string;
+  }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.module && params.module !== 'ALL') searchParams.append('module', params.module);
+    if (params?.action) searchParams.append('action', params.action);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.offset) searchParams.append('offset', String(params.offset));
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/enterprise/core4/audit-logs${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+};
+
 
 
 

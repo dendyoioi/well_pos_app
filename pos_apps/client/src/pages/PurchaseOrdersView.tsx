@@ -15,6 +15,7 @@ import {
   Eye,
   Boxes,
   ChevronDown,
+  CreditCard,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type {
@@ -26,18 +27,26 @@ import type {
 import type { Supplier } from '../types/supplier';
 import type { Outlet } from '../types/outlet';
 import type { RecipeInventoryItem } from '../types/recipe';
+import type { User } from '../types/auth';
 import { TablePagination } from '../components/TablePagination';
 import { CurrencyInput, EmptyState, TableSkeleton } from '../components/ui';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useDialog } from '../context/DialogContext';
 import { formatRupiah } from '../utils/currency';
+import { ProcurementRequestsPanel } from '../components/enterprise/ProcurementRequestsPanel';
+import { SupplierInvoicesPanel } from '../components/enterprise/SupplierInvoicesPanel';
 
 interface PurchaseOrdersViewProps {
   activeOutlet?: Outlet | null;
+  currentUser?: User | null;
 }
 
-export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOutlet }) => {
+export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOutlet, currentUser }) => {
   const dialog = useDialog();
+
+  // Tab Utama: PO vs PR vs AP
+  type PurchasingMainTab = 'PO' | 'PR' | 'AP';
+  const [mainTab, setMainTab] = useState<PurchasingMainTab>('PO');
 
   // Data states
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -482,26 +491,80 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <span className="p-2 rounded-xl bg-blue-50 text-blue-900 border border-blue-100">
               <FileText className="w-5 h-5 text-blue-900" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900">Pengadaan Barang (PO)</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900">Pengadaan Barang (Procurement)</h1>
           </div>
           <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
-            Kelola pesanan pembelian bahan baku ke pemasok, cetak/kirim PO, dan verifikasi penerimaan fisik barang dengan perhitungan Moving Average Cost (MAC) otomatis.
+            Kelola alur pengadaan 6-tahap: Purchase Request (PR), persetujuan manajer, penerbitan Purchase Order (PO), penerimaan barang fisik, hingga penagihan hutang pemasok (AP).
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end shrink-0">
-          <button
-            type="button"
-            onClick={handleOpenCreateModal}
-            className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>Buat PO Baru</span>
-          </button>
-        </div>
+        {mainTab === 'PO' && (
+          <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end shrink-0">
+            <button
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Buat PO Baru</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 5 KPI Metric Cards */}
+      {/* Main Tab Navigation: PO vs PR vs AP */}
+      <div className="flex items-center gap-2 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setMainTab('PO')}
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+            mainTab === 'PO'
+              ? 'border-blue-900 text-blue-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Purchase Order (PO)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('PR')}
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+            mainTab === 'PR'
+              ? 'border-blue-900 text-blue-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Purchase Request (PR)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('AP')}
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+            mainTab === 'AP'
+              ? 'border-blue-900 text-blue-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>Tagihan Supplier (AP)</span>
+        </button>
+      </div>
+
+      {mainTab === 'PR' && (
+        <ProcurementRequestsPanel activeOutlet={activeOutlet} currentUser={currentUser} />
+      )}
+
+      {mainTab === 'AP' && (
+        <SupplierInvoicesPanel activeOutlet={activeOutlet} currentUser={currentUser} />
+      )}
+
+      {mainTab === 'PO' && (
+        <>
+          {/* 5 KPI Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div
           onClick={() => setStatusFilter('ALL')}
@@ -1420,6 +1483,8 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
         onConfirm={handleConfirmCancelPO}
         onClose={() => setCancelModalOpen(false)}
       />
+        </>
+      )}
     </div>
   );
 };

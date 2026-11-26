@@ -1325,6 +1325,193 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
         ON "notification_dispatch_logs"("tenant_id", "outlet_id", "created_at");
     `,
   },
+  {
+    id: '20261126_04_laundry_core_phase4_enterprise',
+    description: 'Menambahkan purchase_requests, purchase_request_items, supplier_invoices, supplier_invoice_payments, staff_overtime_requests, staff_leave_requests, staff_payroll_slips, dan global_audit_logs (Core Phase 4 Enterprise Support)',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "purchase_requests" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "storage_location_id" TEXT REFERENCES "storage_locations"("id") ON DELETE SET NULL,
+        "pr_number" TEXT NOT NULL,
+        "requested_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "requested_by_name" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'SUBMITTED',
+        "priority" TEXT NOT NULL DEFAULT 'NORMAL',
+        "needed_by_date" TIMESTAMP(3),
+        "notes" TEXT,
+        "approved_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "approved_by_name" TEXT,
+        "approved_at" TIMESTAMP(3),
+        "rejection_reason" TEXT,
+        "converted_po_id" TEXT REFERENCES "purchase_orders"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "purchase_requests_tenant_id_pr_number_key"
+        ON "purchase_requests"("tenant_id", "pr_number");
+      CREATE INDEX IF NOT EXISTS "purchase_requests_tenant_id_outlet_id_status_idx"
+        ON "purchase_requests"("tenant_id", "outlet_id", "status");
+
+      CREATE TABLE IF NOT EXISTS "purchase_request_items" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "purchase_request_id" TEXT NOT NULL REFERENCES "purchase_requests"("id") ON DELETE CASCADE,
+        "inventory_item_id" TEXT NOT NULL REFERENCES "inventory_items"("id") ON DELETE RESTRICT,
+        "quantity_requested" DECIMAL(12,3) NOT NULL,
+        "estimated_unit_cost" DECIMAL(15,4) NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "purchase_request_items_tenant_id_purchase_request_id_idx"
+        ON "purchase_request_items"("tenant_id", "purchase_request_id");
+
+      CREATE TABLE IF NOT EXISTS "supplier_invoices" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "supplier_id" TEXT NOT NULL REFERENCES "suppliers"("id") ON DELETE RESTRICT,
+        "purchase_order_id" TEXT REFERENCES "purchase_orders"("id") ON DELETE SET NULL,
+        "invoice_number" TEXT NOT NULL,
+        "supplier_invoice_ref" TEXT,
+        "invoice_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "due_date" TIMESTAMP(3),
+        "subtotal" DECIMAL(15,2) NOT NULL,
+        "tax_amount" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "total_amount" DECIMAL(15,2) NOT NULL,
+        "paid_amount" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "remaining_amount" DECIMAL(15,2) NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'UNPAID',
+        "notes" TEXT,
+        "created_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "supplier_invoices_tenant_id_invoice_number_key"
+        ON "supplier_invoices"("tenant_id", "invoice_number");
+      CREATE INDEX IF NOT EXISTS "supplier_invoices_tenant_id_outlet_id_status_idx"
+        ON "supplier_invoices"("tenant_id", "outlet_id", "status");
+      CREATE INDEX IF NOT EXISTS "supplier_invoices_tenant_id_supplier_id_status_idx"
+        ON "supplier_invoices"("tenant_id", "supplier_id", "status");
+
+      CREATE TABLE IF NOT EXISTS "supplier_invoice_payments" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "supplier_invoice_id" TEXT NOT NULL REFERENCES "supplier_invoices"("id") ON DELETE CASCADE,
+        "amount" DECIMAL(15,2) NOT NULL,
+        "payment_method" TEXT NOT NULL DEFAULT 'BANK_TRANSFER',
+        "reference_number" TEXT,
+        "notes" TEXT,
+        "paid_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "paid_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "supplier_invoice_payments_tenant_id_supplier_invoice_id_idx"
+        ON "supplier_invoice_payments"("tenant_id", "supplier_invoice_id");
+
+      CREATE TABLE IF NOT EXISTS "staff_overtime_requests" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "user_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "work_date" TEXT NOT NULL,
+        "hours" DECIMAL(6,2) NOT NULL,
+        "hourly_rate" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "total_pay" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "reason" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "approved_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "approved_at" TIMESTAMP(3),
+        "rejection_reason" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "staff_overtime_requests_tenant_id_outlet_id_status_idx"
+        ON "staff_overtime_requests"("tenant_id", "outlet_id", "status");
+      CREATE INDEX IF NOT EXISTS "staff_overtime_requests_tenant_id_user_id_work_date_idx"
+        ON "staff_overtime_requests"("tenant_id", "user_id", "work_date");
+
+      CREATE TABLE IF NOT EXISTS "staff_leave_requests" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "user_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "leave_type" TEXT NOT NULL DEFAULT 'ANNUAL',
+        "start_date" TEXT NOT NULL,
+        "end_date" TEXT NOT NULL,
+        "total_days" INTEGER NOT NULL DEFAULT 1,
+        "reason" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "approved_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "approved_at" TIMESTAMP(3),
+        "rejection_reason" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "staff_leave_requests_tenant_id_outlet_id_status_idx"
+        ON "staff_leave_requests"("tenant_id", "outlet_id", "status");
+      CREATE INDEX IF NOT EXISTS "staff_leave_requests_tenant_id_user_id_start_date_idx"
+        ON "staff_leave_requests"("tenant_id", "user_id", "start_date");
+
+      CREATE TABLE IF NOT EXISTS "staff_payroll_slips" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "user_id" TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "period_year" INTEGER NOT NULL,
+        "period_month" INTEGER NOT NULL,
+        "base_salary" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "overtime_pay" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "commission_pay" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "bonus_amount" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "cash_advance_deduction" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "other_deduction" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "net_salary" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'DRAFT',
+        "paid_at" TIMESTAMP(3),
+        "payment_method" TEXT,
+        "notes" TEXT,
+        "generated_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "staff_payroll_slips_tenant_id_outlet_id_user_id_period_year_period_month_key"
+        ON "staff_payroll_slips"("tenant_id", "outlet_id", "user_id", "period_year", "period_month");
+      CREATE INDEX IF NOT EXISTS "staff_payroll_slips_tenant_id_outlet_id_status_idx"
+        ON "staff_payroll_slips"("tenant_id", "outlet_id", "status");
+
+      CREATE TABLE IF NOT EXISTS "global_audit_logs" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT REFERENCES "outlets"("id") ON DELETE SET NULL,
+        "actor_user_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "actor_name" TEXT,
+        "actor_role" TEXT,
+        "module" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        "entity_type" TEXT NOT NULL,
+        "entity_id" TEXT,
+        "summary" TEXT NOT NULL,
+        "before_data" JSONB,
+        "after_data" JSONB,
+        "ip_address" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "global_audit_logs_tenant_id_module_created_at_idx"
+        ON "global_audit_logs"("tenant_id", "module", "created_at");
+      CREATE INDEX IF NOT EXISTS "global_audit_logs_tenant_id_outlet_id_created_at_idx"
+        ON "global_audit_logs"("tenant_id", "outlet_id", "created_at");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

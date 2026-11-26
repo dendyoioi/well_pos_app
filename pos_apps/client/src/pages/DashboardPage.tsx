@@ -831,7 +831,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           ) : activeTab === 'stock_movements' ? (
             <StockMovementsView activeOutlet={activeOutlet} />
           ) : activeTab === 'purchase_orders' ? (
-            <PurchaseOrdersView activeOutlet={activeOutlet} />
+            <PurchaseOrdersView activeOutlet={activeOutlet} currentUser={user} />
           ) : activeTab === 'transfers' ? (
             <StockTransfersView activeOutlet={activeOutlet} />
           ) : activeTab === 'suppliers' ? (
@@ -2408,7 +2408,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           ) : activeTab === 'customers' ? (
             <CustomersView />
           ) : activeTab === 'shifts' ? (
-            <ShiftsAuditView activeOutlet={activeOutlet} />
+            <ShiftsAuditView activeOutlet={activeOutlet} currentUser={user} />
           ) : activeTab === 'payment_items' ? (
             <OrdersView activeOutlet={activeOutlet} currentUser={user} initialSubTab="payment_items" />
           ) : activeTab === 'reports' ? (

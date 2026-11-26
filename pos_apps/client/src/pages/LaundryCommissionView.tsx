@@ -21,6 +21,7 @@ import {
   Wallet,
   ChevronDown,
   TrendingUp,
+  Clock,
 } from 'lucide-react';
 import type { User } from '../types/auth';
 import type { Outlet } from '../types/outlet';
@@ -36,6 +37,7 @@ import { TablePagination } from '../components/TablePagination';
 import { TableSkeleton } from '../components/ui/TableSkeleton';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { StaffPerformanceEvaluationView } from '../components/laundry/StaffPerformanceEvaluationView';
+import { WorkforceEnterprisePanel } from '../components/enterprise/WorkforceEnterprisePanel';
 
 interface LaundryCommissionViewProps {
   activeOutlet: Outlet | null;
@@ -103,8 +105,8 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   const [paidOutKeys, setPaidOutKeys] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Tab Utama: Komisi Staf & Kurir vs Kasbon Karyawan vs Evaluasi Performa
-  const [activeMainTab, setActiveMainTab] = useState<'COMMISSION' | 'CASH_ADVANCE' | 'PERFORMANCE'>('COMMISSION');
+  // Tab Utama: Komisi Staf & Kurir vs Kasbon Karyawan vs Evaluasi Performa vs Lembur/Cuti/Payroll
+  const [activeMainTab, setActiveMainTab] = useState<'COMMISSION' | 'CASH_ADVANCE' | 'PERFORMANCE' | 'WORKFORCE'>('COMMISSION');
 
   // Role Guard: Kembalikan tab ke COMMISSION jika user bukan Owner/Admin/Supervisor
   useEffect(() => {
@@ -526,6 +528,19 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             <span>Evaluasi Performa Staf</span>
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('WORKFORCE')}
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            activeMainTab === 'WORKFORCE'
+              ? 'border-blue-900 text-blue-900 font-extrabold'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Clock className="w-4 h-4 stroke-[2.5]" />
+          <span>Lembur, Cuti &amp; Payroll</span>
+        </button>
       </div>
 
       {activeMainTab === 'COMMISSION' ? (
@@ -1375,9 +1390,14 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             )}
           </div>
         </div>
-      ) : isSupervisorOrAbove ? (
+      ) : activeMainTab === 'PERFORMANCE' && isSupervisorOrAbove ? (
         <StaffPerformanceEvaluationView
           activeOutletId={activeOutlet?.id || ''}
+          currentUser={currentUser}
+        />
+      ) : activeMainTab === 'WORKFORCE' ? (
+        <WorkforceEnterprisePanel
+          activeOutlet={activeOutlet}
           currentUser={currentUser}
         />
       ) : null}

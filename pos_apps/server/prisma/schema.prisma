@@ -124,6 +124,14 @@ model Tenant {
   laundryPickupRequests        LaundryPickupRequest[]
   notificationAutomationRules  NotificationAutomationRule[]
   notificationDispatchLogs     NotificationDispatchLog[]
+  purchaseRequests             PurchaseRequest[]
+  purchaseRequestItems         PurchaseRequestItem[]
+  supplierInvoices             SupplierInvoice[]
+  supplierInvoicePayments      SupplierInvoicePayment[]
+  staffOvertimeRequests        StaffOvertimeRequest[]
+  staffLeaveRequests           StaffLeaveRequest[]
+  staffPayrollSlips            StaffPayrollSlip[]
+  globalAuditLogs              GlobalAuditLog[]
 
   @@map("tenants")
 }
@@ -288,6 +296,17 @@ model User {
   handedOverLaundryItemTracks  LaundryOrderItemTrack[]        @relation("LaundryItemHandedOverBy")
   assignedLaundryPickupRequests LaundryPickupRequest[]        @relation("AssignedLaundryDriver")
   updatedNotificationAutomationRules NotificationAutomationRule[] @relation("RuleUpdatedBy")
+  requestedPurchaseRequests    PurchaseRequest[]              @relation("PurchaseRequestRequestedBy")
+  approvedPurchaseRequests     PurchaseRequest[]              @relation("PurchaseRequestApprovedBy")
+  createdSupplierInvoices      SupplierInvoice[]              @relation("SupplierInvoiceCreatedBy")
+  paidSupplierInvoicePayments  SupplierInvoicePayment[]       @relation("SupplierInvoicePaidBy")
+  staffOvertimeRequests        StaffOvertimeRequest[]         @relation("StaffOvertimeUser")
+  approvedOvertimeRequests     StaffOvertimeRequest[]         @relation("StaffOvertimeApprovedBy")
+  staffLeaveRequests           StaffLeaveRequest[]            @relation("StaffLeaveUser")
+  approvedLeaveRequests        StaffLeaveRequest[]            @relation("StaffLeaveApprovedBy")
+  staffPayrollSlips            StaffPayrollSlip[]             @relation("StaffPayrollUser")
+  generatedPayrollSlips        StaffPayrollSlip[]             @relation("StaffPayrollGeneratedBy")
+  actorGlobalAuditLogs         GlobalAuditLog[]               @relation("GlobalAuditActorUser")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -366,6 +385,12 @@ model Outlet {
   laundryPickupRequests        LaundryPickupRequest[]
   notificationAutomationRules  NotificationAutomationRule[]
   notificationDispatchLogs     NotificationDispatchLog[]
+  purchaseRequests             PurchaseRequest[]
+  supplierInvoices             SupplierInvoice[]
+  staffOvertimeRequests        StaffOvertimeRequest[]
+  staffLeaveRequests           StaffLeaveRequest[]
+  staffPayrollSlips            StaffPayrollSlip[]
+  globalAuditLogs              GlobalAuditLog[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -648,6 +673,7 @@ model StorageLocation {
   balances        InventoryBalance[]
   ledgers         InventoryLedger[]
   purchaseOrders  PurchaseOrder[]
+  purchaseRequests PurchaseRequest[]
   sourceTransfers StockTransfer[]    @relation("TransferSourceLocation")
   targetTransfers StockTransfer[]    @relation("TransferTargetLocation")
 
@@ -684,6 +710,7 @@ model InventoryItem {
   recipeItems           RecipeItem[]
   modifierRecipeEffects ModifierRecipeEffect[]
   purchaseOrderItems    PurchaseOrderItem[]
+  purchaseRequestItems  PurchaseRequestItem[]
   stockTransferItems    StockTransferItem[]
   laundryBomItems       LaundryServiceBomItem[]
   laundryPerfumes       LaundryPerfume[]
@@ -1276,6 +1303,7 @@ model Supplier {
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   purchaseOrders PurchaseOrder[]
+  supplierInvoices SupplierInvoice[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -1306,6 +1334,8 @@ model PurchaseOrder {
   supplier        Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   createdByUser   User?               @relation("POCreatedByUser", fields: [createdByUserId], references: [id], onDelete: Restrict)
   items           PurchaseOrderItem[]
+  convertedFromRequests PurchaseRequest[]
+  supplierInvoices      SupplierInvoice[]
 
   @@unique([tenantId, poNumber])
   @@index([tenantId, outletId, status])
@@ -2528,4 +2558,225 @@ model NotificationDispatchLog {
   @@index([tenantId, eventKey, status, createdAt])
   @@index([tenantId, outletId, createdAt])
   @@map("notification_dispatch_logs")
+}
+
+// ==========================================
+// 12. ENTERPRISE SUPPORT (CORE PHASE 4)
+// ==========================================
+
+model PurchaseRequest {
+  id                String    @id @default(uuid())
+  tenantId          String    @map("tenant_id")
+  outletId          String    @map("outlet_id")
+  storageLocationId String?   @map("storage_location_id")
+  prNumber          String    @map("pr_number")
+  requestedById     String?   @map("requested_by_id")
+  requestedByName   String    @map("requested_by_name")
+  status            String    @default("SUBMITTED") // DRAFT | SUBMITTED | APPROVED | REJECTED | CONVERTED_TO_PO
+  priority          String    @default("NORMAL") // NORMAL | URGENT
+  neededByDate      DateTime? @map("needed_by_date")
+  notes             String?   @db.Text
+  approvedById      String?   @map("approved_by_id")
+  approvedByName    String?   @map("approved_by_name")
+  approvedAt        DateTime? @map("approved_at")
+  rejectionReason   String?   @map("rejection_reason") @db.Text
+  convertedPoId     String?   @map("converted_po_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet          Outlet           @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  storageLocation StorageLocation? @relation(fields: [storageLocationId], references: [id], onDelete: SetNull)
+  requestedBy     User?            @relation("PurchaseRequestRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  approvedBy      User?            @relation("PurchaseRequestApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  convertedPo     PurchaseOrder?   @relation(fields: [convertedPoId], references: [id], onDelete: SetNull)
+  items           PurchaseRequestItem[]
+
+  @@unique([tenantId, prNumber])
+  @@index([tenantId, outletId, status])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestItem {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  purchaseRequestId String   @map("purchase_request_id")
+  inventoryItemId   String   @map("inventory_item_id")
+  quantityRequested Decimal  @map("quantity_requested") @db.Decimal(12, 3)
+  estimatedUnitCost Decimal  @default(0) @map("estimated_unit_cost") @db.Decimal(15, 4)
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, purchaseRequestId])
+  @@map("purchase_request_items")
+}
+
+model SupplierInvoice {
+  id                 String    @id @default(uuid())
+  tenantId           String    @map("tenant_id")
+  outletId           String    @map("outlet_id")
+  supplierId         String    @map("supplier_id")
+  purchaseOrderId    String?   @map("purchase_order_id")
+  invoiceNumber      String    @map("invoice_number")
+  supplierInvoiceRef String?   @map("supplier_invoice_ref")
+  invoiceDate        DateTime  @default(now()) @map("invoice_date")
+  dueDate            DateTime? @map("due_date")
+  subtotal           Decimal   @db.Decimal(15, 2)
+  taxAmount          Decimal   @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  totalAmount        Decimal   @map("total_amount") @db.Decimal(15, 2)
+  paidAmount         Decimal   @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  remainingAmount    Decimal   @map("remaining_amount") @db.Decimal(15, 2)
+  status             String    @default("UNPAID") // UNPAID | PARTIAL | PAID | CANCELLED
+  notes              String?   @db.Text
+  createdById        String?   @map("created_by_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet        Outlet                   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  supplier      Supplier                 @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrder PurchaseOrder?           @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  createdBy     User?                    @relation("SupplierInvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  payments      SupplierInvoicePayment[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, outletId, status])
+  @@index([tenantId, supplierId, status])
+  @@map("supplier_invoices")
+}
+
+model SupplierInvoicePayment {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  supplierInvoiceId String   @map("supplier_invoice_id")
+  amount            Decimal  @db.Decimal(15, 2)
+  paymentMethod     String   @default("BANK_TRANSFER") @map("payment_method")
+  referenceNumber   String?  @map("reference_number")
+  notes             String?  @db.Text
+  paidAt            DateTime @default(now()) @map("paid_at")
+  paidById          String?  @map("paid_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplierInvoice SupplierInvoice @relation(fields: [supplierInvoiceId], references: [id], onDelete: Cascade)
+  paidBy          User?           @relation("SupplierInvoicePaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, supplierInvoiceId])
+  @@map("supplier_invoice_payments")
+}
+
+model StaffOvertimeRequest {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  outletId        String    @map("outlet_id")
+  userId          String    @map("user_id")
+  workDate        String    @map("work_date") // "YYYY-MM-DD"
+  hours           Decimal   @db.Decimal(6, 2)
+  hourlyRate      Decimal   @default(0) @map("hourly_rate") @db.Decimal(15, 2)
+  totalPay        Decimal   @default(0) @map("total_pay") @db.Decimal(15, 2)
+  reason          String?   @db.Text
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  approvedById    String?   @map("approved_by_id")
+  approvedAt      DateTime? @map("approved_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet     Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user       User    @relation("StaffOvertimeUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?   @relation("StaffOvertimeApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, status])
+  @@index([tenantId, userId, workDate])
+  @@map("staff_overtime_requests")
+}
+
+model StaffLeaveRequest {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  outletId        String    @map("outlet_id")
+  userId          String    @map("user_id")
+  leaveType       String    @default("ANNUAL") @map("leave_type") // ANNUAL | SICK | UNPAID | EMERGENCY
+  startDate       String    @map("start_date") // "YYYY-MM-DD"
+  endDate         String    @map("end_date") // "YYYY-MM-DD"
+  totalDays       Int       @default(1) @map("total_days")
+  reason          String?   @db.Text
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  approvedById    String?   @map("approved_by_id")
+  approvedAt      DateTime? @map("approved_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet     Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user       User    @relation("StaffLeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?   @relation("StaffLeaveApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, outletId, status])
+  @@index([tenantId, userId, startDate])
+  @@map("staff_leave_requests")
+}
+
+model StaffPayrollSlip {
+  id                   String    @id @default(uuid())
+  tenantId             String    @map("tenant_id")
+  outletId             String    @map("outlet_id")
+  userId               String    @map("user_id")
+  periodYear           Int       @map("period_year")
+  periodMonth          Int       @map("period_month")
+  baseSalary           Decimal   @default(0) @map("base_salary") @db.Decimal(15, 2)
+  overtimePay          Decimal   @default(0) @map("overtime_pay") @db.Decimal(15, 2)
+  commissionPay        Decimal   @default(0) @map("commission_pay") @db.Decimal(15, 2)
+  bonusAmount          Decimal   @default(0) @map("bonus_amount") @db.Decimal(15, 2)
+  cashAdvanceDeduction Decimal   @default(0) @map("cash_advance_deduction") @db.Decimal(15, 2)
+  otherDeduction       Decimal   @default(0) @map("other_deduction") @db.Decimal(15, 2)
+  netSalary            Decimal   @default(0) @map("net_salary") @db.Decimal(15, 2)
+  status               String    @default("DRAFT") // DRAFT | FINALIZED | PAID
+  paidAt               DateTime? @map("paid_at")
+  paymentMethod        String?   @map("payment_method")
+  notes                String?   @db.Text
+  generatedById        String?   @map("generated_by_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet      Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  user        User    @relation("StaffPayrollUser", fields: [userId], references: [id], onDelete: Cascade)
+  generatedBy User?   @relation("StaffPayrollGeneratedBy", fields: [generatedById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, outletId, userId, periodYear, periodMonth])
+  @@index([tenantId, outletId, status])
+  @@map("staff_payroll_slips")
+}
+
+model GlobalAuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  outletId    String?  @map("outlet_id")
+  actorUserId String?  @map("actor_user_id")
+  actorName   String?  @map("actor_name")
+  actorRole   String?  @map("actor_role")
+  module      String   // PROCUREMENT | HR_PAYROLL | ORDER | PRICING | FINANCE | SECURITY | SYSTEM
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  summary     String   @db.Text
+  beforeData  Json?    @map("before_data")
+  afterData   Json?    @map("after_data")
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet    Outlet? @relation(fields: [outletId], references: [id], onDelete: SetNull)
+  actorUser User?   @relation("GlobalAuditActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, module, createdAt])
+  @@index([tenantId, outletId, createdAt])
+  @@map("global_audit_logs")
 }

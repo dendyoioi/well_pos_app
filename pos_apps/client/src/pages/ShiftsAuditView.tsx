@@ -21,6 +21,7 @@ import {
   Plus,
   Check,
   XCircle,
+  Shield,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Outlet } from '../types/outlet';
@@ -28,6 +29,7 @@ import { TablePagination } from '../components/TablePagination';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { computePresetDateRange } from '../utils/date';
 import { checkIsLaundry } from '../utils/businessType';
+import { GlobalAuditTrailPanel } from '../components/enterprise/GlobalAuditTrailPanel';
 
 export const TARGET_ACCOUNTS_MAP: Record<string, string> = {
   KAS_BESAR: 'Kas Besar / Brankas Pusat',
@@ -97,8 +99,9 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
-  // Tab View State: Rekap Shift vs Setoran Kas (P2)
-  const [activeTab, setActiveTab] = useState<'REKAP_SHIFT' | 'SETORAN_KAS'>('REKAP_SHIFT');
+  // Tab View State: Rekap Shift vs Setoran Kas vs Global Audit Trail
+  const [activeTab, setActiveTab] = useState<'REKAP_SHIFT' | 'SETORAN_KAS' | 'AUDIT_TRAIL'>('REKAP_SHIFT');
+  const isManager = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser?.role || '');
 
   // Setoran Kas State
   const [deposits, setDeposits] = useState<any[]>([]);
@@ -488,6 +491,20 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
             </span>
           )}
         </button>
+
+        {isManager && (
+          <button
+            onClick={() => setActiveTab('AUDIT_TRAIL')}
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'AUDIT_TRAIL'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Shield className="w-4 h-4 stroke-[2.5]" />
+            <span>Global Audit Trail</span>
+          </button>
+        )}
       </div>
 
       {activeTab === 'REKAP_SHIFT' ? (
@@ -988,6 +1005,8 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
         )}
       </div>
       </>
+      ) : activeTab === 'AUDIT_TRAIL' ? (
+        <GlobalAuditTrailPanel activeOutlet={activeOutlet} />
       ) : (
         <div className="space-y-6">
           {/* Summary KPI Cards Setoran Kas */}
