@@ -173,6 +173,7 @@ export interface CreateUserDTO {
   userCode?: string | null;
   pin?: string | null;
   role: string;
+  customRoleId?: string | null;
   outletId?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;
@@ -187,6 +188,7 @@ export interface UpdateUserDTO {
   userCode?: string | null;
   pin?: string | null;
   role?: string;
+  customRoleId?: string | null;
   outletId?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;

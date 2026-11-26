@@ -253,6 +253,7 @@ model User {
   passwordHash String?   @map("password_hash")
   pinHash      String?   @map("pin_hash") // Nullable per OD-13.3-03 (Bcrypt hash of operational PIN; NULL for PIN-less users)
   role         Role      @default(CASHIER)
+  customRoleId String?   @map("custom_role_id")
   canCashOut   Boolean   @default(false) @map("can_cash_out")
   isActive     Boolean   @default(true) @map("is_active")
   tokenVersion Int       @default(1) @map("token_version")
@@ -311,6 +312,7 @@ model User {
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
   @@index([tenantId, role])
+  @@index([tenantId, customRoleId])
   @@map("users")
 }
 

@@ -13,6 +13,7 @@ import {
   sendPasswordChangedNotificationEmail,
 } from '../services/mail.service';
 import { invalidateUserAuthCache } from '../middlewares/auth.middleware';
+import { roleService, RolePermissions } from '../services/role.service';
 
 // Fix K2: JWT_SECRET WAJIB ada di environment. Jika tidak ada, server gagal startup secara eksplisit.
 // Generate dengan: openssl rand -hex 64
@@ -31,7 +32,7 @@ const loginPasswordSchema = z.object({
 // Skema validasi login PIN kasir
 const loginPinSchema = z.object({
   pin: z.string().length(6, 'PIN harus terdiri dari 6 digit angka'),
-  userCode: z.string().min(1).max(20).optional(), // ID Staff kasir (5 digit, misal: 10001)
+  userCode: z.string().regex(/^\d{5}$/, 'ID Staff harus tepat 5 digit angka, contoh: 10001').optional(),
   email: z.string().trim().toLowerCase().email().optional(),
   outletId: z.string().uuid().optional(),
   tenantId: z.string().uuid().optional(),
@@ -40,9 +41,64 @@ const loginPinSchema = z.object({
 // Skema validasi pairing perangkat kasir ke toko menggunakan ID Toko + ID Staff Owner/SPV
 const pairDeviceSchema = z.object({
   tenantSlug: z.string().min(1, 'ID Toko wajib diisi'),       // slug toko, misal: kopi-nusantara
-  staffCode: z.string().min(1, 'ID Staff Owner/SPV wajib diisi'), // userCode, misal: 00001
+  staffCode: z.string().regex(/^\d{5}$/, 'ID Staff harus tepat 5 digit angka, contoh: 00001'),
   authPin: z.string().length(6, 'PIN Otorisasi harus 6 digit'),
 });
+
+/**
+ * Helper: Menyelesaikan metadata peran, nama peran kustom, dan izin aktif user
+ */
+const resolveUserRoleDetails = (user: {
+  tenantId?: string | null;
+  role: string;
+  customRoleId?: string | null;
+  tenant?: { businessVertical?: string | null; businessType?: string | null; name?: string | null } | null;
+}) => {
+  if (!user.tenantId) {
+    return {
+      customRoleId: null,
+      customRoleName: null,
+      permissions: [] as string[],
+      businessPermissions: undefined as any,
+    };
+  }
+
+  const isLaundry =
+    user.tenant?.businessVertical === 'SERVICES' ||
+    (typeof user.tenant?.businessType === 'string' && user.tenant.businessType.toLowerCase().includes('laundry')) ||
+    (typeof user.tenant?.name === 'string' && user.tenant.name.toLowerCase().includes('laundry'));
+
+  const allRoles = roleService.getTenantRoles(user.tenantId, Boolean(isLaundry));
+  let matchedRole: RolePermissions | undefined;
+
+  if (user.customRoleId) {
+    matchedRole = allRoles.find((r) => r.id === user.customRoleId);
+  }
+
+  if (!matchedRole) {
+    const sysRole = user.role.toUpperCase();
+    if (sysRole === 'OWNER' || sysRole === 'ADMIN') {
+      matchedRole = allRoles.find((r) => r.id === 'role-owner');
+    } else if (sysRole === 'SUPERVISOR') {
+      matchedRole = allRoles.find((r) => r.id === 'role-supervisor');
+    } else if (sysRole === 'CASHIER') {
+      matchedRole = allRoles.find((r) => r.id === 'role-cashier');
+    } else if (sysRole === 'KITCHEN' || sysRole === 'BARISTA' || sysRole === 'PRODUCTION') {
+      matchedRole = allRoles.find((r) => r.id === 'role-production' || r.id === 'role-barista');
+    } else if (sysRole === 'WAREHOUSE') {
+      matchedRole = allRoles.find((r) => r.id === 'role-warehouse');
+    } else if (sysRole === 'WAITER' || sysRole === 'COURIER') {
+      matchedRole = allRoles.find((r) => r.id === 'role-courier' || r.id === 'role-waiter');
+    }
+  }
+
+  return {
+    customRoleId: user.customRoleId || null,
+    customRoleName: matchedRole ? matchedRole.name : null,
+    permissions: matchedRole ? matchedRole.permissions : [],
+    businessPermissions: matchedRole ? matchedRole.businessPermissions : undefined,
+  };
+};
 
 /**
  * Helper: Ambil info langganan aktif tenant (FREE vs PRO)
@@ -181,6 +237,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
 
     // Ambil info paket langganan tenant (FREE vs PRO)
     const subscriptionInfo = user.tenantId ? await getTenantSubscriptionInfo(user.tenantId) : null;
+    const roleDetails = resolveUserRoleDetails(user);
 
     return res.status(200).json({
       status: 'success',
@@ -192,6 +249,11 @@ export const loginWithPassword = async (req: Request, res: Response) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          userCode: user.userCode,
+          customRoleId: roleDetails.customRoleId,
+          customRoleName: roleDetails.customRoleName,
+          permissions: roleDetails.permissions,
+          businessPermissions: roleDetails.businessPermissions,
           canCashOut: user.canCashOut ?? false,
           hasPin: !!user.pinHash,
           tenantId: user.tenantId,
@@ -265,6 +327,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
         email: true,
         role: true,
         userCode: true,
+        customRoleId: true,
         canCashOut: true,
         pinHash: true,
         tokenVersion: true,
@@ -337,6 +400,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
     );
 
     const subscriptionInfo = user.tenantId ? await getTenantSubscriptionInfo(user.tenantId) : null;
+    const roleDetails = resolveUserRoleDetails(user);
 
     return res.status(200).json({
       status: 'success',
@@ -349,6 +413,10 @@ export const loginWithPin = async (req: Request, res: Response) => {
           email: user.email,
           role: user.role,
           userCode: user.userCode,
+          customRoleId: roleDetails.customRoleId,
+          customRoleName: roleDetails.customRoleName,
+          permissions: roleDetails.permissions,
+          businessPermissions: roleDetails.businessPermissions,
           canCashOut: (user as any).canCashOut ?? false,
           hasPin: !!user.pinHash,
           tenantId: user.tenantId,
@@ -416,6 +484,7 @@ export const getProfile = async (req: Request, res: Response) => {
 
     // Ambil info paket langganan tenant (FREE vs PRO)
     const subscriptionInfo = user.tenantId ? await getTenantSubscriptionInfo(user.tenantId) : null;
+    const roleDetails = resolveUserRoleDetails(user);
 
     return res.status(200).json({
       status: 'success',
@@ -424,6 +493,11 @@ export const getProfile = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        userCode: user.userCode,
+        customRoleId: roleDetails.customRoleId,
+        customRoleName: roleDetails.customRoleName,
+        permissions: roleDetails.permissions,
+        businessPermissions: roleDetails.businessPermissions,
         canCashOut: user.canCashOut ?? false,
         hasPin: !!user.pinHash,
         tenantId: user.tenantId,

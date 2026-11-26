@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import {
   getUsers,
+  getNextUserCode,
   createUser,
   updateUser,
   deleteUser,
@@ -26,6 +27,7 @@ router.post('/:id/revoke-session', authorize(Role.OWNER, Role.ADMIN), revokeUser
 router.post('/:id/force-logout', authorize(Role.OWNER, Role.ADMIN), revokeUserSession);
 
 // Role & Permission Management (Harus sebelum /:id)
+router.get('/next-code', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getNextUserCode);
 router.get('/roles/permissions', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getSystemPermissions);
 router.get('/roles', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getRoles);
 router.post('/roles', authorize(Role.OWNER, Role.ADMIN), createRole);

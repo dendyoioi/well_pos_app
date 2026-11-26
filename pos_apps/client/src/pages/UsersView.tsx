@@ -40,6 +40,8 @@ interface StaffUser {
   name: string;
   email: string;
   role: string;
+  customRoleId?: string | null;
+  customRoleName?: string | null;
   hasPin: boolean;
   hasPassword: boolean;
   isActive: boolean;
@@ -105,6 +107,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     password: '',
     pin: '',
     role: 'CASHIER',
+    customRoleId: null as string | null,
     outletId: '',
     canCashOut: false,
     isActive: true,
@@ -117,35 +120,33 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   const [showPinField, setShowPinField] = useState(false);
 
   // Auto-generate 5-digit Staff ID sesuai standar hierarki:
-  // 0000x: Owner/Admin | 1000x: Kasir | 2000x: Supervisor | 3000x: Gudang | 4000x: Produksi | 5000x: Kurir
-  const generateRandomStaffId = (targetRole?: string) => {
+  // 00001–09999: Owner/Admin | 10001–49999: Kasir | 50001–99999: Staf Lain
+  const generateRandomStaffId = async (targetRole?: string) => {
     const roleToUse = targetRole || formData.role;
-    let minSeq = 10001;
-    let maxSeq = 19999;
+    try {
+      const nextRes = await api.getNextUserCode(roleToUse);
+      if (nextRes.status === 'success' && nextRes.data?.userCode) {
+        setFormData((prev) => ({ ...prev, userCode: nextRes.data!.userCode }));
+        return;
+      }
+    } catch {
+      // fallback generator deterministik lokal jika offline
+    }
 
+    let minSeq = 50001;
+    let maxSeq = 99999;
     if (roleToUse === 'ADMIN' || roleToUse === 'OWNER') {
       minSeq = 1;
       maxSeq = 9999;
-    } else if (roleToUse === 'SUPERVISOR') {
-      minSeq = 20001;
-      maxSeq = 29999;
-    } else if (roleToUse === 'WAREHOUSE') {
-      minSeq = 30001;
-      maxSeq = 39999;
-    } else if (roleToUse === 'KITCHEN') {
-      minSeq = 40001;
+    } else if (roleToUse === 'CASHIER') {
+      minSeq = 10001;
       maxSeq = 49999;
-    } else if (roleToUse === 'WAITER') {
-      minSeq = 50001;
-      maxSeq = 59999;
     }
 
     const existingCodes = new Set(staffList.map((s) => s.userCode));
     let nextNum = minSeq;
     while (nextNum <= maxSeq) {
-      const codeStr = (roleToUse === 'ADMIN' || roleToUse === 'OWNER')
-        ? nextNum.toString().padStart(5, '0')
-        : nextNum.toString();
+      const codeStr = nextNum.toString().padStart(5, '0');
       if (!existingCodes.has(codeStr)) {
         setFormData((prev) => ({ ...prev, userCode: codeStr }));
         return;
@@ -203,6 +204,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
       password: '',
       pin: '',
       role: defaultCreateRole,
+      customRoleId: null,
       outletId: activeOutlet?.id || (outlets.length > 0 ? outlets[0].id : ''),
       canCashOut: false,
       isActive: true,
@@ -210,6 +212,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     setFormError(null);
     setFormMode('CREATE');
     setViewMode('FORM');
+
+    // Auto-fetch ID Staf 5 digit berikutnya dari server
+    generateRandomStaffId(defaultCreateRole);
   };
 
   const handleOpenEditForm = (u: StaffUser) => {
@@ -223,6 +228,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
       password: '',
       pin: '',
       role: u.role,
+      customRoleId: u.customRoleId || null,
       outletId: u.outletId || u.outlet?.id || '',
       canCashOut: u.canCashOut ?? false,
       isActive: u.isActive,
@@ -280,8 +286,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           email: formData.email.trim(),
           password: formData.password,
           userCode: formData.userCode.trim(),
-          pin: formData.pin || '1234',
+          pin: formData.pin || '123456',
           role: formData.role,
+          customRoleId: formData.customRoleId || null,
           outletId: formData.outletId || null,
           canCashOut: formData.canCashOut,
         });
@@ -298,6 +305,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           name: formData.name.trim(),
           email: formData.email.trim(),
           role: formData.role,
+          customRoleId: formData.customRoleId || null,
           outletId: formData.outletId || null,
           canCashOut: formData.canCashOut,
           isActive: formData.isActive,
@@ -445,7 +453,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     }
   };
 
-  const getRoleBadge = (roleName: string) => {
+  const getRoleBadge = (roleName: string, customRoleName?: string | null) => {
+    if (customRoleName) {
+      return { label: `⭐ ${customRoleName}`, color: 'bg-indigo-50 text-indigo-900 border-indigo-200 font-bold' };
+    }
     const upper = roleName.toUpperCase();
     if (upper.includes('ADMIN') || upper.includes('OWNER')) {
       return { label: roleName, color: 'bg-purple-100 text-purple-800 border-purple-200' };
@@ -609,27 +620,37 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <select
-                    value={formData.role}
+                    value={formData.customRoleId || roles.find((r) => r.isDefault && (ROLE_ID_TO_SYSTEM_ENUM[r.id] || r.name.toUpperCase()) === formData.role)?.id || formData.role}
                     disabled={formMode === 'EDIT' && !!selectedUser && checkIsInitialOwner(selectedUser)}
                     onChange={(e) => {
-                      const newRole = e.target.value;
-                      setFormData((prev) => ({ ...prev, role: newRole }));
-                      if (formMode === 'CREATE' && formData.userCode) {
-                        generateRandomStaffId(newRole);
+                      const selectedVal = e.target.value;
+                      const matched = roles.find((r) => r.id === selectedVal);
+                      let newSystemRole = 'CASHIER';
+                      let newCustomRoleId: string | null = null;
+                      if (matched) {
+                        if (!matched.isDefault || matched.id.startsWith('role-custom')) {
+                          newCustomRoleId = matched.id;
+                          newSystemRole = ROLE_ID_TO_SYSTEM_ENUM[matched.id] || 'CASHIER';
+                        } else {
+                          newCustomRoleId = null;
+                          newSystemRole = ROLE_ID_TO_SYSTEM_ENUM[matched.id] || matched.name.toUpperCase();
+                        }
+                      } else {
+                        newSystemRole = selectedVal;
+                      }
+                      setFormData((prev) => ({ ...prev, role: newSystemRole, customRoleId: newCustomRoleId }));
+                      if (formMode === 'CREATE') {
+                        generateRandomStaffId(newSystemRole);
                       }
                     }}
                     className="w-full pl-4 pr-10 py-3 appearance-none bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {roles.length > 0 ? (
-                      roles.map((r) => {
-                        // Gunakan system enum sebagai value agar cocok dengan formData.role dari DB
-                        const systemEnum = ROLE_ID_TO_SYSTEM_ENUM[r.id] || r.name.toUpperCase();
-                        return (
-                          <option key={r.id} value={systemEnum}>
-                            {r.name} {!r.status ? '(Nonaktif)' : ''}
-                          </option>
-                        );
-                      })
+                      roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} {!r.isDefault ? '⭐ (Kustom)' : ''} {!r.status ? '(Nonaktif)' : ''}
+                        </option>
+                      ))
                     ) : isLaundryMode ? (
                       <>
                         <option value="CASHIER">Kasir / Front Desk Laundry</option>
@@ -673,25 +694,30 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
 
             {/* ID Staf + Tombol Buat */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                ID Staf {formMode === 'CREATE' && <span className="text-rose-500">*</span>}
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  ID Staf {formMode === 'CREATE' && <span className="text-rose-500">*</span>}
+                </label>
+                <span className={`text-[11px] font-mono font-bold ${formData.userCode.length === 5 ? 'text-emerald-700' : 'text-slate-400'}`}>
+                  {formData.userCode.length}/5 digit
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Hash className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    maxLength={formMode === 'EDIT' ? 20 : 5}
+                    inputMode="numeric"
+                    maxLength={5}
+                    pattern="\d{5}"
                     value={formData.userCode}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      // Saat CREATE: hanya angka. Saat EDIT: bebas (bisa legacy format)
-                      const filtered = formMode === 'CREATE' ? val.replace(/\D/g, '') : val;
-                      setFormData({ ...formData, userCode: filtered });
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 5);
+                      setFormData({ ...formData, userCode: val });
                     }}
                     placeholder={formMode === 'CREATE' ? 'Contoh: 10001 (Kasir), 20001 (SPV)' : 'ID Staf (5-digit)'}
                     className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-mono font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 tracking-wider"
-                    required={formMode === 'CREATE'}
+                    required
                   />
                 </div>
                 {formMode === 'CREATE' && (
@@ -702,14 +728,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                     title="Generate ID 5-Digit Sesuai Peran Otomatis"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-blue-700" />
-                    <span>Buat</span>
+                    <span>Acak</span>
                   </button>
                 )}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
-                {formMode === 'CREATE'
-                  ? 'Standar 5-digit: 0000x (Owner), 1000x (Kasir), 2000x (SPV), 3000x (Gudang) untuk kemudahan login numpad kasir POS.'
-                  : 'ID Staf 5-digit angka. Kosongkan atau biarkan untuk mempertahankan ID yang ada.'}
+                Standar 5-digit: 00001–09999 (Owner), 10001–49999 (Kasir), 50001–99999 (Staf lain) untuk kemudahan login kasir POS.
               </p>
             </div>
 
@@ -1244,7 +1268,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                 </tr>
               ) : (
                 paginatedStaff.map((u) => {
-                  const badge = getRoleBadge(u.role);
+                  const badge = getRoleBadge(u.role, u.customRoleName);
                   const outletName = u.outlet?.name || outlets.find((o) => o.id === u.outletId)?.name;
                   const isInitial = checkIsInitialOwner(u);
 
@@ -1410,7 +1434,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
             </div>
           ) : (
             paginatedStaff.map((u) => {
-              const badge = getRoleBadge(u.role);
+              const badge = getRoleBadge(u.role, u.customRoleName);
               const outletName = u.outlet?.name || outlets.find((o) => o.id === u.outletId)?.name;
               const isInitial = checkIsInitialOwner(u);
 

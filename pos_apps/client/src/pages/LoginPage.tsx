@@ -865,12 +865,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="text"
                       inputMode="numeric"
                       required
-                      maxLength={10}
+                      maxLength={5}
+                      pattern="\d{5}"
                       value={staffCode}
-                      onChange={(e) => setStaffCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Contoh: 42031"
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono font-bold tracking-widest"
+                      onChange={(e) => setStaffCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      placeholder="Contoh: 00001 (Owner), 20001 (SPV)"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-16 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono font-bold tracking-widest"
                     />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400 font-bold pointer-events-none">
+                      {staffCode.length}/5
+                    </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
                     ID Staff terdiri dari 5 digit angka (terdaftar di Kelola Staf).
@@ -913,7 +917,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || staffCode.length !== 5 || authPin.length !== 6 || !tenantSlug.trim()}
                   className="w-full mt-2 py-3 px-4 bg-blue-900 hover:bg-blue-950 active:scale-[0.98] disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
                 >
                   {loading ? (

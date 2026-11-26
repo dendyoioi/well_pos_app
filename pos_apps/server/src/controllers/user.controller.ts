@@ -5,6 +5,42 @@ import { Role } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { userDualWriteService } from '../services/dual_write';
 import { invalidateUserAuthCache } from '../middlewares/auth.middleware';
+import {
+  roleService,
+  DEFAULT_FNB_ROLES,
+  RolePermissions,
+  SYSTEM_PERMISSIONS,
+  SYSTEM_LAUNDRY_PERMISSIONS,
+} from '../services/role.service';
+
+export const checkTenantIsLaundry = async (tenantId: string): Promise<boolean> => {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { businessVertical: true, businessType: true, name: true },
+    });
+    if (
+      tenant?.businessVertical === 'SERVICES' ||
+      (typeof tenant?.businessType === 'string' && tenant.businessType.toLowerCase().includes('laundry')) ||
+      (typeof tenant?.name === 'string' && tenant.name.toLowerCase().includes('laundry'))
+    ) {
+      return true;
+    }
+    const laundryOutlet = await prisma.outlet.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          { name: { contains: 'laundry', mode: 'insensitive' } },
+          { name: { contains: 'cuci', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+    return !!laundryOutlet;
+  } catch {
+    return false;
+  }
+};
 
 function mapToSystemRole(roleInput?: string): Role {
   if (!roleInput) return Role.CASHIER;
@@ -26,9 +62,10 @@ const createUserSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter'),
   email: z.string().email('Format email tidak valid'),
   password: z.string().min(6, 'Kata sandi minimal 6 karakter').optional(),
-  userCode: z.string().min(3).max(10).optional(),
+  userCode: z.string().regex(/^\d{5}$/, 'ID Staf harus tepat 5 digit angka, contoh: 10001').optional(),
   pin: z.string().min(4, 'PIN minimal 4 digit').max(6, 'PIN maksimal 6 digit').regex(/^\d{4,6}$/, 'PIN harus berupa angka'),
   role: z.string().default('CASHIER'),
+  customRoleId: z.string().optional().nullable(),
   outletId: z.string().uuid().optional().nullable(),
   canCashOut: z.boolean().optional(),
 });
@@ -37,9 +74,10 @@ const updateUserSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').optional(),
   email: z.string().email('Format email tidak valid').optional(),
   password: z.string().min(6, 'Kata sandi minimal 6 karakter').optional().or(z.literal('')),
-  userCode: z.string().min(3).max(10).optional(),
+  userCode: z.string().regex(/^\d{5}$/, 'ID Staf harus tepat 5 digit angka, contoh: 10001').optional(),
   pin: z.string().min(4).max(6).regex(/^\d{4,6}$/, 'PIN harus berupa angka').optional().nullable(),
   role: z.string().optional(),
+  customRoleId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   outletId: z.string().uuid().optional().nullable(),
   canCashOut: z.boolean().optional(),
@@ -64,6 +102,7 @@ export const getUsers = async (req: Request, res: Response) => {
         name: true,
         email: true,
         role: true,
+        customRoleId: true,
         canCashOut: true,
         isActive: true,
         createdAt: true,
@@ -86,9 +125,15 @@ export const getUsers = async (req: Request, res: Response) => {
     // Temukan akun pendaftar awal (prioritas role OWNER, atau user pertama yang dibuat)
     const initialOwnerUser = users.find((u) => u.role === Role.OWNER) || users[0];
 
+    const isLaundry = await checkTenantIsLaundry(tenantId);
+    const tenantRoles = roleService.getTenantRoles(tenantId, isLaundry);
+    const roleMap = new Map<string, string>();
+    tenantRoles.forEach((r) => roleMap.set(r.id, r.name));
+
     // Sanitize: jangan expose hash sensitif ke client
     const sanitized = users.map(({ pinHash, passwordHash, ...u }) => ({
       ...u,
+      customRoleName: u.customRoleId ? roleMap.get(u.customRoleId) || null : null,
       hasPin: pinHash !== null,
       hasPassword: passwordHash !== null,
       isInitialOwner: initialOwnerUser ? u.id === initialOwnerUser.id : false,
@@ -127,7 +172,7 @@ export const createUser = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, email, password, userCode, pin, role, outletId } = parseResult.data;
+    const { name, email, password, userCode, pin, role, customRoleId, outletId } = parseResult.data;
     const systemRole = mapToSystemRole(role);
 
     // Cek apakah email sudah digunakan
@@ -178,6 +223,7 @@ export const createUser = async (req: Request, res: Response) => {
           userCode: userCode || null,
           pin,
           role: systemRole,
+          customRoleId: customRoleId || null,
           outletId: assignedOutletId,
           canCashOut: parseResult.data.canCashOut ?? false,
           isActive: true,
@@ -194,6 +240,7 @@ export const createUser = async (req: Request, res: Response) => {
         name: true,
         email: true,
         role: true,
+        customRoleId: true,
         canCashOut: true,
         isActive: true,
         createdAt: true,
@@ -259,7 +306,26 @@ export const updateUser = async (req: Request, res: Response) => {
     }
     const user = userRows[0];
 
-    const { name, email, password, pin, role, isActive, outletId } = parseResult.data;
+    const { name, email, password, pin, role, customRoleId, userCode, isActive, outletId } = parseResult.data;
+
+    // Jika userCode diubah, pastikan tidak duplikat di tenant
+    if (userCode) {
+      const currentUserRecord = await prisma.user.findUnique({
+        where: { id },
+        select: { userCode: true },
+      });
+      if (currentUserRecord && userCode !== currentUserRecord.userCode) {
+        const existingCode = await prisma.user.findFirst({
+          where: { tenantId, userCode, id: { not: id } },
+        });
+        if (existingCode) {
+          return res.status(400).json({
+            status: 'error',
+            message: `ID Staf ${userCode} sudah digunakan, silakan buat ID unik lain`,
+          });
+        }
+      }
+    }
 
     // Jika email diubah, pastikan tidak duplikat
     if (email && email !== user.email) {
@@ -326,6 +392,8 @@ export const updateUser = async (req: Request, res: Response) => {
           passwordHash: updateData.passwordHash,
           pin: pin !== undefined ? (pin || null) : undefined,
           role: targetRole,
+          customRoleId: customRoleId !== undefined ? (customRoleId || null) : undefined,
+          userCode: userCode !== undefined ? (userCode || null) : undefined,
           isActive,
           outletId,
           canCashOut: parseResult.data.canCashOut,
@@ -338,9 +406,11 @@ export const updateUser = async (req: Request, res: Response) => {
       where: { id },
       select: {
         id: true,
+        userCode: true,
         name: true,
         email: true,
         role: true,
+        customRoleId: true,
         canCashOut: true,
         isActive: true,
         updatedAt: true,
@@ -462,40 +532,58 @@ export const deleteUser = async (req: Request, res: Response) => {
 // =========================================================================
 // AKSES & PERAN (GRANULAR RBAC DOMAIN)
 // =========================================================================
-import {
-  roleService,
-  DEFAULT_FNB_ROLES,
-  RolePermissions,
-  SYSTEM_PERMISSIONS,
-  SYSTEM_LAUNDRY_PERMISSIONS,
-} from '../services/role.service';
 
-const checkTenantIsLaundry = async (tenantId: string): Promise<boolean> => {
+/**
+ * Menghasilkan ID Staf 5-digit berikutnya yang unik berdasarkan peran
+ * @route GET /api/users/next-code
+ */
+export const getNextUserCode = async (req: Request, res: Response) => {
   try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { businessVertical: true, businessType: true, name: true },
-    });
-    if (
-      tenant?.businessVertical === 'SERVICES' ||
-      (typeof tenant?.businessType === 'string' && tenant.businessType.toLowerCase().includes('laundry')) ||
-      (typeof tenant?.name === 'string' && tenant.name.toLowerCase().includes('laundry'))
-    ) {
-      return true;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
     }
-    const laundryOutlet = await prisma.outlet.findFirst({
-      where: {
-        tenantId,
-        OR: [
-          { name: { contains: 'laundry', mode: 'insensitive' } },
-          { name: { contains: 'cuci', mode: 'insensitive' } },
-        ],
-      },
-      select: { id: true },
+
+    const roleParam = ((req.query.role as string) || 'CASHIER').toUpperCase();
+    const existingUsers = await prisma.user.findMany({
+      where: { tenantId },
+      select: { userCode: true },
     });
-    return !!laundryOutlet;
-  } catch {
-    return false;
+    const existingSet = new Set(existingUsers.map((u) => u.userCode).filter(Boolean));
+
+    let start = 50001;
+    let end = 99999;
+    if (roleParam === 'OWNER' || roleParam === 'ADMIN') {
+      start = 1;
+      end = 9999;
+    } else if (roleParam === 'CASHIER') {
+      start = 10001;
+      end = 49999;
+    }
+
+    let nextCode = '';
+    for (let i = start; i <= end; i++) {
+      const candidate = String(i).padStart(5, '0');
+      if (!existingSet.has(candidate)) {
+        nextCode = candidate;
+        break;
+      }
+    }
+
+    if (!nextCode) {
+      nextCode = String(Date.now()).slice(-5);
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        userCode: nextCode,
+        role: roleParam,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error saat menghasilkan userCode berikutnya:', err);
+    return res.status(500).json({ status: 'error', message: 'Gagal menghasilkan ID staf berikutnya' });
   }
 };
 
@@ -534,21 +622,26 @@ export const getRoles = async (req: Request, res: Response) => {
     const isLaundry = await checkTenantIsLaundry(tenantId);
     const allRoles = roleService.getTenantRoles(tenantId, isLaundry);
 
-    // Hitung staff count per role
+    // Hitung staff count per role (akurat: peran kustom menghitung customRoleId)
     const users = await prisma.user.findMany({
       where: { tenantId, isActive: true },
-      select: { role: true },
+      select: { role: true, customRoleId: true },
     });
 
     const rolesWithCounts = allRoles.map((r) => {
       let count = 0;
-      if (r.id === 'role-owner') count = users.filter((u) => u.role === 'ADMIN' || (u.role as any) === 'OWNER').length;
-      else if (r.id === 'role-supervisor') count = users.filter((u) => u.role === 'SUPERVISOR').length;
-      else if (r.id === 'role-cashier') count = users.filter((u) => u.role === 'CASHIER').length;
-      else if (r.id === 'role-production' || r.id === 'role-barista') count = users.filter((u) => u.role === 'KITCHEN' || (u.role as any) === 'BARISTA' || (u.role as any) === 'PRODUCTION').length;
-      else if (r.id === 'role-warehouse') count = users.filter((u) => u.role === 'WAREHOUSE').length;
-      else if (r.id === 'role-courier' || r.id === 'role-waiter') count = users.filter((u) => u.role === 'WAITER' || (u.role as any) === 'COURIER').length;
-      else count = 0;
+      if (!r.isDefault || r.id.startsWith('role-custom')) {
+        count = users.filter((u) => u.customRoleId === r.id).length;
+      } else {
+        const usersInRole = users.filter((u) => !u.customRoleId || u.customRoleId === r.id);
+        if (r.id === 'role-owner') count = usersInRole.filter((u) => u.role === 'ADMIN' || (u.role as any) === 'OWNER').length;
+        else if (r.id === 'role-supervisor') count = usersInRole.filter((u) => u.role === 'SUPERVISOR').length;
+        else if (r.id === 'role-cashier') count = usersInRole.filter((u) => u.role === 'CASHIER').length;
+        else if (r.id === 'role-production' || r.id === 'role-barista') count = usersInRole.filter((u) => u.role === 'KITCHEN' || (u.role as any) === 'BARISTA' || (u.role as any) === 'PRODUCTION').length;
+        else if (r.id === 'role-warehouse') count = usersInRole.filter((u) => u.role === 'WAREHOUSE').length;
+        else if (r.id === 'role-courier' || r.id === 'role-waiter') count = usersInRole.filter((u) => u.role === 'WAITER' || (u.role as any) === 'COURIER').length;
+        else count = 0;
+      }
 
       return {
         ...r,

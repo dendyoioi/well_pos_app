@@ -28,17 +28,17 @@ export class UserDualWriteService extends BaseDualWriteService {
 
     // Format baru: 5-digit numerik sesuai spesifikasi auth.controller.ts
     // OWNER/ADMIN: range 00001-09999
-    // CASHIER     : range 10001-99999
-    // Other roles : range 50001-59999
+    // CASHIER     : range 10001-49999
+    // Other roles : range 50001-99999
     const roleUpper = role.toUpperCase();
     let start: number;
     let end: number;
     if (roleUpper === 'OWNER' || roleUpper === 'ADMIN') {
       start = 1; end = 9999;
     } else if (roleUpper === 'CASHIER') {
-      start = 10001; end = 99999;
+      start = 10001; end = 49999;
     } else {
-      start = 50001; end = 59999;
+      start = 50001; end = 99999;
     }
 
     for (let i = start; i <= end; i++) {
@@ -86,10 +86,10 @@ export class UserDualWriteService extends BaseDualWriteService {
         tx,
         `INSERT INTO "users" (
           "id", "outlet_id", "name", "email", "password_hash",
-          "role", "is_active", "created_at", "updated_at", "tenant_id", "user_code", "pin_hash", "can_cash_out"
+          "role", "is_active", "created_at", "updated_at", "tenant_id", "user_code", "pin_hash", "can_cash_out", "custom_role_id"
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6::"Role", $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8, $9, $10, $11
+          $6::"Role", $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8, $9, $10, $11, $12
         );`,
         userId,
         dto.outletId || null,
@@ -101,7 +101,8 @@ export class UserDualWriteService extends BaseDualWriteService {
         tenantId,
         userCode,
         pinHash,
-        canCashOut
+        canCashOut,
+        dto.customRoleId || null
       );
 
       const userRecord = {
@@ -110,6 +111,7 @@ export class UserDualWriteService extends BaseDualWriteService {
         name: dto.name,
         email: dto.email,
         role: dto.role,
+        customRoleId: dto.customRoleId || null,
         outletId: dto.outletId || null,
         userCode,
         hasPin: pinHash !== null,
@@ -124,6 +126,7 @@ export class UserDualWriteService extends BaseDualWriteService {
         targetDetails: {
           userId,
           userCode,
+          customRoleId: dto.customRoleId || null,
           hasPinHash: pinHash !== null,
         },
       };
@@ -168,7 +171,7 @@ export class UserDualWriteService extends BaseDualWriteService {
       // Fetch existing user
       const existing = await this.queryRaw<any>(
         tx,
-        `SELECT id, name, email, password_hash, role, outlet_id, is_active, can_cash_out 
+        `SELECT id, name, email, password_hash, role, outlet_id, is_active, can_cash_out, user_code, custom_role_id 
          FROM "users" 
          WHERE "id" = $1 AND "tenant_id" = $2;`,
         userId,
@@ -187,13 +190,18 @@ export class UserDualWriteService extends BaseDualWriteService {
       const outletId = dto.outletId !== undefined ? (dto.outletId || null) : current.outlet_id;
       const isActive = dto.isActive !== undefined ? dto.isActive : current.is_active;
       const canCashOut = dto.canCashOut !== undefined ? dto.canCashOut : (current.can_cash_out ?? false);
+      const userCode = dto.userCode !== undefined && dto.userCode !== null && dto.userCode.trim() !== '' ? dto.userCode.trim() : current.user_code;
+      const customRoleId = dto.customRoleId !== undefined ? (dto.customRoleId || null) : current.custom_role_id;
 
-      // Otomatis naikkan token_version jika password/PIN diubah, user dinonaktifkan, atau diminta eksplisit
+      // Otomatis naikkan token_version jika password/PIN diubah, user dinonaktifkan, role/customRole/userCode diubah, atau diminta eksplisit
       const shouldIncrementToken =
         dto.incrementTokenVersion === true ||
         dto.passwordHash !== undefined ||
         pinHashUpdate !== undefined ||
-        (dto.isActive !== undefined && dto.isActive === false && current.is_active === true);
+        (dto.isActive !== undefined && dto.isActive === false && current.is_active === true) ||
+        (dto.role !== undefined && dto.role !== current.role) ||
+        (dto.customRoleId !== undefined && dto.customRoleId !== current.custom_role_id) ||
+        (dto.userCode !== undefined && dto.userCode !== current.user_code);
 
       // Update user with Parameterized Raw SQL
       let targetAffected = 0;
@@ -204,7 +212,9 @@ export class UserDualWriteService extends BaseDualWriteService {
            SET "name" = $1, "email" = $2, "password_hash" = $3,
                "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6, "pin_hash" = $7,
                "can_cash_out" = $8,
-               "token_version" = CASE WHEN $11::boolean THEN "token_version" + 1 ELSE "token_version" END,
+               "user_code" = $11,
+               "custom_role_id" = $12,
+               "token_version" = CASE WHEN $13::boolean THEN "token_version" + 1 ELSE "token_version" END,
                "updated_at" = CURRENT_TIMESTAMP
            WHERE "id" = $9 AND "tenant_id" = $10;`,
           name,
@@ -217,6 +227,8 @@ export class UserDualWriteService extends BaseDualWriteService {
           canCashOut,
           userId,
           tenantId,
+          userCode,
+          customRoleId,
           shouldIncrementToken
         );
         targetAffected = 1;
@@ -227,7 +239,9 @@ export class UserDualWriteService extends BaseDualWriteService {
            SET "name" = $1, "email" = $2, "password_hash" = $3,
                "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6,
                "can_cash_out" = $7,
-               "token_version" = CASE WHEN $10::boolean THEN "token_version" + 1 ELSE "token_version" END,
+               "user_code" = $10,
+               "custom_role_id" = $11,
+               "token_version" = CASE WHEN $12::boolean THEN "token_version" + 1 ELSE "token_version" END,
                "updated_at" = CURRENT_TIMESTAMP
            WHERE "id" = $8 AND "tenant_id" = $9;`,
           name,
@@ -239,15 +253,17 @@ export class UserDualWriteService extends BaseDualWriteService {
           canCashOut,
           userId,
           tenantId,
+          userCode,
+          customRoleId,
           shouldIncrementToken
         );
       }
 
       return {
-        legacyData: { id: userId, name, email, role, outletId, isActive, canCashOut },
+        legacyData: { id: userId, name, email, role, customRoleId, outletId, isActive, canCashOut, userCode },
         targetSynced: true,
         targetRecordsAffected: targetAffected,
-        targetDetails: { userId, pinHashUpdated: pinHashUpdate !== undefined, tokenVersionIncremented: shouldIncrementToken },
+        targetDetails: { userId, userCode, customRoleId, pinHashUpdated: pinHashUpdate !== undefined, tokenVersionIncremented: shouldIncrementToken },
       };
     } catch (err: any) {
       if (ctx.strictAtomic !== false) {

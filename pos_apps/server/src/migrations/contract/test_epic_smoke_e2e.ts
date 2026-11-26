@@ -181,7 +181,7 @@ export async function runEndToEndSmokeTest() {
       body: JSON.stringify({
         name: 'Kasir Smoke Demo',
         email: cashierEmail,
-        userCode: 'CSH99',
+        userCode: '10099',
         pin: '654321',
         role: 'CASHIER',
         outletId: newOutletId,
@@ -189,7 +189,7 @@ export async function runEndToEndSmokeTest() {
     });
 
     if (createCashierRes.status === 201 && createCashierRes.data?.data?.id) {
-      record('1.7 Pendaftaran Staf Kasir Toko (POST /api/users)', true, `Kasir: ${createCashierRes.data.data.name} [Code: CSH99, PIN: 654321]`);
+      record('1.7 Pendaftaran Staf Kasir Toko (POST /api/users)', true, `Kasir: ${createCashierRes.data.data.name} [Code: 10099, PIN: 654321]`);
     } else {
       record('1.7 Pendaftaran Staf Kasir Toko', false, `Status: ${createCashierRes.status}`, createCashierRes.data);
       throw new Error('Gagal membuat staf kasir');
@@ -200,7 +200,7 @@ export async function runEndToEndSmokeTest() {
       method: 'POST',
       body: JSON.stringify({
         tenantSlug: newTenantSlug,
-        staffCode: 'CSH99',
+        staffCode: '10099',
         authPin: '654321',
       }),
     });

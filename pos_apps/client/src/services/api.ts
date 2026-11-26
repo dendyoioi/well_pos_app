@@ -1316,6 +1316,14 @@ export const api = {
     return res.json();
   },
 
+  getNextUserCode: async (role?: string): Promise<{ status: string; data?: { userCode: string; role: string }; message?: string }> => {
+    const query = role ? `?role=${encodeURIComponent(role)}` : '';
+    const res = await fetch(`/api/users/next-code${query}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
   createUser: async (data: {
     name: string;
     email: string;
@@ -1323,6 +1331,7 @@ export const api = {
     userCode?: string;
     pin: string;
     role: string;
+    customRoleId?: string | null;
     outletId?: string | null;
     canCashOut?: boolean;
   }): Promise<any> => {
@@ -1346,6 +1355,7 @@ export const api = {
       userCode?: string;
       pin?: string | null;
       role?: string;
+      customRoleId?: string | null;
       isActive?: boolean;
       outletId?: string | null;
       canCashOut?: boolean;

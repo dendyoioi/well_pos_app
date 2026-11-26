@@ -1512,6 +1512,14 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
         ON "global_audit_logs"("tenant_id", "outlet_id", "created_at");
     `,
   },
+  {
+    id: '20261126_05_users_custom_role_id',
+    description: 'Add custom_role_id column to users table for custom role persistence',
+    sql: `
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "custom_role_id" TEXT;
+      CREATE INDEX IF NOT EXISTS "users_tenant_id_custom_role_id_idx" ON "users"("tenant_id", "custom_role_id");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

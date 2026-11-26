@@ -16,6 +16,8 @@ dist/
 *.backup
 backups/
 pos_apps/server/backups/
+data/roles.json
+pos_apps/server/data/roles.json
 pos_apps/scratch/
 scratch/
 pos_apps/server/uploads/*

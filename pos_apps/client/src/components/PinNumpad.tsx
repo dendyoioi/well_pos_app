@@ -204,10 +204,10 @@ export const PinNumpad: React.FC<PinNumpadProps> = ({
 
       {/* === Action Button === */}
       {isTwoStep && isOnStaffStep ? (
-        // Tombol Lanjut ke PIN (step 1 → step 2)
+        // Tombol Lanjut ke PIN (step 1 → step 2, wajib tepat 5 digit angka)
         <button
           type="button"
-          disabled={loading || !staffCode || staffCode.length === 0}
+          disabled={loading || !staffCode || staffCode.length !== maxStaffCodeLength}
           onClick={onConfirmStaffCode}
           className="w-full mt-5 py-3.5 px-4 bg-blue-900 hover:bg-blue-800 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 text-sm tracking-wide"
         >
