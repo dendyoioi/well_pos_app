@@ -432,8 +432,8 @@ async function runEnterpriseCorePhase4E2E() {
       const cleanupQueries = [
         `DELETE FROM "global_audit_logs" WHERE "tenant_id" = $1`,
         `DELETE FROM "staff_payroll_slips" WHERE "tenant_id" = $1`,
-        `DELETE FROM "staff_leaves" WHERE "tenant_id" = $1`,
-        `DELETE FROM "staff_overtimes" WHERE "tenant_id" = $1`,
+        `DELETE FROM "staff_leave_requests" WHERE "tenant_id" = $1`,
+        `DELETE FROM "staff_overtime_requests" WHERE "tenant_id" = $1`,
         `DELETE FROM "supplier_invoice_payments" WHERE "tenant_id" = $1`,
         `DELETE FROM "supplier_invoices" WHERE "tenant_id" = $1`,
         `DELETE FROM "purchase_request_items" WHERE "tenant_id" = $1`,

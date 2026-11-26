@@ -229,8 +229,8 @@ export const WorkforceEnterprisePanel: React.FC<WorkforceEnterprisePanelProps> =
     setPayrollLoading(true);
     try {
       const params: any = {
-        year: payrollYear,
-        month: payrollMonth,
+        periodYear: payrollYear,
+        periodMonth: payrollMonth,
       };
       if (activeOutlet?.id) params.outletId = activeOutlet.id;
       const res = await enterpriseCore4Api.getPayrollSlips(params);
@@ -522,7 +522,7 @@ export const WorkforceEnterprisePanel: React.FC<WorkforceEnterprisePanelProps> =
         allowances: Number(genAllowances) || 0,
         commissionPay: Number(genCommissionPay) || 0,
         bonusAmount: Number(genBonusAmount) || 0,
-        cashAdvanceDeduction: Number(genCashAdvanceDeduction) || 0,
+        cashAdvanceDeduction: genAutoPullCashAdvance && Number(genCashAdvanceDeduction) <= 0 ? undefined : Number(genCashAdvanceDeduction) || 0,
         otherDeduction: Number(genOtherDeduction) || 0,
         autoPullOvertime: genAutoPullOvertime,
         autoPullCashAdvance: genAutoPullCashAdvance,
