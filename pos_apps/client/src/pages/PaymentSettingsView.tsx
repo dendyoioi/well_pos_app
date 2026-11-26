@@ -183,19 +183,19 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
   return (
     <div className="space-y-6 max-w-6xl pb-28 sm:pb-16 font-sans">
       {/* HEADER UTAMA */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shadow-2xs">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shadow-2xs shrink-0">
               <QrCode className="w-6 h-6" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                   Metode Pembayaran &amp; QRIS Statis Toko
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 font-sans">
-                  <Building2 className="w-3 h-3 text-blue-800" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 font-sans whitespace-nowrap shrink-0">
+                  <Building2 className="w-3 h-3 text-blue-800 shrink-0" />
                   Toko: {activeOutlet.name}
                 </span>
               </div>
@@ -372,14 +372,14 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
         {/* KOLOM KANAN: PRATINJAU KARTU QRIS DI KASIR */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs sticky top-20">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-900" />
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 min-w-0">
+                <Eye className="w-4 h-4 text-blue-900 shrink-0" />
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider truncate">
                   Pratinjau Layar Kasir POS
                 </h3>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">
                 Live Preview
               </span>
             </div>
@@ -453,7 +453,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
                   Kasbon &amp; Piutang Pelanggan (Pay Later)
                 </h2>
                 <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap shrink-0 ${
                     allowCredit
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-slate-100 text-slate-600 border-slate-200'

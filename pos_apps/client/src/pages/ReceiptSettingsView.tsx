@@ -313,8 +313,8 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                   : 'Format Struk & Pengaturan Printer'}
               </span>
             </h2>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1">
-              <Store className="w-3 h-3 text-blue-800" />
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1 whitespace-nowrap shrink-0">
+              <Store className="w-3 h-3 text-blue-800 shrink-0" />
               Toko: {activeOutlet?.name || 'Utama'}
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
@@ -330,12 +330,12 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
+        <div className="hidden sm:flex items-center gap-2 w-auto shrink-0">
           <button
             type="button"
             onClick={() => handleSave()}
             disabled={saving}
-            className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
           >
             {saving ? (
               <>
@@ -1054,11 +1054,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             )}
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+          <div className="hidden sm:flex pt-4 border-t border-slate-100 items-center justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="w-full sm:w-auto justify-center h-10 px-6 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="h-10 px-6 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
               {saving ? (
                 <>
@@ -1087,11 +1087,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             </div>
 
             {cupLabelEnabled && (
-              <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 max-w-full overflow-x-auto scrollbar-none">
                 <button
                   type="button"
                   onClick={() => setPreviewTab('receipt')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     previewTab === 'receipt'
                       ? 'bg-white text-blue-950 shadow-xs'
                       : 'text-slate-500 hover:text-slate-800'
@@ -1102,7 +1102,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setPreviewTab('cupLabel')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 ${
                     previewTab === 'cupLabel'
                       ? 'bg-white text-amber-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-800'

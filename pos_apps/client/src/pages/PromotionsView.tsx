@@ -530,36 +530,36 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>{activeTab === 'ITEM' ? 'Buat Diskon Item' : 'Buat Voucher Baru'}</span>
           </button>
         </div>
       </div>
 
       {/* Sub-Tab Navigation Bar */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl w-fit border border-slate-200/80">
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none border border-slate-200/80">
         <button
           type="button"
           onClick={() => {
             setActiveTab('ORDER');
             setSearchQuery('');
           }}
-          className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'ORDER'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           }`}
         >
-          <Receipt className="w-3.5 h-3.5" />
+          <Receipt className="w-3.5 h-3.5 shrink-0" />
           <span>Voucher Transaksi (Nota)</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold whitespace-nowrap shrink-0 ${
               activeTab === 'ORDER' ? 'bg-blue-800 text-white' : 'bg-slate-200 text-slate-600'
             }`}
           >
@@ -574,16 +574,16 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               setActiveTab('ITEM');
               setSearchQuery('');
             }}
-            className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === 'ITEM'
                 ? 'bg-blue-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <ShoppingBag className="w-3.5 h-3.5" />
+            <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
             <span>Diskon Produk / Item</span>
             <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold whitespace-nowrap shrink-0 ${
                 activeTab === 'ITEM' ? 'bg-blue-800 text-white' : 'bg-slate-200 text-slate-600'
               }`}
             >
@@ -1412,18 +1412,18 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center whitespace-nowrap"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 >
                   {saving ? (
                     <>
@@ -1445,8 +1445,8 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-slate-50/80 shrink-0">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start sm:items-center justify-between gap-2 p-4 sm:p-5 border-b border-slate-100 bg-slate-50/80 shrink-0">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shrink-0">
                   {inspectingPromo.scope === 'ITEM' ? (
                     <ShoppingBag className="w-5 h-5" />
@@ -1454,10 +1454,10 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
                     <Tag className="w-5 h-5" />
                   )}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-slate-900">{inspectingPromo.name}</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 font-mono font-bold text-xs">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900">{inspectingPromo.name}</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 font-mono font-bold text-xs whitespace-nowrap shrink-0">
                       {inspectingPromo.code}
                     </span>
                   </div>
@@ -1474,7 +1474,7 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
                   setInspectModalOpen(false);
                   setInspectingPromo(null);
                 }}
-                className="w-8 h-8 rounded-xl text-slate-400 hover:bg-slate-200/60 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl text-slate-400 hover:bg-slate-200/60 flex items-center justify-center cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1604,14 +1604,14 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-                    <table className="w-full text-left text-xs">
+                  <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-2xs">
+                    <table className="w-full text-left text-xs min-w-[480px]">
                       <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-500 border-b border-slate-200">
                         <tr>
-                          <th className="px-3 py-2.5">Waktu</th>
-                          <th className="px-3 py-2.5">No. Faktur</th>
-                          <th className="px-3 py-2.5">Pelanggan</th>
-                          <th className="px-3 py-2.5 text-right">Potongan Diskon</th>
+                          <th className="px-3 py-2.5 whitespace-nowrap">Waktu</th>
+                          <th className="px-3 py-2.5 whitespace-nowrap">No. Faktur</th>
+                          <th className="px-3 py-2.5 whitespace-nowrap">Pelanggan</th>
+                          <th className="px-3 py-2.5 text-right whitespace-nowrap">Potongan Diskon</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium text-slate-700 font-mono">
@@ -1657,7 +1657,7 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
                   setInspectModalOpen(false);
                   setInspectingPromo(null);
                 }}
-                className="h-10 px-5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                className="w-full sm:w-auto h-10 px-5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center whitespace-nowrap"
               >
                 Tutup
               </button>

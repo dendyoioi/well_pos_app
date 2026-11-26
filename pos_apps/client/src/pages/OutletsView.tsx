@@ -307,7 +307,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
             </span>
             <span className="text-xs text-blue-200 font-medium">ID Toko Resmi Bisnis</span>
           </div>
-          <div className="flex items-center gap-3 pt-0.5">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap pt-0.5">
             <h2 className="text-2xl sm:text-3xl font-mono font-black tracking-wider text-amber-300">
               {storeId || 'BELUM DIATUR'}
             </h2>
@@ -315,7 +315,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               <button
                 type="button"
                 onClick={handleCopyStoreId}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer text-white"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer text-white whitespace-nowrap shrink-0"
                 title="Salin ID Toko"
               >
                 {copiedStoreId ? (
@@ -396,7 +396,7 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
           ========================================================================= */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         {/* Filter Status Aktif */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full lg:w-auto shrink-0 overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => {
@@ -811,20 +811,20 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 grid grid-cols-2 sm:flex items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer flex items-center justify-center whitespace-nowrap"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all active:scale-95 flex items-center gap-2"
+                  className="h-10 px-4 sm:px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
                 >
-                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                   <span>{submitting ? 'Menyimpan...' : 'Buat Toko Baru'}</span>
                 </button>
               </div>
@@ -951,24 +951,24 @@ export const OutletsView: React.FC<OutletsViewProps> = ({
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 grid grid-cols-2 sm:flex items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setEditingOutlet(null);
                   }}
-                  className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer flex items-center justify-center whitespace-nowrap"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="h-10 px-5 rounded-xl text-white font-extrabold text-xs shadow-md bg-blue-900 hover:bg-blue-800 shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all active:scale-95 flex items-center gap-2"
+                  className="h-10 px-4 sm:px-5 rounded-xl text-white font-extrabold text-xs shadow-md bg-blue-900 hover:bg-blue-800 shadow-blue-900/20 disabled:opacity-50 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
                 >
-                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{submitting ? 'Menyimpan...' : 'Simpan Perubahan Toko'}</span>
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                  <span>{submitting ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
                 </button>
               </div>
             </form>

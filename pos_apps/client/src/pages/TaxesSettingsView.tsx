@@ -407,8 +407,8 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               <Percent className="w-5 h-5 text-blue-900" />
               <span>Pajak Restoran &amp; Biaya Operasional Toko</span>
             </h2>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1 font-sans">
-              <Store className="w-3 h-3 text-blue-800" />
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1 font-sans whitespace-nowrap shrink-0">
+              <Store className="w-3 h-3 text-blue-800 shrink-0" />
               Toko: {activeOutlet?.name || 'Utama'}
             </span>
           </div>
@@ -421,7 +421,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <button
             type="button"
             onClick={() => setFeesModalOpen(true)}
-            className="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             title="Kelola dengan otorisasi PIN Supervisor"
           >
             <Sliders className="w-3.5 h-3.5" />
@@ -579,17 +579,17 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
       </div>
 
       {/* ─── 3. Segmented Navigation Tabs ─── */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('TAX')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'TAX'
               ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <Building2 className="w-4 h-4" />
+          <Building2 className="w-4 h-4 shrink-0" />
           <span>1. Pajak Restoran (PB1 / Daerah)</span>
           {primaryTax.isActive && (
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -599,33 +599,33 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('SERVICE')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'SERVICE'
               ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          {isLaundryMode ? <Shirt className="w-4 h-4" /> : <UtensilsCrossed className="w-4 h-4" />}
+          {isLaundryMode ? <Shirt className="w-4 h-4 shrink-0" /> : <UtensilsCrossed className="w-4 h-4 shrink-0" />}
           <span>2. {isLaundryMode ? 'Biaya Layanan & Kurir Laundry' : 'Biaya Layanan & Kurir'} ({serviceFees.length})</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('PACKAGING')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'PACKAGING'
               ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <Package className="w-4 h-4" />
+          <Package className="w-4 h-4 shrink-0" />
           <span>3. Kemasan &amp; Wadah Kasir ({packagingFees.length})</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('SIMULATOR')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ml-auto ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer sm:ml-auto ${
             activeTab === 'SIMULATOR'
               ? 'bg-emerald-800 text-white shadow-md shadow-emerald-800/20'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -789,7 +789,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 type="button"
                 onClick={handleSaveTax}
                 disabled={isSaving}
-                className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
               >
                 {isSaving ? (
                   <>
@@ -846,7 +846,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddServiceForm(!showAddServiceForm)}
-                className="h-10 px-4 bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                className="w-full sm:w-auto h-10 px-4 bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
                 <span>Tambah Biaya Baru</span>
@@ -1112,13 +1112,13 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
               <div>
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-amber-700" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Package className="w-4 h-4 text-amber-700 shrink-0" />
                   <h3 className="font-extrabold text-base text-slate-900">
                     Wadah Kemasan &amp; Add-on Bawa Pulang (Takeaway)
                   </h3>
-                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 whitespace-nowrap shrink-0">
+                    <Star className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
                     Terpin ke Kasir: {activeQuickCount} / 4
                   </span>
                 </div>
@@ -1130,7 +1130,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddPackagingForm(!showAddPackagingForm)}
-                className="h-10 px-4 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                className="w-full sm:w-auto h-10 px-4 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
                 <span>Tambah Kemasan</span>
@@ -1184,7 +1184,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                   <div className="sm:col-span-3 flex justify-end">
                     <button
                       type="submit"
-                      className="h-10 px-5 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                      className="w-full sm:w-auto h-10 px-5 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center whitespace-nowrap"
                     >
                       Simpan Kemasan Baru
                     </button>

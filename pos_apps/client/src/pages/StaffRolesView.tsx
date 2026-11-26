@@ -1380,40 +1380,40 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
               </div>
 
               {/* Submit Buttons (Desktop) */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs flex items-center justify-end gap-3">
+              <div className="hidden lg:flex bg-white border border-slate-200 rounded-3xl p-5 shadow-xs items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="h-10 px-5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                  className="h-10 px-5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer whitespace-nowrap"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="h-10 px-6 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                  className="h-10 px-6 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95 whitespace-nowrap"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
                 </button>
               </div>
             </div>
 
             {/* Mobile Sticky Action Footer (PWA Ergonomics) */}
-            <div className="lg:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center justify-end gap-3 shadow-lg">
+            <div className="lg:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 grid grid-cols-2 gap-2.5 shadow-lg">
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer flex items-center justify-center whitespace-nowrap"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
               </button>
             </div>
@@ -1425,11 +1425,11 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
               {/* Toolbar & Filter */}
               <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-black text-slate-900">
                       Cakupan Wewenang Fungsional
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-900 border border-blue-200">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-900 border border-blue-200 whitespace-nowrap shrink-0">
                       {selectedPermissions.length} dari {systemPermissions.length} Aktif
                     </span>
                   </div>
@@ -1475,16 +1475,16 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                     >
                       {/* Header Domain Card */}
                       <div className={`p-5 sm:p-6 bg-gradient-to-b ${meta.headerBg} border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
-                        <div className="flex items-center gap-3.5">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black border ${meta.badgeStyle}`}>
+                        <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black border shrink-0 ${meta.badgeStyle}`}>
                             <IconComponent className="w-5 h-5" />
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                               <h4 className="text-sm sm:text-base font-black text-slate-900">
                                 {meta.title}
                               </h4>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${meta.badgeStyle}`}>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap shrink-0 ${meta.badgeStyle}`}>
                                 {selectedCategoryCount}/{allCategoryPerms.length} Wewenang
                               </span>
                             </div>
@@ -1495,7 +1495,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                         <button
                           type="button"
                           onClick={() => toggleSelectAllCategory(category)}
-                          className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                          className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0"
                         >
                           <Check className={`w-3.5 h-3.5 ${isAllCategorySelected ? 'text-blue-900' : 'text-slate-400'}`} />
                           <span>{isAllCategorySelected ? 'Lepas Semua' : 'Pilih Semua'}</span>
@@ -1595,7 +1595,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Akses &amp; Peran Staf
             </h1>
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-900 border border-blue-200">
+            <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-900 border border-blue-200 whitespace-nowrap shrink-0">
               Role-Based Access Control
             </span>
           </div>

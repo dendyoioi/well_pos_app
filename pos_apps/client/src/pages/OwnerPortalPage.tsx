@@ -410,11 +410,11 @@ export const OwnerPortalPage: React.FC<OwnerPortalPageProps> = ({
 
         {/* Navigation Tabs Bar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100">
-          <nav className="flex space-x-2 sm:space-x-8 overflow-x-auto no-scrollbar py-2">
+          <nav className="flex space-x-2 sm:space-x-8 overflow-x-auto scrollbar-none py-2">
             <button
               type="button"
               onClick={() => setActiveTab('businesses')}
-              className={`flex items-center gap-2 py-2 px-3 rounded-xl sm:rounded-none sm:py-3 sm:px-1 border-b-0 sm:border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap transition-all ${activeTab === 'businesses'
+              className={`flex items-center gap-2 py-2 px-3 rounded-xl sm:rounded-none sm:py-3 sm:px-1 border-b-0 sm:border-b-2 font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-all cursor-pointer ${activeTab === 'businesses'
                 ? 'bg-blue-900 text-white sm:bg-transparent sm:text-blue-900 sm:border-blue-900'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 sm:hover:bg-transparent sm:border-transparent'
                 }`}
@@ -531,12 +531,12 @@ export const OwnerPortalPage: React.FC<OwnerPortalPageProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => loadPortalData(true)}
                   disabled={refreshing}
-                  className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="h-10 w-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shrink-0 cursor-pointer"
                   title="Muat Ulang Data"
                 >
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -544,9 +544,9 @@ export const OwnerPortalPage: React.FC<OwnerPortalPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm shadow-sm transition-colors shrink-0"
+                  className="h-10 flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-sm transition-colors shrink-0 whitespace-nowrap cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 shrink-0" />
                   <span>Buat Bisnis Baru</span>
                 </button>
               </div>
@@ -802,7 +802,7 @@ export const OwnerPortalPage: React.FC<OwnerPortalPageProps> = ({
                 </label>
 
                 {isCustomTokens && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                     <input
                       type="number"
                       min={minTokenPurchase}
@@ -814,7 +814,7 @@ export const OwnerPortalPage: React.FC<OwnerPortalPageProps> = ({
                         setPromoError('');
                       }}
                       placeholder={`Minimal ${minTokenPurchase} token`}
-                      className="w-48 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                      className="w-full sm:w-48 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
                     />
                     <span className="text-xs text-slate-500">
                       Minimal pembelian {minTokenPurchase} token
@@ -1112,67 +1112,69 @@ export const OwnerPortalPage: React.FC<OwnerPortalPageProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
-              {editError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
-                  {editError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Nama Bisnis / Brand <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Sub-Kategori / Model Usaha
-                </label>
-                <input
-                  type="text"
-                  value={editSubCategory}
-                  onChange={(e) => setEditSubCategory(e.target.value)}
-                  placeholder="misal: Specialty Coffee, Toko Grosir, dsb"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
-                />
-              </div>
-
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-slate-900">Status Aktif Bisnis</div>
-                  <div className="text-[11px] text-slate-500">
-                    Non-aktifkan jika usaha ini sedang tutup sementara
+            <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto overscroll-contain flex-1">
+                {editError && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
+                    {editError}
                   </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Nama Bisnis / Brand <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  checked={editIsActive}
-                  onChange={(e) => setEditIsActive(e.target.checked)}
-                  className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                />
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Sub-Kategori / Model Usaha
+                  </label>
+                  <input
+                    type="text"
+                    value={editSubCategory}
+                    onChange={(e) => setEditSubCategory(e.target.value)}
+                    placeholder="misal: Specialty Coffee, Toko Grosir, dsb"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  />
+                </div>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Status Aktif Bisnis</div>
+                    <div className="text-[11px] text-slate-500">
+                      Non-aktifkan jika usaha ini sedang tutup sementara
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 shrink-0"
+                  />
+                </div>
               </div>
 
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 mt-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingBusiness(null)}
                   disabled={savingEdit}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-semibold flex items-center justify-center whitespace-nowrap cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={savingEdit || editName.trim().length < 2}
-                  className="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-colors"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-colors flex items-center justify-center whitespace-nowrap cursor-pointer"
                 >
                   {savingEdit ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>

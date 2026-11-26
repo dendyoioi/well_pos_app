@@ -842,9 +842,9 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
         {showCostAndProfit && isPrivileged && (
           <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl shadow-xs animate-fadeIn">
-            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block mb-1 flex items-center justify-between">
-              <span>Estimasi Laba Kotor</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-200/70 text-emerald-900 font-extrabold">Owner</span>
+            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1 flex items-center justify-between gap-2">
+              <span className="truncate">Estimasi Laba Kotor</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-200/70 text-emerald-900 font-extrabold whitespace-nowrap shrink-0">Owner</span>
             </span>
             <div className="text-2xl font-black text-emerald-950">
               Rp {Math.round(totalGrossProfit).toLocaleString('id-ID')}
@@ -870,7 +870,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
 
       {/* TOP-LEVEL PAYMENT SELECTOR CARDS */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 mb-2">
           <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
             PILIH METODE PEMBAYARAN ({topLevelCards.length} JALUR):
           </span>
@@ -946,9 +946,9 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
         {/* SUB-FILTER NON-TUNAI: MUNCUL HANYA SAAT CARD NON-TUNAI DIKLIK */}
         {selectedMethod === 'NON_CASH' && (
           <div className="mt-3 p-3 bg-indigo-50/70 border border-indigo-200 rounded-2xl animate-fadeIn space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
-                <Filter className="w-3.5 h-3.5 text-indigo-700" />
+                <Filter className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
                 <span>Pilih Sub-Jalur Non-Tunai:</span>
               </span>
               <span className="text-[11px] font-bold text-indigo-700">
@@ -958,7 +958,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                 </strong>
               </span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
               {nonCashSubOptions.map((sub) => {
                 const isSubActive = selectedSubMethod === sub.code;
                 return (
@@ -969,7 +969,7 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
                       setSelectedSubMethod(sub.code);
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                       isSubActive
                         ? 'bg-indigo-900 text-white shadow-xs'
                         : 'bg-white text-indigo-950 hover:bg-indigo-100 border border-indigo-200'
@@ -1010,18 +1010,20 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
             {/* Search menu */}
-            <div className="relative flex-1 sm:w-64">
+            <div className="relative w-full sm:w-64">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={isLaundryMode ? "Cari layanan / kategori..." : "Cari menu / kategori..."}
-                className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-xs font-medium focus:border-blue-900 outline-none transition-all"
+                className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-xs font-medium focus:border-blue-900 outline-none transition-all bg-white"
               />
             </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
 
             {/* Toggle HPP & Laba Kotor Khusus Owner/Admin */}
             {isPrivileged && (
@@ -1055,17 +1057,18 @@ export const PaymentItemsAuditView: React.FC<PaymentItemsAuditViewProps> = ({
               <span className="hidden sm:inline">Excel</span>
             </button>
 
-            {/* Cetak PDF Rekap Item */}
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={currentItemsList.length === 0}
-              className="h-10 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer shrink-0 active:scale-95"
-              title="Cetak rekapitulasi item menu ini ke dokumen PDF"
-            >
-              <FileText className="w-3.5 h-3.5 text-blue-900 shrink-0" />
-              <span className="hidden sm:inline">PDF</span>
-            </button>
+              {/* Cetak PDF Rekap Item */}
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={currentItemsList.length === 0}
+                className="h-10 px-3 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 cursor-pointer shrink-0 active:scale-95 whitespace-nowrap"
+                title="Cetak rekapitulasi item menu ini ke dokumen PDF"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+                <span className="hidden sm:inline">PDF</span>
+              </button>
+            </div>
           </div>
         </div>
 

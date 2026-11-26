@@ -9,7 +9,9 @@ export const PwaInstallBanner: React.FC = () => {
   const [showIosGuide, setShowIosGuide] = useState(false);
 
   useEffect(() => {
-    const isDismissed = sessionStorage.getItem('wellpos_pwa_banner_dismissed');
+    const isDismissed =
+      sessionStorage.getItem('wellpos_pwa_banner_dismissed') ||
+      localStorage.getItem('wellpos_pwa_banner_dismissed');
     if (isDismissed) {
       setDismissed(true);
     }
@@ -18,6 +20,7 @@ export const PwaInstallBanner: React.FC = () => {
   const handleDismiss = () => {
     setDismissed(true);
     sessionStorage.setItem('wellpos_pwa_banner_dismissed', 'true');
+    localStorage.setItem('wellpos_pwa_banner_dismissed', 'true');
   };
 
   // Jika sudah terpasang atau ditutup di sesi ini, jangan tampilkan banner mengambang
@@ -33,8 +36,8 @@ export const PwaInstallBanner: React.FC = () => {
   return (
     <>
       {/* Floating Bottom Installation Banner */}
-      <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-40 animate-in slide-in-from-bottom duration-300">
-        <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 shadow-2xl text-white flex flex-col gap-3">
+      <div className="fixed bottom-20 md:bottom-5 inset-x-3 sm:inset-x-auto sm:right-5 sm:w-80 z-40 animate-in slide-in-from-bottom duration-300">
+        <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 shadow-2xl text-white flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <WellPosLogo size="md" />
@@ -94,8 +97,8 @@ export const PwaInstallBanner: React.FC = () => {
 
       {/* iOS Safari Guide Modal */}
       {showIosGuide && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl text-slate-900 space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92dvh] overflow-y-auto shadow-2xl text-slate-900 space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
                 <Smartphone className="w-4 h-4 text-blue-600" />
@@ -191,11 +194,11 @@ export const PwaInstallButton: React.FC<{ className?: string }> = ({ className =
 
       {/* iOS Modal if clicked */}
       {showIosGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl text-slate-900 space-y-3">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92dvh] overflow-y-auto shadow-2xl text-slate-900 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="font-extrabold text-xs">Pasang di iPhone / iPad</span>
-              <button onClick={() => setShowIosGuide(false)}>
+              <button type="button" onClick={() => setShowIosGuide(false)} className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -203,8 +206,9 @@ export const PwaInstallButton: React.FC<{ className?: string }> = ({ className =
               Ketuk tombol <strong>Share</strong> di Safari lalu pilih <strong>"Tambah ke Layar Utama"</strong>.
             </p>
             <button
+              type="button"
               onClick={() => setShowIosGuide(false)}
-              className="w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer"
+              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer"
             >
               Tutup
             </button>
@@ -214,8 +218,8 @@ export const PwaInstallButton: React.FC<{ className?: string }> = ({ className =
 
       {/* Browser Desktop / Android Fallback Guide Modal */}
       {showBrowserGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl text-slate-900 space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92dvh] overflow-y-auto shadow-2xl text-slate-900 space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <span className="font-extrabold text-xs text-blue-950 flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4 text-blue-700" />

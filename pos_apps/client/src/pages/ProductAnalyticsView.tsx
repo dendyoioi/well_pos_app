@@ -264,8 +264,8 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
       {/* Filter Controls Toolbar */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">
         {/* Preset Buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full pb-0.5 md:pb-0">
+          <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1 whitespace-nowrap shrink-0">
             <Calendar className="w-3.5 h-3.5" /> Periode:
           </span>
           {[
@@ -278,7 +278,7 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
             <button
               key={item.key}
               onClick={() => setPeriodPreset(item.key as any)}
-              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer whitespace-nowrap shrink-0 ${
                 periodPreset === item.key
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -291,23 +291,23 @@ export const ProductAnalyticsView: React.FC<ProductAnalyticsViewProps> = ({ acti
 
         {/* Custom Range Inputs if custom selected */}
         {periodPreset === 'custom' && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
             <input
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+              className="w-full sm:w-auto h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
             />
-            <span className="text-xs text-slate-400">s/d</span>
+            <span className="text-xs text-slate-400 text-center hidden sm:inline">s/d</span>
             <input
               type="date"
               value={customEnd}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+              className="w-full sm:w-auto h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
             />
             <button
               onClick={fetchReport}
-              className="h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all flex items-center justify-center cursor-pointer"
+              className="w-full sm:w-auto h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all flex items-center justify-center cursor-pointer whitespace-nowrap"
             >
               Terapkan
             </button>

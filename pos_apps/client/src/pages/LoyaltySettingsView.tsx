@@ -114,7 +114,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
                 <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                   Program Loyalitas &amp; Poin Member
                 </h1>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap shrink-0">
                   Per-Outlet
                 </span>
               </div>
@@ -126,10 +126,10 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
         </div>
 
         {/* Current Active Outlet Badge */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs w-full lg:w-auto shrink-0 justify-center sm:justify-start">
-          <Store className="w-4 h-4 text-blue-900" />
-          <span className="text-blue-950 font-medium">Toko:</span>
-          <span className="font-extrabold text-blue-900">{activeOutlet?.name || 'Belum Dipilih'}</span>
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs w-full lg:w-auto shrink-0 justify-center sm:justify-start min-w-0">
+          <Store className="w-4 h-4 text-blue-900 shrink-0" />
+          <span className="text-blue-950 font-medium shrink-0">Toko:</span>
+          <span className="font-extrabold text-blue-900 truncate">{activeOutlet?.name || 'Belum Dipilih'}</span>
         </div>
       </div>
 

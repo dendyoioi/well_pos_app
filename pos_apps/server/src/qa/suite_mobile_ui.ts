@@ -746,7 +746,7 @@ export async function runMobileUISuite(): Promise<boolean> {
       console.log('   ✅ Modal Pengaturan Tahapan Produksi bebas overflow & bebas teks "SmartOwner"/"SmartKasir".');
 
       // Tutup Modal Pengaturan Tahapan Produksi
-      await page.locator('button:has-text("Batal")').first().click();
+      await page.locator('button:has-text("Batal"):visible').first().click();
       await page.waitForTimeout(300);
 
       results.push({
@@ -766,12 +766,132 @@ export async function runMobileUISuite(): Promise<boolean> {
     }
 
     // =========================================================================
-    // SKENARIO 7: ROLE CASHIER MOBILE/PWA (LOGIN PIN 5-DIGIT, HAMBURGER MENU,
+    // SKENARIO 7: GELOMBANG 1 MOBILE UI AUDIT SWEEP (390x844)
+    // Verifikasi: Owner Portal, Orders, Payment Items, Financial Report,
+    // Product Analytics, Promotions, Staff Roles (+ Matrix), Outlets, & Settings
+    // bebas horizontal overflow, bebas "+ +" ganda, bebas "SmartOwner",
+    // & PwaInstallBanner (jika tampil) tidak menimpa Bottom Navigation.
+    // =========================================================================
+    const t7_wave1 = Date.now();
+    try {
+      console.log('\n▶️ [SKENARIO 7] Gelombang 1 Mobile UI Audit Sweep (12 Halaman di 390x844)...');
+      await page.setViewportSize(VIEWPORTS.mobile);
+
+      const wave1Tabs: Array<{ key: string; label: string }> = [
+        { key: 'orders', label: 'OrdersView' },
+        { key: 'payment_items', label: 'PaymentItemsAuditView' },
+        { key: 'reports', label: 'FinancialReportView' },
+        { key: 'product_analytics', label: 'ProductAnalyticsView' },
+        { key: 'promotions', label: 'PromotionsView' },
+        { key: 'staff_roles', label: 'StaffRolesView' },
+        { key: 'outlets', label: 'OutletsView' },
+        { key: 'settings_receipt', label: 'ReceiptSettingsView' },
+        { key: 'settings_payment', label: 'PaymentSettingsView' },
+        { key: 'settings_taxes', label: 'TaxesSettingsView' },
+        { key: 'settings_loyalty', label: 'LoyaltySettingsView' },
+      ];
+
+      for (const tab of wave1Tabs) {
+        await navigateToTab(page, tab.key);
+        await page.waitForTimeout(550);
+        await checkZeroOverflow(page, tab.label, 'Mobile 390x844');
+
+        // Audit global per halaman: zero SmartOwner/SmartKasir, zero "+ +" ganda, PWA Banner non-overlap
+        const hygiene = await page.evaluate(() => {
+          const text = document.body.innerText || '';
+          const hasSmartOwner = text.includes('SmartOwner');
+          const hasSmartKasir = text.includes('SmartKasir');
+
+          // Deteksi button dengan ikon SVG + teks yang masih diawali tanda "+ "
+          const buttons = Array.from(document.querySelectorAll('button'));
+          const doublePlusBtn = buttons.find((b: any) => {
+            const hasSvg = Boolean(b.querySelector('svg'));
+            const btnText = (b.innerText || '').trim();
+            return hasSvg && (/^\+\s/.test(btnText) || btnText.includes('++'));
+          }) as any;
+
+          // Cek posisi PwaInstallBanner jika muncul
+          const pwaEl = Array.from(document.querySelectorAll('div')).find((el: any) =>
+            (el.innerText || '').includes('Pasang Aplikasi Well POS') &&
+            (window as any).getComputedStyle(el).position === 'fixed'
+          ) as any;
+          let pwaOverlap = false;
+          if (pwaEl) {
+            const rect = pwaEl.getBoundingClientRect();
+            // Bottom nav mobile umumnya tinggi ~56-64px di bagian paling bawah layar
+            pwaOverlap = rect.bottom > (window as any).innerHeight - 52;
+          }
+
+          return {
+            hasSmartOwner,
+            hasSmartKasir,
+            doublePlusText: doublePlusBtn ? (doublePlusBtn.innerText || '').trim() : null,
+            pwaOverlap,
+          };
+        });
+
+        assert(!hygiene.hasSmartOwner, `Teks "SmartOwner" ditemukan pada ${tab.label}`);
+        assert(!hygiene.hasSmartKasir, `Teks "SmartKasir" ditemukan pada ${tab.label}`);
+        assert(
+          !hygiene.doublePlusText,
+          `Tombol "+ ..." ganda dengan ikon ditemukan pada ${tab.label}: "${hygiene.doublePlusText}"`
+        );
+        assert(!hygiene.pwaOverlap, `PwaInstallBanner menimpa Bottom Nav pada ${tab.label}`);
+      }
+      console.log('   ✅ Seluruh 11 halaman Backoffice Gelombang 1 lolos 390x844 (0 overflow, 0 double +, 0 SmartOwner).');
+
+      // Uji interaktif singkat pada StaffRolesView (Matriks Izin)
+      await navigateToTab(page, 'staff_roles');
+      await page.waitForTimeout(450);
+      const addRoleBtn = page.locator('button:has-text("Tambah Peran Kustom")').first();
+      await addRoleBtn.waitFor({ state: 'visible', timeout: 6000 });
+      await addRoleBtn.click();
+      await page.waitForTimeout(450);
+      await checkZeroOverflow(page, 'StaffRolesView — Matrix Editor', 'Mobile 390x844');
+      await page.locator('button:has-text("Batal"):visible').first().click();
+      await page.waitForTimeout(300);
+      console.log('   ✅ StaffRolesView Matrix Editor bebas overflow di 390x844.');
+
+      // Uji OwnerPortalPage pada Mobile 390x844 (3 Tab: Bisnis Saya, Paket & Token, Invoice)
+      const ownerPortalBtn = page.locator('button[title="Buka Owner Portal & Kelola Bisnis"]').first();
+      await ownerPortalBtn.waitFor({ state: 'visible', timeout: 6000 });
+      await ownerPortalBtn.click();
+      await page.waitForSelector('text=Owner Portal', { timeout: 10000 });
+      await page.waitForTimeout(700);
+      await checkZeroOverflow(page, 'OwnerPortalPage — Bisnis Saya', 'Mobile 390x844');
+
+      await page.locator('button:has-text("Paket & Beli Token")').first().click();
+      await page.waitForTimeout(400);
+      await checkZeroOverflow(page, 'OwnerPortalPage — Paket & Beli Token', 'Mobile 390x844');
+
+      await page.locator('button:has-text("Invoice & Pemakaian Token")').first().click();
+      await page.waitForTimeout(400);
+      await checkZeroOverflow(page, 'OwnerPortalPage — Invoice & Token', 'Mobile 390x844');
+      console.log('   ✅ OwnerPortalPage (3 tab) lolos zero overflow di 390x844.');
+
+      results.push({
+        name: 'Gelombang 1 Mobile UI Audit Sweep (Owner Portal, Orders, Reports, Promo, Roles & Settings)',
+        status: 'PASS',
+        durationMs: Date.now() - t7_wave1,
+      });
+      console.log('   ✅ PASS: Seluruh 12+ halaman & modal Gelombang 1 lolos standar anti-cacat mobile 390x844.');
+    } catch (err: any) {
+      results.push({
+        name: 'Gelombang 1 Mobile UI Audit Sweep (Owner Portal, Orders, Reports, Promo, Roles & Settings)',
+        status: 'FAIL',
+        durationMs: Date.now() - t7_wave1,
+        error: err.message,
+      });
+      console.error('   ❌ FAIL:', err.message);
+    }
+
+    // =========================================================================
+    // SKENARIO 8: ROLE CASHIER MOBILE/PWA (LOGIN PIN 5-DIGIT, HAMBURGER MENU,
     // PRINTER MODAL, HEADER RINGKAS & FULL-WIDTH CTA TANPA SHORTCUT F2)
     // =========================================================================
     const t6 = Date.now();
     try {
-      console.log('\n▶️ [SKENARIO 7] Role CASHIER Mobile/PWA (PIN Login, Hamburger, Printer Modal, CTA Full-Width)...');
+      console.log('\n▶️ [SKENARIO 8] Role CASHIER Mobile/PWA (PIN Login, Hamburger, Printer Modal, CTA Full-Width)...');
 
       // 6.0 Reset session & buka halaman login pada viewport Mobile 390x844
       await page.setViewportSize(VIEWPORTS.mobile);
