@@ -74,6 +74,7 @@ export async function getPurchaseRequests(req: Request, res: Response) {
           approvedBy: { select: { id: true, name: true, email: true, role: true } },
         },
         orderBy: { createdAt: 'desc' },
+        take: Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100)),
       }),
       prisma.purchaseRequest.groupBy({
         by: ['status'],
@@ -245,7 +246,14 @@ export async function createPurchaseRequest(req: Request, res: Response) {
       entityType: 'PURCHASE_REQUEST',
       entityId: pr.id,
       summary: `Purchase Request #${pr.prNumber} dibuat (${items.length} item, Prioritas: ${priority})`,
-      afterData: pr,
+      afterData: {
+        id: pr.id,
+        prNumber: pr.prNumber,
+        status: pr.status,
+        priority: pr.priority,
+        itemsCount: items.length,
+        estimatedTotal: calculatedTotal,
+      },
       ipAddress: req.ip,
     });
 
@@ -557,6 +565,7 @@ export async function getSupplierInvoices(req: Request, res: Response) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100)),
     });
 
     let totalAmount = 0;
@@ -726,7 +735,13 @@ export async function createSupplierInvoice(req: Request, res: Response) {
       entityType: 'SUPPLIER_INVOICE',
       entityId: invoice.id,
       summary: `Tagihan Supplier #${invoice.invoiceNumber} sebesar Rp ${finalTotal.toLocaleString('id-ID')} diterbitkan (${targetSupplierName})`,
-      afterData: invoice,
+      afterData: {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        supplierId: invoice.supplierId,
+        totalAmount: Number(invoice.totalAmount),
+        status: invoice.status,
+      },
       ipAddress: req.ip,
     });
 
@@ -873,6 +888,7 @@ export async function getOvertimeRequests(req: Request, res: Response) {
         approvedBy: { select: { id: true, name: true } },
       },
       orderBy: [{ workDate: 'desc' }, { createdAt: 'desc' }],
+      take: Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100)),
     });
 
     let approvedHours = 0;
@@ -1002,7 +1018,14 @@ export async function createOvertimeRequest(req: Request, res: Response) {
       entityType: 'STAFF_OVERTIME_REQUEST',
       entityId: overtime.id,
       summary: `Pengajuan lembur ${finalHours} jam pada ${finalWorkDate} untuk ${targetUser.name}`,
-      afterData: overtime,
+      afterData: {
+        id: overtime.id,
+        userId: overtime.userId,
+        workDate: overtime.workDate,
+        hours: Number(overtime.hours),
+        totalPay: Number(overtime.totalPay),
+        status: overtime.status,
+      },
       ipAddress: req.ip,
     });
 
@@ -1120,6 +1143,7 @@ export async function getLeaveRequests(req: Request, res: Response) {
         approvedBy: { select: { id: true, name: true } },
       },
       orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }],
+      take: Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100)),
     });
 
     let pendingCount = 0;
@@ -1227,7 +1251,15 @@ export async function createLeaveRequest(req: Request, res: Response) {
       entityType: 'STAFF_LEAVE_REQUEST',
       entityId: leave.id,
       summary: `Pengajuan cuti ${leaveType} (${calculatedDays} hari: ${cleanStartDate} s.d ${cleanEndDate}) untuk ${targetUser.name}`,
-      afterData: leave,
+      afterData: {
+        id: leave.id,
+        userId: leave.userId,
+        leaveType: leave.leaveType,
+        startDate: leave.startDate,
+        endDate: leave.endDate,
+        totalDays: leave.totalDays,
+        status: leave.status,
+      },
       ipAddress: req.ip,
     });
 
@@ -1337,6 +1369,7 @@ export async function getPayrollSlips(req: Request, res: Response) {
         generatedBy: { select: { id: true, name: true } },
       },
       orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { createdAt: 'desc' }],
+      take: Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100)),
     });
 
     let totalGross = 0;
@@ -1562,7 +1595,14 @@ export async function generatePayrollSlip(req: Request, res: Response) {
       entityType: 'STAFF_PAYROLL_SLIP',
       entityId: slip.id,
       summary: `Slip gaji periode ${periodYear}-${String(periodMonth).padStart(2, '0')} untuk ${targetUser.name} dibuat (Net: Rp ${netSalary.toLocaleString('id-ID')})`,
-      afterData: slip,
+      afterData: {
+        id: slip.id,
+        userId: slip.userId,
+        periodYear,
+        periodMonth,
+        netSalary: Number(slip.netSalary),
+        status: slip.status,
+      },
       ipAddress: req.ip,
     });
 

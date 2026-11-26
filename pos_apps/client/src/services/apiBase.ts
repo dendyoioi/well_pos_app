@@ -7,13 +7,18 @@ export const getApiBaseUrl = (): string => {
     return import.meta.env.VITE_API_URL.replace(/\/$/, '');
   }
   // Auto-detection untuk deployment Vercel / Domain Resmi Well POS:
-  // Jika sedang berjalan di domain wellpos.id, beta.wellpos.id, atau *.vercel.app,
-  // langsung arahkan seluruh pemanggilan API ke backend Render Singapore
-  // tanpa melewati reverse proxy Vercel Edge (mencegah kehabisan kuota 1.000.000 CDN requests).
+  // Pisahkan secara ketat endpoint DEV (beta.wellpos.id / *.vercel.app) vs PRODUCTION (wellpos.id)
+  // untuk menghindari reverse proxy Vercel Edge sekaligus mencegah prod mengarah ke API dev.
   if (typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
-    if (hostname.endsWith('.vercel.app') || hostname.endsWith('wellpos.id')) {
+    if (hostname === 'beta.wellpos.id' || hostname.endsWith('.vercel.app')) {
       return 'https://wellpos-api-dev.onrender.com';
+    }
+    if (hostname === 'wellpos.id' || hostname === 'www.wellpos.id') {
+      console.warn(
+        '[apiBase] VITE_API_URL belum diset pada environment production; menggunakan fallback https://api.wellpos.id'
+      );
+      return 'https://api.wellpos.id';
     }
   }
   // Localhost development fallback (menggunakan Vite proxy localhost:5001)

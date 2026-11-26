@@ -279,7 +279,13 @@ export const OfflineQueueModal: React.FC<OfflineQueueModalProps> = ({
                       className="flex-1 sm:flex-initial h-9 px-3.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isEntrySyncing ? 'animate-spin' : ''}`} />
-                      <span>{isEntrySyncing ? 'Menyinkronkan...' : 'Sinkronkan'}</span>
+                      <span>
+                        {isEntrySyncing
+                          ? 'Menyinkronkan...'
+                          : entry.status === 'FAILED'
+                          ? 'Coba Lagi'
+                          : 'Sinkronkan'}
+                      </span>
                     </button>
 
                     {canDeleteEntry && (

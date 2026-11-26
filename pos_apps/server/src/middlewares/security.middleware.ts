@@ -97,3 +97,17 @@ export const qrOrderRateLimiter = createRateLimiter({
   message: 'Terlalu banyak pesanan dikirim. Silakan tunggu sebentar sebelum memesan kembali.',
 });
 
+// Rate limiter endpoint publik Customer Portal (Read: info outlet & profil/order)
+export const publicPortalReadRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 Menit
+  maxRequests: 60,      // Maksimal 60 request per IP per menit
+  message: 'Terlalu banyak permintaan akses portal pelanggan. Silakan tunggu beberapa saat.',
+});
+
+// Rate limiter endpoint publik Customer Portal (Write: buat sesi & permintaan antar-jemput)
+export const publicPortalWriteRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 Menit
+  maxRequests: 15,      // Maksimal 15 permintaan per IP per menit
+  message: 'Terlalu banyak permintaan pengiriman portal pelanggan. Silakan tunggu beberapa saat.',
+});
+

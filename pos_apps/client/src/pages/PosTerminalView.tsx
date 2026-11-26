@@ -939,11 +939,14 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   }, [cart, currentShift, products, paymentModalOpen, xReportModalOpen, closeShiftModalOpen]);
 
   // Handler Sinkronisasi Antrean Offline PWA
-  const handleSyncOfflineQueue = useCallback(async () => {
-    if (isSyncingQueue || !navigator.onLine) return;
-    setIsSyncingQueue(true);
-    try {
-      const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'POS');
+  const syncOfflineQueueCore = useCallback(
+    async (includeExhausted: boolean) => {
+      if (isSyncingQueue || !navigator.onLine) return;
+      setIsSyncingQueue(true);
+      try {
+        const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'POS', {
+          includeExhausted,
+        });
       if (pendingOrders.length === 0) {
         await refreshOfflineQueueCount();
         setIsSyncingQueue(false);
@@ -985,12 +988,18 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       if (failCount > 0) {
         dialog.toast(`${failCount} transaksi offline belum berhasil disinkronkan. Akan dicoba kembali otomatis.`, 'error');
       }
-    } catch (err: any) {
-      console.error('Error saat menyinkronkan antrean offline:', err);
-    } finally {
-      setIsSyncingQueue(false);
-    }
-  }, [isSyncingQueue, activeOutlet?.id, dialog, loadProducts, loadCurrentShift, loadTablesAndOrders, refreshOfflineQueueCount]);
+      } catch (err: any) {
+        console.error('Error saat menyinkronkan antrean offline:', err);
+      } finally {
+        setIsSyncingQueue(false);
+      }
+    },
+    [isSyncingQueue, activeOutlet?.id, dialog, loadProducts, loadCurrentShift, loadTablesAndOrders, refreshOfflineQueueCount]
+  );
+
+  const handleSyncOfflineQueue = useCallback(() => {
+    return syncOfflineQueueCore(true);
+  }, [syncOfflineQueueCore]);
 
   const handleRetrySingleOfflineOrder = useCallback(
     async (entry: OfflineOrderEntry) => {
@@ -1051,8 +1060,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       if (navigator.onLine) {
         getOfflineQueueCount(activeOutlet?.id, 'POS').then((stats) => {
           setPendingOfflineCount(stats.pending);
-          if (stats.pending > 0 && !isSyncingQueue) {
-            handleSyncOfflineQueue();
+          if (stats.autoRetryable > 0 && !isSyncingQueue) {
+            syncOfflineQueueCore(false);
           }
         });
       }
@@ -1063,7 +1072,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       window.removeEventListener('offline', handleOffline);
       clearInterval(syncInterval);
     };
-  }, [activeOutlet?.id, handleSyncOfflineQueue, isSyncingQueue, refreshOfflineQueueCount]);
+  }, [activeOutlet?.id, syncOfflineQueueCore, isSyncingQueue, refreshOfflineQueueCount]);
 
   const handleScanBarcode = (code: string): { success: boolean; productName?: string } => {
     const cleanCode = code.trim().toLowerCase();

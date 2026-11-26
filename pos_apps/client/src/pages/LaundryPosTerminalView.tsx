@@ -405,11 +405,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   }, [activeOutlet?.id]);
 
   // Handler sinkronisasi transaksi offline kasir laundry
-  const syncOfflineLaundryOrders = useCallback(async () => {
-    if (isSyncingOffline || !navigator.onLine) return;
-    setIsSyncingOffline(true);
-    try {
-      const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'LAUNDRY');
+  const syncOfflineLaundryOrdersCore = useCallback(
+    async (includeExhausted: boolean) => {
+      if (isSyncingOffline || !navigator.onLine) return;
+      setIsSyncingOffline(true);
+      try {
+        const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'LAUNDRY', {
+          includeExhausted,
+        });
       if (pendingOrders.length === 0) {
         await refreshOfflineQueueCount();
         setIsSyncingOffline(false);
@@ -456,12 +459,18 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         });
         setTimeout(() => setFeedbackToast(null), 5000);
       }
-    } catch (err: any) {
-      console.error('Error saat menyinkronkan antrean laundry offline:', err);
-    } finally {
-      setIsSyncingOffline(false);
-    }
-  }, [isSyncingOffline, activeOutlet?.id, refreshOfflineQueueCount]);
+      } catch (err: any) {
+        console.error('Error saat menyinkronkan antrean laundry offline:', err);
+      } finally {
+        setIsSyncingOffline(false);
+      }
+    },
+    [isSyncingOffline, activeOutlet?.id, refreshOfflineQueueCount]
+  );
+
+  const syncOfflineLaundryOrders = useCallback(() => {
+    return syncOfflineLaundryOrdersCore(true);
+  }, [syncOfflineLaundryOrdersCore]);
 
   const handleRetrySingleOfflineLaundryOrder = useCallback(
     async (entry: OfflineOrderEntry) => {
@@ -513,8 +522,12 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      refreshOfflineQueueCount();
-      syncOfflineLaundryOrders();
+      getOfflineQueueCount(activeOutlet?.id, 'LAUNDRY').then((stats) => {
+        setOfflineQueueCount(stats);
+        if (stats.autoRetryable > 0 && !isSyncingOffline) {
+          syncOfflineLaundryOrdersCore(false);
+        }
+      });
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -528,7 +541,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [refreshOfflineQueueCount, syncOfflineLaundryOrders]);
+  }, [activeOutlet?.id, isSyncingOffline, refreshOfflineQueueCount, syncOfflineLaundryOrdersCore]);
 
   useEffect(() => {
     fetchServices();

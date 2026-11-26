@@ -75,6 +75,7 @@ export const getBatches = async (req: Request, res: Response) => {
         outlet: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100)),
     });
 
     return res.json({
@@ -908,6 +909,7 @@ export const getProductionQueue = async (req: Request, res: Response) => {
         },
       },
       orderBy: { createdAt: 'asc' },
+      take: 200,
     });
 
     const now = new Date();

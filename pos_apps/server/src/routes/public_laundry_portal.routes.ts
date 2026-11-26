@@ -6,6 +6,10 @@ import {
   getPortalCustomerMe,
   createPortalPickupRequest,
 } from '../controllers/laundry_core_phase3.controller';
+import {
+  publicPortalReadRateLimiter,
+  publicPortalWriteRateLimiter,
+} from '../middlewares/security.middleware';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'wellpos-default-jwt-secret';
@@ -46,15 +50,15 @@ export const authenticatePortalCustomer = (
 };
 
 // 1. Info Publik Outlet & Katalog Layanan
-router.get('/outlet/:outletId', getPortalOutletInfo);
+router.get('/outlet/:outletId', publicPortalReadRateLimiter, getPortalOutletInfo);
 
 // 2. Mulai / Verifikasi Sesi Portal via Nomor HP (Passwordless / Guest)
-router.post('/session', createPortalSession);
+router.post('/session', publicPortalWriteRateLimiter, createPortalSession);
 
 // 3. Profil Pelanggan, Saldo/Kuota Laundry, & Order Aktif (Memerlukan Token Sesi Portal)
-router.get('/me', authenticatePortalCustomer, getPortalCustomerMe);
+router.get('/me', publicPortalReadRateLimiter, authenticatePortalCustomer, getPortalCustomerMe);
 
 // 4. Kirim Permintaan Jemput Cucian Mandiri (Memerlukan Token Sesi Portal)
-router.post('/pickup-requests', authenticatePortalCustomer, createPortalPickupRequest);
+router.post('/pickup-requests', publicPortalWriteRateLimiter, authenticatePortalCustomer, createPortalPickupRequest);
 
 export default router;

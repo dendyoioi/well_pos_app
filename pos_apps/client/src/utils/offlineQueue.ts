@@ -38,6 +38,8 @@ const DB_NAME = 'well_pos_offline_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline_orders';
 
+export const MAX_OFFLINE_AUTO_RETRIES = 5;
+
 /**
  * Inisialisasi koneksi database IndexedDB
  */
@@ -88,7 +90,8 @@ export const saveOfflineOrder = async (order: OfflineOrderEntry): Promise<void> 
  */
 export const getPendingOfflineOrders = async (
   outletId?: string,
-  orderKind?: 'POS' | 'LAUNDRY'
+  orderKind?: 'POS' | 'LAUNDRY',
+  options?: { includeExhausted?: boolean }
 ): Promise<OfflineOrderEntry[]> => {
   const db = await openOfflineDatabase();
   return new Promise((resolve, reject) => {
@@ -100,6 +103,13 @@ export const getPendingOfflineOrders = async (
       let results: OfflineOrderEntry[] = req.result || [];
       // Filter yang masih PENDING atau FAILED
       results = results.filter((item) => item.status === 'PENDING' || item.status === 'FAILED');
+      // Secara default kecualikan entri FAILED yang melampaui batas auto-retry agar tidak infinite retry storm
+      if (!options?.includeExhausted) {
+        results = results.filter(
+          (item) =>
+            !(item.status === 'FAILED' && (item.retryCount || 0) >= MAX_OFFLINE_AUTO_RETRIES)
+        );
+      }
       if (outletId) {
         results = results.filter((item) => !item.outletId || item.outletId === outletId);
       }
@@ -120,7 +130,7 @@ export const getPendingOfflineOrders = async (
 export const getOfflineQueueCount = async (
   outletId?: string,
   orderKind?: 'POS' | 'LAUNDRY'
-): Promise<{ pending: number; total: number }> => {
+): Promise<{ pending: number; autoRetryable: number; total: number }> => {
   try {
     const db = await openOfflineDatabase();
     return new Promise((resolve, reject) => {
@@ -137,12 +147,17 @@ export const getOfflineQueueCount = async (
           all = all.filter((o) => (o.orderKind || 'POS') === orderKind);
         }
         const pending = all.filter((o) => o.status === 'PENDING' || o.status === 'FAILED').length;
-        resolve({ pending, total: all.length });
+        const autoRetryable = all.filter(
+          (o) =>
+            o.status === 'PENDING' ||
+            (o.status === 'FAILED' && (o.retryCount || 0) < MAX_OFFLINE_AUTO_RETRIES)
+        ).length;
+        resolve({ pending, autoRetryable, total: all.length });
       };
       req.onerror = () => reject(req.error);
     });
   } catch {
-    return { pending: 0, total: 0 };
+    return { pending: 0, autoRetryable: 0, total: 0 };
   }
 };
 
