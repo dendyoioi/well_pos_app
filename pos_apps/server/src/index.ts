@@ -30,6 +30,7 @@ import qrMenuRouter from './routes/qr_menu.routes';
 import { attendanceRouter } from './routes/attendance.routes';
 import { laundryAnalyticsRouter } from './routes/laundry_analytics.routes';
 import laundryCorePhase1Router from './routes/laundry_core_phase1.routes';
+import laundryCorePhase2Router from './routes/laundry_core_phase2.routes';
 import { laundryRouter } from './routes/laundry.routes';
 import {
   getPublicLaundryTracking,
@@ -132,6 +133,7 @@ app.use('/api/attendance', attendanceRouter);
 app.use('/api/qr-menu', qrMenuRouter);
 app.use('/api/laundry/analytics', laundryAnalyticsRouter);
 app.use('/api/laundry/core', laundryCorePhase1Router);
+app.use('/api/laundry/core2', laundryCorePhase2Router);
 app.use('/api/laundry', laundryRouter);
 app.use('/api/media', mediaRouter);
 

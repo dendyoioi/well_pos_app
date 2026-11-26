@@ -118,6 +118,9 @@ model Tenant {
   laundryLostAndFounds         LaundryLostAndFound[]
   laundryServiceOutletPrices   LaundryServiceOutletPrice[]
   laundryServicePriceHistories LaundryServicePriceHistory[]
+  laundryBatches               LaundryBatch[]
+  laundryBatchItems            LaundryBatchItem[]
+  laundryOrderItemTracks       LaundryOrderItemTrack[]
 
   @@map("tenants")
 }
@@ -278,6 +281,8 @@ model User {
   foundLostAndFoundItems       LaundryLostAndFound[]          @relation("LostAndFoundFoundBy")
   returnedLostAndFoundItems    LaundryLostAndFound[]          @relation("LostAndFoundReturnedBy")
   changedLaundryPriceHistories LaundryServicePriceHistory[]   @relation("LaundryPriceHistoryChangedBy")
+  operatedLaundryBatches       LaundryBatch[]                 @relation("LaundryBatchOperator")
+  handedOverLaundryItemTracks  LaundryOrderItemTrack[]        @relation("LaundryItemHandedOverBy")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -351,6 +356,8 @@ model Outlet {
   laundryLostAndFounds         LaundryLostAndFound[]
   laundryServiceOutletPrices   LaundryServiceOutletPrice[]
   laundryServicePriceHistories LaundryServicePriceHistory[]
+  laundryBatches               LaundryBatch[]
+  laundryOrderItemTracks       LaundryOrderItemTrack[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -918,6 +925,8 @@ model Order {
   laundryFeedback      LaundryCustomerFeedback?
   laundryIncidents     LaundryIncident[]
   lostAndFoundItems    LaundryLostAndFound[]
+  laundryBatchItems    LaundryBatchItem[]
+  laundryOrderItemTracks LaundryOrderItemTrack[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -1991,6 +2000,7 @@ model LaundryMachine {
   maintenanceLogs LaundryMachineMaintenanceLog[]
   stageLogs       LaundryStageLog[]
   incidents       LaundryIncident[]
+  laundryBatches  LaundryBatch[]
 
   @@unique([outletId, code])
   @@index([tenantId, outletId])
@@ -2337,4 +2347,86 @@ model LaundryServicePriceHistory {
   @@index([tenantId, laundryServiceId, createdAt])
   @@index([tenantId, outletId])
   @@map("laundry_service_price_histories")
+}
+
+model LaundryBatch {
+  id            String    @id @default(uuid())
+  tenantId      String    @map("tenant_id")
+  outletId      String    @map("outlet_id")
+  batchCode     String    @map("batch_code") // e.g. "BCH-261126-001"
+  stage         String    @default("WASHING") // 'WASHING' | 'DRYING'
+  machineId     String?   @map("machine_id")
+  machineName   String?   @map("machine_name")
+  colorGroup    String?   @map("color_group") // 'PUTIH' | 'WARNA' | 'GELAP' | 'CAMPUR' | 'DELICATE'
+  totalWeightKg Decimal   @default(0) @map("total_weight_kg") @db.Decimal(10, 3)
+  status        String    @default("OPEN") // 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  operatorId    String?   @map("operator_id")
+  operatorName  String?   @map("operator_name")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet   Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  machine  LaundryMachine? @relation(fields: [machineId], references: [id], onDelete: SetNull)
+  operator User?           @relation("LaundryBatchOperator", fields: [operatorId], references: [id], onDelete: SetNull)
+  items    LaundryBatchItem[]
+
+  @@unique([tenantId, batchCode])
+  @@index([tenantId, outletId, status, createdAt])
+  @@index([tenantId, machineId])
+  @@map("laundry_batches")
+}
+
+model LaundryBatchItem {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  batchId   String   @map("batch_id")
+  orderId   String   @map("order_id")
+  weightKg  Decimal  @default(0) @map("weight_kg") @db.Decimal(10, 3)
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  batch  LaundryBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  order  Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, orderId])
+  @@index([tenantId, orderId])
+  @@map("laundry_batch_items")
+}
+
+model LaundryOrderItemTrack {
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  outletId         String    @map("outlet_id")
+  orderId          String    @map("order_id")
+  tagCode          String    @map("tag_code") // e.g. "TAG-INV001-01"
+  garmentName      String    @map("garment_name") // e.g. "Jas Hitam", "Kemeja Putih Lengan Panjang"
+  category         String?   // 'ATASAN' | 'BAWAHAN' | 'JAS_GAUN' | 'BEDDING' | 'SEPATU_TAS' | 'LAINNYA'
+  color            String?
+  brand            String?
+  specialTreatment String?   @map("special_treatment") // e.g. "Dry Clean Only", "Setrika Uap Suhu Rendah"
+  currentStage     String    @default("TAGGED") @map("current_stage") // 'TAGGED' | 'WASHING' | 'DRYING' | 'IRONING' | 'PACKED' | 'READY' | 'HANDED_OVER'
+  rackCode         String?   @map("rack_code")
+  photoUrl         String?   @map("photo_url")
+  notes            String?   @db.Text
+  handedOverAt     DateTime? @map("handed_over_at")
+  handedOverById   String?   @map("handed_over_by_id")
+  handedOverByName String?   @map("handed_over_by_name")
+  receivedByName   String?   @map("received_by_name")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant       Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet       Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  handedOverBy User?   @relation("LaundryItemHandedOverBy", fields: [handedOverById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, tagCode])
+  @@index([tenantId, orderId])
+  @@index([tenantId, outletId, currentStage])
+  @@map("laundry_order_item_tracks")
 }

@@ -23,6 +23,8 @@ import {
   Loader2,
   ChevronDown,
   ShieldAlert,
+  Layers,
+  Tag,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api, authStorage } from '../services/api';
@@ -33,6 +35,10 @@ import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcode
 import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
 import { LaundryIncidentModal } from '../components/laundry/LaundryIncidentModal';
 import { LaundryIncidentManagementModal } from '../components/laundry/LaundryIncidentManagementModal';
+import { LaundryBatchBoardModal } from '../components/laundry/LaundryBatchBoardModal';
+import { LaundryTagScannerModal } from '../components/laundry/LaundryTagScannerModal';
+import { LaundryItemTrackingModal } from '../components/laundry/LaundryItemTrackingModal';
+import { SmartProductionQueuePanel } from '../components/laundry/SmartProductionQueuePanel';
 
 interface LaundryProductionViewProps {
   activeOutlet: Outlet | null;
@@ -58,6 +64,18 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   const [selectedOrderForIncident, setSelectedOrderForIncident] = useState<LaundryQueueOrder | null>(null);
   const [incidentModalOpen, setIncidentModalOpen] = useState(false);
   const [incidentManagementOpen, setIncidentManagementOpen] = useState(false);
+
+  // Core Phase 2 State
+  const [productionViewTab, setProductionViewTab] = useState<'STATION' | 'PRIORITY_QUEUE'>('STATION');
+  const [batchBoardModalOpen, setBatchBoardModalOpen] = useState(false);
+  const [tagScannerModalOpen, setTagScannerModalOpen] = useState(false);
+  const [itemTrackingModalOpen, setItemTrackingModalOpen] = useState(false);
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<{
+    id: string;
+    invoiceNumber: string;
+    customerName?: string;
+  } | null>(null);
+  const [selectedBatchOrderIds, setSelectedBatchOrderIds] = useState<string[]>([]);
 
   // Master Mesin (Washer / Dryer)
   const [machines, setMachines] = useState<LaundryMachine[]>([]);
@@ -371,6 +389,30 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             <span>Scan QR / Barcode Nota</span>
           </button>
 
+          {/* Core Phase 2: Batch Mesin & Scan Tag */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedBatchOrderIds([]);
+              setBatchBoardModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap"
+            title="Kelola & Jalankan Batch Mesin Cuci/Dryer"
+          >
+            <Layers className="w-4 h-4 text-sky-700" />
+            <span>Batch Mesin</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTagScannerModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 active:scale-95 whitespace-nowrap"
+            title="Pindai Tag QR/Barcode Satuan Pakaian"
+          >
+            <Tag className="w-4 h-4 text-blue-700" />
+            <span>Scan Tag</span>
+          </button>
+
           {canManageMachines && (
             <button
               type="button"
@@ -415,6 +457,49 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
           </div>
         </div>
       </div>
+
+      {/* Mode / Tab Switcher: Stasiun Workshop vs Prioritas SLA & Batch */}
+      <div className="flex border-b border-slate-200 bg-white px-5 rounded-2xl shadow-xs">
+        <button
+          type="button"
+          onClick={() => setProductionViewTab('STATION')}
+          className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            productionViewTab === 'STATION'
+              ? 'border-blue-900 text-blue-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Stasiun Workshop</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setProductionViewTab('PRIORITY_QUEUE')}
+          className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 ${
+            productionViewTab === 'PRIORITY_QUEUE'
+              ? 'border-blue-900 text-blue-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Prioritas SLA &amp; Batch</span>
+        </button>
+      </div>
+
+      {productionViewTab === 'PRIORITY_QUEUE' ? (
+        <SmartProductionQueuePanel
+          activeOutletId={activeOutlet?.id || ''}
+          onOpenBatchWithOrders={(orderIds) => {
+            setSelectedBatchOrderIds(orderIds);
+            setBatchBoardModalOpen(true);
+          }}
+          onOpenItemTracking={(order) => {
+            setSelectedOrderForTracking(order);
+            setItemTrackingModalOpen(true);
+          }}
+        />
+      ) : (
+        <>
 
       {/* Ringkasan Beban Kerja Antrean */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -870,6 +955,43 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
             );
           })}
         </div>
+      )}
+      </>
+      )}
+
+      {/* Modal Batch Mesin (Core Phase 2) */}
+      {batchBoardModalOpen && (
+        <LaundryBatchBoardModal
+          isOpen={batchBoardModalOpen}
+          onClose={() => setBatchBoardModalOpen(false)}
+          activeOutletId={activeOutlet?.id || ''}
+          preselectedOrderIds={selectedBatchOrderIds}
+          onBatchUpdated={() => fetchData()}
+        />
+      )}
+
+      {/* Modal Quick Tag Scanner (Core Phase 2) */}
+      {tagScannerModalOpen && (
+        <LaundryTagScannerModal
+          isOpen={tagScannerModalOpen}
+          onClose={() => setTagScannerModalOpen(false)}
+          onStageChanged={() => fetchData()}
+        />
+      )}
+
+      {/* Modal Item-Level Tracking (Core Phase 2) */}
+      {itemTrackingModalOpen && selectedOrderForTracking && (
+        <LaundryItemTrackingModal
+          isOpen={itemTrackingModalOpen}
+          onClose={() => {
+            setItemTrackingModalOpen(false);
+            setSelectedOrderForTracking(null);
+          }}
+          orderId={selectedOrderForTracking.id}
+          invoiceNumber={selectedOrderForTracking.invoiceNumber}
+          customerName={selectedOrderForTracking.customerName}
+          onUpdated={() => fetchData()}
+        />
       )}
 
       {/* Modal Form Sortir Pakaian */}

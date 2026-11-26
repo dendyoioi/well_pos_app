@@ -47,6 +47,17 @@ import type {
   LostAndFoundCategory,
   LostAndFoundStatus,
 } from '../types/laundry_core';
+import type {
+  LaundryBatchRecord,
+  LaundryBatchStage,
+  LaundryColorGroup,
+  LaundryTrackedItem,
+  LaundryOrderItemsResponse,
+  PartialHandoverResponse,
+  SmartProductionQueueResponse,
+  GarmentCategory,
+  TrackedItemStage,
+} from '../types/laundry_core2';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -4198,5 +4209,166 @@ export const laundryCoreApi = {
     return res.json();
   },
 };
+
+// ============================================================================
+// LAUNDRY CORE ENGINE — PHASE 2 WORKSHOP & TRACEABILITY API CLIENT
+// ============================================================================
+export const laundryCore2Api = {
+  // A. Laundry Batch Management
+  getBatches: async (params?: {
+    outletId?: string;
+    status?: string;
+    stage?: string;
+  }): Promise<{ status: string; data: LaundryBatchRecord[]; message?: string }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.stage) searchParams.append('stage', params.stage);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/laundry/core2/batches${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createBatch: async (payload: {
+    outletId: string;
+    stage: LaundryBatchStage;
+    machineId?: string | null;
+    colorGroup?: LaundryColorGroup | null;
+    orderIds: string[];
+    notes?: string | null;
+    autoStart?: boolean;
+  }): Promise<{ status: string; data: LaundryBatchRecord; message?: string }> => {
+    const res = await fetch('/api/laundry/core2/batches', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  updateBatchStatus: async (
+    batchId: string,
+    payload: {
+      status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+      notes?: string | null;
+    }
+  ): Promise<{ status: string; data: LaundryBatchRecord; message?: string }> => {
+    const res = await fetch(`/api/laundry/core2/batches/${batchId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // B. Item-Level Tracking & Quick Scan
+  getOrderItems: async (
+    orderId: string
+  ): Promise<{ status: string; data: LaundryOrderItemsResponse; message?: string }> => {
+    const res = await fetch(`/api/laundry/core2/orders/${orderId}/items`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  createOrderItems: async (
+    orderId: string,
+    items: Array<{
+      garmentName: string;
+      category?: GarmentCategory | null;
+      color?: string | null;
+      brand?: string | null;
+      specialTreatment?: string | null;
+      photoUrl?: string | null;
+      notes?: string | null;
+    }>
+  ): Promise<{ status: string; data: LaundryTrackedItem[]; message?: string }> => {
+    const res = await fetch(`/api/laundry/core2/orders/${orderId}/items`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify({ items }),
+    });
+    return res.json();
+  },
+
+  scanItemByTag: async (
+    tagCode: string
+  ): Promise<{ status: string; data: LaundryTrackedItem; message?: string }> => {
+    const res = await fetch(`/api/laundry/core2/items/scan/${encodeURIComponent(tagCode)}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateItem: async (
+    itemId: string,
+    payload: {
+      currentStage?: TrackedItemStage;
+      rackCode?: string | null;
+      specialTreatment?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{ status: string; data: LaundryTrackedItem; message?: string }> => {
+    const res = await fetch(`/api/laundry/core2/items/${itemId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // C. Split Order & Partial Handover
+  partialHandover: async (
+    orderId: string,
+    payload: {
+      itemIds: string[];
+      receivedByName: string;
+      notes?: string | null;
+    }
+  ): Promise<{ status: string; data: PartialHandoverResponse; message?: string }> => {
+    const res = await fetch(`/api/laundry/core2/orders/${orderId}/partial-handover`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  // D. Smart Production Queue
+  getProductionQueue: async (params?: {
+    outletId?: string;
+    stage?: string;
+  }): Promise<SmartProductionQueueResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.stage) searchParams.append('stage', params.stage);
+    const queryString = searchParams.toString();
+    const res = await fetch(
+      `/api/laundry/core2/production-queue${queryString ? `?${queryString}` : ''}`,
+      {
+        headers: authHeader(),
+      }
+    );
+    return res.json();
+  },
+};
+
 
 

@@ -21,6 +21,7 @@ import {
   RotateCcw,
   ShieldAlert,
   PackageSearch,
+  Tag,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
@@ -35,6 +36,8 @@ import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
 import { LaundryIncidentModal } from '../components/laundry/LaundryIncidentModal';
 import { LaundryQcAndWeightModal } from '../components/laundry/LaundryQcAndWeightModal';
 import { LaundryLostAndFoundDrawer } from '../components/laundry/LaundryLostAndFoundDrawer';
+import { LaundryTagScannerModal } from '../components/laundry/LaundryTagScannerModal';
+import { LaundryItemTrackingModal } from '../components/laundry/LaundryItemTrackingModal';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -103,6 +106,15 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
 
   // State Drawer Lost & Found (Core Phase 1)
   const [lostAndFoundOpen, setLostAndFoundOpen] = useState(false);
+
+  // State Core Phase 2 (Item Tracking & Scan)
+  const [tagScannerOpen, setTagScannerOpen] = useState(false);
+  const [itemTrackingModalOpen, setItemTrackingModalOpen] = useState(false);
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<{
+    id: string;
+    invoiceNumber: string;
+    customerName?: string;
+  } | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -341,6 +353,17 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           >
             <QrCode className="w-4 h-4 text-blue-200" />
             <span>Scan Nota</span>
+          </button>
+
+          {/* Core Phase 2: Scan Tag Pakaian */}
+          <button
+            type="button"
+            onClick={() => setTagScannerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-extrabold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Pindai QR / Barcode Tag Pakaian Satuan"
+          >
+            <Tag className="w-4 h-4 text-sky-700" />
+            <span>Scan Tag</span>
           </button>
 
           <button
@@ -736,6 +759,24 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                             <span>QC &amp; Berat Final</span>
                           </button>
 
+                          {/* Tombol Item & Tag (Core Phase 2) with Touch Target >= 44px */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrderForTracking({
+                                id: item.orderId,
+                                invoiceNumber: item.invoiceNumber,
+                                customerName: item.customerName,
+                              });
+                              setItemTrackingModalOpen(true);
+                            }}
+                            className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-sky-50 hover:bg-sky-100 text-sky-900 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-sky-200 transition-all cursor-pointer active:scale-95"
+                            title="Item-Level Tracking Pakaian & Serah Terima Sebagian"
+                          >
+                            <Tag className="w-3.5 h-3.5 text-sky-700" />
+                            <span>Item &amp; Tag</span>
+                          </button>
+
                           {/* Tombol Cuci Ulang Garansi (Khusus Status Siap Ambil / Selesai) with Touch Target >= 44px */}
                           {(item.status === 'READY_FOR_PICKUP' || item.status === 'COMPLETED') && (
                             <button
@@ -1050,6 +1091,30 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           onClose={() => setLostAndFoundOpen(false)}
           activeOutletId={activeOutlet.id}
           activeOutletName={activeOutlet.name}
+        />
+      )}
+
+      {/* Modal Quick Tag Scanner (Core Phase 2) */}
+      {tagScannerOpen && (
+        <LaundryTagScannerModal
+          isOpen={tagScannerOpen}
+          onClose={() => setTagScannerOpen(false)}
+          onStageChanged={() => fetchOrders()}
+        />
+      )}
+
+      {/* Modal Item-Level Tracking (Core Phase 2) */}
+      {itemTrackingModalOpen && selectedOrderForTracking && (
+        <LaundryItemTrackingModal
+          isOpen={itemTrackingModalOpen}
+          onClose={() => {
+            setItemTrackingModalOpen(false);
+            setSelectedOrderForTracking(null);
+          }}
+          orderId={selectedOrderForTracking.id}
+          invoiceNumber={selectedOrderForTracking.invoiceNumber}
+          customerName={selectedOrderForTracking.customerName}
+          onUpdated={() => fetchOrders()}
         />
       )}
 

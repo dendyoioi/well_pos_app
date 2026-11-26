@@ -1162,6 +1162,83 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
         ON "laundry_service_price_histories"("tenant_id", "outlet_id");
     `,
   },
+  {
+    id: '20261126_02_laundry_core_phase2_workshop',
+    description: 'Menambahkan laundry_batches, laundry_batch_items, dan laundry_order_item_tracks (Laundry Core Phase 2 Workshop Efficiency & Traceability)',
+    sql: `
+      CREATE TABLE IF NOT EXISTS "laundry_batches" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "batch_code" TEXT NOT NULL,
+        "stage" TEXT NOT NULL DEFAULT 'WASHING',
+        "machine_id" TEXT REFERENCES "laundry_machines"("id") ON DELETE SET NULL,
+        "machine_name" TEXT,
+        "color_group" TEXT,
+        "total_weight_kg" NUMERIC(10,3) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'OPEN',
+        "operator_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "operator_name" TEXT,
+        "started_at" TIMESTAMPTZ,
+        "completed_at" TIMESTAMPTZ,
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_batches_tenant_id_batch_code_key"
+        ON "laundry_batches"("tenant_id", "batch_code");
+      CREATE INDEX IF NOT EXISTS "laundry_batches_tenant_id_outlet_id_status_created_at_idx"
+        ON "laundry_batches"("tenant_id", "outlet_id", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "laundry_batches_tenant_id_machine_id_idx"
+        ON "laundry_batches"("tenant_id", "machine_id");
+
+      CREATE TABLE IF NOT EXISTS "laundry_batch_items" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "batch_id" TEXT NOT NULL REFERENCES "laundry_batches"("id") ON DELETE CASCADE,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+        "weight_kg" NUMERIC(10,3) NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_batch_items_batch_id_order_id_key"
+        ON "laundry_batch_items"("batch_id", "order_id");
+      CREATE INDEX IF NOT EXISTS "laundry_batch_items_tenant_id_order_id_idx"
+        ON "laundry_batch_items"("tenant_id", "order_id");
+
+      CREATE TABLE IF NOT EXISTS "laundry_order_item_tracks" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "order_id" TEXT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+        "tag_code" TEXT NOT NULL,
+        "garment_name" TEXT NOT NULL,
+        "category" TEXT,
+        "color" TEXT,
+        "brand" TEXT,
+        "special_treatment" TEXT,
+        "current_stage" TEXT NOT NULL DEFAULT 'TAGGED',
+        "rack_code" TEXT,
+        "photo_url" TEXT,
+        "notes" TEXT,
+        "handed_over_at" TIMESTAMPTZ,
+        "handed_over_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "handed_over_by_name" TEXT,
+        "received_by_name" TEXT,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_order_item_tracks_tenant_id_tag_code_key"
+        ON "laundry_order_item_tracks"("tenant_id", "tag_code");
+      CREATE INDEX IF NOT EXISTS "laundry_order_item_tracks_tenant_id_order_id_idx"
+        ON "laundry_order_item_tracks"("tenant_id", "order_id");
+      CREATE INDEX IF NOT EXISTS "laundry_order_item_tracks_tenant_id_outlet_id_current_stage_idx"
+        ON "laundry_order_item_tracks"("tenant_id", "outlet_id", "current_stage");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;
