@@ -48,6 +48,7 @@ import { BackofficeLayout } from '../components/saas/BackofficeLayout';
 import { BusinessSummaryView } from '../components/saas/BusinessSummaryView';
 import { PwaInstallButton } from '../components/PwaInstallBanner';
 import { ThermalPrinterModal } from '../components/pos/ThermalPrinterModal';
+import { QuotaAlertBanner } from '../components/saas/QuotaAlertBanner';
 import { api } from '../services/api';
 import { checkIsLaundry } from '../utils/businessType';
 import type { QrLiveOrder } from '../types/qr_menu';
@@ -1864,6 +1865,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
         )}
 
+        {/* Banner peringatan kuota non-teknis untuk CASHIER (muncul di area konten utama) */}
+        <QuotaAlertBanner user={user} />
+
         <Suspense fallback={<ViewTabFallback />}>
           {activeTab === 'pos' ? (
             isLaundryMode ? (
@@ -1873,6 +1877,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 currentUser={user}
                 onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
                 onLogout={onLogout}
+                onOpenMobileMenu={() => setMobileMenuOpen(true)}
+                onOpenPrinterModal={() => setBluetoothModalOpen(true)}
               />
             ) : (
               <PosTerminalView

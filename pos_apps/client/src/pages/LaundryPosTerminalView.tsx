@@ -42,6 +42,7 @@ import {
   CloudUpload,
   RefreshCw,
   Sliders,
+  Menu,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import type {
@@ -55,6 +56,7 @@ import type {
 import type { Shift } from '../types/shift';
 import type { Promotion } from '../types/promotion';
 import { api, customerApi, attendanceApi } from '../services/api';
+import { useDialog } from '../context/DialogContext';
 import { WhatsAppInput, CurrencyInput } from '../components/ui';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
 import { CustomerPreferenceBadges } from '../components/laundry/CustomerPreferenceBadges';
@@ -81,6 +83,8 @@ interface LaundryPosTerminalViewProps {
   currentUser: any;
   onNavigateTab: (tab: string) => void;
   onLogout: () => void;
+  onOpenMobileMenu?: () => void;
+  onOpenPrinterModal?: () => void;
 }
 
 interface CartItem {
@@ -121,7 +125,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   currentUser,
   onNavigateTab,
   onLogout,
+  onOpenMobileMenu,
+  onOpenPrinterModal,
 }) => {
+  const dialog = useDialog();
   const [services, setServices] = useState<LaundryService[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
@@ -986,10 +993,26 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   ]);
 
   // Transaksi Baru (Reset Form & Keranjang)
-  const handleNewTransaction = () => {
-    if (cartItems.length > 0) {
-      if (!window.confirm('Kosongkan keranjang kasir dan mulai transaksi baru?')) return;
+  const handleNewTransaction = async () => {
+    // 1. Jika shift kasir belum dibuka: peringatkan dan langsung buka StartShiftModal
+    if (!currentShift) {
+      dialog.toast('Buka shift kasir terlebih dahulu untuk memulai transaksi baru!', 'error');
+      setStartShiftModalOpen(true);
+      return;
     }
+
+    // 2. Jika keranjang terisi atau data pelanggan sudah diinput: minta konfirmasi
+    if (cartItems.length > 0 || isCustomerFilled) {
+      const ok = await dialog.confirm({
+        title: 'Mulai Transaksi Baru',
+        message: 'Kosongkan keranjang kasir dan mulai transaksi baru?',
+        confirmText: 'Ya, Mulai Baru',
+        cancelText: 'Batal',
+        variant: 'warning',
+      });
+      if (!ok) return;
+    }
+
     setCartItems([]);
     handleResetCustomer();
     setCashReceived('');
@@ -1003,6 +1026,13 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     setDeliveryType('NONE');
     setDeliveryAddress('');
     setDeliveryNotes('');
+
+    // 3. Setelah reset: tutup mobile sheet jika terbuka, buka Modal Cari Pelanggan, dan beri feedback toast
+    if (mobileCartSheetOpen) {
+      setMobileCartSheetOpen(false);
+    }
+    setCustomerSearchModalOpen(true);
+    dialog.toast('Transaksi baru siap — pilih atau masukkan nama pelanggan', 'info');
   };
 
   // Listener Shortcut Keyboard Kasir (F1: Transaksi Baru, F2: Cari Member / Selesaikan Transaksi, F8: X-Report, F9: Tutup Shift, Esc: Tutup Modal)
@@ -1444,37 +1474,41 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   className="px-2.5 py-1 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
                 >
                   <Search className="w-3 h-3" />
-                  <span>Pilih (F2)</span>
+                  <span>
+                    Pilih<span className="hidden lg:inline"> (F2)</span>
+                  </span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Daftar Item di Keranjang */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2.5">
-            <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-              <span className="text-xs font-bold text-slate-700">
-                Item Cucian ({cartItems.length})
-              </span>
-              {cartItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setCartItems([])}
-                  className="text-[11px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Kosongkan
-                </button>
-              )}
-            </div>
-
-            {cartItems.length === 0 ? (
-              <div className="py-16 text-center text-slate-400 text-xs space-y-1">
-                <Shirt className="w-8 h-8 mx-auto text-slate-300" />
-                <p className="font-semibold text-slate-600">Keranjang Masih Kosong</p>
-                <p className="text-[11px]">Klik salah satu layanan di sebelah kiri untuk mulai menimbang atau memasukkan cucian.</p>
+          {/* Wrapper Scrollable Terpadu: Item Cucian + Moda Antar-Jemput + Pembayaran */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-200">
+            {/* Bagian 1: Daftar Item di Keranjang */}
+            <div className="p-3 space-y-2.5 bg-slate-50/60">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                <span className="text-xs font-bold text-slate-700">
+                  Item Cucian ({cartItems.length})
+                </span>
+                {cartItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCartItems([])}
+                    className="text-[11px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Kosongkan
+                  </button>
+                )}
               </div>
-            ) : (
+
+              {cartItems.length === 0 ? (
+                <div className="py-6 sm:py-8 text-center text-slate-400 text-xs space-y-1">
+                  <Shirt className="w-7 h-7 mx-auto text-slate-300" />
+                  <p className="font-semibold text-slate-600">Keranjang Masih Kosong</p>
+                  <p className="text-[11px]">Klik salah satu layanan di sebelah kiri untuk mulai menimbang atau memasukkan cucian.</p>
+                </div>
+              ) : (
               cartItems.map((item) => (
                 <div
                   key={item.id}
@@ -1540,8 +1574,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
             )}
           </div>
 
-          {/* Ringkasan Finansial & Opsi Pembayaran */}
-          <div className="bg-white border-t border-slate-200 p-3 space-y-2.5 shadow-lg shrink-0">
+          {/* Bagian 2: Ringkasan Finansial, Moda Antar-Jemput & Opsi Pembayaran */}
+          <div className="bg-white p-3 space-y-2.5">
             {/* Info Estimasi Selesai */}
             {cartItems.length > 0 && (
               <div className="p-2 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs text-blue-950">
@@ -1832,13 +1866,19 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         <p className="text-[10.5px] text-amber-700 leading-tight">
                           Unggah foto/gambar QRIS toko pada menu Pengaturan Pembayaran agar pelanggan bisa scan QRIS di kasir.
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => onNavigateTab('settings_payment')}
-                          className="mt-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          Buka Pengaturan Pembayaran
-                        </button>
+                        {currentUser?.role && ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role) ? (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateTab('settings_payment')}
+                            className="mt-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Buka Pengaturan Pembayaran
+                          </button>
+                        ) : (
+                          <p className="text-[10px] text-amber-600 font-semibold mt-0.5">
+                            Minta Owner/Admin mengunggah QRIS toko di Pengaturan Pembayaran.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2094,8 +2134,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               )}
             </div>
           </div>
+        </div>
 
-          {/* Sticky Action Footer: Ringkasan Total Tagihan & Tombol Terima Cucian (F2) */}
+        {/* Sticky Action Footer: Ringkasan Total Tagihan & Tombol Terima Cucian (F2) */}
           <div className="shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4 space-y-2 shadow-lg pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             {/* Subtotal & Grand Total */}
             <div className="space-y-1">
@@ -2143,7 +2184,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
             {/* Tombol Eksekusi Bayar / Simpan Order (F2) */}
             <div className="pt-1 flex items-center justify-between gap-2">
-              <div className="text-[10px] text-slate-400 font-semibold leading-tight">
+              <div className="hidden lg:block text-[10px] text-slate-400 font-semibold leading-tight">
                 <span>Shortcut F2:</span>
                 <span className="block text-slate-600">Simpan &amp; Cetak</span>
               </div>
@@ -2152,9 +2193,17 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 type="button"
                 disabled={processingOrder || cartItems.length === 0}
                 onClick={handleProcessOrder}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-900/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                className="w-full lg:w-auto px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-900/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <span>{processingOrder ? 'Memproses...' : 'Terima Cucian & Struk (F2)'}</span>
+                <span>
+                  {processingOrder ? (
+                    'Memproses...'
+                  ) : (
+                    <>
+                      Terima Cucian &amp; Struk<span className="hidden lg:inline"> (F2)</span>
+                    </>
+                  )}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -2163,62 +2212,97 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   );
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-68px)] lg:h-[calc(100vh-68px)] bg-slate-100 font-sans text-slate-800 pb-20 lg:pb-0">
+    <div className="flex flex-col min-h-[100dvh] md:min-h-[calc(100dvh-68px)] lg:h-[calc(100dvh-68px)] bg-slate-100 font-sans text-slate-800 pb-20 lg:pb-0">
       {/* 1. Header Toolbar Terminal Kasir Laundry */}
-      <header className="bg-white border-b border-slate-200 px-4 py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shadow-xs shrink-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-            <Shirt className="w-5 h-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                Kasir Laundry &amp; Cuci Kiloan
-              </h1>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
-                SmartKasir Mode
-              </span>
+      <header className="bg-white border-b border-slate-200 px-3 py-2 lg:px-4 lg:py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 lg:gap-3 shadow-xs shrink-0">
+        {/* Baris atas: Hamburger (mobile < md CASHIER) + Ikon + Judul + Status Shift (mobile) */}
+        <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Hamburger Menu — hanya tampil di mobile (< md) jika prop onOpenMobileMenu tersedia (role CASHIER) */}
+            {onOpenMobileMenu && (
+              <button
+                type="button"
+                onClick={onOpenMobileMenu}
+                className="md:hidden p-1.5 rounded-xl bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100 transition-all shrink-0 cursor-pointer shadow-xs"
+                title="Buka Menu Navigasi"
+                aria-label="Buka Menu Navigasi"
+              >
+                <Menu className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            )}
+            <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+              <Shirt className="w-4 h-4 lg:w-5 lg:h-5" />
             </div>
-            <p className="text-xs text-slate-500">
-              {activeOutlet?.name || 'Toko Aktif'} • Kasir: <span className="font-semibold text-slate-700">{currentUser?.name}</span>
-            </p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-sm lg:text-base font-black text-slate-900 tracking-tight truncate">
+                  Kasir Laundry
+                </h1>
+                <span className="hidden lg:inline text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
+                  SmartKasir Mode
+                </span>
+              </div>
+              <p className="text-[10px] lg:text-xs text-slate-500 truncate">
+                {activeOutlet?.name || 'Toko Aktif'} • <span className="font-semibold text-slate-700">{currentUser?.name}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Status Shift ringkas di baris atas mobile (< lg) */}
+          <div className="lg:hidden shrink-0">
+            {!currentShift ? (
+              <button
+                type="button"
+                onClick={() => setStartShiftModalOpen(true)}
+                className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black transition-all flex items-center gap-1 shadow-xs cursor-pointer active:scale-95 animate-pulse whitespace-nowrap"
+                title="Buka Shift Kasir Baru"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Buka Shift</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-black whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Shift Aktif</span>
+              </span>
+            )}
           </div>
         </div>
 
         {/* Action Buttons Toolbar */}
-        <div className="flex items-center gap-1.5 flex-wrap w-full lg:w-auto shrink-0">
+        <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto scrollbar-none pb-0.5 w-full lg:w-auto lg:flex-wrap lg:overflow-visible lg:pb-0 shrink-0">
           {/* Shift Controls (Pilar 1) */}
           {!currentShift ? (
             <button
               type="button"
               onClick={() => setStartShiftModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 animate-pulse"
+              className="hidden lg:flex px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition-all items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 animate-pulse shrink-0 whitespace-nowrap"
               title="Buka Shift Kasir Baru"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Buka Shift</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1.5">
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black whitespace-nowrap">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Shift Aktif</span>
               </span>
               <button
                 type="button"
                 onClick={() => setXReportModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
                 title="X-Report Laporan Berjalan Kasir (F8)"
               >
                 <FileText className="w-3.5 h-3.5 text-blue-700" />
-                <span className="hidden sm:inline">X-Report (F8)</span>
+                <span className="hidden sm:inline">X-Report<span className="hidden lg:inline"> (F8)</span></span>
                 <span className="sm:hidden">X-Rep</span>
               </button>
               {canCashOut && (
                 <button
                   type="button"
                   onClick={() => setCashExpenseModalOpen(true)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
                   title="Catat Kas Keluar / Kas Masuk Operasional"
                 >
                   <ArrowUpRight className="w-3.5 h-3.5 text-amber-700" />
@@ -2229,11 +2313,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               <button
                 type="button"
                 onClick={handleOpenCloseShift}
-                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
                 title="Tutup Shift Kasir & Cetak Z-Report (F9)"
               >
                 <Square className="w-3.5 h-3.5 text-rose-700" />
-                <span className="hidden sm:inline">Tutup Shift (F9)</span>
+                <span className="hidden sm:inline">Tutup Shift<span className="hidden lg:inline"> (F9)</span></span>
                 <span className="sm:hidden">Tutup</span>
               </button>
             </div>
@@ -2243,7 +2327,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           <button
             type="button"
             onClick={() => setStaffAttendanceModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
             title="Absensi Staf Kasir (Clock-In / Clock-Out)"
           >
             <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
@@ -2254,17 +2338,17 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           <button
             type="button"
             onClick={handleNewTransaction}
-            className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+            className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
             title="Mulai Transaksi Baru (F1)"
           >
             <FilePlus2 className="w-3.5 h-3.5" />
-            <span>Transaksi Baru (F1)</span>
+            <span>Transaksi Baru<span className="hidden lg:inline"> (F1)</span></span>
           </button>
 
           <button
             type="button"
             onClick={() => onNavigateTab('laundry_queue')}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
           >
             <Layers className="w-3.5 h-3.5 text-blue-700" />
             <span>Antrean Live</span>
@@ -2272,7 +2356,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           <button
             type="button"
             onClick={() => onNavigateTab('laundry_racks')}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
           >
             <Archive className="w-3.5 h-3.5 text-emerald-700" />
             <span>Rak Simpan</span>
@@ -2280,16 +2364,31 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           <button
             type="button"
             onClick={() => onNavigateTab('laundry_transfers')}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-900 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
           >
             <Truck className="w-3.5 h-3.5 text-indigo-700" />
             <span>Delivery</span>
           </button>
           <button
             type="button"
-            onClick={() => onNavigateTab('settings_receipt')}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            title="Format Struk Thermal"
+            onClick={() => {
+              if (currentUser?.role === 'CASHIER' || onOpenPrinterModal) {
+                onOpenPrinterModal?.();
+              } else {
+                onNavigateTab('settings_receipt');
+              }
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+            title={
+              currentUser?.role === 'CASHIER' || onOpenPrinterModal
+                ? 'Pengaturan Printer Thermal'
+                : 'Format Struk Thermal'
+            }
+            aria-label={
+              currentUser?.role === 'CASHIER' || onOpenPrinterModal
+                ? 'Pengaturan Printer Thermal'
+                : 'Format Struk Thermal'
+            }
           >
             <Printer className="w-3.5 h-3.5" />
           </button>
@@ -2385,34 +2484,36 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           <div className="flex-1 p-3 pb-28 lg:pb-3 overflow-y-auto">
             {/* Customer-First Guardrail Banner */}
             {!isCustomerFilled && (
-              <div className="mb-3.5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300/80 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 animate-fadeIn">
-                <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                    <Lock className="w-4 h-4 text-amber-900" />
+              <div className="mb-2.5 sm:mb-3.5 p-2.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300/80 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-3 animate-fadeIn">
+                <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center shrink-0">
+                    <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-900" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
                         Input Pelanggan
                       </span>
-                      <h4 className="text-xs sm:text-sm font-black text-amber-950">
-                        Tentukan Nama Pelanggan Sebelum Memilih Layanan
+                      <h4 className="text-xs sm:text-sm font-black text-amber-950 leading-tight">
+                        Tentukan Nama Pelanggan Dahulu
                       </h4>
                     </div>
-                    <p className="text-[11px] sm:text-xs text-amber-900/90 mt-1 leading-relaxed">
+                    <p className="text-[11px] sm:text-xs text-amber-900/90 mt-0.5 leading-snug line-clamp-1 sm:line-clamp-none">
                       Pilih nama pelanggan terlebih dahulu agar nota, berat timbangan, dan riwayat pesanan tercatat dengan benar.
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto shrink-0 pt-1 lg:pt-0 border-t border-amber-200/60 lg:border-t-0">
+                <div className="grid grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto shrink-0 pt-1.5 lg:pt-0 border-t border-amber-200/60 lg:border-t-0">
                   <button
                     type="button"
                     onClick={() => setCustomerSearchModalOpen(true)}
                     className="h-9 px-3.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                   >
                     <Search className="w-3.5 h-3.5" />
-                    <span>Cari (F2)</span>
+                    <span>
+                      Cari<span className="hidden lg:inline"> (F2)</span>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -2979,8 +3080,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
             {/* Search Input Bar & Quick Add Trigger */}
             <div className="p-4 border-b border-slate-100 space-y-2.5 shrink-0 bg-white">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative w-full sm:flex-1">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -2994,7 +3095,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         handleSelectWalkIn(memberSearchQuery.trim());
                       }
                     }}
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-semibold shadow-2xs"
+                    className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 rounded-xl border border-slate-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900 font-semibold shadow-2xs"
                   />
                   {memberSearchQuery && (
                     <button
@@ -3010,11 +3111,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSelectWalkIn(memberSearchQuery.trim())}
-                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 shadow-xs"
+                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1 shadow-xs max-w-full"
                     title="Gunakan langsung nama ini"
                   >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Gunakan &quot;{memberSearchQuery.trim()}&quot;</span>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Gunakan &quot;{memberSearchQuery.trim()}&quot;</span>
                   </button>
                 )}
                 <button
@@ -3023,7 +3124,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     setCustomerSearchModalOpen(false);
                     setQuickAddModalOpen(true);
                   }}
-                  className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 text-blue-800" />
                   <span>Member Baru</span>
@@ -3910,7 +4011,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* Floating Feedback Toast */}
       {feedbackToast && (
         <div
-          className={`fixed bottom-24 lg:bottom-6 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
+          className={`fixed bottom-24 lg:bottom-6 inset-x-3 sm:inset-x-auto sm:right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
             feedbackToast.type === 'success'
               ? 'bg-emerald-950 text-emerald-100 border-emerald-700'
               : 'bg-rose-950 text-rose-100 border-rose-700'
