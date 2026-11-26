@@ -417,7 +417,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       </div>
 
       {/* SLA Instant Filter Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap pb-1">
         <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0">
           <Clock className="w-3.5 h-3.5" />
           <span>Filter SLA:</span>
@@ -480,7 +480,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       </div>
 
       {/* Mobile Stage Selector Pill Tabs (< md) */}
-      <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none flex-nowrap">
         {PIPELINE_COLUMNS.map((col) => {
           const count = filteredOrders.filter((i) => i.status === col.key).length;
           const isActive = mobileActiveStage === col.key;
@@ -489,7 +489,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
               key={col.key}
               type="button"
               onClick={() => setMobileActiveStage(col.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                 isActive
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
@@ -514,14 +514,14 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           Memuat antrean cucian aktif...
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row md:overflow-x-auto md:snap-x 2xl:grid 2xl:grid-cols-5 gap-3.5 items-start pb-3 2xl:pb-0 2xl:overflow-visible">
+        <div className="flex flex-col md:flex-row md:overflow-x-auto md:snap-x 2xl:grid 2xl:grid-cols-5 gap-3.5 items-start pb-3 2xl:pb-0 2xl:overflow-visible w-full">
           {PIPELINE_COLUMNS.map((col) => {
             const colItems = filteredOrders.filter((i) => i.status === col.key);
 
             return (
               <div
                 key={col.key}
-                className={`bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[440px] md:min-w-[270px] xl:min-w-[250px] md:snap-start flex-1 ${
+                className={`bg-slate-50/80 rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[440px] w-full md:w-auto md:min-w-[270px] xl:min-w-[250px] md:snap-start flex-1 ${
                   mobileActiveStage === col.key ? 'flex' : 'hidden md:flex'
                 }`}
               >

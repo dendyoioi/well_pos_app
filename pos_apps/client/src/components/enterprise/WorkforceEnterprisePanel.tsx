@@ -598,38 +598,38 @@ export const WorkforceEnterprisePanel: React.FC<WorkforceEnterprisePanelProps> =
 
       {/* Sub-tab Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap">
           <button
             onClick={() => setActiveTab('OVERTIME')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'OVERTIME'
                 ? 'bg-blue-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <Clock className="w-4 h-4" />
+            <Clock className="w-4 h-4 shrink-0" />
             <span>Lembur (Overtime)</span>
           </button>
           <button
             onClick={() => setActiveTab('LEAVE')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'LEAVE'
                 ? 'bg-blue-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-4 h-4 shrink-0" />
             <span>Cuti & Izin</span>
           </button>
           <button
             onClick={() => setActiveTab('PAYROLL')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'PAYROLL'
                 ? 'bg-blue-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <Banknote className="w-4 h-4" />
+            <Banknote className="w-4 h-4 shrink-0" />
             <span>Rekap Slip Gaji (Payroll)</span>
           </button>
         </div>

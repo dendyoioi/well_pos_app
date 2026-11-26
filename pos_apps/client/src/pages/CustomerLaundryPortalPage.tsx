@@ -432,43 +432,43 @@ export const CustomerLaundryPortalPage: React.FC<CustomerLaundryPortalPageProps>
             </div>
 
             {/* TAB NAVIGATOR */}
-            <div className="flex border-b border-slate-200 bg-white rounded-xl p-1 shadow-sm gap-1">
+            <div className="flex border-b border-slate-200 bg-white rounded-xl p-1 shadow-sm gap-1 overflow-x-auto scrollbar-none flex-nowrap">
               <button
                 type="button"
                 onClick={() => setActiveTab('overview')}
-                className={`flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap shrink-0 flex items-center justify-center gap-2 cursor-pointer ${
                   activeTab === 'overview'
                     ? 'bg-blue-900 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Wallet className="w-4 h-4" />
+                <Wallet className="w-4 h-4 shrink-0" />
                 <span>Ringkasan &amp; Saldo</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('pickup')}
-                className={`flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap shrink-0 flex items-center justify-center gap-2 cursor-pointer ${
                   activeTab === 'pickup'
                     ? 'bg-blue-900 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Truck className="w-4 h-4" />
+                <Truck className="w-4 h-4 shrink-0" />
                 <span>Jemput Cucian</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('services')}
-                className={`flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap shrink-0 flex items-center justify-center gap-2 cursor-pointer ${
                   activeTab === 'services'
                     ? 'bg-blue-900 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Package className="w-4 h-4" />
+                <Package className="w-4 h-4 shrink-0" />
                 <span>Tarif Layanan</span>
               </button>
             </div>

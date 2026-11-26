@@ -347,29 +347,29 @@ export const DriverAssignmentBoardPanel: React.FC<DriverAssignmentBoardPanelProp
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Subtab Buttons */}
-          <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+          <div className="flex bg-slate-100 p-1 rounded-xl gap-1 overflow-x-auto scrollbar-none flex-nowrap">
             <button
               type="button"
               onClick={() => setSubTab('pickups')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap shrink-0 flex items-center gap-2 cursor-pointer ${
                 subTab === 'pickups'
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Truck className="w-4 h-4" />
+              <Truck className="w-4 h-4 shrink-0" />
               <span>Permintaan Jemput ({boardData?.pickupTasks?.length || 0})</span>
             </button>
             <button
               type="button"
               onClick={() => setSubTab('deliveries')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap shrink-0 flex items-center gap-2 cursor-pointer ${
                 subTab === 'deliveries'
                   ? 'bg-blue-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Package className="w-4 h-4" />
+              <Package className="w-4 h-4 shrink-0" />
               <span>Antar Pesanan ({boardData?.deliveryTasks?.length || 0})</span>
             </button>
           </div>

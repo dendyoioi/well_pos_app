@@ -430,7 +430,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   }, [report?.staff, currentPage, pageSize]);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* 1. Header View */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -483,11 +483,11 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
       </div>
 
       {/* Navigation Tabs (Komisi Staf & Kurir vs Kasbon Karyawan) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 no-print">
+      <div className="flex items-center gap-2 border-b border-slate-200 no-print overflow-x-auto scrollbar-none flex-nowrap">
         <button
           type="button"
           onClick={() => setActiveMainTab('COMMISSION')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeMainTab === 'COMMISSION'
               ? 'border-blue-900 text-blue-900 font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -499,7 +499,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveMainTab('CASH_ADVANCE')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeMainTab === 'CASH_ADVANCE'
               ? 'border-blue-900 text-blue-900 font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -518,7 +518,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveMainTab('PERFORMANCE')}
-            className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
               activeMainTab === 'PERFORMANCE'
                 ? 'border-blue-900 text-blue-900 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -532,7 +532,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveMainTab('WORKFORCE')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-2 ${
             activeMainTab === 'WORKFORCE'
               ? 'border-blue-900 text-blue-900 font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-800'

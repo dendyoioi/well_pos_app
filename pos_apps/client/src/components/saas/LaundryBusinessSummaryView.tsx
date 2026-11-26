@@ -453,7 +453,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
 
           {/* Period Filter Bar */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 overflow-x-auto max-w-full">
+            <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 overflow-x-auto max-w-full scrollbar-none flex-nowrap">
               {(['today', '7days', 'month', 'year', 'custom'] as PeriodPreset[]).map((p) => {
                 const label = p === 'today' ? 'Hari Ini' : p === '7days' ? '7 Hari' : p === 'month' ? 'Bulan Ini' : p === 'year' ? 'Tahun Ini' : 'Kustom';
                 const isActive = periodPreset === p;
@@ -461,7 +461,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
                   <button
                     key={p}
                     onClick={() => setPeriodPreset(p)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                       isActive ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1447,7 +1447,7 @@ export const LaundryBusinessSummaryView: React.FC<LaundryBusinessSummaryViewProp
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-28 sm:pb-16 font-sans">
       {effectiveRole === 'OWNER' && renderOwnerDashboard()}
       {effectiveRole === 'CASHIER' && renderCashierDashboard()}
       {effectiveRole === 'PRODUCTION' && renderProductionDashboard()}

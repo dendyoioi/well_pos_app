@@ -1451,7 +1451,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           </div>
 
           {/* Daftar Item di Keranjang */}
-          <div className="flex-1 p-3 overflow-y-auto space-y-2">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2.5">
             <div className="flex items-center justify-between pb-1 border-b border-slate-200">
               <span className="text-xs font-bold text-slate-700">
                 Item Cucian ({cartItems.length})
@@ -2093,9 +2093,12 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 </div>
               )}
             </div>
+          </div>
 
+          {/* Sticky Action Footer: Ringkasan Total Tagihan & Tombol Terima Cucian (F2) */}
+          <div className="shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4 space-y-2 shadow-lg pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
             {/* Subtotal & Grand Total */}
-            <div className="pt-2 border-t border-slate-200 space-y-1">
+            <div className="space-y-1">
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>Subtotal ({cartItems.length} Layanan):</span>
                 <span>Rp {cartTotals.subtotal.toLocaleString('id-ID')}</span>
@@ -2149,7 +2152,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 type="button"
                 disabled={processingOrder || cartItems.length === 0}
                 onClick={handleProcessOrder}
-                className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-900/20 flex items-center gap-1.5 transition-all cursor-pointer"
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-900/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <span>{processingOrder ? 'Memproses...' : 'Terima Cucian & Struk (F2)'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2522,7 +2525,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* Mobile Slide-Up Cart Bottom Sheet (< lg) */}
       {mobileCartSheetOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-slate-900/60 backdrop-blur-xs transition-opacity animate-fadeIn">
-          <div className="w-full bg-slate-50 rounded-t-3xl max-h-[88dvh] flex flex-col shadow-2xl border-t border-slate-200 overflow-hidden animate-slideUp">
+          <div className="w-full bg-slate-50 rounded-t-3xl max-h-[90dvh] flex flex-col shadow-2xl border-t border-slate-200 overflow-hidden animate-slideUp">
             {/* Header Sheet */}
             <div className="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -2543,8 +2546,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               </button>
             </div>
 
-            {/* Cart Body */}
-            <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* Cart Body Container */}
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {renderCartBody()}
             </div>
           </div>

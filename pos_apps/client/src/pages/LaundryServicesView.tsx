@@ -898,19 +898,19 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
             </div>
 
             {/* 2. Top Navigation Tabs: Layanan Utama vs Layanan Tambahan (Add-ons) */}
-            <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl w-full sm:w-fit">
+            <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl w-full sm:w-fit flex-nowrap overflow-x-auto scrollbar-none">
                 <button
                     type="button"
                     onClick={() => {
                         setActiveMainTab('SERVICES');
                         setSearchQuery('');
                     }}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === 'SERVICES'
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${activeMainTab === 'SERVICES'
                         ? 'bg-white text-blue-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                         }`}
                 >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 shrink-0" />
                     <span>Katalog Layanan Utama ({mainServices.length})</span>
                 </button>
 
@@ -920,12 +920,12 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         setActiveMainTab('ADDONS');
                         setSearchQuery('');
                     }}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === 'ADDONS'
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${activeMainTab === 'ADDONS'
                         ? 'bg-white text-purple-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                         }`}
                 >
-                    <Tag className="w-4 h-4 text-purple-600" />
+                    <Tag className="w-4 h-4 shrink-0 text-purple-600" />
                     <span>Layanan Tambahan &amp; Treatment ({addonServices.length})</span>
                 </button>
 
@@ -935,12 +935,12 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         setActiveMainTab('DEPOSIT_PACKAGES');
                         setSearchQuery('');
                     }}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === 'DEPOSIT_PACKAGES'
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${activeMainTab === 'DEPOSIT_PACKAGES'
                         ? 'bg-white text-blue-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                         }`}
                 >
-                    <Coins className="w-4 h-4 text-amber-500" />
+                    <Coins className="w-4 h-4 shrink-0 text-amber-500" />
                     <span>Paket Deposit &amp; Kuota</span>
                 </button>
 
@@ -950,12 +950,12 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                         setActiveMainTab('PERFUMES');
                         setSearchQuery('');
                     }}
-                    className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === 'PERFUMES'
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${activeMainTab === 'PERFUMES'
                         ? 'bg-white text-indigo-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                         }`}
                 >
-                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <Sparkles className="w-4 h-4 shrink-0 text-indigo-600" />
                     <span>Parfum &amp; Aroma ({perfumes.length})</span>
                 </button>
             </div>
@@ -967,7 +967,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                     {/* Toolbar Filter & Sorting */}
                     <div className="space-y-3 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">
                         {/* Baris Atas: Tab Kategori Dinamis */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-nowrap">
                             {dynamicCategories.map((cat: string) => {
                                 const count =
                                     cat === 'ALL'
@@ -978,7 +978,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                         key={cat}
                                         type="button"
                                         onClick={() => setActiveCategory(cat)}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${activeCategory === cat
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === cat
                                             ? 'bg-blue-900 text-white shadow-xs'
                                             : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
                                             }`}

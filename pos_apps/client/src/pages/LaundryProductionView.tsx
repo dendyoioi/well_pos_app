@@ -357,7 +357,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn">
+    <div className="space-y-5 pb-28 sm:pb-16 font-sans animate-fadeIn">
       {/* Header View */}
       <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs">
         <div className="flex items-start gap-3.5 min-w-0 flex-1">
@@ -588,7 +588,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
       <div className="space-y-3 border-b border-slate-200 pb-3">
         {/* Row 1: Station Tabs */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 max-w-full">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-nowrap pb-1 max-w-full">
             {[
               { key: 'ALL', label: 'Semua Stasiun', count: stats.total },
               { key: 'SORTING', label: '1. Sortir & QC', count: stats.sortingCount },
@@ -624,7 +624,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
         </div>
 
         {/* Row 2: SLA Instant Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1 pb-1">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap pt-1 pb-1">
           <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0">
             <Clock className="w-3.5 h-3.5" />
             <span>Filter SLA:</span>

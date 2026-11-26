@@ -19,7 +19,6 @@ import {
   Plus,
   Warehouse,
   Package,
-  Coins,
   Menu,
   X,
   CheckCheck,
@@ -59,6 +58,7 @@ import { checkIsLaundry } from '../../utils/businessType';
 import { LaundryQuickDropoffModal } from '../laundry/LaundryQuickDropoffModal';
 import { LaundryReceiptModal } from '../laundry/LaundryReceiptModal';
 import { StaffAttendanceModal } from '../pos/StaffAttendanceModal';
+import { QuotaAlertBanner } from './QuotaAlertBanner';
 
 export const TAB_TO_GROUP_MAP: Record<string, string> = {
   // Operasional Laundry & Dry Clean
@@ -789,37 +789,6 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
           </span>
         </button>
 
-        {/* Menu Khusus Pemilik: Paket & Kuota Token */}
-        {(user.role === 'ADMIN' || user.role === 'OWNER') && (
-          <button
-            onClick={() => handleSelectTab('billing_tokens')}
-            className={`w-full px-2.5 lg:px-3 py-2.5 rounded-xl font-bold flex items-center ${
-              isRail ? 'justify-center lg:justify-between' : 'justify-between'
-            } transition-all cursor-pointer ${
-              activeTab === 'billing_tokens'
-                ? 'bg-blue-900 text-white shadow-xs'
-                : 'text-slate-700 hover:bg-slate-100'
-            }`}
-            title="Paket & Kuota Token"
-          >
-            <span className="flex items-center gap-2.5">
-              <span className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                activeTab === 'billing_tokens' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'
-              }`}>
-                <Zap className="w-3.5 h-3.5 fill-current" />
-              </span>
-              <span className={isRail ? 'hidden lg:inline' : 'inline'}>Paket &amp; Kuota</span>
-            </span>
-            <span className={`${isRail ? 'hidden lg:flex' : 'flex'} text-[10px] font-black px-2 py-0.5 rounded-full items-center gap-1 shrink-0 ${
-              activeTab === 'billing_tokens'
-                ? 'bg-amber-500 text-white'
-                : 'bg-amber-100 text-amber-800 border border-amber-200'
-            }`}>
-              <Coins className="w-3 h-3" />
-              <span>Token</span>
-            </span>
-          </button>
-        )}
 
         {/* KHUSUS MODE LAUNDRY: Group Operasional Laundry */}
         {isLaundryMode && (
@@ -1688,8 +1657,8 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
           <div className="h-5 w-px bg-slate-200 hidden sm:block" />
 
-          {/* Tombol Akses Owner Portal & Multi-Bisnis (Khusus OWNER) */}
-          {user.role === 'OWNER' && onOpenOwnerPortal && (
+          {/* Tombol Akses Owner Portal & Multi-Bisnis (Khusus OWNER / ADMIN) */}
+          {(user.role === 'OWNER' || user.role === 'ADMIN') && onOpenOwnerPortal && (
             <button
               type="button"
               onClick={() => onOpenOwnerPortal('businesses')}
@@ -1839,7 +1808,7 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
 
                       {/* Kelola Toko & Pengaturan */}
                       <div className="pt-1.5 border-t border-slate-100 space-y-1">
-                        {user.role === 'OWNER' && onOpenOwnerPortal && (
+                        {(user.role === 'OWNER' || user.role === 'ADMIN') && onOpenOwnerPortal && (
                           <button
                             onClick={() => {
                               setStoreDropdownOpen(false);
@@ -2265,8 +2234,8 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
             </button>
           </div>
 
-          {/* Shortcut Ganti Bisnis di Mobile Drawer */}
-          {user.role === 'OWNER' && onOpenOwnerPortal && (
+          {/* Shortcut Ganti Bisnis di Mobile Drawer (Khusus OWNER / ADMIN) */}
+          {(user.role === 'OWNER' || user.role === 'ADMIN') && onOpenOwnerPortal && (
             <div className="p-3 bg-indigo-50/60 border-b border-indigo-100 shrink-0">
               <button
                 type="button"
@@ -2351,6 +2320,10 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
         {/* Main Content Pane */}
         <div className={`flex-1 overflow-y-auto ${activeTab === 'pos' ? 'p-0 sm:p-4' : 'p-3 sm:p-8 pb-28 sm:pb-8'}`}>
           <div className={['pos', 'laundry_queue', 'laundry_production'].includes(activeTab) ? 'max-w-[1600px] mx-auto' : 'max-w-6xl mx-auto'}>
+            <QuotaAlertBanner
+              user={user}
+              onOpenOwnerPortal={onOpenOwnerPortal}
+            />
             {children}
           </div>
         </div>

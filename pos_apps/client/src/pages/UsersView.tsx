@@ -1051,11 +1051,11 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
       </div>
 
       {/* Sub-tab Navigation Kanonikal */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200/60 w-fit max-w-full overflow-x-auto">
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200/60 w-fit max-w-full overflow-x-auto scrollbar-none flex-nowrap">
         <button
           type="button"
           onClick={() => setMainTab('USERS')}
-          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             mainTab === 'USERS'
               ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-transparent'
@@ -1068,7 +1068,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
         <button
           type="button"
           onClick={() => setMainTab('ATTENDANCE')}
-          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             mainTab === 'ATTENDANCE'
               ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-transparent'
@@ -1081,7 +1081,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
         <button
           type="button"
           onClick={() => setMainTab('SCHEDULES')}
-          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+          className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             mainTab === 'SCHEDULES'
               ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-transparent'

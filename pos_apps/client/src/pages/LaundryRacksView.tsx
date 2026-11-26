@@ -360,21 +360,21 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
       {/* Header View */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-            <Archive className="w-6 h-6" />
+        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0 mt-0.5 sm:mt-0">
+            <Archive className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-slate-900">Manajemen Rak &amp; Titik Simpan</h1>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Manajemen Rak &amp; Titik Simpan</h1>
+              <span className="text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
                 Laundry Ready-To-Pickup
               </span>
             </div>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-snug">
               Atur alokasi nomor rak penyimpanan cucian siap ambil di {activeOutlet?.name || 'Toko Ini'}.
             </p>
           </div>
@@ -403,7 +403,7 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
 
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap w-full sm:w-auto pb-1 sm:pb-0">
           {[
             { id: 'ALL', label: 'Semua Rak' },
             { id: 'STAGNANT', label: `Mengendap > 7 Hari (${stagnantOrdersCount})` },
@@ -418,7 +418,7 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? isStagnantTab
                       ? 'bg-amber-600 text-white shadow-2xs'
