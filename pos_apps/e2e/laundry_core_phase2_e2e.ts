@@ -447,7 +447,7 @@ async function runLaundryCorePhase2E2E() {
     const order1QueueCard = page
       .locator(`text=${inv1}`)
       .locator('xpath=ancestor::div[contains(@class, "bg-white") and contains(@class, "rounded-2xl")]');
-    await order1QueueCard.locator('button:has-text("Item & Tag")').click();
+    await order1QueueCard.first().locator('button:has-text("Item & Tag")').first().click();
 
     const trackingModal = page
       .locator('h2:has-text("Pelacakan Pakaian (Item-Level Tracking)")')
@@ -538,7 +538,7 @@ async function runLaundryCorePhase2E2E() {
     console.log('▶️ [SKENARIO 4] Split Order / Partial Handover (Serah Terima Bertahap)');
 
     // 4.1 Buka kembali modal Item Tracking Order 1
-    await order1QueueCard.locator('button:has-text("Item & Tag")').click();
+    await order1QueueCard.first().locator('button:has-text("Item & Tag")').first().click();
     await trackingModal.waitFor({ timeout: 8000 });
 
     // 4.2 Ubah status Item 1 dan Item 2 menjadi READY (RAK) via select di tiap baris
