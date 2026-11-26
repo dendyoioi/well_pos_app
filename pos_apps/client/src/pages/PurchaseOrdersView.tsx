@@ -503,7 +503,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
+              className="w-full sm:w-auto h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
             >
               <Plus className="w-4 h-4 shrink-0" />
               <span>Buat PO Baru</span>
@@ -513,43 +513,43 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       </div>
 
       {/* Main Tab Navigation: PO vs PR vs AP */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto scrollbar-none flex-nowrap">
         <button
           type="button"
           onClick={() => setMainTab('PO')}
-          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs sm:text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
             mainTab === 'PO'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          <FileText className="w-4 h-4" />
+          <FileText className="w-4 h-4 shrink-0" />
           <span>Purchase Order (PO)</span>
         </button>
 
         <button
           type="button"
           onClick={() => setMainTab('PR')}
-          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs sm:text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
             mainTab === 'PR'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-4 h-4 shrink-0" />
           <span>Purchase Request (PR)</span>
         </button>
 
         <button
           type="button"
           onClick={() => setMainTab('AP')}
-          className={`flex items-center gap-2 py-3 px-4 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs sm:text-sm border-b-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
             mainTab === 'AP'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          <CreditCard className="w-4 h-4" />
+          <CreditCard className="w-4 h-4 shrink-0" />
           <span>Tagihan Supplier (AP)</span>
         </button>
       </div>
@@ -655,16 +655,16 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
           {/* Status filter */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
+              className="w-full sm:w-auto h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
             >
               <option value="ALL">Semua Status</option>
               <option value="DRAFT">Draf</option>
@@ -677,14 +677,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
           </div>
 
           {/* Supplier filter */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={supplierFilter}
               onChange={(e) => {
                 setSupplierFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[200px] truncate cursor-pointer appearance-none"
+              className="w-full sm:w-auto h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 sm:max-w-[200px] truncate cursor-pointer appearance-none"
             >
               <option value="ALL">Semua Pemasok</option>
               {suppliers.map((s) => (
@@ -697,14 +697,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
           </div>
 
           {/* Outlet filter */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={outletFilter}
               onChange={(e) => {
                 setOutletFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 max-w-[200px] truncate cursor-pointer appearance-none"
+              className="w-full sm:w-auto h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 sm:max-w-[200px] truncate cursor-pointer appearance-none"
             >
               <option value="ALL">Semua Toko / Gudang</option>
               {outlets.map((o) => (
@@ -859,16 +859,16 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       {/* MODAL 1: BUAT PURCHASE ORDER (PO) BARU */}
       {/* ========================================================================= */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shrink-0">
                   <FileText className="w-5 h-5 text-blue-900" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-blue-950 text-base">Buat Purchase Order (PO)</h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-blue-950 text-sm sm:text-base truncate">Buat Purchase Order (PO)</h3>
+                  <p className="text-xs text-slate-500 font-medium truncate">
                     Pesan persediaan bahan baku baru kepada pemasok resmi
                   </p>
                 </div>
@@ -876,13 +876,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSavePurchaseOrder} className="flex-1 overflow-y-auto p-6 space-y-6">
+            <form onSubmit={handleSavePurchaseOrder} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
               {/* Header Info Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -1072,23 +1073,24 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                 </div>
                 <div className="text-xl font-black text-blue-950">{formatRupiah(poFormTotal)}</div>
               </div>
+              </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPO}
-                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 transition-all cursor-pointer flex items-center gap-2"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   {submittingPO ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
                       <span>Menyimpan...</span>
                     </>
                   ) : (
@@ -1105,21 +1107,21 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       {/* MODAL 2: DETAIL PURCHASE ORDER */}
       {/* ========================================================================= */}
       {detailModalOpen && selectedPO && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shrink-0">
                   <FileText className="w-5 h-5 text-blue-900" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-blue-950 text-base">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-blue-950 text-sm sm:text-base">
                       Detail PO #{selectedPO.poNumber}
                     </h3>
                     {renderStatusBadge(selectedPO.status)}
                   </div>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
                     Dibuat pada{' '}
                     {new Date(selectedPO.orderDate || selectedPO.createdAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
@@ -1132,13 +1134,13 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               <button
                 type="button"
                 onClick={() => setDetailModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
               {/* Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
                 <div>
@@ -1177,8 +1179,8 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               {/* Items List Table */}
               <div className="space-y-2">
                 <h4 className="font-extrabold text-slate-900 text-sm">Rincian Item Bahan Baku</h4>
-                <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="border border-slate-200 rounded-2xl overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs min-w-[560px]">
                     <thead>
                       <tr className="bg-slate-50 text-[11px] font-extrabold text-slate-500 uppercase border-b border-slate-200">
                         <th className="py-2.5 px-3">Bahan Baku</th>
@@ -1252,7 +1254,7 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
             </div>
 
             {/* Actions Bar */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
                 {selectedPO.status !== 'CANCELLED' && selectedPO.status !== 'RECEIVED' && (
                   <button
@@ -1261,21 +1263,21 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                       setCancellingPO(selectedPO);
                       setCancelModalOpen(true);
                     }}
-                    className="h-10 px-4 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer border border-rose-200"
+                    className="w-full sm:w-auto h-10 px-4 rounded-xl text-rose-600 bg-white hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer border border-rose-200 whitespace-nowrap flex items-center justify-center"
                   >
                     Batalkan PO
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 {selectedPO.status === 'DRAFT' && (
                   <button
                     type="button"
                     onClick={() => handleIssuePO(selectedPO)}
-                    className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-4 h-4 shrink-0" />
                     <span>Terbitkan ke Pemasok</span>
                   </button>
                 )}
@@ -1284,9 +1286,9 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                   <button
                     type="button"
                     onClick={() => handleOpenReceiveModal(selectedPO)}
-                    className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                   >
-                    <Package className="w-4 h-4" />
+                    <Package className="w-4 h-4 shrink-0" />
                     <span>Terima Fisik Barang</span>
                   </button>
                 )}
@@ -1300,18 +1302,18 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
       {/* MODAL 3: PENERIMAAN FISIK BARANG (GOODS RECEIVING) */}
       {/* ========================================================================= */}
       {receiveModalOpen && receivingPO && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-200 shrink-0">
                   <Package className="w-5 h-5 text-emerald-600" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-blue-950 text-base">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-blue-950 text-sm sm:text-base truncate">
                     Penerimaan Barang Fisik PO #{receivingPO.poNumber}
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 font-medium truncate">
                     Verifikasi fisik barang yang tiba, input nomor batch dan tanggal kadaluarsa
                   </p>
                 </div>
@@ -1319,13 +1321,14 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
               <button
                 type="button"
                 onClick={() => setReceiveModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitReceive} className="flex-1 overflow-y-auto p-6 space-y-6">
+            <form onSubmit={handleSubmitReceive} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
               {/* Alert Notice regarding MAC */}
               <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -1442,23 +1445,24 @@ export const PurchaseOrdersView: React.FC<PurchaseOrdersViewProps> = ({ activeOu
                   </div>
                 ))}
               </div>
+              </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setReceiveModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReceive}
-                  className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-700/20 transition-all cursor-pointer flex items-center gap-2"
+                  className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-700/20 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   {submittingReceive ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
                       <span>Menyimpan Penerimaan...</span>
                     </>
                   ) : (

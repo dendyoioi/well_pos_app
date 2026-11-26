@@ -406,13 +406,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     fetchOutlets();
   }, [user.id, user.tenantId, user.outletId, user.role, activeBusiness?.id, initialOutletId]);
 
-  // Reset tab ke default saat berpindah workspace bisnis
-  useEffect(() => {
-    if (activeBusiness?.id) {
-      setActiveTab(DEFAULT_TAB[user.role] || 'overview');
-    }
-  }, [activeBusiness?.id, user.role]);
-
   const handleOutletSelect = (outletId: string) => {
     const selected = outlets.find((o) => o.id === outletId);
     if (selected) {
@@ -483,36 +476,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setActiveOutlet(updatedOutlet);
     setOutlets((prev) => prev.map((o) => (o.id === updatedOutlet.id ? updatedOutlet : o)));
   }, []);
-
-  // Sesuaikan tab aktif bila user switch role atau outlet gudang aktif
-  useEffect(() => {
-    if (activeOutlet?.isWarehouse) {
-      const allowedWarehouseTabs: TabKey[] = [
-        'inventory',
-        'warehouses',
-        'stock_movements',
-        'purchase_orders',
-        'transfers',
-        'suppliers',
-        'recipes',
-        'products',
-        'staff_users',
-        'staff_roles',
-        'users',
-        'outlets',
-        'guide',
-      ];
-      if (!allowedWarehouseTabs.includes(activeTab)) {
-        setActiveTab('inventory');
-      }
-      return;
-    }
-
-    const allowed = ROLE_TABS[user.role] || ['pos'];
-    if (!allowed.includes(activeTab)) {
-      setActiveTab(DEFAULT_TAB[user.role] || allowed[0]);
-    }
-  }, [user.role, activeOutlet?.id, activeOutlet?.isWarehouse, activeTab]);
 
   useEffect(() => {
     api
@@ -590,7 +553,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return checkIsLaundry(activeOutlet, user);
   }, [activeBusiness, activeOutlet, user]);
 
-  const allowedTabs = React.useMemo(() => {
+  const allowedTabs = React.useMemo<TabKey[]>(() => {
     const baseTabs = ROLE_TABS[user.role] || ['pos'];
     if (!isLaundryMode) return baseTabs;
 
@@ -628,6 +591,49 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     });
     return filtered;
   }, [user.role, isLaundryMode]);
+
+  // Reset tab ke default saat berpindah workspace bisnis
+  useEffect(() => {
+    if (activeBusiness?.id) {
+      const targetTab: TabKey = isLaundryMode && user.role === 'KITCHEN'
+        ? 'laundry_production'
+        : (DEFAULT_TAB[user.role] || 'overview');
+      setActiveTab(targetTab);
+    }
+  }, [activeBusiness?.id, user.role, isLaundryMode]);
+
+  // Sesuaikan tab aktif bila user switch role atau outlet gudang aktif
+  useEffect(() => {
+    if (activeOutlet?.isWarehouse) {
+      const allowedWarehouseTabs: TabKey[] = [
+        'inventory',
+        'warehouses',
+        'stock_movements',
+        'purchase_orders',
+        'transfers',
+        'suppliers',
+        'recipes',
+        'products',
+        'staff_users',
+        'staff_roles',
+        'users',
+        'outlets',
+        'guide',
+      ];
+      if (!allowedWarehouseTabs.includes(activeTab)) {
+        setActiveTab('inventory');
+      }
+      return;
+    }
+
+    const defaultTabForRole: TabKey =
+      isLaundryMode && user.role === 'KITCHEN'
+        ? 'laundry_production'
+        : (DEFAULT_TAB[user.role] || allowedTabs[0]);
+    if (!allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs.includes(defaultTabForRole) ? defaultTabForRole : allowedTabs[0]);
+    }
+  }, [user.role, isLaundryMode, allowedTabs, activeOutlet?.id, activeOutlet?.isWarehouse, activeTab]);
 
   // Listener event navigasi tab lintas komponen / window
   useEffect(() => {
@@ -1348,10 +1354,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   setMobileMenuOpen(false);
                   onLogout();
                 }}
-                className="w-full py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                className="w-full py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
               >
-                <Lock className="w-4 h-4 text-amber-700" />
-                <span>Kunci Terminal Kasir</span>
+                <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>{user.role === 'CASHIER' ? 'Kunci Terminal Kasir' : 'Kunci Terminal'}</span>
               </button>
 
               <button
@@ -1421,8 +1427,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   )}
                 </div>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200/80 shrink-0">
-                  <Lock className="w-2.5 h-2.5 text-blue-700" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200/80 shrink-0 whitespace-nowrap">
+                  <Lock className="w-2.5 h-2.5 text-blue-700 shrink-0" />
                   <span>Terkunci</span>
                 </span>
               )}
@@ -2395,6 +2401,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </div>
               </div>
             )
+          ) : activeTab === 'recipes' ? (
+            <RecipesView outletId={activeOutlet?.id} />
+          ) : activeTab === 'qr_orders' ? (
+            <QrLiveOrdersView
+              activeOutlet={activeOutlet}
+              onOpenInPos={(order) => {
+                setSelectedQrOrderForPos(order);
+                setActiveTab('pos');
+              }}
+            />
+          ) : activeTab === 'stock_movements' ? (
+            <StockMovementsView activeOutlet={activeOutlet} />
+          ) : activeTab === 'purchase_orders' ? (
+            <PurchaseOrdersView activeOutlet={activeOutlet} currentUser={user} />
+          ) : activeTab === 'transfers' ? (
+            <StockTransfersView activeOutlet={activeOutlet} />
+          ) : activeTab === 'suppliers' ? (
+            <SuppliersView activeOutlet={activeOutlet} currentUser={user} />
           ) : activeTab === 'products' ? (
             <ProductsView
               userRole={user.role}

@@ -454,39 +454,39 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
           <button
             onClick={handleExportCSV}
             disabled={shifts.length === 0}
-            className="h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+            className="w-full sm:w-auto h-10 px-4 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
           >
-            <Download className="w-4 h-4 stroke-[2.5]" />
+            <Download className="w-4 h-4 stroke-[2.5] shrink-0" />
             <span>Ekspor CSV</span>
           </button>
         </div>
       </div>
 
       {/* Navigation Tabs (Rekap Shift Kasir vs Setoran Kas ke Pusat) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 no-print">
+      <div className="flex items-center gap-2 border-b border-slate-200 no-print overflow-x-auto scrollbar-none flex-nowrap">
         <button
           onClick={() => setActiveTab('REKAP_SHIFT')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
             activeTab === 'REKAP_SHIFT'
               ? 'border-blue-900 text-blue-900 font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <Clock className="w-4 h-4 stroke-[2.5]" />
+          <Clock className="w-4 h-4 stroke-[2.5] shrink-0" />
           <span>Rekap Shift Kasir</span>
         </button>
         <button
           onClick={() => setActiveTab('SETORAN_KAS')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
             activeTab === 'SETORAN_KAS'
               ? 'border-blue-900 text-blue-900 font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <Landmark className="w-4 h-4 stroke-[2.5]" />
+          <Landmark className="w-4 h-4 stroke-[2.5] shrink-0" />
           <span>Setoran Kas ke Pusat</span>
           {depositSummary && depositSummary.pendingCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-mono font-bold shrink-0">
               {depositSummary.pendingCount}
             </span>
           )}
@@ -495,13 +495,13 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
         {isManager && (
           <button
             onClick={() => setActiveTab('AUDIT_TRAIL')}
-            className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === 'AUDIT_TRAIL'
                 ? 'border-blue-900 text-blue-900 font-extrabold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Shield className="w-4 h-4 stroke-[2.5]" />
+            <Shield className="w-4 h-4 stroke-[2.5] shrink-0" />
             <span>Global Audit Trail</span>
           </button>
         )}
@@ -539,23 +539,25 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
         {/* Custom Range Inputs if custom selected */}
         {periodPreset === 'custom' && (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
-            />
-            <span className="text-xs text-slate-400">s/d</span>
-            <input
-              type="date"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="flex-1 sm:flex-initial min-w-0 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+              />
+              <span className="text-xs text-slate-400 shrink-0">s/d</span>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="flex-1 sm:flex-initial min-w-0 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none"
+              />
+            </div>
             <button
               onClick={fetchShifts}
-              className="h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all flex items-center justify-center cursor-pointer"
+              className="w-full sm:w-auto h-10 px-4 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-950 transition-all flex items-center justify-center cursor-pointer whitespace-nowrap shrink-0"
             >
               Terapkan
             </button>
@@ -1110,9 +1112,9 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                 setSelectedShiftForDeposit(shifts[0]?.id || '');
                 setShowCreateDepositModal(true);
               }}
-              className="h-10 px-4 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0"
+              className="w-full sm:w-auto h-10 px-4 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
               <span>Ajukan Setoran Kas</span>
             </button>
           </div>
@@ -1520,26 +1522,26 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-3">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowCreateDepositModal(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingDeposit || !depositAmount || depositAmount <= 0}
-                  className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-900/20 transition-all disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                  className="h-10 px-5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-900/20 transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   {submittingDeposit ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
                       <span>Mengirim...</span>
                     </>
                   ) : (
-                    <span>Kirim Pengajuan Setoran</span>
+                    <span>Kirim Setoran</span>
                   )}
                 </button>
               </div>
@@ -1551,26 +1553,26 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
       {/* Modal Tolak Setoran Kas */}
       {rejectingDepositId && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full max-w-md max-h-[92dvh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center font-bold shrink-0">
                   <XCircle className="w-5 h-5 stroke-[2.5]" />
                 </div>
-                <div>
-                  <h3 className="font-black text-slate-900 text-base">Tolak Setoran Kas</h3>
-                  <p className="text-xs text-slate-500">Berikan alasan penolakan pengajuan setoran kas</p>
+                <div className="min-w-0">
+                  <h3 className="font-black text-slate-900 text-base truncate">Tolak Setoran Kas</h3>
+                  <p className="text-xs text-slate-500 truncate">Berikan alasan penolakan pengajuan setoran kas</p>
                 </div>
               </div>
               <button
                 onClick={() => setRejectingDepositId(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-3">
+            <div className="p-4 sm:p-5 space-y-3 overflow-y-auto overscroll-contain flex-1">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Alasan Penolakan <span className="text-rose-500">*</span>
               </label>
@@ -1584,11 +1586,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
               />
             </div>
 
-            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-3">
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setRejectingDepositId(null)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                className="h-10 px-4 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center"
               >
                 Batal
               </button>
@@ -1596,9 +1598,9 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
                 type="button"
                 onClick={handleRejectDeposit}
                 disabled={!rejectionReason.trim()}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-md shadow-rose-600/20 transition-all disabled:opacity-50 cursor-pointer"
+                className="h-10 px-5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-md shadow-rose-600/20 transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap flex items-center justify-center"
               >
-                Konfirmasi Tolak Setoran
+                Tolak Setoran
               </button>
             </div>
           </div>
@@ -1788,26 +1790,26 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
 
               {/* Rekap Item Terjual Selama Shift */}
               <div>
-                <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-2.5">
                   <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     {isLaundryMode ? (
-                      <Shirt className="w-3.5 h-3.5 text-blue-900" />
+                      <Shirt className="w-3.5 h-3.5 text-blue-900 shrink-0" />
                     ) : (
-                      <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900" />
+                      <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900 shrink-0" />
                     )}
                     <span>
                       {isLaundryMode ? 'Rekap Layanan Terjual' : 'Rekap Item Terjual'} ({selectedShift.soldItemsSummary?.length || 0} {isLaundryMode ? 'Layanan' : 'Menu'})
                     </span>
                   </h4>
                   {selectedShift.soldItemsSummary && selectedShift.soldItemsSummary.length > 0 && (
-                    <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 font-mono">
+                    <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 font-mono whitespace-nowrap shrink-0">
                       Total: {selectedShift.soldItemsSummary.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0)} {isLaundryMode ? 'Layanan/Item' : 'Porsi/Item'}
                     </span>
                   )}
                 </div>
 
-                <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-56 overflow-y-auto">
-                  <table className="w-full text-left text-xs">
+                <div className="border border-slate-200 rounded-2xl overflow-x-auto max-h-56 overflow-y-auto">
+                  <table className="w-full text-left text-xs min-w-[360px]">
                     <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase sticky top-0">
                       <tr>
                         <th className="px-3.5 py-2">{isLaundryMode ? 'Nama Layanan / Paket' : 'Nama Menu / Produk'}</th>

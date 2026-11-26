@@ -386,11 +386,11 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
+            className="w-full md:w-auto h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-950/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4 shrink-0" />
             <span>Buat Transfer Baru</span>
@@ -478,16 +478,16 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Direction Filter */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={directionFilter}
               onChange={(e) => {
                 setDirectionFilter(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
+              className="w-full sm:w-auto h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
             >
               <option value="ALL">Semua Arah Transfer</option>
               <option value="OUTBOUND">Terkirim (Keluar dari sini)</option>
@@ -497,14 +497,14 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
           </div>
 
           {/* Status Filter */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
+              className="w-full sm:w-auto h-10 pl-3.5 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-900 cursor-pointer appearance-none"
             >
               <option value="ALL">Semua Status</option>
               <option value="DRAFT">Draf</option>
@@ -671,16 +671,16 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
       {/* MODAL 1: BUAT TRANSFER STOK BARU */}
       {/* ========================================================================= */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shrink-0">
                   <ArrowLeftRight className="w-5 h-5 text-blue-900" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-blue-950 text-base">Buat Transfer Antar Toko</h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-blue-950 text-sm sm:text-base truncate">Buat Transfer Antar Toko</h3>
+                  <p className="text-xs text-slate-500 font-medium truncate">
                     Alokasikan stok persediaan dari gudang/toko asal ke toko tujuan
                   </p>
                 </div>
@@ -688,13 +688,14 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitTransfer} className="flex-1 overflow-y-auto p-6 space-y-6">
+            <form onSubmit={handleSubmitTransfer} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
               {/* Location Selector Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -848,23 +849,24 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer"
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingCreate}
-                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 transition-all cursor-pointer flex items-center gap-2"
+                  className="h-10 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md shadow-blue-950/20 transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   {submittingCreate ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
                       <span>Menyimpan...</span>
                     </>
                   ) : (
@@ -881,21 +883,21 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
       {/* MODAL 2: RINCIAN DETAIL TRANSFER */}
       {/* ========================================================================= */}
       {detailModalOpen && selectedTransfer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl border border-blue-100 shrink-0">
                   <ArrowLeftRight className="w-5 h-5 text-blue-900" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-blue-950 text-base">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-blue-950 text-sm sm:text-base">
                       Detail Transfer #{selectedTransfer.transferNumber}
                     </h3>
                     {renderStatusBadge(selectedTransfer.status)}
                   </div>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
                     Dibuat pada{' '}
                     {new Date(selectedTransfer.createdAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
@@ -908,15 +910,15 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
               <button
                 type="button"
                 onClick={() => setDetailModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
               {/* Route Card */}
-              <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex items-center justify-between text-xs">
+              <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div>
                   <span className="text-slate-400 font-semibold block uppercase text-[10px]">
                     Toko / Outlet Asal (Pengirim)
@@ -929,7 +931,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                   <span className="text-xs">Dikirim</span>
                   <Truck className="w-5 h-5" />
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <span className="text-slate-400 font-semibold block uppercase text-[10px]">
                     Toko / Outlet Tujuan (Penerima)
                   </span>
@@ -948,8 +950,8 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
               {/* Items List */}
               <div className="space-y-2">
                 <h4 className="font-extrabold text-slate-900 text-sm">Bahan Baku yang Ditransfer</h4>
-                <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="border border-slate-200 rounded-2xl overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs min-w-[420px]">
                     <thead>
                       <tr className="bg-slate-50 text-[11px] font-extrabold text-slate-500 uppercase border-b border-slate-200">
                         <th className="py-2.5 px-3">Bahan Baku</th>
@@ -990,7 +992,7 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col sm:flex-row sm:items-center justify-end gap-2">
               {selectedTransfer.status === 'DRAFT' && (
                 <button
                   type="button"
@@ -998,9 +1000,9 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                     setDispatchingTransfer(selectedTransfer);
                     setDispatchModalOpen(true);
                   }}
-                  className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="w-full sm:w-auto h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 shrink-0" />
                   <span>Kirim Sekarang (Dispatch)</span>
                 </button>
               )}
@@ -1012,9 +1014,9 @@ export const StockTransfersView: React.FC<StockTransfersViewProps> = ({ activeOu
                     setReceivingTransfer(selectedTransfer);
                     setReceiveModalOpen(true);
                   }}
-                  className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="w-full sm:w-auto h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
-                  <Package className="w-4 h-4" />
+                  <Package className="w-4 h-4 shrink-0" />
                   <span>Terima Barang di Tujuan</span>
                 </button>
               )}

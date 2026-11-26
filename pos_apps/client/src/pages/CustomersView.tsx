@@ -518,42 +518,42 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-28 sm:pb-16 font-sans">
       {/* Subtab Navigation: Direktori Pelanggan vs Buku Kasbon & Piutang */}
-      <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 w-fit border border-slate-200/60">
+      <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 max-w-full w-fit border border-slate-200/60 overflow-x-auto scrollbar-none flex-nowrap">
         <button
           type="button"
           onClick={() => handleSubTabChange('directory')}
-          className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+          className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'directory'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-4 h-4 shrink-0" />
           <span>Direktori &amp; Loyalitas Pelanggan</span>
         </button>
         <button
           type="button"
           onClick={() => handleSubTabChange('debts')}
-          className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+          className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'debts'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-4 h-4 shrink-0" />
           <span>Buku Kasbon &amp; Piutang</span>
         </button>
         {isLaundryMode && (
           <button
             type="button"
             onClick={() => handleSubTabChange('winback')}
-            className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            className={`flex items-center gap-2 h-9 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeSubTab === 'winback'
                 ? 'bg-blue-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
             }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-500" />
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Pelanggan Pasif (Win-Back)</span>
           </button>
         )}
@@ -678,9 +678,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full lg:w-auto">
           <span className="text-xs font-bold text-slate-400 shrink-0">Urutkan:</span>
-          <div className="relative">
+          <div className="relative flex-1 lg:flex-initial">
             <select
               value={`${sortBy}-${sortOrder}`}
               onChange={(e) => {
@@ -688,14 +688,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                 setSortBy(field);
                 setSortOrder(ord as 'asc' | 'desc');
               }}
-              className="h-10 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer appearance-none"
+              className="w-full h-10 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-9 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer appearance-none"
             >
               <option value="createdAt-desc">Paling Baru Terdaftar</option>
               <option value="totalSpent-desc">Belanja Tertinggi (Top Spender)</option>
               <option value="visitCount-desc">Kunjungan Terbanyak</option>
               <option value="name-asc">Nama Pelanggan (A - Z)</option>
             </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -1318,21 +1318,21 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsFormModalOpen(false)}
-                  className="h-10 px-5 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-all cursor-pointer"
+                  className="h-10 px-4 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 cursor-pointer whitespace-nowrap"
                 >
-                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{editingCustomer ? 'Simpan Perubahan' : 'Tambahkan Pelanggan'}</span>
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+                  <span>{editingCustomer ? 'Simpan Perubahan' : 'Tambahkan'}</span>
                 </button>
               </div>
             </form>
@@ -1557,45 +1557,45 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
               </div>
 
               {/* Tab Switcher: Riwayat Belanja vs Riwayat Mutasi Poin vs Saldo & Kuota Laundry */}
-              <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 w-fit border border-slate-200/60 overflow-x-auto max-w-full">
+              <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 w-fit border border-slate-200/60 overflow-x-auto scrollbar-none flex-nowrap max-w-full">
                 <button
                   type="button"
                   onClick={() => setActiveDetailTab('orders')}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     activeDetailTab === 'orders'
                       ? 'bg-blue-900 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
                   <span>Riwayat Transaksi ({selectedCustomer.orders?.length || 0})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveDetailTab('points')}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     activeDetailTab === 'points'
                       ? 'bg-blue-900 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <History className="w-3.5 h-3.5" />
+                  <History className="w-3.5 h-3.5 shrink-0" />
                   <span>Buku Besar Mutasi Poin ({pointLedgers.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveDetailTab('laundry_wallet')}
-                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     activeDetailTab === 'laundry_wallet'
                       ? 'bg-blue-900 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <Wallet className="w-3.5 h-3.5 text-blue-700" />
-                  <span>
-                    Saldo &amp; Kuota Laundry
+                  <Wallet className={`w-3.5 h-3.5 shrink-0 ${activeDetailTab === 'laundry_wallet' ? 'text-blue-200' : 'text-blue-700'}`} />
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>Saldo &amp; Kuota Laundry</span>
                     {selectedCustomer.laundryWallet && (
-                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-400 text-slate-950 font-black">
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-400 text-slate-950 font-black whitespace-nowrap shrink-0">
                         Rp {Math.floor(Number(selectedCustomer.laundryWallet.balanceAmount || 0)).toLocaleString('id-ID')}
                       </span>
                     )}
@@ -1619,8 +1619,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                       description="Belum ada transaksi penjualan yang tercatat atas nama pelanggan ini."
                     />
                   ) : (
-                    <div className="rounded-xl border border-slate-200 overflow-hidden">
-                      <table className="w-full text-left text-xs border-collapse">
+                    <div className="rounded-xl border border-slate-200 overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse min-w-[420px]">
                         <thead>
                           <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
                             <th className="py-2.5 px-3">No. Invoice</th>
@@ -1674,8 +1674,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                       description="Belum ada riwayat perolehan atau penukaran poin loyalty yang tercatat."
                     />
                   ) : (
-                    <div className="rounded-xl border border-slate-200 overflow-hidden">
-                      <table className="w-full text-left text-xs border-collapse">
+                    <div className="rounded-xl border border-slate-200 overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse min-w-[420px]">
                         <thead>
                           <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
                             <th className="py-2.5 px-3">Waktu</th>
@@ -1738,14 +1738,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
               {/* Tab Content 3: Saldo & Kuota Laundry Pelanggan */}
               {activeDetailTab === 'laundry_wallet' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between pb-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
                     <span className="text-xs font-bold text-slate-700">Ringkasan Dompet Laundry</span>
                     <button
                       type="button"
                       onClick={handleOpenTopupModal}
-                      className="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      className="h-9 px-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap shrink-0"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
                       <span>Top-up Saldo / Kuota</span>
                     </button>
                   </div>
@@ -1814,8 +1814,8 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                         description="Pelanggan ini belum pernah melakukan top-up deposit atau pemakaian kuota laundry."
                       />
                     ) : (
-                      <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
-                        <table className="w-full text-left text-xs border-collapse">
+                      <div className="border border-slate-200 rounded-2xl overflow-x-auto bg-white shadow-2xs">
+                        <table className="w-full text-left text-xs border-collapse min-w-[480px]">
                           <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[11px]">
                             <tr>
                               <th className="py-2.5 px-3">Waktu</th>
@@ -1908,7 +1908,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
             <div className="p-4 sm:px-6 border-t border-slate-200 bg-slate-50 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-end">
               <button
                 onClick={() => setIsDetailModalOpen(false)}
-                className="h-10 px-6 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                className="w-full sm:w-auto h-10 px-6 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
               >
                 Tutup
               </button>
@@ -2178,18 +2178,18 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowLaundryTopupModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+                  className="h-10 px-4 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingTopup}
-                  className="px-5 py-2 text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white rounded-xl shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="h-10 px-5 text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white rounded-xl shadow-xs disabled:opacity-50 cursor-pointer whitespace-nowrap flex items-center justify-center"
                 >
                   {submittingTopup ? 'Memproses...' : 'Proses Top-up'}
                 </button>

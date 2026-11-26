@@ -535,11 +535,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <AlertTriangle className="w-5 h-5 text-amber-700" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="font-extrabold text-amber-950 text-sm">
                       {isLaundryMode ? 'Peringatan Bahan Cuci Mendekati Kadaluarsa' : 'Peringatan Bahan Baku Mendekati Kadaluarsa'}
                     </h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 whitespace-nowrap shrink-0">
                       {expiryAlerts.length} Batch
                     </span>
                   </div>
@@ -554,7 +554,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowExpiryModal(true)}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+                className="w-full sm:w-auto h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer whitespace-nowrap flex items-center justify-center"
               >
                 Lihat Detail Batch
               </button>
@@ -638,11 +638,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
               <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
                 {activeOutlet && !activeOutlet.isWarehouse && (
-                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+                  <div className="w-full sm:w-auto flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/80 overflow-x-auto scrollbar-none">
                     <button
                       type="button"
                       onClick={() => setIngredientScope('outlet')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                         ingredientScope === 'outlet'
                           ? 'bg-blue-900 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -653,7 +653,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setIngredientScope('all')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                         ingredientScope === 'all'
                           ? 'bg-blue-900 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -674,12 +674,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </div>
 
             {/* Quick Status Chips */}
-            <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Status Stok:</span>
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap sm:flex-wrap pt-2 border-t border-slate-100">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 whitespace-nowrap shrink-0">Status Stok:</span>
               <button
                 type="button"
                 onClick={() => setIngredientStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   ingredientStatusFilter === 'ALL'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -692,13 +692,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIngredientStatusFilter('CRITICAL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   ingredientStatusFilter === 'CRITICAL'
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
                 }`}
               >
-                <AlertTriangle className="w-3.5 h-3.5" />
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 <span>Menipis</span>
                 <span className="px-1.5 py-0.2 rounded-md bg-amber-900/20 text-[10px] font-extrabold">{countCriticalIngredients}</span>
               </button>
@@ -706,7 +706,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIngredientStatusFilter('OUT')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   ingredientStatusFilter === 'OUT'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
@@ -719,13 +719,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIngredientStatusFilter('SAFE')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   ingredientStatusFilter === 'SAFE'
                     ? 'bg-emerald-700 text-white shadow-xs'
                     : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                 }`}
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 <span>Stok Aman</span>
                 <span className="px-1.5 py-0.2 rounded-md bg-emerald-900/20 text-[10px] font-extrabold">{countSafeIngredients}</span>
               </button>
@@ -1230,12 +1230,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </div>
 
                 {/* Quick Status Chips */}
-                <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Status Stok:</span>
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-nowrap sm:flex-wrap pt-2 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 whitespace-nowrap shrink-0">Status Stok:</span>
                   <button
                     type="button"
                     onClick={() => setProductStockFilter('ALL')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       productStockFilter === 'ALL'
                         ? 'bg-slate-900 text-white shadow-xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -1248,13 +1248,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setProductStockFilter('LOW')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       productStockFilter === 'LOW'
                         ? 'bg-amber-600 text-white shadow-xs'
                         : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
                     }`}
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>Menipis</span>
                     <span className="px-1.5 py-0.2 rounded-md bg-amber-900/20 text-[10px] font-extrabold">{countLowProducts}</span>
                   </button>
@@ -1262,7 +1262,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setProductStockFilter('OUT')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       productStockFilter === 'OUT'
                         ? 'bg-rose-600 text-white shadow-xs'
                         : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
@@ -1275,13 +1275,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setProductStockFilter('SAFE')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       productStockFilter === 'SAFE'
                         ? 'bg-emerald-700 text-white shadow-xs'
                         : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                     }`}
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Stok Aman</span>
                     <span className="px-1.5 py-0.2 rounded-md bg-emerald-900/20 text-[10px] font-extrabold">{countSafeProducts}</span>
                   </button>
@@ -1598,23 +1598,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <form onSubmit={handleSearchSubmit} className="relative">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+                  <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-56">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={movementSearch}
                       onChange={(e) => setMovementSearch(e.target.value)}
                       placeholder="Cari SKU, produk, PO..."
-                      className="pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:bg-white focus:border-blue-900 w-44 sm:w-56 font-medium text-slate-800"
+                      className="w-full h-10 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-blue-900 font-medium text-slate-800"
                     />
                   </form>
 
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto">
                     <select
                       value={movementTypeFilter}
                       onChange={(e) => setMovementTypeFilter(e.target.value)}
-                      className="appearance-none py-2 pr-10 pl-3 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+                      className="w-full sm:w-auto h-10 appearance-none pr-10 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
                     >
                       <option value="ALL">Semua Mutasi</option>
                       <option value="PURCHASE_IN">Stok Masuk (PO)</option>
@@ -1842,18 +1842,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Modal: Detail Batch Kadaluarsa */}
       {showExpiryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-amber-50 text-amber-700 rounded-2xl border border-amber-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="p-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 bg-amber-50 text-amber-700 rounded-2xl border border-amber-200 shrink-0">
                   <AlertTriangle className="w-5 h-5 text-amber-600" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-slate-900 text-sm sm:text-base truncate">
                     Batch Bahan Baku Mendekati Kadaluarsa
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 font-medium truncate">
                     Daftar persediaan fisik dengan tanggal kedaluwarsa &le; 30 hari
                   </p>
                 </div>
@@ -1861,15 +1861,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowExpiryModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+              <div className="border border-slate-200 rounded-2xl overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs min-w-[540px]">
                   <thead>
                     <tr className="bg-slate-50 text-[11px] font-extrabold text-slate-500 uppercase border-b border-slate-200">
                       <th className="py-2.5 px-3">Bahan Baku</th>
@@ -1930,11 +1930,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
             </div>
 
-            <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
+            <div className="p-4 sm:px-6 border-t border-slate-200 bg-slate-50 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setShowExpiryModal(false)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                className="w-full sm:w-auto h-10 px-5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap"
               >
                 Tutup
               </button>

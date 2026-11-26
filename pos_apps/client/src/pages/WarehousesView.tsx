@@ -483,19 +483,19 @@ export const WarehousesView: React.FC<WarehousesViewProps> = ({
 
                 {/* Bagian Bawah: Aksi Buka Mode Gudang */}
                 <div className="p-3 sm:p-3.5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {wh.isActive ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         Aktif
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
                         Nonaktif
                       </span>
                     )}
                     {isCurrentlyActive && (
-                      <span className="text-[10px] font-extrabold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-extrabold text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                         Sedang Dipilih
                       </span>
                     )}

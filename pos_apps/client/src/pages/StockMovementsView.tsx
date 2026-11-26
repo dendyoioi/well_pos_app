@@ -355,7 +355,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               type="button"
               onClick={handleExportCSV}
               disabled={filteredMovements.length === 0}
-              className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold border border-white/15 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+              className="w-full md:w-auto h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold border border-white/15 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
               title="Unduh data mutasi format Excel/CSV"
             >
               <Download className="w-4 h-4 shrink-0" />
@@ -504,13 +504,13 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
         </form>
 
         {/* Dropdown Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-1 sm:flex sm:items-center gap-2 sm:flex-wrap w-full lg:w-auto">
           {/* Lokasi / Toko / Gudang */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={selectedOutletId}
               onChange={(e) => setSelectedOutletId(e.target.value)}
-              className="appearance-none h-10 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+              className="w-full sm:w-auto appearance-none h-10 pr-10 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
             >
               <option value="ALL">Semua Lokasi &amp; Gudang</option>
               {outlets.map((o) => (
@@ -519,15 +519,15 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
           </div>
 
           {/* Tipe Mutasi */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="appearance-none h-10 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+              className="w-full sm:w-auto appearance-none h-10 pr-10 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
             >
               <option value="ALL">Semua Jenis Mutasi</option>
               <option value="SALE_OUT">Penjualan Kasir</option>
@@ -539,15 +539,15 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <option value="PRODUCTION_OUTPUT">{isLaundryMode ? 'Pemakaian Cuci & Workshop' : 'Resep Dapur (BOM)'}</option>
               <option value="SALE_VOID">Retur / Batal Kasir</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
           </div>
 
           {/* Filter Periode Waktu */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value as any)}
-              className="appearance-none h-10 pr-8 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
+              className="w-full sm:w-auto appearance-none h-10 pr-10 pl-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:outline-none focus:bg-white focus:border-blue-900 cursor-pointer"
             >
               <option value="ALL">Semua Periode</option>
               <option value="TODAY">Hari Ini</option>
@@ -555,7 +555,7 @@ export const StockMovementsView: React.FC<StockMovementsViewProps> = ({ activeOu
               <option value="30D">30 Hari Terakhir</option>
               <option value="THIS_MONTH">Bulan Ini</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
           </div>
         </div>
       </div>

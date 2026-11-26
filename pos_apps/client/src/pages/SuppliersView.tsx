@@ -240,11 +240,11 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
+            className="w-full sm:w-auto h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4 shrink-0" />
             <span>Tambah Pemasok</span>
@@ -468,23 +468,24 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
 
       {/* Modal Tambah / Edit Pemasok */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
               <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <Truck className="w-5 h-5 text-blue-900" />
+                <Truck className="w-5 h-5 text-blue-900 shrink-0" />
                 <span>{editingSupplier ? 'Ubah Data Pemasok' : 'Tambah Pemasok Baru'}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100"
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSupplier} className="p-6 space-y-4">
+            <form onSubmit={handleSaveSupplier} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto overscroll-contain flex-1">
               {formError && (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -492,7 +493,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Kode Pemasok <span className="text-rose-500">*</span>
@@ -502,12 +503,12 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                     placeholder="SUP-001"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase focus:bg-white focus:border-blue-900 outline-hidden"
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase focus:bg-white focus:border-blue-900 outline-hidden"
                     required
                   />
                 </div>
 
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Nama Vendor / Toko <span className="text-rose-500">*</span>
                   </label>
@@ -516,13 +517,13 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={isLaundryMode ? 'Contoh: CV Berkah Kimia Laundry Nusantara' : 'Contoh: PT Sumber Biji Kopi Nusantara'}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-blue-900 outline-hidden"
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-blue-900 outline-hidden"
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Nama Kontak (PIC)
@@ -532,7 +533,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                     value={formData.contactName || ''}
                     onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
                     placeholder="Contoh: Bpk. Bambang"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
                   />
                 </div>
 
@@ -546,7 +547,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Email Vendor
@@ -556,7 +557,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                     value={formData.email || ''}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="sales@vendor.com"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
                   />
                 </div>
 
@@ -571,7 +572,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                     value={formData.paymentTermsDays || 0}
                     onChange={(e) => setFormData({ ...formData, paymentTermsDays: parseInt(e.target.value, 10) || 0 })}
                     placeholder="0 = Tunai, 14, 30"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-blue-900 outline-hidden"
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:border-blue-900 outline-hidden"
                   />
                 </div>
               </div>
@@ -585,7 +586,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                   value={formData.address || ''}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Jl. Perdagangan No. 12, Jakarta"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-blue-900 outline-hidden"
                 />
               </div>
 
@@ -595,29 +596,30 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({ activeOutlet, curr
                   id="supplierIsActive"
                   checked={formData.isActive}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-4 h-4 rounded-sm border-slate-300 text-blue-900 focus:ring-blue-900 cursor-pointer"
+                  className="w-4 h-4 rounded-sm border-slate-300 text-blue-900 focus:ring-blue-900 cursor-pointer shrink-0"
                 />
                 <label htmlFor="supplierIsActive" className="text-xs font-bold text-slate-700 cursor-pointer">
                   Pemasok ini aktif (dapat dipilih saat penerimaan stok PO)
                 </label>
               </div>
+              </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs cursor-pointer border border-slate-200"
+                  className="h-10 px-4 bg-white hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs cursor-pointer border border-slate-200 whitespace-nowrap flex items-center justify-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-900/20 cursor-pointer flex items-center gap-1.5"
+                  className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-900/20 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
                 >
                   {saving ? (
                     <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
                       <span>Menyimpan...</span>
                     </>
                   ) : (

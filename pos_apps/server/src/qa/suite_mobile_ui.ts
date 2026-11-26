@@ -103,22 +103,64 @@ export async function runMobileUISuite(): Promise<boolean> {
     await seedSubscriptionForTenant(tenantData.tenantId, 500);
     const tenantRecord = await prisma.tenant.findUnique({ where: { id: tenantData.tenantId } });
 
-    // Seed akun staf CASHIER 5-digit (10099 / PIN 123456) untuk uji Skenario 6
-    const cashierPinHash = await bcrypt.hash('123456', 10);
-    await prisma.user.create({
-      data: {
-        tenantId: tenantData.tenantId,
-        outletId: tenantData.outletId,
-        userCode: '10099',
-        name: 'Kasir Mobile QA',
-        firstName: 'Kasir',
-        lastName: 'QA',
-        email: `kasir.mobile.${tenantData.timestamp.slice(-6)}@wellpos.qa`,
-        passwordHash: cashierPinHash,
-        pinHash: cashierPinHash,
-        role: Role.CASHIER,
-        isActive: true,
-      },
+    // Seed akun staf CASHIER, WAREHOUSE, KITCHEN & SUPERVISOR 5-digit (PIN 123456) untuk uji Skenario 8 & 10
+    const staffPinHash = await bcrypt.hash('123456', 10);
+    const tsSuffix = tenantData.timestamp.slice(-6);
+    await prisma.user.createMany({
+      data: [
+        {
+          tenantId: tenantData.tenantId,
+          outletId: tenantData.outletId,
+          userCode: '10099',
+          name: 'Kasir Mobile QA',
+          firstName: 'Kasir',
+          lastName: 'QA',
+          email: `kasir.mobile.${tsSuffix}@wellpos.qa`,
+          passwordHash: staffPinHash,
+          pinHash: staffPinHash,
+          role: Role.CASHIER,
+          isActive: true,
+        },
+        {
+          tenantId: tenantData.tenantId,
+          outletId: tenantData.outletId,
+          userCode: '10096',
+          name: 'Gudang Mobile QA',
+          firstName: 'Gudang',
+          lastName: 'QA',
+          email: `gudang.mobile.${tsSuffix}@wellpos.qa`,
+          passwordHash: staffPinHash,
+          pinHash: staffPinHash,
+          role: Role.WAREHOUSE,
+          isActive: true,
+        },
+        {
+          tenantId: tenantData.tenantId,
+          outletId: tenantData.outletId,
+          userCode: '10097',
+          name: 'Workshop Mobile QA',
+          firstName: 'Workshop',
+          lastName: 'QA',
+          email: `kitchen.mobile.${tsSuffix}@wellpos.qa`,
+          passwordHash: staffPinHash,
+          pinHash: staffPinHash,
+          role: Role.KITCHEN,
+          isActive: true,
+        },
+        {
+          tenantId: tenantData.tenantId,
+          outletId: tenantData.outletId,
+          userCode: '10098',
+          name: 'Supervisor Mobile QA',
+          firstName: 'Supervisor',
+          lastName: 'QA',
+          email: `spv.mobile.${tsSuffix}@wellpos.qa`,
+          passwordHash: staffPinHash,
+          pinHash: staffPinHash,
+          role: Role.SUPERVISOR,
+          isActive: true,
+        },
+      ],
     });
 
     browser = await chromium.launch({
@@ -1032,6 +1074,219 @@ export async function runMobileUISuite(): Promise<boolean> {
         name: 'Role CASHIER Mobile/PWA (PIN Login, Hamburger, Printer Modal & Full-Width CTA)',
         status: 'FAIL',
         durationMs: Date.now() - t6,
+        error: err.message,
+      });
+      console.error('   ❌ FAIL:', err.message);
+    }
+
+    // =========================================================================
+    // SKENARIO 9: GELOMBANG 2 MOBILE UI AUDIT SWEEP (8 HALAMAN DI 390x844)
+    // Verifikasi: InventoryView, WarehousesView, StockMovementsView,
+    // StockTransfersView, PurchaseOrdersView, SuppliersView, ShiftsAuditView,
+    // CustomersView bebas overflow, bebas "+ ..." ganda, dan bebas SmartOwner.
+    // =========================================================================
+    const t9_wave2 = Date.now();
+    try {
+      console.log('\n▶️ [SKENARIO 9] Gelombang 2 Mobile UI Audit Sweep (8 Halaman di 390x844)...');
+      await page.setViewportSize(VIEWPORTS.mobile);
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.goto(`${BASE_FRONTEND}/#pos`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(700);
+
+      // Login kembali sebagai OWNER agar memiliki akses penuh ke seluruh 8 halaman Wave 2
+      const emailBtn = page.locator('button:has-text("Portal Pemilik (Email)")').first();
+      await emailBtn.waitFor({ state: 'visible', timeout: 8000 });
+      await emailBtn.click();
+      await page.fill('input[type="email"]', tenantData.ownerEmail);
+      await page.fill('input[type="password"]', 'Password123!');
+      await page.click('button:has-text("Masuk ke Portal Pemilik")');
+      await page.waitForSelector('button[title="Buka Owner Portal & Kelola Bisnis"]', { timeout: 15000 });
+      await page.waitForTimeout(700);
+
+      const wave2Tabs: Array<{ key: string; label: string }> = [
+        { key: 'inventory', label: 'InventoryView' },
+        { key: 'warehouses', label: 'WarehousesView' },
+        { key: 'stock_movements', label: 'StockMovementsView' },
+        { key: 'transfers', label: 'StockTransfersView' },
+        { key: 'purchase_orders', label: 'PurchaseOrdersView' },
+        { key: 'suppliers', label: 'SuppliersView' },
+        { key: 'shifts', label: 'ShiftsAuditView' },
+        { key: 'customers', label: 'CustomersView' },
+      ];
+
+      for (const tab of wave2Tabs) {
+        await navigateToTab(page, tab.key);
+        await page.waitForTimeout(550);
+        await checkZeroOverflow(page, tab.label, 'Mobile 390x844');
+
+        const hygiene = await page.evaluate(() => {
+          const text = document.body.innerText || '';
+          const hasSmartOwner = text.includes('SmartOwner');
+          const hasSmartKasir = text.includes('SmartKasir');
+
+          const buttons = Array.from(document.querySelectorAll('button'));
+          const doublePlusBtn = buttons.find((b: any) => {
+            const hasSvg = Boolean(b.querySelector('svg'));
+            const btnText = (b.innerText || '').trim();
+            return hasSvg && (/^\+\s/.test(btnText) || btnText.includes('++'));
+          }) as any;
+
+          const pwaEl = Array.from(document.querySelectorAll('div')).find((el: any) =>
+            (el.innerText || '').includes('Pasang Aplikasi Well POS') &&
+            (window as any).getComputedStyle(el).position === 'fixed'
+          ) as any;
+          let pwaOverlap = false;
+          if (pwaEl) {
+            const rect = pwaEl.getBoundingClientRect();
+            pwaOverlap = rect.bottom > (window as any).innerHeight - 52;
+          }
+
+          return {
+            hasSmartOwner,
+            hasSmartKasir,
+            doublePlusText: doublePlusBtn ? (doublePlusBtn.innerText || '').trim() : null,
+            pwaOverlap,
+          };
+        });
+
+        assert(!hygiene.hasSmartOwner, `Teks "SmartOwner" ditemukan pada ${tab.label}`);
+        assert(!hygiene.hasSmartKasir, `Teks "SmartKasir" ditemukan pada ${tab.label}`);
+        assert(
+          !hygiene.doublePlusText,
+          `Tombol "+ ..." ganda dengan ikon ditemukan pada ${tab.label}: "${hygiene.doublePlusText}"`
+        );
+        assert(!hygiene.pwaOverlap, `PwaInstallBanner menimpa Bottom Nav pada ${tab.label}`);
+      }
+
+      results.push({
+        name: 'Gelombang 2 Mobile UI Audit Sweep (Inventori, Gudang, Mutasi, Transfer, PO, Pemasok, Shift & Pelanggan)',
+        status: 'PASS',
+        durationMs: Date.now() - t9_wave2,
+      });
+      console.log('   ✅ PASS: Seluruh 8 halaman Gelombang 2 lolos 390x844 (0 overflow, 0 double +, 0 SmartOwner).');
+    } catch (err: any) {
+      results.push({
+        name: 'Gelombang 2 Mobile UI Audit Sweep (Inventori, Gudang, Mutasi, Transfer, PO, Pemasok, Shift & Pelanggan)',
+        status: 'FAIL',
+        durationMs: Date.now() - t9_wave2,
+        error: err.message,
+      });
+      console.error('   ❌ FAIL:', err.message);
+    }
+
+    // =========================================================================
+    // SKENARIO 10: MULTI-ROLE MOBILE/PWA VERIFICATION (390x844)
+    // Role: WAREHOUSE (10096), KITCHEN (10097), & SUPERVISOR (10098)
+    // =========================================================================
+    const t10_roles = Date.now();
+    try {
+      console.log('\n▶️ [SKENARIO 10] Multi-Role Mobile/PWA Verification (WAREHOUSE, KITCHEN, SUPERVISOR di 390x844)...');
+      await page.setViewportSize(VIEWPORTS.mobile);
+
+      const loginStaffPin = async (staffCode: string) => {
+        await page.evaluate(() => {
+          localStorage.clear();
+          sessionStorage.clear();
+        });
+        await page.goto(`${BASE_FRONTEND}/#pos`, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(700);
+        const slugInput = page.locator('input[placeholder*="DND-4829001"]');
+        await slugInput.waitFor({ state: 'visible', timeout: 8000 });
+        await slugInput.fill((tenantRecord?.slug || '').toUpperCase());
+        await page.locator('input[placeholder*="00001"]').fill(staffCode);
+        await page.locator('input[placeholder="••••••"]').fill('123456');
+        await page.locator('button:has-text("Hubungkan Mesin Kasir")').click();
+      };
+
+      // 10.1 ROLE WAREHOUSE (10096)
+      await loginStaffPin('10096');
+      await page.waitForSelector('h2:has-text("Stok Bahan")', { timeout: 15000 });
+      await page.waitForTimeout(600);
+      await checkZeroOverflow(page, 'Role WAREHOUSE — Inventory', 'Mobile 390x844');
+
+      const whHasOwnerPortal = await page.locator('button[title="Buka Owner Portal & Kelola Bisnis"]').count();
+      assert(whHasOwnerPortal === 0, 'Role WAREHOUSE dilarang menampilkan tombol Owner Portal!');
+
+      const whHamburger = page.locator('header button[title="Buka Menu Navigasi"]').first();
+      await whHamburger.waitFor({ state: 'visible', timeout: 6000 });
+      await whHamburger.click();
+      await page.waitForTimeout(350);
+
+      const whDrawerText = await page.evaluate(() => document.body.innerText || '');
+      for (const expectedMenu of ['Bahan Baku & Stok', 'Kartu Mutasi Stok', 'Pengadaan (PO)', 'Transfer Antar Toko', 'Pemasok (Vendor)', 'Kunci Terminal', 'Keluar Akun']) {
+        assert(whDrawerText.includes(expectedMenu), `Drawer WAREHOUSE wajib memuat "${expectedMenu}"`);
+      }
+
+      // Verifikasi klik Pengadaan (PO) dari drawer WAREHOUSE benar-benar me-render PurchaseOrdersView
+      await page.locator('button:has-text("Pengadaan (PO)")').first().click();
+      await page.waitForSelector('h1:has-text("Pengadaan Barang")', { timeout: 10000 });
+      await page.waitForTimeout(400);
+      await checkZeroOverflow(page, 'Role WAREHOUSE — PO via Drawer', 'Mobile 390x844');
+      console.log('   ✅ Role WAREHOUSE lolos 390x844: drawer lengkap, PO ter-render, zero overflow, zero Owner Portal.');
+
+      // 10.2 ROLE KITCHEN / WORKSHOP LAUNDRY (10097)
+      await loginStaffPin('10097');
+      await page.locator('h2:has-text("Stasiun Produksi")').first().waitFor({ state: 'visible', timeout: 15000 });
+      await page.waitForTimeout(600);
+      await checkZeroOverflow(page, 'Role KITCHEN — Workshop', 'Mobile 390x844');
+
+      const ktHasOwnerPortal = await page.locator('button[title="Buka Owner Portal & Kelola Bisnis"]').count();
+      assert(ktHasOwnerPortal === 0, 'Role KITCHEN dilarang menampilkan tombol Owner Portal!');
+
+      const ktHamburger = page.locator('header button[title="Buka Menu Navigasi"]').first();
+      await ktHamburger.waitFor({ state: 'visible', timeout: 6000 });
+      await ktHamburger.click();
+      await page.waitForTimeout(350);
+
+      const ktDrawerText = await page.evaluate(() => document.body.innerText || '');
+      for (const expectedMenu of ['Workshop Produksi', 'Antrean Cucian', 'Rak Simpan', 'Keluar Akun']) {
+        assert(ktDrawerText.includes(expectedMenu), `Drawer KITCHEN wajib memuat "${expectedMenu}"`);
+      }
+      assert(!ktDrawerText.includes('Laporan Finansial'), 'Role KITCHEN dilarang mengakses Laporan Finansial!');
+
+      await page.locator('button:has-text("Antrean Cucian")').first().click();
+      await page.waitForTimeout(600);
+      await checkZeroOverflow(page, 'Role KITCHEN — Antrean Cucian via Drawer', 'Mobile 390x844');
+      console.log('   ✅ Role KITCHEN lolos 390x844: langsung Workshop, drawer berfungsi, terisolasi finansial, zero overflow.');
+
+      // 10.3 ROLE SUPERVISOR (10098)
+      await loginStaffPin('10098');
+      await page.waitForSelector('text=Performa Bisnis Laundry', { timeout: 15000 });
+      await page.waitForTimeout(1200);
+      await checkZeroOverflow(page, 'Role SUPERVISOR — Ringkasan Bisnis Laundry', 'Mobile 390x844');
+
+      const spvAudit = await page.evaluate(() => {
+        const text = document.body.innerText || '';
+        const ownerPortalCount = document.querySelectorAll('button[title="Buka Owner Portal & Kelola Bisnis"]').length;
+        const has403Error =
+          text.includes('Akses ditolak') ||
+          text.includes('Error 403') ||
+          text.includes('Status: 403');
+        const allowedOpTabs = ['Operasional & SLA', 'Karyawan & Shift', 'Mesin & Aset', 'Bahan Baku & Stok'];
+        const missingOpTab = allowedOpTabs.find((t) => !text.includes(t)) || null;
+        const leakedOwnerTabs = ['Finansial & Kas', 'Benchmark Outlet', 'Asisten AI'].find((t) => text.includes(t)) || null;
+        return { ownerPortalCount, has403Error, missingOpTab, leakedOwnerTabs };
+      });
+      assert(spvAudit.ownerPortalCount === 0, 'Role SUPERVISOR dilarang menampilkan tombol Owner Portal!');
+      assert(!spvAudit.has403Error, 'Role SUPERVISOR tidak boleh memunculkan error 403 / Akses ditolak saat membuka Ringkasan Bisnis Laundry!');
+      assert(!spvAudit.missingOpTab, `Sub-tab operasional SUPERVISOR hilang: "${spvAudit.missingOpTab}"`);
+      assert(!spvAudit.leakedOwnerTabs, `Sub-tab finansial/owner bocor ke SUPERVISOR: "${spvAudit.leakedOwnerTabs}"`);
+      console.log('   ✅ Role SUPERVISOR lolos 390x844: data cabang langsung tampil tanpa error 403, 4 sub-tab operasional bersih, zero Owner Portal.');
+
+      results.push({
+        name: 'Multi-Role Mobile/PWA Verification (WAREHOUSE, KITCHEN & SUPERVISOR di 390x844)',
+        status: 'PASS',
+        durationMs: Date.now() - t10_roles,
+      });
+      console.log('   ✅ PASS: Seluruh multi-role WAREHOUSE, KITCHEN & SUPERVISOR lolos verifikasi Mobile/PWA.');
+    } catch (err: any) {
+      results.push({
+        name: 'Multi-Role Mobile/PWA Verification (WAREHOUSE, KITCHEN & SUPERVISOR di 390x844)',
+        status: 'FAIL',
+        durationMs: Date.now() - t10_roles,
         error: err.message,
       });
       console.error('   ❌ FAIL:', err.message);
