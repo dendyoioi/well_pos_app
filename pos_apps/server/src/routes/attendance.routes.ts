@@ -39,6 +39,7 @@ attendanceRouter.put('/config', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISO
 attendanceRouter.get('/shift-templates', getWorkShiftTemplates);
 attendanceRouter.post('/shift-templates', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createWorkShiftTemplate);
 attendanceRouter.patch('/shift-templates/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateWorkShiftTemplate);
+attendanceRouter.put('/shift-templates/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateWorkShiftTemplate);
 attendanceRouter.delete('/shift-templates/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), deleteWorkShiftTemplate);
 
 // --- Modul Roster Jadwal Kerja & Auto-Penjadwalan (Fase B) ---

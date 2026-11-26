@@ -778,6 +778,10 @@ export async function createWorkShiftTemplate(req: Request, res: Response) {
       });
     }
 
+    if (graceMinutes !== undefined && graceMinutes !== null && (isNaN(Number(graceMinutes)) || Number(graceMinutes) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Toleransi keterlambatan tidak boleh negatif' });
+    }
+
     const template = await prisma.workShiftTemplate.create({
       data: {
         tenantId,
@@ -820,6 +824,10 @@ export async function updateWorkShiftTemplate(req: Request, res: Response) {
 
     const { id } = req.params;
     const { name, startTime, endTime, isOffDay, colorHex, graceMinutes, isActive } = req.body;
+
+    if (graceMinutes !== undefined && graceMinutes !== null && (isNaN(Number(graceMinutes)) || Number(graceMinutes) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Toleransi keterlambatan tidak boleh negatif' });
+    }
 
     const existing = await prisma.workShiftTemplate.findFirst({
       where: { id, tenantId },

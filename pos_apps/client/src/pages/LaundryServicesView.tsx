@@ -676,7 +676,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 price: parseFloat(formPrice) || 0,
                 minOrderQty: isAddon ? 1 : formHasMinOrder ? parseFloat(formMinOrder) || 1 : 0,
                 durationHours: isAddon ? 0 : parseInt(formDuration, 10) || 48,
-                expressMultiplier: 1.0,
+                expressMultiplier: editingService?.expressMultiplier != null ? Number(editingService.expressMultiplier) : 1.0,
                 description: formDescription.trim() || undefined,
                 stages: isAddon ? [] : formStages,
                 isActive: formIsActive,

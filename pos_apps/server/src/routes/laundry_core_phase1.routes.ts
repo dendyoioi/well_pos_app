@@ -34,6 +34,12 @@ router.patch(
   updateCustomerPreferences
 );
 
+router.put(
+  '/customers/:customerId/preferences',
+  authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.CASHIER),
+  updateCustomerPreferences
+);
+
 // ============================================================================
 // B. BERAT AWAL VS BERAT FINAL & QC CHECKLIST
 // ============================================================================
@@ -98,6 +104,12 @@ router.patch(
   updateLostAndFound
 );
 
+router.put(
+  '/lost-and-found/:id',
+  authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR, Role.CASHIER),
+  updateLostAndFound
+);
+
 // ============================================================================
 // D. OUTLET PRICING & PRICE HISTORY
 // ============================================================================
@@ -108,6 +120,12 @@ router.get(
 );
 
 router.put(
+  '/services/:serviceId/outlet-price',
+  authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR),
+  setOutletServicePrice
+);
+
+router.post(
   '/services/:serviceId/outlet-price',
   authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR),
   setOutletServicePrice

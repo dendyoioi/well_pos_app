@@ -20,7 +20,7 @@ const createLaundryServiceSchema = z.object({
   unit: z.string().default('KG'),
   price: z.number().min(0, 'Tarif tidak boleh negatif'),
   minOrderQty: z.number().min(0).default(1.00),
-  durationHours: z.number().int().min(1).default(48),
+  durationHours: z.number().int().min(0, 'Estimasi waktu tidak boleh negatif').default(48),
   expressMultiplier: z.number().min(1.00).default(1.00),
   description: z.string().optional(),
   stages: z.array(z.string()).optional(),
@@ -34,8 +34,17 @@ const createLaundryRackSchema = z.object({
   code: z.string().min(2, 'Kode rak minimal 2 karakter'),
   name: z.string().min(2, 'Nama rak minimal 2 karakter'),
   category: z.enum(['KILOAN', 'SATUAN', 'EXPRESS', 'SEPATU_TAS']).default('KILOAN'),
-  capacity: z.number().int().min(1).default(10),
+  capacity: z.number().int().min(1, 'Kapasitas minimal 1 slot').default(10),
   locationNote: z.string().optional(),
+});
+
+const updateLaundryRackSchema = z.object({
+  code: z.string().min(2, 'Kode rak minimal 2 karakter').optional(),
+  name: z.string().min(2, 'Nama rak minimal 2 karakter').optional(),
+  category: z.enum(['KILOAN', 'SATUAN', 'EXPRESS', 'SEPATU_TAS']).optional(),
+  capacity: z.number().int().min(1, 'Kapasitas minimal 1 slot').optional(),
+  locationNote: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
 });
 
 const createLaundryOrderSchema = z.object({
@@ -708,6 +717,12 @@ export const createLaundryPerfume = async (req: Request, res: Response) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ status: 'error', message: 'Nama parfum wajib diisi' });
     }
+    if (extraPrice !== undefined && extraPrice !== null && (isNaN(Number(extraPrice)) || Number(extraPrice) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Tarif tambahan parfum tidak boleh negatif' });
+    }
+    if (resolvedQty !== undefined && resolvedQty !== null && (isNaN(Number(resolvedQty)) || Number(resolvedQty) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Takaran penggunaan parfum tidak boleh negatif' });
+    }
 
     if (inventoryItemId) {
       const inv = await prisma.inventoryItem.findFirst({
@@ -799,6 +814,16 @@ export const updateLaundryPerfume = async (req: Request, res: Response) => {
 
     const resolvedQty = usageQtyPerUnit !== undefined ? usageQtyPerUnit : dosageMl;
     const resolvedBasis = usageBasis !== undefined ? usageBasis : dosageUnit;
+
+    if (name !== undefined && (!name || !name.trim())) {
+      return res.status(400).json({ status: 'error', message: 'Nama parfum tidak boleh kosong' });
+    }
+    if (extraPrice !== undefined && extraPrice !== null && (isNaN(Number(extraPrice)) || Number(extraPrice) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Tarif tambahan parfum tidak boleh negatif' });
+    }
+    if (resolvedQty !== undefined && resolvedQty !== null && (isNaN(Number(resolvedQty)) || Number(resolvedQty) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Takaran penggunaan parfum tidak boleh negatif' });
+    }
 
     if (inventoryItemId) {
       const inv = await prisma.inventoryItem.findFirst({
@@ -1054,6 +1079,126 @@ export const createLaundryRack = async (req: Request, res: Response) => {
   }
 };
 
+export const updateLaundryRack = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat mengubah rak penyimpanan' });
+    }
+
+    const existing = await prisma.laundryRack.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Rak tidak ditemukan' });
+    }
+
+    const parseResult = updateLaundryRackSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi pembaruan rak gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { code, name, category, capacity, locationNote, isActive } = parseResult.data;
+
+    let cleanCode = existing.code;
+    if (code && code.trim().toUpperCase() !== existing.code) {
+      cleanCode = code.trim().toUpperCase();
+      const duplicate = await prisma.laundryRack.findFirst({
+        where: { outletId: existing.outletId, code: cleanCode, id: { not: id } },
+      });
+      if (duplicate) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Rak dengan kode ${cleanCode} sudah terdaftar pada toko ini`,
+        });
+      }
+    }
+
+    const updated = await prisma.laundryRack.update({
+      where: { id },
+      data: {
+        code: cleanCode,
+        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(category !== undefined ? { category } : {}),
+        ...(capacity !== undefined ? { capacity } : {}),
+        ...(locationNote !== undefined ? { locationNote: locationNote?.trim() || null } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Rak penyimpanan berhasil diperbarui',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryRack:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memperbarui rak laundry' });
+  }
+};
+
+export const deleteLaundryRack = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({ status: 'error', message: 'Hanya Owner, Admin, atau Supervisor yang dapat menghapus rak penyimpanan' });
+    }
+
+    const existing = await prisma.laundryRack.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return res.status(404).json({ status: 'error', message: 'Rak tidak ditemukan' });
+    }
+
+    // Cek apakah rak sedang berisi order aktif
+    const activeOrdersInThisRack = await prisma.laundryOrderDetail.count({
+      where: {
+        tenantId,
+        rackCode: existing.code,
+        order: {
+          orderStatus: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.VOIDED] },
+        },
+      },
+    });
+
+    if (activeOrdersInThisRack > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Rak ${existing.code} tidak dapat dihapus karena masih menampung ${activeOrdersInThisRack} nota cucian aktif. Pindahkan cucian terlebih dahulu.`,
+      });
+    }
+
+    await prisma.laundryRack.delete({
+      where: { id },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Rak ${existing.code} berhasil dihapus`,
+    });
+  } catch (error: any) {
+    console.error('Error deleteLaundryRack:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menghapus rak laundry' });
+  }
+};
+
 // ==========================================
 // 3B. LAUNDRY MACHINES CONTROLLER
 // ==========================================
@@ -1160,6 +1305,9 @@ export const createLaundryMachine = async (req: Request, res: Response) => {
     if (!['WASHER', 'DRYER'].includes(machineType)) {
       return res.status(400).json({ status: 'error', message: 'Tipe mesin harus WASHER atau DRYER' });
     }
+    if (capacityKg !== undefined && capacityKg !== null && (isNaN(Number(capacityKg)) || Number(capacityKg) <= 0)) {
+      return res.status(400).json({ status: 'error', message: 'Kapasitas mesin harus lebih besar dari 0 kg' });
+    }
 
     const cleanCode = code.trim().toUpperCase();
     const existing = await prisma.laundryMachine.findFirst({
@@ -1216,6 +1364,16 @@ export const updateLaundryMachine = async (req: Request, res: Response) => {
     }
 
     const { code, name, machineType, capacityKg, status } = req.body;
+
+    if (machineType !== undefined && !['WASHER', 'DRYER'].includes(machineType)) {
+      return res.status(400).json({ status: 'error', message: 'Tipe mesin harus WASHER atau DRYER' });
+    }
+    if (capacityKg !== undefined && capacityKg !== null && (isNaN(Number(capacityKg)) || Number(capacityKg) <= 0)) {
+      return res.status(400).json({ status: 'error', message: 'Kapasitas mesin harus lebih besar dari 0 kg' });
+    }
+    if (status !== undefined && !['ACTIVE', 'MAINTENANCE', 'INACTIVE'].includes(status)) {
+      return res.status(400).json({ status: 'error', message: 'Status mesin tidak valid (harus ACTIVE, MAINTENANCE, atau INACTIVE)' });
+    }
 
     let cleanCode = existing.code;
     if (code && code.trim().toUpperCase() !== existing.code) {
@@ -4155,6 +4313,19 @@ export const topupCustomerLaundryWallet = async (req: Request, res: Response) =>
       return res.status(400).json({ status: 'error', message: 'Jumlah kuota kg harus lebih besar dari 0' });
     }
 
+    if (bonusAmount !== undefined && bonusAmount !== null && (isNaN(Number(bonusAmount)) || Number(bonusAmount) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Bonus saldo tidak boleh bernilai negatif' });
+    }
+    if (quotaBonusKg !== undefined && quotaBonusKg !== null && (isNaN(Number(quotaBonusKg)) || Number(quotaBonusKg) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Bonus kuota kg tidak boleh bernilai negatif' });
+    }
+    if (pricePaid !== undefined && pricePaid !== null && (isNaN(Number(pricePaid)) || Number(pricePaid) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Nominal pembayaran tidak boleh bernilai negatif' });
+    }
+    if (validityDays !== undefined && validityDays !== null && (isNaN(Number(validityDays)) || Number(validityDays) <= 0)) {
+      return res.status(400).json({ status: 'error', message: 'Masa aktif harus lebih besar dari 0 hari' });
+    }
+
     const customer = await prisma.customer.findFirst({
       where: { id: customerId, tenantId },
     });
@@ -4407,6 +4578,26 @@ export const getLaundryDepositConfig = async (req: Request, res: Response) => {
   }
 };
 
+const depositPackageSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Nama paket deposit wajib diisi'),
+  type: z.enum(['QUOTA_KG', 'BALANCE']),
+  price: z.number().min(0, 'Tarif paket tidak boleh negatif'),
+  balanceAmount: z.number().min(0, 'Saldo deposit tidak boleh negatif').optional(),
+  bonusAmount: z.number().min(0, 'Bonus saldo tidak boleh negatif').optional(),
+  quotaKg: z.number().min(0, 'Kuota Kg tidak boleh negatif').optional(),
+  quotaBonusKg: z.number().min(0, 'Bonus kuota tidak boleh negatif').optional(),
+  validityDays: z.number().int().min(1, 'Masa aktif minimal 1 hari').default(30),
+  expiryPolicy: z.enum(['ACCUMULATE', 'EXPIRE']).optional(),
+  description: z.string().optional(),
+});
+
+const updateLaundryDepositConfigSchema = z.object({
+  outletId: z.string().optional().nullable(),
+  packages: z.array(depositPackageSchema).optional(),
+  expiryPolicy: z.enum(['ACCUMULATE', 'EXPIRE']).default('ACCUMULATE'),
+});
+
 export const updateLaundryDepositConfig = async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.tenantId;
@@ -4419,7 +4610,16 @@ export const updateLaundryDepositConfig = async (req: Request, res: Response) =>
       return res.status(403).json({ status: 'error', message: 'Hanya Owner/Admin yang berhak mengubah paket deposit' });
     }
 
-    const { outletId, packages, expiryPolicy } = req.body;
+    const parseResult = updateLaundryDepositConfigSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi konfigurasi paket deposit gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { outletId, packages, expiryPolicy } = parseResult.data;
     const effectiveOutletId = outletId || (req.user as any)?.outletId;
     let targetOutlet = null;
     if (effectiveOutletId) {
@@ -4503,6 +4703,29 @@ export const getLaundryDeliveryConfig = async (req: Request, res: Response) => {
 /**
  * Menyimpan konfigurasi tarif ongkir dan zona delivery toko
  */
+const deliveryZoneSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Nama zona delivery wajib diisi'),
+  fee: z.number().min(0, 'Tarif ongkir zona tidak boleh negatif'),
+  maxKm: z.number().min(0, 'Jarak maksimal tidak boleh negatif').optional(),
+});
+
+const updateLaundryDeliveryConfigSchema = z.object({
+  outletId: z.string().optional().nullable(),
+  config: z.object({
+    enabled: z.boolean().default(true),
+    freeDeliveryMinAmount: z.number().min(0, 'Minimal belanja gratis ongkir tidak boleh negatif').optional(),
+    freeDeliveryMinWeightKg: z.number().min(0, 'Minimal berat gratis ongkir tidak boleh negatif').optional(),
+    roundTripMultiplier: z.number().min(1.0, 'Multiplier bolak-balik minimal 1.0').optional(),
+    zones: z.array(deliveryZoneSchema).optional(),
+  }).passthrough().optional(),
+  enabled: z.boolean().optional(),
+  freeDeliveryMinAmount: z.number().min(0, 'Minimal belanja gratis ongkir tidak boleh negatif').optional(),
+  freeDeliveryMinWeightKg: z.number().min(0, 'Minimal berat gratis ongkir tidak boleh negatif').optional(),
+  roundTripMultiplier: z.number().min(1.0, 'Multiplier bolak-balik minimal 1.0').optional(),
+  zones: z.array(deliveryZoneSchema).optional(),
+}).passthrough();
+
 export const updateLaundryDeliveryConfig = async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || req.tenantId;
@@ -4515,6 +4738,15 @@ export const updateLaundryDeliveryConfig = async (req: Request, res: Response) =
     const role = (req.user?.role || '').toUpperCase();
     if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
       return res.status(403).json({ status: 'error', message: 'Hanya Pengelola/Supervisor yang dapat mengubah tarif delivery' });
+    }
+
+    const parseResult = updateLaundryDeliveryConfigSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi konfigurasi delivery gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
     }
 
     const payload = config && typeof config === 'object' ? config : req.body;
@@ -7810,6 +8042,13 @@ export const updateLaundryIncident = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, approvedCompensation, resolutionNotes } = req.body;
 
+    if (status && !['REPORTED', 'INVESTIGATING', 'APPROVED', 'REJECTED', 'RESOLVED', 'COMPENSATED'].includes(status)) {
+      return res.status(400).json({ status: 'error', message: 'Status insiden tidak valid' });
+    }
+    if (approvedCompensation !== undefined && approvedCompensation !== null && (isNaN(Number(approvedCompensation)) || Number(approvedCompensation) < 0)) {
+      return res.status(400).json({ status: 'error', message: 'Nilai kompensasi tidak boleh negatif' });
+    }
+
     const incident = await prisma.laundryIncident.findFirst({
       where: { id, tenantId },
     });
@@ -8195,6 +8434,19 @@ export const createStaffPerformanceReview = async (req: Request, res: Response) 
         status: 'error',
         message: 'outletId, userId, periodStart, dan periodEnd wajib diisi',
       });
+    }
+
+    const scoreFields = [
+      { name: 'Kedisiplinan', val: disciplineScore },
+      { name: 'Produktivitas', val: productivityScore },
+      { name: 'Kualitas', val: qualityScore },
+      { name: 'Pelayanan Pelanggan', val: customerScore },
+      { name: 'Keseluruhan', val: overallScore },
+    ];
+    for (const sf of scoreFields) {
+      if (sf.val !== undefined && sf.val !== null && (isNaN(Number(sf.val)) || Number(sf.val) < 0 || Number(sf.val) > 100)) {
+        return res.status(400).json({ status: 'error', message: `Skor ${sf.name} harus bernilai antara 0 hingga 100` });
+      }
     }
 
     const review = await prisma.staffPerformanceReview.create({

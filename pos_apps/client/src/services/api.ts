@@ -2792,6 +2792,23 @@ export const api = {
     return res.json();
   },
 
+  updateLaundryRack: async (id: string, data: any): Promise<any> => {
+    const res = await fetch(`/api/laundry/racks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deleteLaundryRack: async (id: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/racks/${id}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
   getLaundryOrders: async (outletId?: string, status?: string): Promise<any> => {
     const searchParams = new URLSearchParams();
     if (outletId) searchParams.append('outletId', outletId);

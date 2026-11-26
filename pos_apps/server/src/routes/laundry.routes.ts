@@ -10,6 +10,8 @@ import {
   saveLaundryServiceBom,
   getLaundryRacks,
   createLaundryRack,
+  updateLaundryRack,
+  deleteLaundryRack,
   getLaundryOrders,
   createLaundryOrder,
   updateLaundryStatus,
@@ -103,7 +105,10 @@ router.delete('/perfumes/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR
 
 // --- Master Rak & Titik Simpan Laundry ---
 router.get('/racks', getLaundryRacks);
-router.post('/racks', createLaundryRack);
+router.post('/racks', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createLaundryRack);
+router.put('/racks/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryRack);
+router.patch('/racks/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryRack);
+router.delete('/racks/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), deleteLaundryRack);
 
 // --- Master Mesin Produksi Laundry (Washer & Dryer) ---
 router.get('/machines', getLaundryMachines);
@@ -177,6 +182,8 @@ router.patch('/incidents/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR
 // --- Modul Evaluasi Performa Karyawan (Fase B) ---
 router.get('/staff-performance', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getStaffPerformance);
 router.post('/staff-performance/reviews', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createStaffPerformanceReview);
+router.post('/performance-reviews', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), createStaffPerformanceReview);
 router.get('/staff-performance/reviews', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getStaffPerformanceReviews);
+router.get('/performance-reviews', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), getStaffPerformanceReviews);
 
 export { router as laundryRouter };

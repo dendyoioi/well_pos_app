@@ -72,7 +72,31 @@ export const updateCustomerPreferences = async (req: Request, res: Response) => 
     const user = (req as any).user;
     const { customerId } = req.params;
 
-    const parsed = customerPreferencesSchema.safeParse(req.body);
+    // Dukung baik format bersarang { laundryPreferences: {...} } maupun format flat
+    const bodyPreferences = req.body.laundryPreferences ?? (
+      req.body.preferFoldOrHang !== undefined ||
+      req.body.preferPerfume !== undefined ||
+      req.body.avoidSoftener !== undefined ||
+      req.body.alwaysExpress !== undefined ||
+      req.body.allergies !== undefined ||
+      req.body.customNotes !== undefined ||
+      req.body.separateColors !== undefined
+        ? {
+            preferFoldOrHang: req.body.preferFoldOrHang,
+            preferPerfume: req.body.preferPerfume,
+            avoidSoftener: req.body.avoidSoftener,
+            alwaysExpress: req.body.alwaysExpress,
+            allergies: req.body.allergies,
+            customNotes: req.body.customNotes,
+            separateColors: req.body.separateColors,
+          }
+        : undefined
+    );
+
+    const parsed = customerPreferencesSchema.safeParse({
+      laundryPreferences: bodyPreferences,
+      secondaryPhones: req.body.secondaryPhones,
+    });
     if (!parsed.success) {
       return res.status(400).json({
         status: 'error',
@@ -421,11 +445,20 @@ export const getLostAndFound = async (req: Request, res: Response) => {
   }
 };
 
+const LOST_AND_FOUND_CATEGORIES = [
+  'POCKET_ITEM',
+  'UNCLAIMED_GARMENT',
+  'VALUABLES',
+  'CLOTHING',
+  'ACCESSORIES',
+  'OTHER',
+] as const;
+
 const createLostAndFoundSchema = z.object({
   outletId: z.string().min(1, 'Outlet ID wajib diisi'),
   orderId: z.string().nullable().optional(),
   customerId: z.string().nullable().optional(),
-  itemCategory: z.enum(['POCKET_ITEM', 'UNCLAIMED_GARMENT']).default('POCKET_ITEM'),
+  itemCategory: z.enum(LOST_AND_FOUND_CATEGORIES).default('POCKET_ITEM'),
   itemName: z.string().min(1, 'Nama barang wajib diisi'),
   description: z.string().nullable().optional(),
   photoUrl: z.string().nullable().optional(),
@@ -527,6 +560,10 @@ export const createLostAndFound = async (req: Request, res: Response) => {
 };
 
 const updateLostAndFoundSchema = z.object({
+  itemName: z.string().min(1, 'Nama barang wajib diisi').optional(),
+  itemCategory: z.enum(LOST_AND_FOUND_CATEGORIES).optional(),
+  description: z.string().nullable().optional(),
+  photoUrl: z.string().nullable().optional(),
   status: z.enum(['FOUND', 'NOTIFIED', 'RETURNED', 'DISPOSED']).optional(),
   claimedByName: z.string().nullable().optional(),
   storageLocation: z.string().nullable().optional(),
@@ -563,9 +600,13 @@ export const updateLostAndFound = async (req: Request, res: Response) => {
       });
     }
 
-    const { status, claimedByName, storageLocation, notes } = parsed.data;
+    const { itemName, itemCategory, description, photoUrl, status, claimedByName, storageLocation, notes } = parsed.data;
 
     const updateData: any = {};
+    if (itemName !== undefined) updateData.itemName = itemName.trim();
+    if (itemCategory !== undefined) updateData.itemCategory = itemCategory;
+    if (description !== undefined) updateData.description = description ? description.trim() : null;
+    if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
     if (status !== undefined) updateData.status = status;
     if (claimedByName !== undefined) updateData.claimedByName = claimedByName;
     if (storageLocation !== undefined) updateData.storageLocation = storageLocation;
