@@ -9,3 +9,4 @@ export * from './BluetoothSettingsModal';
 export * from './ThermalPrinterModal';
 export * from './BarcodeCameraScannerModal';
 export * from './ComboSlotModal';
+export * from './OfflineQueueModal';

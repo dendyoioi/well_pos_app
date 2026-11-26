@@ -219,6 +219,56 @@ export const markOfflineOrderFailed = async (offlineId: string, errorMsg: string
 };
 
 /**
+ * Mengambil seluruh entri antrean offline (PENDING / FAILED / SYNCING) untuk manajemen UI kasir
+ */
+export const getOfflineOrdersByOutlet = async (
+  outletId?: string,
+  orderKind?: 'POS' | 'LAUNDRY'
+): Promise<OfflineOrderEntry[]> => {
+  try {
+    const db = await openOfflineDatabase();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+
+      req.onsuccess = () => {
+        let results: OfflineOrderEntry[] = req.result || [];
+        results = results.filter(
+          (item) => item.status === 'PENDING' || item.status === 'FAILED' || item.status === 'SYNCING'
+        );
+        if (outletId) {
+          results = results.filter((item) => !item.outletId || item.outletId === outletId);
+        }
+        if (orderKind) {
+          results = results.filter((item) => (item.orderKind || 'POS') === orderKind);
+        }
+        results.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        resolve(results);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Menghapus 1 entri antrean offline berdasarkan offlineId
+ */
+export const deleteOfflineOrder = async (offlineId: string): Promise<void> => {
+  const db = await openOfflineDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.delete(offlineId);
+
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+};
+
+/**
  * Menghapus pesanan yang sudah berhasil disinkronkan untuk membersihkan ruang penyimpanan lokal
  */
 export const clearSyncedOfflineOrders = async (): Promise<void> => {

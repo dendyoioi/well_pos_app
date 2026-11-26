@@ -19,6 +19,7 @@ import {
   PosMobileView,
   BarcodeCameraScannerModal,
   ComboSlotModal,
+  OfflineQueueModal,
 } from '../components/pos';
 import { VoucherSelectionModal } from '../components/pos/VoucherSelectionModal';
 import { SplitBillModal } from '../components/pos/SplitBillModal';
@@ -50,6 +51,7 @@ import {
   markOfflineOrderFailed,
   clearSyncedOfflineOrders,
   generateIdempotencyKey,
+  type OfflineOrderEntry,
 } from '../utils/offlineQueue';
 import { setOfflineCache, getOfflineCache, formatCacheTime } from '../utils/offlineDataCache';
 import { getEffectiveItemPricing, getCartItemSubtotal } from '../utils/pricing';
@@ -686,6 +688,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [pendingOfflineCount, setPendingOfflineCount] = useState<number>(0);
   const [isSyncingQueue, setIsSyncingQueue] = useState<boolean>(false);
   const [lastCatalogSyncAt, setLastCatalogSyncAt] = useState<string | null>(null);
+  const [offlineQueueModalOpen, setOfflineQueueModalOpen] = useState<boolean>(false);
 
   const refreshOfflineQueueCount = useCallback(async () => {
     try {
@@ -988,6 +991,47 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       setIsSyncingQueue(false);
     }
   }, [isSyncingQueue, activeOutlet?.id, dialog, loadProducts, loadCurrentShift, loadTablesAndOrders, refreshOfflineQueueCount]);
+
+  const handleRetrySingleOfflineOrder = useCallback(
+    async (entry: OfflineOrderEntry) => {
+      try {
+        await markOfflineOrderSyncing(entry.offlineId);
+        const idempotencyKey = entry.clientRequestId || entry.offlineId;
+        const res = await api.checkoutOrder(entry.payload, { idempotencyKey });
+        if (res.status === 'success' && res.data) {
+          await markOfflineOrderSuccess(entry.offlineId, res.data);
+          await clearSyncedOfflineOrders();
+          await refreshOfflineQueueCount();
+          dialog.toast(
+            `Faktur #${entry.tempOrder?.invoiceNumber || entry.offlineId} berhasil disinkronkan.`,
+            'success'
+          );
+          if (activeOutlet?.id) {
+            loadProducts(activeOutlet.id);
+          }
+          loadCurrentShift();
+          loadTablesAndOrders();
+        } else {
+          await markOfflineOrderFailed(entry.offlineId, res.message || 'Gagal sinkron');
+          await refreshOfflineQueueCount();
+          dialog.toast(res.message || 'Transaksi belum berhasil disinkronkan.', 'error');
+        }
+      } catch (syncErr: any) {
+        await markOfflineOrderFailed(entry.offlineId, syncErr?.message || 'Network error');
+        await refreshOfflineQueueCount();
+        dialog.toast(syncErr?.message || 'Koneksi gagal saat menyinkronkan.', 'error');
+      }
+    },
+    [activeOutlet?.id, dialog, loadProducts, loadCurrentShift, loadTablesAndOrders, refreshOfflineQueueCount]
+  );
+
+  const handleReprintOfflineOrder = useCallback((entry: OfflineOrderEntry) => {
+    setOfflineQueueModalOpen(false);
+    if (entry.tempOrder) {
+      setLastOrder(entry.tempOrder);
+      setSuccessModalOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -1909,6 +1953,40 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           retryCount: 0,
         });
 
+        // Pilar 3C: Optimistic local stock decrement agar grid katalog & cache mencerminkan sisa stok offline
+        const qtySoldByProductId = new Map<string, number>();
+        cart.forEach((c) => {
+          qtySoldByProductId.set(
+            c.product.id,
+            (qtySoldByProductId.get(c.product.id) || 0) + Number(c.quantity || 0)
+          );
+        });
+        const updatedProducts = products.map((p) => {
+          const qtySold = qtySoldByProductId.get(p.id);
+          if (!qtySold) return p;
+          const isBundle = Boolean(p.isBundle || (p.bundleItems && p.bundleItems.length > 0));
+          const hasBundleStockLimit =
+            isBundle && p.bundleLimitStock !== null && p.bundleLimitStock !== undefined;
+          const isCompositeRecipe = !isBundle && p.hasStock === false;
+          const currentStock = p.stock ?? 0;
+          const isUnlimited =
+            isCompositeRecipe || (isBundle && !hasBundleStockLimit) || currentStock >= 99999;
+          if (isUnlimited) return p;
+          return {
+            ...p,
+            stock: Math.max(0, currentStock - qtySold),
+            ...(hasBundleStockLimit
+              ? { bundleLimitStock: Math.max(0, Number(p.bundleLimitStock) - qtySold) }
+              : {}),
+          };
+        });
+        setProducts(updatedProducts);
+        setOfflineCache(`fnb_catalog:${activeOutlet?.id || 'default'}`, {
+          products: updatedProducts,
+          categories,
+          activeItemDiscounts,
+        });
+
         setLastOrder(tempOrderData);
         setPaymentModalOpen(false);
         setSuccessModalOpen(true);
@@ -2136,6 +2214,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           pendingOfflineCount={pendingOfflineCount}
           isSyncingQueue={isSyncingQueue}
           onSyncOfflineQueue={handleSyncOfflineQueue}
+          onOpenOfflineQueue={() => setOfflineQueueModalOpen(true)}
           lastCatalogSyncAt={lastCatalogSyncAt}
         />
       ) : (
@@ -2201,9 +2280,15 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {pendingOfflineCount > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-amber-200 text-amber-900">
-                    {pendingOfflineCount} antrean offline
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOfflineQueueModalOpen(true)}
+                    className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-amber-200 hover:bg-amber-300 text-amber-950 transition-colors cursor-pointer inline-flex items-center gap-1"
+                    title="Klik untuk melihat & mengelola antrean transaksi offline"
+                  >
+                    <span>{pendingOfflineCount} antrean offline</span>
+                    <span className="underline font-extrabold">Lihat Antrean</span>
+                  </button>
                 )}
                 {isOnline && pendingOfflineCount > 0 && (
                   <button
@@ -2389,6 +2474,23 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           order={lastOrder}
         />
       )}
+
+      {/* Manajemen Antrean Transaksi Offline PWA */}
+      <OfflineQueueModal
+        isOpen={offlineQueueModalOpen}
+        onClose={() => setOfflineQueueModalOpen(false)}
+        outletId={activeOutlet?.id}
+        orderKind="POS"
+        isOnline={isOnline}
+        isSyncing={isSyncingQueue}
+        canDeleteEntry={['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUserRole || activeUser?.role || '')}
+        onRetrySingle={handleRetrySingleOfflineOrder}
+        onRetryAll={handleSyncOfflineQueue}
+        onReprintReceipt={handleReprintOfflineOrder}
+        onQueueChanged={() => {
+          refreshOfflineQueueCount();
+        }}
+      />
 
       {/* Shift Management Modals */}
       <StartShiftModal

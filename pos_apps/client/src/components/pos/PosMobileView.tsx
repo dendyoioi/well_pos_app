@@ -118,6 +118,7 @@ export interface PosMobileViewProps {
   pendingOfflineCount?: number;
   isSyncingQueue?: boolean;
   onSyncOfflineQueue?: () => void;
+  onOpenOfflineQueue?: () => void;
   lastCatalogSyncAt?: string | null;
   activeItemDiscounts?: ActiveItemDiscount[];
   /** Callback ubah / tambah catatan item pesanan kasir */
@@ -139,6 +140,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   pendingOfflineCount = 0,
   isSyncingQueue = false,
   onSyncOfflineQueue,
+  onOpenOfflineQueue,
   lastCatalogSyncAt = null,
   onlineOrderId,
   onChangeOnlineOrderId,
@@ -367,9 +369,14 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {pendingOfflineCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full font-bold text-[10px] bg-amber-200 text-amber-900">
-                {pendingOfflineCount}
-              </span>
+              <button
+                type="button"
+                onClick={onOpenOfflineQueue}
+                className="px-2 py-0.5 rounded-full font-bold text-[10px] bg-amber-200 hover:bg-amber-300 text-amber-950 transition-colors cursor-pointer whitespace-nowrap"
+                title="Lihat daftar antrean offline"
+              >
+                {pendingOfflineCount} Antrean
+              </button>
             )}
             {isOnline && pendingOfflineCount > 0 && onSyncOfflineQueue && (
               <button

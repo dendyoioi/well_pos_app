@@ -32,7 +32,8 @@ import type {
 } from '../../types/laundry';
 import { api, customerApi } from '../../services/api';
 import { WhatsAppInput, CurrencyInput } from '../ui';
-import { generateIdempotencyKey } from '../../utils/offlineQueue';
+import { generateIdempotencyKey, saveOfflineOrder } from '../../utils/offlineQueue';
+import { getOfflineCache, setOfflineCache } from '../../utils/offlineDataCache';
 import { StartShiftModal } from '../StartShiftModal';
 import type { Shift } from '../../types/shift';
 
@@ -57,6 +58,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
   isOpen,
   onClose,
   activeOutlet,
+  currentUser,
   onOrderCreated,
   onOpenFullPos,
 }) => {
@@ -127,7 +129,7 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     return `/${unit}`;
   };
 
-  // Fetch Services & Initial Customers & Shift when modal opens
+  // Fetch Services & Initial Customers & Shift when modal opens (Network-First, Fallback-to-Cache)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -135,56 +137,119 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
     setLoadingServices(true);
     setErrorMsg(null);
 
+    const catalogKey = `laundry_catalog:${activeOutlet?.id || 'default'}`;
+    const custKey = `customers:${currentUser?.tenantId || currentUser?.id || 'default'}`;
+    const shiftKey = `current_shift:${currentUser?.id || 'default'}:${activeOutlet?.id || 'default'}`;
+
+    const applyServicesList = (srvList: LaundryService[]) => {
+      setServices(srvList);
+      const nonAddons = srvList.filter(
+        (s: LaundryService) => s.category !== 'ADDON' && s.isActive !== false
+      );
+      const firstKiloan = nonAddons.find((s: LaundryService) => s.category === 'KILOAN');
+      const def = firstKiloan || nonAddons[0] || srvList[0];
+      if (def) {
+        setSelectedServiceId(def.id);
+        if (def.minOrderQty) {
+          setWeightKg(Math.max(3.0, Number(def.minOrderQty)));
+        }
+      }
+    };
+
+    const restoreShiftFromCache = async () => {
+      const cached = await getOfflineCache<Shift | null>(shiftKey);
+      if (!mounted) return;
+      if (cached && 'data' in cached && cached.data) {
+        setCurrentShift(cached.data);
+      }
+    };
+
     // Cek shift kasir aktif
     api.getCurrentShift()
-      .then((res) => {
+      .then(async (res) => {
         if (!mounted) return;
         if (res.status === 'success') {
           setCurrentShift(res.data);
+          setOfflineCache(shiftKey, res.data);
+        } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+          await restoreShiftFromCache();
         } else {
           setCurrentShift(null);
         }
       })
-      .catch(() => {
-        if (mounted) setCurrentShift(null);
+      .catch(async () => {
+        await restoreShiftFromCache();
       });
 
     Promise.all([
-      api.getLaundryServices().catch(() => ({ status: 'error', data: [] })),
+      api.getLaundryServices(activeOutlet?.id).catch(() => ({ status: 'error', data: [] })),
       customerApi.getCustomers({ limit: 50 }).catch(() => ({ status: 'error', data: [] })),
       activeOutlet?.id
         ? api.getLaundryDeliveryConfig(activeOutlet.id).catch(() => ({ status: 'error', data: null }))
         : Promise.resolve({ status: 'error', data: null }),
       api.getLaundryPerfumes().catch(() => ({ status: 'error', data: [] })),
-    ]).then(([srvRes, custRes, delRes, perfRes]) => {
+    ]).then(async ([srvRes, custRes, delRes, perfRes]) => {
       if (!mounted) return;
-      if (srvRes.status === 'success' && Array.isArray(srvRes.data)) {
-        setServices(srvRes.data);
-        // Default to first active non-ADDON service (prefer KILOAN)
-        const nonAddons = srvRes.data.filter(
-          (s: LaundryService) => s.category !== 'ADDON' && s.isActive !== false
+
+      const resolvedDeliveryConfig =
+        delRes?.status === 'success' && delRes.data ? delRes.data : null;
+
+      if (srvRes?.status === 'success' && Array.isArray(srvRes.data)) {
+        const availableServices = srvRes.data.filter(
+          (s: any) => s.isAvailableAtOutlet !== false
         );
-        const firstKiloan = nonAddons.find(
-          (s: LaundryService) => s.category === 'KILOAN'
-        );
-        const def = firstKiloan || nonAddons[0] || srvRes.data[0];
-        if (def) {
-          setSelectedServiceId(def.id);
-          if (def.minOrderQty) {
-            setWeightKg(Math.max(3.0, Number(def.minOrderQty)));
+        applyServicesList(availableServices);
+        if (resolvedDeliveryConfig) {
+          setDeliveryConfig(resolvedDeliveryConfig);
+          if (resolvedDeliveryConfig.zones && resolvedDeliveryConfig.zones.length > 0) {
+            setDeliveryZoneId(resolvedDeliveryConfig.zones[0].id);
+          }
+        }
+        setOfflineCache(catalogKey, {
+          services: availableServices,
+          deliveryConfig: resolvedDeliveryConfig,
+        });
+      } else {
+        const cachedCatalog = await getOfflineCache<{
+          services: LaundryService[];
+          deliveryConfig: LaundryDeliveryConfig | null;
+        }>(catalogKey);
+        if (!mounted) return;
+        if (cachedCatalog?.data) {
+          if (Array.isArray(cachedCatalog.data.services)) {
+            applyServicesList(cachedCatalog.data.services);
+          }
+          if (cachedCatalog.data.deliveryConfig) {
+            setDeliveryConfig(cachedCatalog.data.deliveryConfig);
+            if (
+              cachedCatalog.data.deliveryConfig.zones &&
+              cachedCatalog.data.deliveryConfig.zones.length > 0
+            ) {
+              setDeliveryZoneId(cachedCatalog.data.deliveryConfig.zones[0].id);
+            }
           }
         }
       }
-      if (custRes.status === 'success' && Array.isArray(custRes.data)) {
+
+      if (custRes?.status === 'success' && Array.isArray(custRes.data)) {
         setCustomersList(custRes.data);
+        setOfflineCache(custKey, custRes.data);
+      } else {
+        const cachedCustomers = await getOfflineCache<any[]>(custKey);
+        if (!mounted) return;
+        if (cachedCustomers?.data && Array.isArray(cachedCustomers.data)) {
+          setCustomersList(cachedCustomers.data);
+        }
       }
-      if (delRes.status === 'success' && delRes.data) {
+
+      if (delRes?.status === 'success' && delRes.data && srvRes?.status !== 'success') {
         setDeliveryConfig(delRes.data);
         if (delRes.data.zones && delRes.data.zones.length > 0) {
           setDeliveryZoneId(delRes.data.zones[0].id);
         }
       }
-      if (perfRes.status === 'success' && Array.isArray(perfRes.data) && perfRes.data.length > 0) {
+
+      if (perfRes?.status === 'success' && Array.isArray(perfRes.data) && perfRes.data.length > 0) {
         setPerfumesList(perfRes.data);
         const defPerfume = perfRes.data.find((p: LaundryPerfume) => p.isDefault) || perfRes.data[0];
         if (defPerfume) {
@@ -194,13 +259,13 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
         setPerfumesList([]);
         setPerfumeVariant('Standard');
       }
-      setLoadingServices(false);
+      if (mounted) setLoadingServices(false);
     });
 
     return () => {
       mounted = false;
     };
-  }, [isOpen, activeOutlet?.id]);
+  }, [isOpen, activeOutlet?.id, currentUser?.id, currentUser?.tenantId]);
 
   // Selected Service Object
   const currentService = useMemo(() => {
@@ -403,76 +468,164 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
       }
     }
 
+    const isDigitalOrWallet =
+      paymentChoice !== 'UNPAID' &&
+      ['QRIS', 'TRANSFER', 'CUSTOMER_DEPOSIT', 'LAUNDRY_QUOTA'].includes(paymentMethod);
+
+    if (!navigator.onLine && isDigitalOrWallet) {
+      setErrorMsg(
+        'Pembayaran digital atau saldo deposit / kuota membutuhkan koneksi internet aktif. Gunakan metode Tunai atau Bayar Nanti saat offline.'
+      );
+      return;
+    }
+
     setSubmitting(true);
     setErrorMsg(null);
+    const clientUuid = generateIdempotencyKey();
 
-    try {
-      const allNotesArray = [...selectedSpotNotes];
-      if (customNotes.trim()) allNotesArray.push(customNotes.trim());
-      const compiledNotes = allNotesArray.join('; ');
+    const allNotesArray = [...selectedSpotNotes];
+    if (customNotes.trim()) allNotesArray.push(customNotes.trim());
+    const compiledNotes = allNotesArray.join('; ');
 
-      const formattedPhone = customerPhone
-        ? customerPhone.startsWith('+62')
-          ? customerPhone
-          : `+62${customerPhone.replace(/^0+/, '')}`
-        : undefined;
+    const formattedPhone = customerPhone
+      ? customerPhone.startsWith('+62')
+        ? customerPhone
+        : `+62${customerPhone.replace(/^0+/, '')}`
+      : undefined;
 
-      const zones = deliveryConfig?.zones || [];
-      const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
+    const zones = deliveryConfig?.zones || [];
+    const selectedZone = zones.find((z) => z.id === deliveryZoneId) || zones[0];
 
-      const selectedPerfume = perfumesList.find((p) => p.name.toLowerCase() === perfumeVariant.toLowerCase());
-      const perfumeExtra = (selectedPerfume && Number(selectedPerfume.extraPrice) > 0)
-        ? (selectedPerfume.usageBasis === 'PER_KG' ? Math.round(Number(selectedPerfume.extraPrice) * billedQty) : Number(selectedPerfume.extraPrice))
-        : 0;
+    const selectedPerfume = perfumesList.find((p) => p.name.toLowerCase() === perfumeVariant.toLowerCase());
+    const perfumeExtra = (selectedPerfume && Number(selectedPerfume.extraPrice) > 0)
+      ? (selectedPerfume.usageBasis === 'PER_KG' ? Math.round(Number(selectedPerfume.extraPrice) * billedQty) : Number(selectedPerfume.extraPrice))
+      : 0;
 
-      const addons: any[] = [];
-      if (perfumeExtra > 0 && selectedPerfume) {
-        addons.push({
-          id: selectedPerfume.id,
-          name: `Parfum: ${selectedPerfume.name}`,
-          price: Number(selectedPerfume.extraPrice),
-          unit: selectedPerfume.usageBasis === 'PER_KG' ? 'PER_KG' : 'FLAT',
-          total: perfumeExtra,
-        });
-      }
+    const addons: any[] = [];
+    if (perfumeExtra > 0 && selectedPerfume) {
+      addons.push({
+        id: selectedPerfume.id,
+        name: `Parfum: ${selectedPerfume.name}`,
+        price: Number(selectedPerfume.extraPrice),
+        unit: selectedPerfume.usageBasis === 'PER_KG' ? 'PER_KG' : 'FLAT',
+        total: perfumeExtra,
+      });
+    }
 
-      const payload = {
-        outletId: activeOutlet.id,
-        customerId: selectedCustomer?.id || undefined,
+    const payload = {
+      outletId: activeOutlet.id,
+      customerId: selectedCustomer?.id || undefined,
+      customerName: customerName.trim(),
+      customerPhone: formattedPhone,
+      deliveryType: deliveryType,
+      deliveryDistanceKm: 0,
+      deliveryFeePerKm: 0,
+      deliveryFee: deliveryFee,
+      deliveryZoneName: deliveryType !== 'NONE' ? selectedZone?.name : undefined,
+      deliveryAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() : undefined,
+      deliveryNotes: deliveryType !== 'NONE' ? deliveryNotes.trim() : undefined,
+      items: [
+        {
+          serviceId: currentService.id,
+          name: currentService.name,
+          category: currentService.category,
+          quantity: Number(billedQty),
+          unit: currentService.unit || 'Kg',
+          unitPrice: Number(currentService.price),
+          perfumeVariant: perfumeVariant || 'Lavender',
+          addons,
+          notes: isUnderMinimum
+            ? `${compiledNotes ? `${compiledNotes}; ` : ''}(Timbangan fisik: ${weightKg.toFixed(1)} Kg, min order ${minOrderQty} Kg)`
+            : compiledNotes || undefined,
+        },
+      ],
+      totalPieces: Math.max(1, Math.round(Number(totalPieces || 1))),
+      perfumeVariant: perfumeVariant || 'Lavender',
+      estimatedReadyHours: Math.max(1, Math.round(Number(currentService.durationHours || 24))),
+      depositAmount: paymentChoice === 'PAID' ? Number(grandTotal) : paymentChoice === 'PARTIAL' ? Number(depositAmount) : 0,
+      discountAmount: 0,
+      paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
+      customerNotes: compiledNotes || undefined,
+    };
+
+    const completeOfflineDropoff = async () => {
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const tempInvoice = `LD-OFFLINE-${dateStr}-${randomSuffix}`;
+
+      const tempOrderData: LaundryQueueOrder = {
+        id: clientUuid,
+        orderId: clientUuid,
+        invoiceNumber: tempInvoice,
         customerName: customerName.trim(),
-        customerPhone: formattedPhone,
+        customerPhone: formattedPhone || null,
+        customerAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() || null : null,
         deliveryType: deliveryType,
         deliveryDistanceKm: 0,
-        deliveryFeePerKm: 0,
         deliveryFee: deliveryFee,
-        deliveryZoneName: deliveryType !== 'NONE' ? selectedZone?.name : undefined,
-        deliveryAddress: deliveryType !== 'NONE' ? deliveryAddress.trim() : undefined,
-        deliveryNotes: deliveryType !== 'NONE' ? deliveryNotes.trim() : undefined,
+        status: 'RECEIVED',
+        currentStage: 'DROP_OFF',
+        serviceName: currentService.name,
+        totalWeightKg: weightKg,
+        totalPieces: totalPieces,
+        perfumeVariant: perfumeVariant,
+        rackCode: null,
+        grandTotal: Number(grandTotal),
+        paidAmount:
+          paymentChoice === 'PAID'
+            ? Number(grandTotal)
+            : paymentChoice === 'PARTIAL'
+            ? Number(depositAmount)
+            : 0,
+        paymentStatus:
+          paymentChoice === 'PAID' ? 'PAID' : paymentChoice === 'PARTIAL' ? 'PARTIALLY_PAID' : 'UNPAID',
+        createdAt: now.toISOString(),
+        estimatedReadyAt: new Date(
+          Date.now() + (currentService.durationHours || 24) * 3600000
+        ).toISOString(),
+        customerNotes: compiledNotes ? `${compiledNotes} [OFFLINE]` : '[OFFLINE]',
         items: [
           {
-            serviceId: currentService.id,
             name: currentService.name,
-            category: currentService.category,
-            quantity: Number(billedQty),
-            unit: currentService.unit || 'Kg',
-            unitPrice: Number(currentService.price),
-            perfumeVariant: perfumeVariant || 'Lavender',
-            addons,
-            notes: isUnderMinimum
-              ? `${compiledNotes ? `${compiledNotes}; ` : ''}(Timbangan fisik: ${weightKg.toFixed(1)} Kg, min order ${minOrderQty} Kg)`
-              : compiledNotes || undefined,
+            quantity: billedQty,
+            unit: currentService.unit,
+            unitPrice: currentService.price,
+            subtotal: subtotal,
+            notes: compiledNotes || undefined,
           },
         ],
-        totalPieces: Math.max(1, Math.round(Number(totalPieces || 1))),
-        perfumeVariant: perfumeVariant || 'Lavender',
-        estimatedReadyHours: Math.max(1, Math.round(Number(currentService.durationHours || 24))),
-        depositAmount: paymentChoice === 'PAID' ? Number(grandTotal) : paymentChoice === 'PARTIAL' ? Number(depositAmount) : 0,
-        discountAmount: 0,
-        paymentMethod: paymentChoice === 'UNPAID' ? 'UNPAID' : paymentMethod,
-        customerNotes: compiledNotes || undefined,
       };
 
-      const clientUuid = generateIdempotencyKey();
+      await saveOfflineOrder({
+        offlineId: clientUuid,
+        orderKind: 'LAUNDRY',
+        clientRequestId: clientUuid,
+        createdAt: now.toISOString(),
+        outletId: activeOutlet.id,
+        shiftId: currentShift.id,
+        cashierName: currentUser?.name || 'Kasir Laundry',
+        payload: {
+          ...payload,
+          offlineReferenceId: clientUuid,
+          clientRequestId: clientUuid,
+        },
+        tempOrder: tempOrderData,
+        status: 'PENDING',
+        retryCount: 0,
+      });
+
+      onOrderCreated(tempOrderData);
+      window.dispatchEvent(new CustomEvent('wellpos:laundry_order_created', { detail: tempOrderData }));
+      onClose();
+    };
+
+    try {
+      if (!navigator.onLine) {
+        await completeOfflineDropoff();
+        return;
+      }
+
       const res = await api.createLaundryOrder(
         { ...payload, clientRequestId: clientUuid },
         { idempotencyKey: clientUuid }
@@ -524,11 +677,39 @@ export const LaundryQuickDropoffModal: React.FC<LaundryQuickDropoffModalProps> =
         window.dispatchEvent(new CustomEvent('wellpos:laundry_order_created', { detail: newQueueOrder }));
 
         onClose();
+      } else if ((res as any)?.offline === true) {
+        if (isDigitalOrWallet) {
+          setErrorMsg(
+            'Pembayaran digital atau saldo deposit / kuota membutuhkan koneksi internet aktif. Gunakan metode Tunai atau Bayar Nanti saat offline.'
+          );
+        } else {
+          await completeOfflineDropoff();
+        }
       } else {
         setErrorMsg(res.message || 'Gagal menyimpan transaksi laundry');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+      const isNetworkFailure =
+        !navigator.onLine ||
+        err?.name === 'TypeError' ||
+        String(err?.message || '').toLowerCase().includes('fetch') ||
+        String(err?.message || '').toLowerCase().includes('network');
+
+      if (isNetworkFailure) {
+        if (isDigitalOrWallet) {
+          setErrorMsg(
+            'Pembayaran digital atau saldo deposit / kuota membutuhkan koneksi internet aktif. Gunakan metode Tunai atau Bayar Nanti saat offline.'
+          );
+        } else {
+          try {
+            await completeOfflineDropoff();
+          } catch {
+            setErrorMsg(err?.message || 'Terjadi kesalahan sistem saat menyimpan antrean offline');
+          }
+        }
+      } else {
+        setErrorMsg(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+      }
     } finally {
       setSubmitting(false);
     }

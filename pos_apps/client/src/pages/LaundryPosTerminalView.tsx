@@ -68,6 +68,7 @@ import { XReportModal } from '../components/XReportModal';
 import { CashExpenseModal } from '../components/CashExpenseModal';
 import { VoucherSelectionModal } from '../components/pos/VoucherSelectionModal';
 import { StaffAttendanceModal } from '../components/pos/StaffAttendanceModal';
+import { OfflineQueueModal } from '../components/pos/OfflineQueueModal';
 import {
   generateIdempotencyKey,
   saveOfflineOrder,
@@ -77,6 +78,7 @@ import {
   markOfflineOrderSuccess,
   markOfflineOrderFailed,
   clearSyncedOfflineOrders,
+  type OfflineOrderEntry,
 } from '../utils/offlineQueue';
 
 interface LaundryPosTerminalViewProps {
@@ -139,6 +141,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [offlineQueueCount, setOfflineQueueCount] = useState<{ pending: number; total: number }>({ pending: 0, total: 0 });
   const [isSyncingOffline, setIsSyncingOffline] = useState<boolean>(false);
   const [lastCatalogSyncAt, setLastCatalogSyncAt] = useState<string | null>(null);
+  const [offlineQueueModalOpen, setOfflineQueueModalOpen] = useState<boolean>(false);
 
   // Pelanggan & CRM
   const [customerName, setCustomerName] = useState('');
@@ -459,6 +462,53 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       setIsSyncingOffline(false);
     }
   }, [isSyncingOffline, activeOutlet?.id, refreshOfflineQueueCount]);
+
+  const handleRetrySingleOfflineLaundryOrder = useCallback(
+    async (entry: OfflineOrderEntry) => {
+      try {
+        await markOfflineOrderSyncing(entry.offlineId);
+        const idempotencyKey = entry.clientRequestId || entry.offlineId;
+        const res = await api.createLaundryOrder(entry.payload, { idempotencyKey });
+        if (res.status === 'success' && res.data) {
+          await markOfflineOrderSuccess(entry.offlineId, res.data);
+          await clearSyncedOfflineOrders();
+          await refreshOfflineQueueCount();
+          fetchCustomers();
+          loadCurrentShift();
+          setFeedbackToast({
+            message: `Nota #${entry.tempOrder?.invoiceNumber || entry.offlineId} berhasil disinkronkan!`,
+            type: 'success',
+          });
+          setTimeout(() => setFeedbackToast(null), 4000);
+        } else {
+          await markOfflineOrderFailed(entry.offlineId, res.message || 'Gagal sinkron');
+          await refreshOfflineQueueCount();
+          setFeedbackToast({
+            message: res.message || 'Gagal menyinkronkan nota offline.',
+            type: 'error',
+          });
+          setTimeout(() => setFeedbackToast(null), 4000);
+        }
+      } catch (syncErr: any) {
+        await markOfflineOrderFailed(entry.offlineId, syncErr?.message || 'Network error');
+        await refreshOfflineQueueCount();
+        setFeedbackToast({
+          message: syncErr?.message || 'Koneksi terputus saat menyinkronkan.',
+          type: 'error',
+        });
+        setTimeout(() => setFeedbackToast(null), 4000);
+      }
+    },
+    [refreshOfflineQueueCount]
+  );
+
+  const handleReprintOfflineLaundryOrder = useCallback((entry: OfflineOrderEntry) => {
+    setOfflineQueueModalOpen(false);
+    if (entry.tempOrder) {
+      setCompletedOrder(entry.tempOrder);
+      setReceiptModalOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -2489,9 +2539,15 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {offlineQueueCount.pending > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-amber-200 text-amber-900">
-                {offlineQueueCount.pending} antrean offline
-              </span>
+              <button
+                type="button"
+                onClick={() => setOfflineQueueModalOpen(true)}
+                className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-amber-200 hover:bg-amber-300 text-amber-950 transition-colors cursor-pointer inline-flex items-center gap-1"
+                title="Klik untuk melihat & mengelola antrean offline"
+              >
+                <span>{offlineQueueCount.pending} antrean offline</span>
+                <span className="underline font-extrabold">Lihat Antrean</span>
+              </button>
             )}
             {isOnline && offlineQueueCount.pending > 0 && (
               <button
@@ -4052,6 +4108,23 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         onClose={() => setReceiptModalOpen(false)}
         order={completedOrder}
         outlet={activeOutlet}
+      />
+
+      {/* 6B. Modal Manajemen Antrean Transaksi Offline Kasir Laundry */}
+      <OfflineQueueModal
+        isOpen={offlineQueueModalOpen}
+        onClose={() => setOfflineQueueModalOpen(false)}
+        outletId={activeOutlet?.id}
+        orderKind="LAUNDRY"
+        isOnline={isOnline}
+        isSyncing={isSyncingOffline}
+        canDeleteEntry={['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser?.role || '')}
+        onRetrySingle={handleRetrySingleOfflineLaundryOrder}
+        onRetryAll={syncOfflineLaundryOrders}
+        onReprintReceipt={handleReprintOfflineLaundryOrder}
+        onQueueChanged={() => {
+          refreshOfflineQueueCount();
+        }}
       />
 
       {/* 7. Modal Preferensi & Nomor Alternatif Pelanggan (Core Phase 1) */}
