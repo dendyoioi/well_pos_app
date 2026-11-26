@@ -139,8 +139,11 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
     };
   }, [activeOutlet?.id]);
 
+  const isBranchOutletPending = !canSwitchOutlet && (!outletId || outletId === 'ALL');
+
   // Load Alert Summary for Header Bell Badge
   const loadAlertSummary = useCallback(() => {
+    if (isBranchOutletPending) return;
     fetchPersistentAlerts({
       outletId: outletId === 'ALL' ? undefined : outletId,
       limit: 1,
@@ -153,7 +156,7 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
       .catch((err) => {
         console.warn('[LOAD ALERT SUMMARY ERROR]', err);
       });
-  }, [outletId]);
+  }, [outletId, isBranchOutletPending]);
 
   useEffect(() => {
     loadAlertSummary();
@@ -180,6 +183,11 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
 
   // Fetch Overview Level 1
   const loadOverview = useCallback(() => {
+    // Tunggu sampai outletId terisi dari assignedOutletId / activeOutlet?.id untuk staf cabang (!canSwitchOutlet)
+    if (isBranchOutletPending) {
+      return;
+    }
+
     const signal = getAbortSignal();
     setOverviewLoading(true);
     setOverviewError(null);
@@ -203,7 +211,7 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
       .finally(() => {
         setOverviewLoading(false);
       });
-  }, [preset, startDate, endDate, outletId, getAbortSignal]);
+  }, [preset, startDate, endDate, outletId, isBranchOutletPending, getAbortSignal]);
 
   useEffect(() => {
     loadOverview();
@@ -443,14 +451,20 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
       </div>
 
       {/* 5. Render Lazy-Loaded Sub-Tab dengan Suspense */}
-      <Suspense
-        fallback={
-          <div className="py-12 flex flex-col items-center justify-center space-y-3 bg-white border border-slate-200/80 rounded-2xl animate-pulse">
-            <div className="w-8 h-8 rounded-full border-2 border-blue-900 border-t-transparent animate-spin" />
-            <span className="text-xs font-bold text-slate-500">Memuat Modul Analitik...</span>
-          </div>
-        }
-      >
+      {isBranchOutletPending ? (
+        <div className="py-12 flex flex-col items-center justify-center space-y-3 bg-white border border-slate-200/80 rounded-2xl animate-pulse">
+          <div className="w-8 h-8 rounded-full border-2 border-blue-900 border-t-transparent animate-spin" />
+          <span className="text-xs font-bold text-slate-500">Menyiapkan Filter Toko Cabang...</span>
+        </div>
+      ) : (
+        <Suspense
+          fallback={
+            <div className="py-12 flex flex-col items-center justify-center space-y-3 bg-white border border-slate-200/80 rounded-2xl animate-pulse">
+              <div className="w-8 h-8 rounded-full border-2 border-blue-900 border-t-transparent animate-spin" />
+              <span className="text-xs font-bold text-slate-500">Memuat Modul Analitik...</span>
+            </div>
+          }
+        >
         {effectiveSubTab === 'financial' && (
           <FinancialAnalyticsTab
             preset={preset}
@@ -550,7 +564,8 @@ export const PerformanceAnalyticsContainer: React.FC<PerformanceAnalyticsContain
             onAlertAction={handleAlertAction}
           />
         )}
-      </Suspense>
+        </Suspense>
+      )}
 
       {/* 6. Single DrillDown Inspection Drawer Instance (Zero Stacked Modals Policy) */}
       <DrillDownInspectionDrawer

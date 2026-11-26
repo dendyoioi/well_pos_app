@@ -66,7 +66,7 @@ async function main() {
       },
     });
 
-    // b. Buat User Owner (Role ADMIN), outletId: null (belum ada outlet!)
+    // b. Buat User Owner (Role OWNER), outletId: null (belum ada outlet!)
     const user = await tx.user.create({
       data: {
         tenantId: tenant.id,
@@ -79,7 +79,7 @@ async function main() {
         phone,
         passwordHash,
         pinHash: null,
-        role: Role.ADMIN,
+        role: Role.OWNER,
         isActive: true,
         tokenVersion: 1,
       },

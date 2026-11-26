@@ -1520,6 +1520,13 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE INDEX IF NOT EXISTS "users_tenant_id_custom_role_id_idx" ON "users"("tenant_id", "custom_role_id");
     `,
   },
+  {
+    id: '20261126_06_owner_laundry_demo_role_owner',
+    description: 'Promote testing account owner.laundry@wellpos.id from ADMIN to OWNER',
+    sql: `
+      UPDATE "users" SET "role" = 'OWNER' WHERE LOWER("email") = 'owner.laundry@wellpos.id' AND "role" = 'ADMIN';
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

@@ -27,11 +27,12 @@ export interface AnalyticsFilterState {
 export function useAnalyticsFilter(activeOutlet?: Outlet | null) {
   const user = authStorage.getUser();
   const isOwner = user?.role === 'OWNER';
-  const assignedOutletId = user?.outletId || '';
-  const canSwitchOutlet = isOwner || (user?.role === 'ADMIN' && !user?.outletId);
-  const initialDefaultOutlet = assignedOutletId
-    ? assignedOutletId
-    : (activeOutlet?.id || 'ALL');
+  const assignedOutletId = user?.outletId || (user as any)?.outlet?.id || '';
+  const canSwitchOutlet = isOwner || (user?.role === 'ADMIN' && !assignedOutletId);
+  const fallbackOutletId = assignedOutletId || activeOutlet?.id || '';
+  const initialDefaultOutlet = canSwitchOutlet
+    ? (fallbackOutletId || 'ALL')
+    : fallbackOutletId;
   const defaultSubTab = user?.role === 'SUPERVISOR' ? 'operations' : 'financial';
 
   // Baca URL query params saat mount awal
@@ -65,8 +66,8 @@ export function useAnalyticsFilter(activeOutlet?: Outlet | null) {
     ];
 
     const preset = validPresets.includes(pPreset) ? pPreset : 'month';
-    const outletId = assignedOutletId
-      ? assignedOutletId
+    const outletId = !canSwitchOutlet
+      ? (assignedOutletId || activeOutlet?.id || '')
       : (pOutlet || initialDefaultOutlet);
     const activeSubTab = pTab || defaultSubTab;
 
@@ -123,6 +124,20 @@ export function useAnalyticsFilter(activeOutlet?: Outlet | null) {
 
     window.history.replaceState({}, '', `${url.pathname}${url.search}`);
   }, []);
+
+  // Sinkronkan outletId untuk user branch-restricted (!canSwitchOutlet) agar tidak pernah mengirim 'ALL' atau kosong
+  useEffect(() => {
+    if (canSwitchOutlet) return;
+    const resolvedOutletId = assignedOutletId || activeOutlet?.id || '';
+    if (resolvedOutletId && (state.outletId === 'ALL' || !state.outletId)) {
+      setState((prev) => {
+        if (prev.outletId && prev.outletId !== 'ALL') return prev;
+        const next = { ...prev, outletId: resolvedOutletId };
+        syncToUrl(next);
+        return next;
+      });
+    }
+  }, [canSwitchOutlet, assignedOutletId, activeOutlet?.id, state.outletId, syncToUrl]);
 
   // Sinkronkan outletId saat user mengganti activeOutlet di dropdown top-bar Well POS (selama tidak manual ALL)
   useEffect(() => {
