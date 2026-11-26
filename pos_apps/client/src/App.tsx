@@ -9,6 +9,7 @@ import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { PullToRefresh } from './components/PullToRefresh';
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary';
 import { SessionExpiredModal } from './components/ui/SessionExpiredModal';
+import { setOfflineCache, getOfflineCache, clearOfflineCacheByPrefix } from './utils/offlineDataCache';
 
 // Code-splitting P1-1: Halaman publik, superadmin, dan QR menu dimuat secara dinamis saat rute diakses
 const SuperadminDashboardPage = lazy(() =>
@@ -313,13 +314,15 @@ export const App: React.FC = () => {
           if (res.status === 'success' && res.data) {
             setUser(res.data);
             authStorage.saveSession(token, res.data);
+          } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+            // Pertahankan savedUser saat Service Worker mengembalikan 503 offline atau browser offline
           } else {
             authStorage.clearSession();
             setUser(null);
           }
         })
         .catch(() => {
-          // Tetap gunakan cached user jika offline
+          // Tetap gunakan cached user jika offline / gagal jaringan
         })
         .finally(() => {
           setInitializing(false);
@@ -334,43 +337,60 @@ export const App: React.FC = () => {
     if (user?.role === 'OWNER') {
       let isMounted = true;
       setLoadingOwnerBusinesses(true);
+      const bizCacheKey = `businesses:${user.id}`;
+
+      const applyBusinessesList = (list: BusinessItem[]) => {
+        if (list.length === 0) {
+          // 0 Bisnis: Arahkan ke Owner Portal untuk membuat bisnis pertama
+          setActiveBusiness(null);
+          setShowOwnerPortal(true);
+          sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
+        } else if (list.length === 1) {
+          // 1 Bisnis: Auto-select langsung masuk Dashboard bisnis (tanpa tambah 1 klik)
+          setActiveBusiness(list[0]);
+          setShowOwnerPortal(false);
+          sessionStorage.setItem(ACTIVE_BUSINESS_KEY, list[0].id);
+        } else {
+          // >= 2 Bisnis: Cek sessionStorage untuk auto-resume bisnis aktif
+          const savedBizId = sessionStorage.getItem(ACTIVE_BUSINESS_KEY);
+          const found = list.find((b) => b.id === savedBizId);
+          if (found) {
+            setActiveBusiness(found);
+            setShowOwnerPortal(false);
+          } else {
+            // Belum memilih -> Tampilkan Owner Portal
+            setActiveBusiness(null);
+            setShowOwnerPortal(true);
+          }
+        }
+      };
+
+      const loadBusinessesFromCache = async () => {
+        const cached = await getOfflineCache<BusinessItem[]>(bizCacheKey);
+        if (!isMounted) return;
+        if (cached?.data && Array.isArray(cached.data)) {
+          applyBusinessesList(cached.data);
+        } else {
+          setShowOwnerPortal(false);
+        }
+      };
 
       businessApi
         .getBusinesses()
-        .then((res) => {
+        .then(async (res) => {
           if (!isMounted) return;
           if (res.status === 'success' && Array.isArray(res.data)) {
-            const list = res.data;
-            if (list.length === 0) {
-              // 0 Bisnis: Arahkan ke Owner Portal untuk membuat bisnis pertama
-              setActiveBusiness(null);
-              setShowOwnerPortal(true);
-              sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
-            } else if (list.length === 1) {
-              // 1 Bisnis: Auto-select langsung masuk Dashboard bisnis (tanpa tambah 1 klik)
-              setActiveBusiness(list[0]);
-              setShowOwnerPortal(false);
-              sessionStorage.setItem(ACTIVE_BUSINESS_KEY, list[0].id);
-            } else {
-              // >= 2 Bisnis: Cek sessionStorage untuk auto-resume bisnis aktif
-              const savedBizId = sessionStorage.getItem(ACTIVE_BUSINESS_KEY);
-              const found = list.find((b) => b.id === savedBizId);
-              if (found) {
-                setActiveBusiness(found);
-                setShowOwnerPortal(false);
-              } else {
-                // Belum memilih -> Tampilkan Owner Portal
-                setActiveBusiness(null);
-                setShowOwnerPortal(true);
-              }
-            }
+            setOfflineCache(bizCacheKey, res.data);
+            applyBusinessesList(res.data);
+          } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+            await loadBusinessesFromCache();
           } else {
             setShowOwnerPortal(false);
           }
         })
-        .catch((err) => {
+        .catch(async (err) => {
           console.warn('[App] Gagal memuat bisnis owner:', err);
-          if (isMounted) setShowOwnerPortal(false);
+          await loadBusinessesFromCache();
         })
         .finally(() => {
           if (isMounted) setLoadingOwnerBusinesses(false);
@@ -407,6 +427,7 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     authStorage.clearSession();
     sessionStorage.removeItem(ACTIVE_BUSINESS_KEY);
+    clearOfflineCacheByPrefix().catch(() => {});
     setActiveBusiness(null);
     setInitialOutletId(undefined);
     setShowOwnerPortal(false);

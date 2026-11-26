@@ -8,11 +8,14 @@ import {
   ArrowRight,
   Zap,
   Loader2,
+  WifiOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { Shift, ZReportData } from '../types/shift';
 import { printElementViaThermalIframe } from '../utils/thermalPrinter';
 import { useThermalPrinterHub } from '../hooks/useThermalPrinterHub';
+import { getOfflineQueueCount } from '../utils/offlineQueue';
 import { ShiftCashDenominationTab } from './shift/ShiftCashDenominationTab';
 import { ShiftReconciliationSummary } from './shift/ShiftReconciliationSummary';
 import { ZReportSlipPrintBody } from './shift/ZReportSlipPrintBody';
@@ -55,24 +58,44 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const [showDenomCalculator, setShowDenomCalculator] = useState<boolean>(false);
   const [denominations, setDenominations] = useState<{ [key: number]: number }>(INITIAL_DENOMINATIONS);
   const [activeShift, setActiveShift] = useState<Shift | null>(currentShift);
+  const [pendingOfflineCount, setPendingOfflineCount] = useState<number>(0);
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
   useEffect(() => {
     setActiveShift(currentShift);
   }, [currentShift]);
 
   useEffect(() => {
-    if (isOpen) {
-      api.getCurrentShift()
-        .then((res) => {
-          if (res.status === 'success' && res.data) {
-            setActiveShift(res.data);
-          }
-        })
-        .catch((err) => {
-          console.error('Gagal memuat data shift terkini:', err);
-        });
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+
+    setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    getOfflineQueueCount(activeShift?.outletId || currentShift?.outletId)
+      .then((stats) => setPendingOfflineCount(stats.pending))
+      .catch(() => setPendingOfflineCount(0));
+
+    api.getCurrentShift()
+      .then((res) => {
+        if (res.status === 'success' && res.data) {
+          setActiveShift(res.data);
+        }
+      })
+      .catch((err) => {
+        console.error('Gagal memuat data shift terkini:', err);
+      });
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isOpen, currentShift?.outletId]);
 
   const effectiveShift = activeShift || currentShift;
 
@@ -223,6 +246,28 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
           /* Step 1: Input Uang Fisik Kasir & Review Transaksi */
           <form onSubmit={handleSubmitClose} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1 overscroll-contain">
+              {(pendingOfflineCount > 0 || !isOnline) && (
+                <div className="rounded-2xl p-3.5 text-xs bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-2.5 min-w-0">
+                  {!isOnline ? (
+                    <WifiOff className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="min-w-0 flex-1 space-y-1.5 break-words leading-relaxed font-medium">
+                    {!isOnline && (
+                      <p className="text-rose-800 font-semibold">
+                        Koneksi internet terputus. Tutup shift dan pencetakan Z-Report membutuhkan koneksi internet aktif.
+                      </p>
+                    )}
+                    {pendingOfflineCount > 0 && (
+                      <p>
+                        Masih ada <strong className="font-black">{pendingOfflineCount}</strong> transaksi offline yang belum tersinkron ke server. Sinkronkan antrean offline terlebih dahulu di layar kasir agar rekap kas Z-Report akurat.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {errorMsg && (
                 <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-rose-700 text-xs font-semibold">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -270,10 +315,19 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={loading || (!isLaundry && unpaidOrdersInShift.length > 0)}
-                className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                disabled={
+                  loading ||
+                  !isOnline ||
+                  pendingOfflineCount > 0 ||
+                  (!isLaundry && unpaidOrdersInShift.length > 0)
+                }
+                className="h-10 px-4 sm:px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
                 title={
-                  !isLaundry && unpaidOrdersInShift.length > 0
+                  !isOnline
+                    ? 'Tutup shift membutuhkan koneksi internet aktif'
+                    : pendingOfflineCount > 0
+                    ? `Sinkronkan ${pendingOfflineCount} transaksi offline terlebih dahulu`
+                    : !isLaundry && unpaidOrdersInShift.length > 0
                     ? 'Selesaikan tagihan belum bayar terlebih dahulu'
                     : 'Kunci & Tutup Shift'
                 }

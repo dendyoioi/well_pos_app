@@ -45,6 +45,7 @@ import { ThermalPrinterModal } from './ThermalPrinterModal';
 import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 import { getEffectiveItemPricing, getCartItemSubtotal } from '../../utils/pricing';
 import { checkIsLaundry } from '../../utils/businessType';
+import { formatCacheTime } from '../../utils/offlineDataCache';
 
 export interface PosMobileViewProps {
   activeOutlet: Outlet | null | undefined;
@@ -117,6 +118,7 @@ export interface PosMobileViewProps {
   pendingOfflineCount?: number;
   isSyncingQueue?: boolean;
   onSyncOfflineQueue?: () => void;
+  lastCatalogSyncAt?: string | null;
   activeItemDiscounts?: ActiveItemDiscount[];
   /** Callback ubah / tambah catatan item pesanan kasir */
   onUpdateItemNote?: (index: number, note: string) => void;
@@ -137,6 +139,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
   pendingOfflineCount = 0,
   isSyncingQueue = false,
   onSyncOfflineQueue,
+  lastCatalogSyncAt = null,
   onlineOrderId,
   onChangeOnlineOrderId,
   channelsConfig,
@@ -351,13 +354,13 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
             ) : (
               <CloudUpload className="w-4 h-4 text-amber-600 shrink-0" />
             )}
-            <div className="truncate">
+            <div className="truncate min-w-0">
               <span className="font-extrabold text-[11px]">
                 {!isOnline ? 'Mode Offline' : 'Data Lokal'}
               </span>
               <span className="ml-1 text-[11px] opacity-90">
                 {!isOnline
-                  ? 'Bisa transaksi tunai & cetak struk'
+                  ? `Bisa transaksi tunai & cetak struk${lastCatalogSyncAt ? ` • Katalog: ${formatCacheTime(lastCatalogSyncAt)}` : ''}`
                   : `${pendingOfflineCount} antrean offline`}
               </span>
             </div>

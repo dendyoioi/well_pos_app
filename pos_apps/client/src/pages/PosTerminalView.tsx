@@ -51,6 +51,7 @@ import {
   clearSyncedOfflineOrders,
   generateIdempotencyKey,
 } from '../utils/offlineQueue';
+import { setOfflineCache, getOfflineCache, formatCacheTime } from '../utils/offlineDataCache';
 import { getEffectiveItemPricing, getCartItemSubtotal } from '../utils/pricing';
 
 interface PosTerminalViewProps {
@@ -684,6 +685,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [pendingOfflineCount, setPendingOfflineCount] = useState<number>(0);
   const [isSyncingQueue, setIsSyncingQueue] = useState<boolean>(false);
+  const [lastCatalogSyncAt, setLastCatalogSyncAt] = useState<string | null>(null);
 
   const refreshOfflineQueueCount = useCallback(async () => {
     try {
@@ -716,9 +718,25 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
   // Initial Data Fetch
   const loadProducts = async (targetOutletId?: string) => {
+    const outletIdToUse = targetOutletId || activeOutlet?.id;
+    const catalogKey = `fnb_catalog:${outletIdToUse || 'default'}`;
+
+    const restoreCatalogFromCache = async () => {
+      const cached = await getOfflineCache<{
+        products: Product[];
+        categories: Category[];
+        activeItemDiscounts: ActiveItemDiscount[];
+      }>(catalogKey);
+      if (cached?.data) {
+        if (Array.isArray(cached.data.products)) setProducts(cached.data.products);
+        if (Array.isArray(cached.data.categories)) setCategories(cached.data.categories);
+        if (Array.isArray(cached.data.activeItemDiscounts)) setActiveItemDiscounts(cached.data.activeItemDiscounts);
+        setLastCatalogSyncAt(cached.updatedAt);
+      }
+    };
+
     try {
       setLoading(true);
-      const outletIdToUse = targetOutletId || activeOutlet?.id;
       const [prodRes, catRes, itemPromoRes] = await Promise.all([
         api.getProducts({ outletId: outletIdToUse }),
         api.getCategories(outletIdToUse, 'true', true),
@@ -726,32 +744,57 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       ]);
 
       if (prodRes.status === 'success' && prodRes.data) {
-        setProducts(prodRes.data);
-      }
-      if (catRes.status === 'success' && catRes.data) {
-        setCategories(catRes.data);
-      }
-      if (itemPromoRes.status === 'success' && itemPromoRes.data) {
-        setActiveItemDiscounts(itemPromoRes.data);
+        const nextProducts = prodRes.data;
+        const nextCategories = catRes.status === 'success' && catRes.data ? catRes.data : [];
+        const nextDiscounts = itemPromoRes.status === 'success' && itemPromoRes.data ? itemPromoRes.data : [];
+
+        setProducts(nextProducts);
+        if (catRes.status === 'success' && catRes.data) {
+          setCategories(nextCategories);
+        }
+        if (itemPromoRes.status === 'success' && itemPromoRes.data) {
+          setActiveItemDiscounts(nextDiscounts);
+        }
+
+        setOfflineCache(catalogKey, {
+          products: nextProducts,
+          categories: nextCategories,
+          activeItemDiscounts: nextDiscounts,
+        });
+        setLastCatalogSyncAt(new Date().toISOString());
+      } else if ((prodRes as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        await restoreCatalogFromCache();
       }
     } catch (err) {
       console.error('Gagal memuat produk & kategori:', err);
+      await restoreCatalogFromCache();
     } finally {
       setLoading(false);
     }
   };
 
   const loadCurrentShift = async () => {
+    const shiftKey = `current_shift:${activeUser?.id || 'default'}:${activeOutlet?.id || 'default'}`;
+    const restoreShiftFromCache = async () => {
+      const cached = await getOfflineCache<Shift | null>(shiftKey);
+      if (cached && 'data' in cached && cached.data) {
+        setCurrentShift(cached.data);
+      }
+    };
+
     try {
       const res = await api.getCurrentShift();
       if (res.status === 'success') {
         setCurrentShift(res.data);
+        setOfflineCache(shiftKey, res.data);
+      } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        await restoreShiftFromCache();
       } else {
         setCurrentShift(null);
       }
     } catch (err) {
       console.error('Gagal memuat status shift:', err);
-      setCurrentShift(null);
+      await restoreShiftFromCache();
     }
   };
 
@@ -772,13 +815,24 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
   };
 
   const loadCustomers = async () => {
+    const custKey = `customers:${activeUser?.tenantId || activeUser?.id || 'default'}`;
     try {
       const res = await customerApi.getCustomers({ limit: 100 });
       if (res.status === 'success' && res.data) {
         setCustomers(res.data);
+        setOfflineCache(custKey, res.data);
+      } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        const cached = await getOfflineCache<Customer[]>(custKey);
+        if (cached?.data && Array.isArray(cached.data)) {
+          setCustomers(cached.data);
+        }
       }
     } catch (err) {
       console.error('Gagal memuat data pelanggan CRM:', err);
+      const cached = await getOfflineCache<Customer[]>(custKey);
+      if (cached?.data && Array.isArray(cached.data)) {
+        setCustomers(cached.data);
+      }
     }
   };
 
@@ -1755,8 +1809,9 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
         return;
       }
 
+      const clientUuid = generateIdempotencyKey();
+
       const completeOfflineOrder = async () => {
-        const clientUuid = generateIdempotencyKey();
         const offlineRefId = `OFFLINE-${Date.now()}-${clientUuid.substring(0, 8)}`;
         const now = new Date();
         const yyyy = now.getFullYear();
@@ -1872,7 +1927,6 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
       }
 
       try {
-        const clientUuid = generateIdempotencyKey();
         const res = await api.checkoutOrder(
           { ...checkoutPayload, clientRequestId: clientUuid },
           { idempotencyKey: clientUuid }
@@ -1897,6 +1951,8 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
               'info'
             );
           }
+        } else if ((res as any)?.offline === true && !requiresInternet) {
+          await completeOfflineOrder();
         } else {
           const resObj = res as any;
           dialog.alert({
@@ -2080,6 +2136,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           pendingOfflineCount={pendingOfflineCount}
           isSyncingQueue={isSyncingQueue}
           onSyncOfflineQueue={handleSyncOfflineQueue}
+          lastCatalogSyncAt={lastCatalogSyncAt}
         />
       ) : (
         <>
@@ -2114,19 +2171,19 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           {/* Banner Status Offline / Antrean Offline PWA (Desktop/Tablet) */}
           {(!isOnline || pendingOfflineCount > 0) && (
             <div
-              className={`px-4 py-2.5 border-b flex items-center justify-between gap-3 text-xs shrink-0 transition-colors ${
+              className={`px-4 py-2.5 border-b flex items-center justify-between flex-wrap sm:flex-nowrap gap-2 sm:gap-3 text-xs shrink-0 transition-colors min-w-0 ${
                 !isOnline
                   ? 'bg-rose-50 border-rose-200 text-rose-950'
                   : 'bg-amber-50 border-amber-200 text-amber-950'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 {!isOnline ? (
                   <WifiOff className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
                 ) : (
                   <CloudUpload className="w-4 h-4 text-amber-600 shrink-0" />
                 )}
-                <div className="truncate">
+                <div className="truncate min-w-0">
                   <span className="font-extrabold">
                     {!isOnline ? 'Koneksi Terputus (Mode Kasir Offline Aktif)' : 'Penyelarasan Data Lokal PWA'}
                   </span>
@@ -2135,6 +2192,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
                       ? 'Kasir tetap dapat memproses pembayaran Tunai dan mencetak struk fisik lokal.'
                       : `${pendingOfflineCount} transaksi offline tersimpan di perangkat ini.`}
                   </span>
+                  {!isOnline && lastCatalogSyncAt && (
+                    <span className="ml-2 font-semibold text-rose-800">
+                      • Data katalog: {formatCacheTime(lastCatalogSyncAt)}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">

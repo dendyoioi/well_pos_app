@@ -51,6 +51,7 @@ import { ThermalPrinterModal } from '../components/pos/ThermalPrinterModal';
 import { QuotaAlertBanner } from '../components/saas/QuotaAlertBanner';
 import { api } from '../services/api';
 import { checkIsLaundry } from '../utils/businessType';
+import { setOfflineCache, getOfflineCache } from '../utils/offlineDataCache';
 import type { QrLiveOrder } from '../types/qr_menu';
 
 // Code Splitting: Lazy-loaded Secondary Backoffice Views & Modals
@@ -356,47 +357,63 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Fetch all outlets belonging to this store's tenant / active business
   const fetchOutlets = async () => {
+    const cacheKey = `outlets:${user.tenantId || user.id}:${activeBusiness?.id || 'default'}`;
+
+    const applyOutletsList = (outletList: Outlet[]) => {
+      setOutlets(outletList);
+      if (outletList.length > 0) {
+        setActiveOutlet((current) => {
+          // Kasir & Gudang harus terkunci ke outlet penugasan mereka
+          if (user.role === 'CASHIER' || user.role === 'WAREHOUSE') {
+            const userOutlet = outletList.find((o: Outlet) => o.id === user.outletId || o.id === user.outlet?.id);
+            if (userOutlet) return userOutlet;
+          }
+
+          // Jika outlet yang saat ini aktif valid dan BUKAN gudang, pertahankan (agar tidak snap-back saat refetch/edit outlet)
+          if (current && !current.isWarehouse) {
+            const found = outletList.find((o: Outlet) => o.id === current.id && !o.isWarehouse);
+            if (found) return found;
+          }
+
+          // Prioritas: Jika initialOutletId diberikan dan cocok (misal navigasi baru dari Owner Portal), gunakan itu
+          if (initialOutletId) {
+            const matchedInitial = outletList.find((o: Outlet) => o.id === initialOutletId);
+            if (matchedInitial) return matchedInitial;
+          }
+
+          // Prioritas: Toko penjualan yang cocok dengan penugasan outlet user
+          const matchedStore = outletList.find(
+            (o: Outlet) => !o.isWarehouse && (o.id === user.outletId || o.id === user.outlet?.id)
+          );
+          if (matchedStore) return matchedStore;
+
+          // Prioritas fallback: Ambil Toko Penjualan pertama (bukan Gudang)
+          const firstStore = outletList.find((o: Outlet) => !o.isWarehouse);
+          return firstStore || outletList[0];
+        });
+      } else {
+        setActiveOutlet(null);
+      }
+    };
+
     try {
       setLoadingOutlets(true);
       const res = await api.getOutlets(activeBusiness?.id);
-      if (res.status === 'success' && res.data) {
-        setOutlets(res.data);
-        if (res.data.length > 0) {
-          setActiveOutlet((current) => {
-            // Kasir & Gudang harus terkunci ke outlet penugasan mereka
-            if (user.role === 'CASHIER' || user.role === 'WAREHOUSE') {
-              const userOutlet = res.data.find((o: Outlet) => o.id === user.outletId || o.id === user.outlet?.id);
-              if (userOutlet) return userOutlet;
-            }
-
-            // Jika outlet yang saat ini aktif valid dan BUKAN gudang, pertahankan (agar tidak snap-back saat refetch/edit outlet)
-            if (current && !current.isWarehouse) {
-              const found = res.data.find((o: Outlet) => o.id === current.id && !o.isWarehouse);
-              if (found) return found;
-            }
-
-            // Prioritas: Jika initialOutletId diberikan dan cocok (misal navigasi baru dari Owner Portal), gunakan itu
-            if (initialOutletId) {
-              const matchedInitial = res.data.find((o: Outlet) => o.id === initialOutletId);
-              if (matchedInitial) return matchedInitial;
-            }
-
-            // Prioritas: Toko penjualan yang cocok dengan penugasan outlet user
-            const matchedStore = res.data.find(
-              (o: Outlet) => !o.isWarehouse && (o.id === user.outletId || o.id === user.outlet?.id)
-            );
-            if (matchedStore) return matchedStore;
-
-            // Prioritas fallback: Ambil Toko Penjualan pertama (bukan Gudang)
-            const firstStore = res.data.find((o: Outlet) => !o.isWarehouse);
-            return firstStore || res.data[0];
-          });
-        } else {
-          setActiveOutlet(null);
+      if (res.status === 'success' && Array.isArray(res.data)) {
+        setOfflineCache(cacheKey, res.data);
+        applyOutletsList(res.data);
+      } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        const cached = await getOfflineCache<Outlet[]>(cacheKey);
+        if (cached?.data && Array.isArray(cached.data)) {
+          applyOutletsList(cached.data);
         }
       }
     } catch (err) {
       console.error('Gagal mengambil daftar outlet:', err);
+      const cached = await getOfflineCache<Outlet[]>(cacheKey);
+      if (cached?.data && Array.isArray(cached.data)) {
+        applyOutletsList(cached.data);
+      }
     } finally {
       setLoadingOutlets(false);
     }

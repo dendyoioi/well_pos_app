@@ -58,6 +58,7 @@ import type { Promotion } from '../types/promotion';
 import { api, customerApi, attendanceApi } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 import { WhatsAppInput, CurrencyInput } from '../components/ui';
+import { setOfflineCache, getOfflineCache, formatCacheTime } from '../utils/offlineDataCache';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
 import { CustomerPreferenceBadges } from '../components/laundry/CustomerPreferenceBadges';
 import { CustomerPreferenceModal } from '../components/laundry/CustomerPreferenceModal';
@@ -137,6 +138,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [offlineQueueCount, setOfflineQueueCount] = useState<{ pending: number; total: number }>({ pending: 0, total: 0 });
   const [isSyncingOffline, setIsSyncingOffline] = useState<boolean>(false);
+  const [lastCatalogSyncAt, setLastCatalogSyncAt] = useState<string | null>(null);
 
   // Pelanggan & CRM
   const [customerName, setCustomerName] = useState('');
@@ -268,49 +270,118 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [deliveryAddress, setDeliveryAddress] = useState<string>('');
   const [deliveryNotes, setDeliveryNotes] = useState<string>('');
 
-  // Ambil daftar layanan dari API
+  // Ambil daftar layanan & konfigurasi antar-jemput dari API dengan fallback cache IndexedDB
   const fetchServices = async () => {
+    const catalogKey = `laundry_catalog:${activeOutlet?.id || 'default'}`;
+
+    const restoreLaundryCatalogFromCache = async () => {
+      const cached = await getOfflineCache<{
+        services: LaundryService[];
+        deliveryConfig: LaundryDeliveryConfig | null;
+      }>(catalogKey);
+      if (cached?.data) {
+        if (Array.isArray(cached.data.services)) {
+          setServices(cached.data.services);
+        }
+        if (cached.data.deliveryConfig) {
+          setDeliveryConfig(cached.data.deliveryConfig);
+          if (cached.data.deliveryConfig.zones && cached.data.deliveryConfig.zones.length > 0) {
+            setDeliveryZoneId(cached.data.deliveryConfig.zones[0].id);
+          }
+        }
+        setLastCatalogSyncAt(cached.updatedAt);
+      }
+    };
+
     try {
       setLoadingServices(true);
-      const res = await api.getLaundryServices(activeOutlet?.id);
-      if (res.status === 'success' && Array.isArray(res.data)) {
-        const availableServices = res.data.filter((s: any) => s.isAvailableAtOutlet !== false);
+      const [servRes, delRes] = await Promise.all([
+        api.getLaundryServices(activeOutlet?.id),
+        activeOutlet?.id
+          ? api.getLaundryDeliveryConfig(activeOutlet.id).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      if (servRes.status === 'success' && Array.isArray(servRes.data)) {
+        const availableServices = servRes.data.filter((s: any) => s.isAvailableAtOutlet !== false);
         setServices(availableServices);
+
+        const nextDeliveryConfig =
+          delRes && delRes.status === 'success' && delRes.data ? delRes.data : deliveryConfig;
+        if (delRes && delRes.status === 'success' && delRes.data) {
+          setDeliveryConfig(delRes.data);
+          if (delRes.data.zones && delRes.data.zones.length > 0) {
+            setDeliveryZoneId(delRes.data.zones[0].id);
+          }
+        }
+
+        setOfflineCache(catalogKey, {
+          services: availableServices,
+          deliveryConfig: nextDeliveryConfig,
+        });
+        setLastCatalogSyncAt(new Date().toISOString());
+      } else if ((servRes as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        await restoreLaundryCatalogFromCache();
       }
     } catch {
-      // Abaikan jika offline
+      await restoreLaundryCatalogFromCache();
     } finally {
       setLoadingServices(false);
     }
   };
 
-  // Ambil daftar pelanggan untuk pencarian cepat CRM
+  // Ambil daftar pelanggan untuk pencarian cepat CRM dengan fallback cache IndexedDB
   const fetchCustomers = async () => {
+    const custKey = `customers:${currentUser?.tenantId || currentUser?.id || 'default'}`;
+    const applyCustomers = (list: any[]) => {
+      setCustomersList(list);
+      if (selectedCustomerId) {
+        const fresh = list.find((c: any) => c.id === selectedCustomerId);
+        if (fresh) setSelectedCustomer(fresh);
+      }
+    };
+
     try {
       const res = await customerApi.getCustomers({ limit: 100 });
       if (res.status === 'success' && Array.isArray(res.data)) {
-        setCustomersList(res.data);
-        if (selectedCustomerId) {
-          const fresh = res.data.find((c: any) => c.id === selectedCustomerId);
-          if (fresh) setSelectedCustomer(fresh);
+        setOfflineCache(custKey, res.data);
+        applyCustomers(res.data);
+      } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        const cached = await getOfflineCache<any[]>(custKey);
+        if (cached?.data && Array.isArray(cached.data)) {
+          applyCustomers(cached.data);
         }
       }
     } catch {
-      // Abaikan jika CRM error
+      const cached = await getOfflineCache<any[]>(custKey);
+      if (cached?.data && Array.isArray(cached.data)) {
+        applyCustomers(cached.data);
+      }
     }
   };
 
-  // Muat status shift kasir berjalan
+  // Muat status shift kasir berjalan (pertahankan & pulihkan dari cache saat offline)
   const loadCurrentShift = async () => {
+    const shiftKey = `current_shift:${currentUser?.id || 'default'}:${activeOutlet?.id || 'default'}`;
+    const restoreShiftFromCache = async () => {
+      const cached = await getOfflineCache<Shift | null>(shiftKey);
+      if (cached && 'data' in cached && cached.data) {
+        setCurrentShift(cached.data);
+      }
+    };
+
     try {
       const res = await api.getCurrentShift();
-      if (res.status === 'success' && res.data) {
+      if (res.status === 'success') {
         setCurrentShift(res.data);
+        setOfflineCache(shiftKey, res.data);
+      } else if ((res as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        await restoreShiftFromCache();
       } else {
         setCurrentShift(null);
       }
     } catch {
-      setCurrentShift(null);
+      await restoreShiftFromCache();
     }
   };
 
@@ -421,7 +492,6 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       })
       .catch(() => {});
     if (activeOutlet?.id) {
-      fetchServices();
       try {
         const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (clientTz && clientTz !== activeOutlet.timezone) {
@@ -438,17 +508,6 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         .then((res) => {
           if (res.status === 'success' && res.data?.config) {
             setDepositConfig(res.data.config);
-          }
-        })
-        .catch(() => {});
-      api
-        .getLaundryDeliveryConfig(activeOutlet.id)
-        .then((res) => {
-          if (res.status === 'success' && res.data) {
-            setDeliveryConfig(res.data);
-            if (res.data.zones && res.data.zones.length > 0) {
-              setDeliveryZoneId(res.data.zones[0].id);
-            }
           }
         })
         .catch(() => {});
@@ -1350,6 +1409,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           type: 'success',
         });
         setTimeout(() => setFeedbackToast(null), 4000);
+      } else if ((res as any)?.offline === true && !isDigitalOrWallet) {
+        await completeOfflineLaundryOrder();
       } else {
         alert(res.message || 'Gagal memproses transaksi laundry');
       }
@@ -2398,19 +2459,19 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* Banner Status Offline / Pending Sync */}
       {(!isOnline || offlineQueueCount.pending > 0) && (
         <div
-          className={`px-4 py-2.5 border-b flex items-center justify-between gap-3 text-xs shrink-0 transition-colors ${
+          className={`px-4 py-2.5 border-b flex items-center justify-between flex-wrap sm:flex-nowrap gap-2 sm:gap-3 text-xs shrink-0 transition-colors min-w-0 ${
             !isOnline
               ? 'bg-amber-50 border-amber-200 text-amber-950'
               : 'bg-blue-50 border-blue-200 text-blue-950'
           }`}
         >
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             {!isOnline ? (
               <WifiOff className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
             ) : (
               <CloudUpload className="w-4 h-4 text-blue-600 shrink-0" />
             )}
-            <div className="truncate">
+            <div className="truncate min-w-0">
               <span className="font-extrabold">
                 {!isOnline ? 'Mode Offline Aktif' : 'Penyelarasan Data Lokal PWA'}
               </span>
@@ -2419,6 +2480,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   ? 'Transaksi tersimpan lokal di browser. Struk & label fisik tetap dapat dicetak.'
                   : `Ada ${offlineQueueCount.pending} transaksi offline yang siap disinkronkan ke server.`}
               </span>
+              {!isOnline && lastCatalogSyncAt && (
+                <span className="ml-2 font-semibold text-amber-800">
+                  • Data layanan: {formatCacheTime(lastCatalogSyncAt)}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
