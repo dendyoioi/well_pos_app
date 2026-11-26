@@ -2430,18 +2430,18 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
       {/* Modal Daftar Pesanan Meja QR (Kitchen & Pull to Cashier) */}
       {qrOrdersModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs shrink-0">
                   <QrCode className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-blue-950 text-base">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-blue-950 text-sm sm:text-base truncate">
                     Pesanan Masuk dari Meja QR
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 truncate">
                     Tarik pesanan meja pelanggan untuk proses pembayaran di kasir
                   </p>
                 </div>
@@ -2449,13 +2449,13 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
               <button
                 type="button"
                 onClick={() => setQrOrdersModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-3">
+            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               {unpaidQrOrders.length === 0 ? (
                 <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-2">
                   <QrCode className="w-8 h-8 text-slate-300 mx-auto" />

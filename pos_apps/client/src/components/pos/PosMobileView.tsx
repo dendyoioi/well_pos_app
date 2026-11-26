@@ -675,7 +675,7 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
 
           <div
             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
-            className="bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 flex flex-col max-h-[88vh] animate-in slide-in-from-bottom duration-200"
+            className="bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom duration-200"
           >
             {/* Sheet Handle */}
             <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 shrink-0" />
@@ -1043,9 +1043,10 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                                     setEditingMobileNoteIdx(index);
                                     setTempMobileNoteText('');
                                   }}
-                                  className="text-[9px] text-slate-400 hover:text-blue-900 font-medium hover:underline"
+                                  className="text-[9px] text-slate-400 hover:text-blue-900 font-medium hover:underline inline-flex items-center gap-0.5"
                                 >
-                                  + Catatan
+                                  <Plus className="w-2.5 h-2.5" />
+                                  <span>Catatan</span>
                                 </button>
                               )
                             )}
@@ -1246,9 +1247,9 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                       setCartDrawerOpen(false);
                       onHoldOrder();
                     }}
-                    className="flex-1 py-2 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-amber-100 disabled:opacity-50"
+                    className="flex-1 min-h-[40px] py-2 px-2 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-amber-100 disabled:opacity-50 whitespace-nowrap"
                   >
-                    <PauseCircle className="w-3.5 h-3.5 text-amber-700" />
+                    <PauseCircle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                     <span>Tahan Antrean</span>
                   </button>
 
@@ -1268,9 +1269,9 @@ export const PosMobileView: React.FC<PosMobileViewProps> = ({
                         setCartDrawerOpen(false);
                         onSaveOpenTab();
                       }}
-                      className="flex-1 py-2 bg-white border border-blue-300 text-blue-950 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-blue-50/60 disabled:opacity-50"
+                      className="flex-1 min-h-[40px] py-2 px-2 bg-white border border-blue-300 text-blue-950 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-blue-50/60 disabled:opacity-50 whitespace-nowrap"
                     >
-                      <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900" />
+                      <UtensilsCrossed className="w-3.5 h-3.5 text-blue-900 shrink-0" />
                       <span>Kirim Dapur</span>
                     </button>
                   )}

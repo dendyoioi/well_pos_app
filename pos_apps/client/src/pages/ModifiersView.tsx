@@ -302,7 +302,7 @@ export const ModifiersView: React.FC = () => {
     return (
       <div className="space-y-6 max-w-4xl mx-auto pb-16">
         {/* Header Breadcrumb */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
           <button
             onClick={handleCloseForm}
             className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
@@ -427,7 +427,7 @@ export const ModifiersView: React.FC = () => {
 
           {/* Card 2: Daftar Pilihan Opsi */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-base font-bold text-slate-900">2. Opsi Pilihan Modifier</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -437,7 +437,7 @@ export const ModifiersView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAddItemRow}
-                className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+                className="w-full sm:w-auto justify-center px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Tambah Opsi</span>
@@ -599,7 +599,7 @@ export const ModifiersView: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
@@ -640,7 +640,7 @@ export const ModifiersView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
           <Button
             variant="primary"
             size="md"
@@ -751,25 +751,25 @@ export const ModifiersView: React.FC = () => {
             >
               <div>
                 <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base">{group.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-900 text-base truncate">{group.name}</h3>
+                    <div className="flex items-center flex-wrap gap-2 mt-1">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md whitespace-nowrap shrink-0">
                         {group.selectionType === 'SINGLE' ? 'Pilih 1 (Radio)' : 'Boleh Banyak (Checkbox)'}
                       </span>
                       {group.isRequired ? (
-                        <span className="px-2 py-0.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-md border border-rose-200">
+                        <span className="px-2 py-0.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-md border border-rose-200 whitespace-nowrap shrink-0">
                           Wajib
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-slate-50 text-slate-500 text-xs font-medium rounded-md">
+                        <span className="px-2 py-0.5 bg-slate-50 text-slate-500 text-xs font-medium rounded-md whitespace-nowrap shrink-0">
                           Opsional
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0">
                     {group.items?.length || 0} Opsi
                   </span>
                 </div>

@@ -262,7 +262,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-slate-100">
               <Button
                 type="button"
                 variant="outline"
@@ -379,14 +379,14 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         </div>
 
         {activeOutlet && (
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-stretch sm:self-auto shrink-0">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-stretch sm:self-auto max-w-full overflow-x-auto scrollbar-none flex-nowrap">
             <button
               type="button"
               onClick={() => {
                 setScopeMode('outlet');
                 fetchCategories('outlet');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 scopeMode === 'outlet'
                   ? 'bg-white text-blue-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -400,7 +400,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 setScopeMode('all');
                 fetchCategories('all');
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 scopeMode === 'all'
                   ? 'bg-white text-blue-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -464,7 +464,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                     </div>
                   </div>
 
-                  <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
+                  <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100 whitespace-nowrap shrink-0">
                     {cat.productCount ?? cat._count?.products ?? 0} Menu
                   </span>
                 </div>

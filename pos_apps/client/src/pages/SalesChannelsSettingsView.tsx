@@ -212,9 +212,9 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
               <Globe className="w-5 h-5 text-blue-900" />
               <span>Kanal Penjualan &amp; Mitra Online Delivery</span>
             </h2>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1">
-              <Store className="w-3 h-3 text-blue-800" />
-              Toko: {activeOutlet?.name || 'Utama'}
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0 max-w-full">
+              <Store className="w-3 h-3 text-blue-800 shrink-0" />
+              <span className="truncate">Toko: {activeOutlet?.name || 'Utama'}</span>
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium max-w-3xl leading-relaxed">
@@ -228,7 +228,7 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
               type="button"
               onClick={handleResetToDefault}
               disabled={isSaving}
-              className="flex-1 sm:flex-initial justify-center px-4 h-10 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer inline-flex items-center disabled:opacity-50"
+              className="flex-1 sm:flex-initial justify-center px-4 h-10 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer inline-flex items-center disabled:opacity-50 whitespace-nowrap"
             >
               Reset Default
             </button>
@@ -238,7 +238,7 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
             <button
               type="button"
               onClick={() => setShowAddModal(true)}
-              className="flex-1 sm:flex-initial justify-center px-5 h-10 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial justify-center px-5 h-10 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-900/20 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span>Tambah Mitra</span>
@@ -273,17 +273,17 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
 
       {/* Group 1: Penjualan Langsung Toko */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center font-black">
+        <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center font-black shrink-0">
               <Store className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-sm font-black text-slate-900">🏢 Penjualan Langsung Toko (Direct Store)</h3>
               <p className="text-xs text-slate-500">Transaksi langsung pelanggan di kasir outlet fisik</p>
             </div>
           </div>
-          <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+          <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 whitespace-nowrap shrink-0">
             {directChannels.filter((c) => c.isActive).length} / {directChannels.length} Aktif
           </span>
         </div>
@@ -368,19 +368,19 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
 
       {/* Group 2: Mitra Online Delivery */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-black">
+        <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-black shrink-0">
               <Globe className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-sm font-black text-slate-900">🌐 Mitra Online Delivery (Layanan Pesan Antar Online)</h3>
               <p className="text-xs text-slate-500">
                 Pesanan dari platform aggregator &amp; kurir online dengan integrasi input ID Pesanan Driver
               </p>
             </div>
           </div>
-          <span className="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+          <span className="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 whitespace-nowrap shrink-0">
             {onlineChannels.filter((c) => c.isActive).length} / {onlineChannels.length} Mitra Aktif
           </span>
         </div>
@@ -405,7 +405,7 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
                     <span className="font-extrabold text-sm text-slate-900">{channel.name}</span>
                   </div>
                   {channel.badge && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 whitespace-nowrap shrink-0">
                       {channel.badge}
                     </span>
                   )}
@@ -612,18 +612,18 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditingChannel(null)}
-                  className="px-4 h-10 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                  className="px-4 h-10 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving || !editChannelName.trim()}
-                  className="px-5 h-10 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-900/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-5 h-10 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-900/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 >
                   Simpan Perubahan
                 </button>
@@ -753,18 +753,18 @@ export const SalesChannelsSettingsView: React.FC<SalesChannelsSettingsViewProps>
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 h-10 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                  className="px-4 h-10 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving || !newChannelName.trim()}
-                  className="px-5 h-10 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-900/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-5 h-10 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-900/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 >
                   Simpan Mitra Baru
                 </button>

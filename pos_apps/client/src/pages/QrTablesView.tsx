@@ -252,7 +252,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
 
     return (
       <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
-        <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col p-5 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in overflow-hidden">
+        <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col p-5 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
             <div>
@@ -300,32 +300,32 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
           </div>
 
           {/* Sticky Action Footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 shrink-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-0">
             <a
               href={tableUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 hover:underline self-start sm:self-auto"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-900 hover:underline self-start sm:self-auto whitespace-nowrap"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Coba Buka Menu Tamu</span>
             </a>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
               <a
                 href={qrImage}
                 download={`QR-${previewTable.tableNumber}.png`}
-                className="flex-1 sm:flex-initial justify-center h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
+                className="justify-center h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors whitespace-nowrap"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4 shrink-0" />
                 <span>Simpan PNG</span>
               </a>
 
               <button
                 onClick={() => window.print()}
-                className="flex-1 sm:flex-initial justify-center h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs flex items-center gap-1.5 transition-colors shadow-md shadow-blue-950/20"
+                className="justify-center h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs flex items-center gap-1.5 transition-colors shadow-md shadow-blue-950/20 whitespace-nowrap"
               >
-                <Printer className="w-4 h-4" />
+                <Printer className="w-4 h-4 shrink-0" />
                 <span>Cetak Kartu</span>
               </button>
             </div>
@@ -340,8 +340,8 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
   // ==========================================
   if (isPrintAllMode) {
     return (
-      <div className="fixed inset-0 bg-white z-50 overflow-y-auto p-8 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4 print:hidden">
+      <div className="fixed inset-0 bg-white z-50 overflow-y-auto p-4 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4 print:hidden">
           <div>
             <h2 className="text-xl font-black text-blue-950">Lembar Cetak Semua Barcode Meja</h2>
             <p className="text-xs text-slate-500">
@@ -397,7 +397,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
   if (isFormOpen) {
     return (
       <div className="space-y-6 max-w-xl mx-auto pb-12">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setIsFormOpen(false)}
@@ -455,7 +455,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Zona / Area Meja
@@ -511,18 +511,18 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="h-10 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-xs"
+                className="h-10 px-5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-xs whitespace-nowrap"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-950/20 disabled:opacity-50"
+                className="h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-950/20 disabled:opacity-50 whitespace-nowrap"
               >
                 {submitting ? 'Menyimpan...' : 'Simpan Meja'}
               </button>
@@ -540,10 +540,10 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
     <div className="space-y-6 pb-28 sm:pb-12">
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold mb-2">
-            <QrCode className="w-3.5 h-3.5" />
-            <span>Buku Menu QR Resto &bull; Toko: {activeOutlet.name}</span>
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold mb-2 max-w-full">
+            <QrCode className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Buku Menu QR Resto &bull; Toko: {activeOutlet.name}</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-blue-950 tracking-tight flex items-center gap-2">
             <span>Manajemen Meja & Barcode QR</span>
@@ -553,32 +553,32 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap w-full sm:w-auto">
           <a
             href={`/#menu?outletId=${activeOutlet?.id || ''}&table=${tables[0]?.tableNumber || '01'}`}
             target="_blank"
             rel="noreferrer"
-            className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold rounded-xl text-xs shadow-xs transition-colors inline-flex items-center gap-2"
+            className="flex-1 sm:flex-initial justify-center h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold rounded-xl text-xs shadow-xs transition-colors inline-flex items-center gap-2 whitespace-nowrap"
             title="Uji coba tampilan menu digital pelanggan di tab baru"
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-4 h-4 shrink-0" />
             <span>Pratinjau Menu Tamu</span>
           </a>
 
           <button
             onClick={() => setIsPrintAllMode(true)}
             disabled={tables.length === 0}
-            className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold rounded-xl text-xs shadow-xs transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+            className="flex-1 sm:flex-initial justify-center h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold rounded-xl text-xs shadow-xs transition-colors inline-flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
           >
-            <Printer className="w-4 h-4 text-blue-900" />
+            <Printer className="w-4 h-4 text-blue-900 shrink-0" />
             <span>Cetak Semua Meja</span>
           </button>
 
           <button
             onClick={handleOpenCreateForm}
-            className="h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-950/20 hover:shadow-lg transition-all inline-flex items-center gap-2"
+            className="w-full sm:w-auto justify-center h-10 px-5 bg-blue-900 hover:bg-blue-950 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-950/20 hover:shadow-lg transition-all inline-flex items-center gap-2 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Tambah Meja</span>
           </button>
         </div>
@@ -708,7 +708,7 @@ export const QrTablesView: React.FC<QrTablesViewProps> = ({ activeOutlet }) => {
                     </div>
                   </div>
 
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${statusBadge.color}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border whitespace-nowrap shrink-0 ${statusBadge.color}`}>
                     {statusBadge.label}
                   </span>
                 </div>

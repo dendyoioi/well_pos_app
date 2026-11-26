@@ -50,7 +50,12 @@ export interface IsolatedQATenant {
 /**
  * Membuat data seeder tenant QA terisolasi dengan prefix unik
  */
-export async function createIsolatedQATenant(prefix = 'QA_AUTO'): Promise<IsolatedQATenant> {
+export async function createIsolatedQATenant(
+  prefix = 'QA_AUTO',
+  options?: { vertical?: 'LAUNDRY' | 'FNB' }
+): Promise<IsolatedQATenant> {
+  const vertical = options?.vertical || 'LAUNDRY';
+  const isFnb = vertical === 'FNB';
   const timestamp = Date.now().toString();
   const slug = `${prefix.toLowerCase()}-${timestamp}`;
 
@@ -58,8 +63,8 @@ export async function createIsolatedQATenant(prefix = 'QA_AUTO'): Promise<Isolat
     data: {
       name: `${prefix} Corp ${timestamp.slice(-4)}`,
       slug: `tenant-${slug}`,
-      businessVertical: 'SERVICES',
-      businessType: 'LAUNDRY',
+      businessVertical: isFnb ? 'FNB' : 'SERVICES',
+      businessType: isFnb ? 'FNB' : 'LAUNDRY',
       status: 'ACTIVE',
       phone: '+6281299990001',
     },
@@ -68,9 +73,9 @@ export async function createIsolatedQATenant(prefix = 'QA_AUTO'): Promise<Isolat
   const business = await prisma.business.create({
     data: {
       tenantId: tenant.id,
-      name: `${prefix} Laundry Business`,
+      name: `${prefix} ${isFnb ? 'F&B' : 'Laundry'} Business`,
       slug: `biz-${slug}`,
-      vertical: BusinessVerticalMode.LAUNDRY,
+      vertical: isFnb ? BusinessVerticalMode.FNB : BusinessVerticalMode.LAUNDRY,
       isActive: true,
     },
   });
@@ -83,7 +88,7 @@ export async function createIsolatedQATenant(prefix = 'QA_AUTO'): Promise<Isolat
       name: `${prefix} Outlet Menteng`,
       address: 'Jl. Menteng Raya No. 88, Jakarta Pusat',
       phone: '+6281299990002',
-      industries: ['LAUNDRY'],
+      industries: isFnb ? ['FOOD_BEVERAGE'] : ['LAUNDRY'],
       isActive: true,
     },
   });
@@ -252,6 +257,18 @@ export async function cleanupQATenant(tenantId: string): Promise<void> {
     `DELETE FROM "order_items" WHERE "tenant_id" = $1`,
     `DELETE FROM "payment_transactions" WHERE "tenant_id" = $1`,
     `DELETE FROM "orders" WHERE "tenant_id" = $1`,
+    `DELETE FROM "modifier_recipe_effects" WHERE "tenant_id" = $1`,
+    `DELETE FROM "product_modifier_groups" WHERE "tenant_id" = $1`,
+    `DELETE FROM "modifier_items" WHERE "tenant_id" = $1`,
+    `DELETE FROM "modifier_groups" WHERE "tenant_id" = $1`,
+    `DELETE FROM "recipe_items" WHERE "tenant_id" = $1`,
+    `DELETE FROM "recipes" WHERE "tenant_id" = $1`,
+    `DELETE FROM "product_bundle_items" WHERE "tenant_id" = $1`,
+    `DELETE FROM "product_price_tiers" WHERE "tenant_id" = $1`,
+    `DELETE FROM "outlet_products" WHERE "tenant_id" = $1`,
+    `DELETE FROM "product_variants" WHERE "tenant_id" = $1`,
+    `DELETE FROM "products" WHERE "tenant_id" = $1`,
+    `DELETE FROM "categories" WHERE "tenant_id" = $1`,
     `DELETE FROM "customers" WHERE "tenant_id" = $1`,
     `DELETE FROM "saas_invoices" WHERE "tenant_id" = $1`,
     `DELETE FROM "tenant_subscriptions" WHERE "tenant_id" = $1`,

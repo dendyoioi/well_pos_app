@@ -393,7 +393,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Card 1: Komposisi Bahan Baku (BOM) */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-base font-bold text-slate-900">1. Komposisi Bahan Baku Mentah</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -403,7 +403,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
               <button
                 type="button"
                 onClick={handleAddRow}
-                className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+                className="w-full sm:w-auto justify-center px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Tambah Bahan</span>
@@ -545,7 +545,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
@@ -647,10 +647,10 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto max-w-full overflow-x-auto scrollbar-none flex-nowrap sm:flex-wrap pb-1 sm:pb-0">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               statusFilter === 'all' ? 'bg-blue-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -658,7 +658,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
           </button>
           <button
             onClick={() => setStatusFilter('has_recipe')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               statusFilter === 'has_recipe' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -666,7 +666,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
           </button>
           <button
             onClick={() => setStatusFilter('no_recipe')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               statusFilter === 'no_recipe' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -674,12 +674,12 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
           </button>
 
           {outletId && (
-            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 ml-1">
-              <span className="text-[11px] font-semibold text-slate-500 hidden md:inline">Bahan:</span>
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 ml-1 shrink-0">
+              <span className="text-[11px] font-semibold text-slate-500 hidden md:inline whitespace-nowrap">Bahan:</span>
               <button
                 type="button"
                 onClick={() => setIngredientScope('outlet')}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   ingredientScope === 'outlet'
                     ? 'bg-blue-100 text-blue-800 border border-blue-300 shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -691,7 +691,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
               <button
                 type="button"
                 onClick={() => setIngredientScope('all')}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   ingredientScope === 'all'
                     ? 'bg-blue-100 text-blue-800 border border-blue-300 shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -722,7 +722,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({ outletId }) => {
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-500 text-xs font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4">Menu &amp; Varian</th>

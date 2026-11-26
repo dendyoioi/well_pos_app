@@ -94,6 +94,7 @@ export async function runMobileUISuite(): Promise<boolean> {
 
   const results: TestScenarioResult[] = [];
   let tenantData: any = null;
+  let fnbTenantData: any = null;
   let browser: any = null;
   let page: any = null;
 
@@ -1292,6 +1293,189 @@ export async function runMobileUISuite(): Promise<boolean> {
       console.error('   ❌ FAIL:', err.message);
     }
 
+    // =========================================================================
+    // SKENARIO 11: GELOMBANG 3 — F&B & RETAIL MOBILE UI AUDIT SWEEP (390x844)
+    // Verifikasi: PosTerminalView/PosMobileView, ProductsView, CategoriesView,
+    // ModifiersView, RecipesView, QrTablesView, QrMenuSettingsView,
+    // QrLiveOrdersView, qr_guest_menu, SalesChannelsSettingsView, serta
+    // halaman publik Guest QR Menu (/#menu?outletId=...&table=DEMO).
+    // =========================================================================
+    const t11_wave3 = Date.now();
+    try {
+      console.log('\n▶️ [SKENARIO 11] Gelombang 3 — F&B & Retail Mobile UI Audit Sweep (390x844)...');
+      fnbTenantData = await createIsolatedQATenant('QAFNB', { vertical: 'FNB' });
+      await seedSubscriptionForTenant(fnbTenantData.tenantId, 500);
+
+      // Seed 1 Kategori + 1 Menu F&B + 1 OutletProduct agar katalog, resep, POS & QR Menu render nyata
+      const tsFnb = fnbTenantData.timestamp.slice(-6);
+      const fnbCategory = await prisma.category.create({
+        data: {
+          tenantId: fnbTenantData.tenantId,
+          name: 'Minuman Spesial',
+          slug: `minuman-spesial-${tsFnb}`,
+          isActive: true,
+        },
+      });
+      const fnbProduct = await prisma.product.create({
+        data: {
+          tenantId: fnbTenantData.tenantId,
+          categoryId: fnbCategory.id,
+          name: 'Kopi Susu Gula Aren',
+          description: 'Espresso arabika dengan susu segar dan gula aren organik.',
+          sku: `KSGA-${tsFnb}`,
+          unit: 'Cup',
+          type: 'STANDARD',
+          isActive: true,
+        },
+      });
+      await prisma.productVariant.create({
+        data: {
+          tenantId: fnbTenantData.tenantId,
+          productId: fnbProduct.id,
+          sku: `KSGA-${tsFnb}-REG`,
+          name: 'Regular',
+          price: 22000,
+          isActive: true,
+        },
+      });
+      await prisma.outletProduct.create({
+        data: {
+          tenantId: fnbTenantData.tenantId,
+          outletId: fnbTenantData.outletId,
+          productId: fnbProduct.id,
+          isAvailable: true,
+        },
+      });
+
+      await page.setViewportSize(VIEWPORTS.mobile);
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.goto(`${BASE_FRONTEND}/#pos`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(700);
+
+      // Login sebagai OWNER tenant F&B
+      const fnbEmailBtn = page.locator('button:has-text("Portal Pemilik (Email)")').first();
+      await fnbEmailBtn.waitFor({ state: 'visible', timeout: 8000 });
+      await fnbEmailBtn.click();
+      await page.fill('input[type="email"]', fnbTenantData.ownerEmail);
+      await page.fill('input[type="password"]', 'Password123!');
+      await page.click('button:has-text("Masuk ke Portal Pemilik")');
+      await page.waitForSelector('button[title="Buka Owner Portal & Kelola Bisnis"]', { timeout: 15000 });
+      await page.waitForTimeout(700);
+
+      const wave3Tabs: Array<{ key: string; label: string }> = [
+        { key: 'pos', label: 'PosTerminalView / PosMobileView (F&B)' },
+        { key: 'products', label: 'ProductsView' },
+        { key: 'categories', label: 'CategoriesView' },
+        { key: 'modifiers', label: 'ModifiersView' },
+        { key: 'recipes', label: 'RecipesView' },
+        { key: 'qr_tables', label: 'QrTablesView' },
+        { key: 'qr_settings', label: 'QrMenuSettingsView' },
+        { key: 'qr_orders', label: 'QrLiveOrdersView' },
+        { key: 'qr_guest_menu', label: 'Pratinjau Menu Tamu (Mockup)' },
+        { key: 'settings_channels', label: 'SalesChannelsSettingsView' },
+      ];
+
+      for (const tab of wave3Tabs) {
+        await navigateToTab(page, tab.key);
+        await page.waitForTimeout(600);
+        await checkZeroOverflow(page, tab.label, 'Mobile 390x844');
+
+        const hygiene = await page.evaluate(() => {
+          const text = document.body.innerText || '';
+          const legacyBrand = ['SmartOwner', 'SmartKasir', 'SmartLaundry', 'SmartPOS'].find((b) =>
+            text.includes(b)
+          ) || null;
+
+          const buttons = Array.from(document.querySelectorAll('button'));
+          const doublePlusBtn = buttons.find((b: any) => {
+            const hasSvg = Boolean(b.querySelector('svg'));
+            const btnText = (b.innerText || '').trim();
+            return hasSvg && (/^\+\s/.test(btnText) || btnText.includes('++'));
+          }) as any;
+
+          const pwaEl = Array.from(document.querySelectorAll('div')).find(
+            (el: any) =>
+              (el.innerText || '').includes('Pasang Aplikasi Well POS') &&
+              (window as any).getComputedStyle(el).position === 'fixed'
+          ) as any;
+          let pwaOverlap = false;
+          if (pwaEl) {
+            const rect = pwaEl.getBoundingClientRect();
+            pwaOverlap = rect.bottom > (window as any).innerHeight - 52;
+          }
+
+          return {
+            legacyBrand,
+            doublePlusText: doublePlusBtn ? (doublePlusBtn.innerText || '').trim() : null,
+            pwaOverlap,
+          };
+        });
+
+        assert(!hygiene.legacyBrand, `Teks legacy "${hygiene.legacyBrand}" ditemukan pada ${tab.label}`);
+        assert(
+          !hygiene.doublePlusText,
+          `Tombol "+ ..." ganda dengan ikon ditemukan pada ${tab.label}: "${hygiene.doublePlusText}"`
+        );
+        assert(!hygiene.pwaOverlap, `PwaInstallBanner menimpa Bottom Nav pada ${tab.label}`);
+      }
+
+      // Uji Halaman Publik CustomerQrMenuView di 390x844 (tanpa token backoffice / tamu asli)
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.goto(`${BASE_FRONTEND}/#menu?outletId=${fnbTenantData.outletId}&table=DEMO`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await page.waitForSelector('text=Kopi Susu Gula Aren', { timeout: 15000 });
+      await page.waitForTimeout(500);
+      await checkZeroOverflow(page, 'CustomerQrMenuView (Guest Page)', 'Mobile 390x844');
+
+      // Buka modal Customize item, tambahkan ke keranjang, lalu buka sheet Konfirmasi Pesanan Meja
+      const addItemBtn = page.locator('button:has-text("Tambah")').first();
+      await addItemBtn.click();
+      await page.waitForSelector('button:has-text("Tambahkan")', { timeout: 5000 });
+      await checkZeroOverflow(page, 'CustomerQrMenuView Customize Modal', 'Mobile 390x844');
+
+      await page.locator('button:has-text("Tambahkan")').first().click();
+      await page.waitForSelector('button:has-text("Lihat Pesanan")', { timeout: 5000 });
+      await page.locator('button:has-text("Lihat Pesanan")').first().click();
+      await page.waitForSelector('text=Konfirmasi Pesanan Meja', { timeout: 5000 });
+      await checkZeroOverflow(page, 'CustomerQrMenuView Checkout Sheet', 'Mobile 390x844');
+
+      const guestHygiene = await page.evaluate(() => {
+        const text = document.body.innerText || '';
+        const legacyBrand = ['SmartOwner', 'SmartKasir', 'SmartLaundry', 'SmartPOS'].find((b) =>
+          text.includes(b)
+        ) || null;
+        return { legacyBrand };
+      });
+      assert(
+        !guestHygiene.legacyBrand,
+        `Teks legacy "${guestHygiene.legacyBrand}" ditemukan pada CustomerQrMenuView`
+      );
+
+      results.push({
+        name: 'Gelombang 3 F&B & Retail Mobile UI Audit Sweep (10 Views + Guest QR Menu di 390x844)',
+        status: 'PASS',
+        durationMs: Date.now() - t11_wave3,
+      });
+      console.log(
+        '   ✅ PASS: Seluruh 10 halaman F&B/Retail + Guest QR Menu lolos 390x844 (0 overflow, 0 double +, 0 branding lama).'
+      );
+    } catch (err: any) {
+      results.push({
+        name: 'Gelombang 3 F&B & Retail Mobile UI Audit Sweep (10 Views + Guest QR Menu di 390x844)',
+        status: 'FAIL',
+        durationMs: Date.now() - t11_wave3,
+        error: err.message,
+      });
+      console.error('   ❌ FAIL:', err.message);
+    }
+
   } catch (fatalErr: any) {
     console.error('🔥 Fatal error in UI suite execution:', fatalErr);
     results.push({
@@ -1310,6 +1494,10 @@ export async function runMobileUISuite(): Promise<boolean> {
     if (tenantData?.tenantId) {
       console.log('🧹 Menjalankan Teardown Bersih Data QA Tenant di DB...');
       await cleanupQATenant(tenantData.tenantId);
+    }
+    if (fnbTenantData?.tenantId) {
+      console.log('🧹 Menjalankan Teardown Bersih Data QA F&B Tenant di DB...');
+      await cleanupQATenant(fnbTenantData.tenantId);
     }
   }
 

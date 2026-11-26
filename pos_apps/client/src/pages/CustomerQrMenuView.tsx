@@ -641,12 +641,12 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
             />
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`h-9 px-3.5 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer ${
+                className={`h-9 px-3.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-blue-900 text-white border-blue-900 shadow-sm shadow-blue-950/20'
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -660,7 +660,7 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
       </header>
 
       {/* PRODUCT CATALOG GRID */}
-      <main className="max-w-3xl mx-auto px-3 sm:px-4 py-4">
+      <main className={`max-w-3xl mx-auto px-3 sm:px-4 py-4 ${cart.length > 0 && !isCartOpen ? 'pb-28' : 'pb-8'}`}>
         {filteredProducts.length === 0 ? (
           <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200 p-6">
             <Utensils className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -732,7 +732,7 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
 
       {/* FLOATING CART BAR (IF CART HAS ITEMS) */}
       {cart.length > 0 && !isCartOpen && (
-        <div className="fixed bottom-4 inset-x-4 max-w-3xl mx-auto z-40 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] inset-x-3 sm:inset-x-4 max-w-3xl mx-auto z-40 animate-in slide-in-from-bottom-5">
           <button
             onClick={() => setIsCartOpen(true)}
             className="w-full p-4 bg-blue-900 hover:bg-blue-950 text-white rounded-2xl shadow-xl flex items-center justify-between transition-all"
@@ -758,14 +758,15 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
       {/* MODAL: CUSTOMIZE / ADD PRODUCT */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-              <div>
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Sticky Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4 sm:p-5 shrink-0">
+              <div className="min-w-0">
                 <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded-md inline-block mb-1">
                   {selectedProduct.categoryName}
                 </span>
                 <h3 className="text-base font-black text-blue-950">{selectedProduct.name}</h3>
-                <div className="text-sm font-black text-blue-900 mt-1 flex items-baseline gap-2">
+                <div className="text-sm font-black text-blue-900 mt-1 flex items-baseline flex-wrap gap-2">
                   <span>{formatRupiah(activeModalUnitPrice)}</span>
                   {activeModalModifiersDelta > 0 && (
                     <span className="text-[11px] text-slate-400 font-medium">
@@ -775,12 +776,16 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedProduct(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100"
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 shrink-0 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Scrollable Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain flex-1 space-y-5">
 
             {/* Alert Validasi Modifier */}
             {modifierError && (
@@ -898,13 +903,15 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
               />
             </div>
 
-            {/* Quantity Selector & Add Button */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 bg-white p-1 rounded-2xl border border-slate-200 shrink-0">
                 <button
                   type="button"
                   onClick={() => setItemQuantity((prev) => Math.max(1, prev - 1))}
-                  className="w-8 h-8 rounded-xl bg-white shadow-2xs flex items-center justify-center font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  className="w-8 h-8 rounded-xl bg-slate-50 shadow-2xs flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
@@ -912,7 +919,7 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setItemQuantity((prev) => prev + 1)}
-                  className="w-8 h-8 rounded-xl bg-white shadow-2xs flex items-center justify-center font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  className="w-8 h-8 rounded-xl bg-slate-50 shadow-2xs flex items-center justify-center font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -921,7 +928,7 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="flex-1 h-11 sm:h-10 px-6 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs sm:text-sm shadow-md shadow-blue-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                className="flex-1 h-11 sm:h-10 px-4 sm:px-6 bg-blue-900 hover:bg-blue-950 text-white rounded-xl font-extrabold text-xs sm:text-sm shadow-md shadow-blue-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 whitespace-nowrap"
               >
                 <span>Tambahkan</span>
                 <span>&bull;</span>
@@ -935,25 +942,27 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
       {/* FULL-SCREEN / SHEET: CART & CHECKOUT REVIEW */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 max-h-[92vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
-              <div>
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[11px] font-black">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-5 shrink-0">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[11px] font-black whitespace-nowrap">
                   <span>📍 Meja {data.table?.tableNumber || tableCode || '01'}</span>
                 </div>
                 <h3 className="text-base font-black text-blue-950 mt-1">Konfirmasi Pesanan Meja</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCartOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100"
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 shrink-0 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Scrollable Content */}
-            <form onSubmit={handleSubmitOrder} className="flex-1 overflow-y-auto space-y-4 pr-1">
+            {/* Form Container with Scrollable Body + Sticky Action Footer */}
+            <form onSubmit={handleSubmitOrder} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain flex-1 space-y-4">
               {/* Customer Info Form */}
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-3">
                 <div className="text-xs font-extrabold text-blue-950">Informasi Pemesan</div>
@@ -1080,8 +1089,10 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                 </div>
               </div>
 
-              {/* Submit Button — Mode Pratinjau: tampilkan mock demo, bukan kirim ke API */}
-              <div className="pt-2 space-y-2">
+              </div>
+
+              {/* Sticky Action Footer — Mode Pratinjau: tampilkan mock demo, bukan kirim ke API */}
+              <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-2">
                 {isPreviewMode && (
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-bold flex items-start gap-2">
                     <span className="text-base shrink-0">🚫</span>
@@ -1131,7 +1142,7 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                     setCart([]);
                     setIsCartOpen(false);
                   } : undefined}
-                  className={`w-full h-12 rounded-xl font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-98 ${
+                  className={`w-full h-11 sm:h-12 rounded-xl font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-98 whitespace-nowrap ${
                     isPreviewMode
                       ? 'bg-amber-500 hover:bg-amber-600 text-white'
                       : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-950/20'
@@ -1139,18 +1150,18 @@ export const CustomerQrMenuView: React.FC<CustomerQrMenuViewProps> = ({
                 >
                   {submitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
                       <span>Mengirim Pesanan ke Dapur...</span>
                     </>
                   ) : isPreviewMode ? (
                     <>
-                      <span>👁️</span>
-                      <span>Pratinjau Tampilan Konfirmasi ({formatRupiah(grandTotal)})</span>
+                      <span className="shrink-0">👁️</span>
+                      <span className="truncate">Pratinjau Konfirmasi ({formatRupiah(grandTotal)})</span>
                     </>
                   ) : (
                     <>
-                      <ChefHat className="w-4 h-4" />
-                      <span>Kirim Pesanan ke Dapur ({formatRupiah(grandTotal)})</span>
+                      <ChefHat className="w-4 h-4 shrink-0" />
+                      <span className="truncate">Kirim Pesanan ke Dapur ({formatRupiah(grandTotal)})</span>
                     </>
                   )}
                 </button>

@@ -823,13 +823,13 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         {/* Baris 1: Status Filter & Tipe Produk */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Status:</span>
-            <div className="inline-flex p-1 bg-slate-100/80 rounded-xl border border-slate-200/60 text-xs font-bold shrink-0">
+          <div className="flex items-center gap-2 max-w-full overflow-x-auto scrollbar-none pb-0.5 sm:pb-0">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline shrink-0">Status:</span>
+            <div className="inline-flex p-1 bg-slate-100/80 rounded-xl border border-slate-200/60 text-xs font-bold shrink-0 flex-nowrap">
               <button
                 type="button"
                 onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   statusFilter === 'all'
                     ? 'bg-white text-blue-950 shadow-2xs font-extrabold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -840,37 +840,37 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter('active')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                   statusFilter === 'active'
                     ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
                     : 'text-slate-600 hover:text-emerald-700'
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 shrink-0" />
                 <span>Hanya Aktif ({stats.activeCount})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter('inactive')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                   statusFilter === 'inactive'
                     ? 'bg-slate-800 text-white shadow-2xs font-extrabold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
                 <span>Nonaktif ({stats.total - stats.activeCount})</span>
               </button>
             </div>
           </div>
 
           {/* Tipe Menu Filter (F&B vs Ritel Fisik) */}
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-slate-400 font-bold hidden md:inline uppercase tracking-wider text-[11px]">Tipe:</span>
+          <div className="flex items-center gap-1.5 text-xs max-w-full overflow-x-auto scrollbar-none flex-nowrap sm:flex-wrap pb-0.5 sm:pb-0">
+            <span className="text-slate-400 font-bold hidden md:inline uppercase tracking-wider text-[11px] shrink-0">Tipe:</span>
             <button
               type="button"
               onClick={() => setTypeFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 typeFilter === 'all'
                   ? 'bg-blue-50 text-blue-900 border border-blue-200'
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
@@ -881,37 +881,37 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <button
               type="button"
               onClick={() => setTypeFilter(typeFilter === 'FNB' ? 'all' : 'FNB')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 ${
                 typeFilter === 'FNB'
                   ? 'bg-teal-50 text-teal-800 border border-teal-300'
                   : 'text-slate-500 hover:text-teal-700 hover:bg-teal-50/50'
               }`}
             >
-              <UtensilsCrossed className="w-3 h-3 text-teal-600" />
+              <UtensilsCrossed className="w-3 h-3 text-teal-600 shrink-0" />
               <span>Olahan F&amp;B ({stats.fnbCount})</span>
             </button>
             <button
               type="button"
               onClick={() => setTypeFilter(typeFilter === 'RETAIL' ? 'all' : 'RETAIL')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 ${
                 typeFilter === 'RETAIL'
                   ? 'bg-indigo-50 text-indigo-800 border border-indigo-300'
                   : 'text-slate-500 hover:text-indigo-700 hover:bg-indigo-50/50'
               }`}
             >
-              <Boxes className="w-3 h-3 text-indigo-600" />
+              <Boxes className="w-3 h-3 text-indigo-600 shrink-0" />
               <span>Ritel Fisik ({stats.retailCount})</span>
             </button>
             <button
               type="button"
               onClick={() => setTypeFilter(typeFilter === 'BUNDLE' ? 'all' : 'BUNDLE')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 ${
                 typeFilter === 'BUNDLE'
                   ? 'bg-purple-50 text-purple-800 border border-purple-300'
                   : 'text-slate-500 hover:text-purple-700 hover:bg-purple-50/50'
               }`}
             >
-              <Package className="w-3 h-3 text-purple-600" />
+              <Package className="w-3 h-3 text-purple-600 shrink-0" />
               <span>Paket Komposit ({stats.bundleCount})</span>
             </button>
           </div>
@@ -1704,18 +1704,18 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         </div>
       )}
 
-      {/* Modal Dialog: Ubah Kategori Massal */}
+      {/* Modal Dialog: Ubah Kategori Massal (Rule 10 PWA Bottom Sheet with Sticky Footer) */}
       {bulkCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4 animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 p-4 sm:p-6 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center shrink-0">
                   <FolderSync className="w-5 h-5 stroke-[2.5]" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-blue-950 text-base">Ubah Kategori Massal</h3>
-                  <p className="text-xs text-slate-500">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-blue-950 text-base truncate">Ubah Kategori Massal</h3>
+                  <p className="text-xs text-slate-500 truncate">
                     Pindahkan {selectedIds.length} produk terpilih
                   </p>
                 </div>
@@ -1723,32 +1723,35 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setBulkCategoryModalOpen(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-700"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 shrink-0 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700">Pilih Kategori Tujuan</label>
-              <select
-                value={selectedTargetCategoryId}
-                onChange={(e) => setSelectedTargetCategoryId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/10 cursor-pointer"
-              >
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    📁 {cat.name} ({cat.productCount ?? 0} Produk)
-                  </option>
-                ))}
-              </select>
+            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">Pilih Kategori Tujuan</label>
+              <div className="relative">
+                <select
+                  value={selectedTargetCategoryId}
+                  onChange={(e) => setSelectedTargetCategoryId(e.target.value)}
+                  className="w-full h-10 pl-3 pr-10 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/10 cursor-pointer appearance-none"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      📁 {cat.name} ({cat.productCount ?? 0} Produk)
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setBulkCategoryModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                className="h-10 px-4 bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer whitespace-nowrap"
               >
                 Batal
               </button>
@@ -1756,7 +1759,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
                 type="button"
                 disabled={actionLoading || !selectedTargetCategoryId}
                 onClick={handleBulkChangeCategory}
-                className="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                className="h-10 px-5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50 whitespace-nowrap"
               >
                 {actionLoading && (
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
