@@ -623,12 +623,155 @@ export async function runMobileUISuite(): Promise<boolean> {
     }
 
     // =========================================================================
-    // SKENARIO 6: ROLE CASHIER MOBILE/PWA (LOGIN PIN 5-DIGIT, HAMBURGER MENU,
+    // SKENARIO 6: AUDIT MOBILE WORKSHOP & MODALS (390x844)
+    // Prioritas SLA & Batch, Modal Batch Mesin, Modal Kelola Mesin, dan
+    // Modal Pengaturan Tahapan Produksi — zero overflow, zero "+ +", zero "SmartOwner"
+    // =========================================================================
+    const t6_workshop = Date.now();
+    try {
+      console.log('\n▶️ [SKENARIO 6] Mobile Workshop, Prioritas SLA & Modals Hygiene (390x844)...');
+      await page.setViewportSize(VIEWPORTS.mobile);
+
+      // 6A. Navigasi ke Antrian Produksi Workshop (laundry_production)
+      await navigateToTab(page, 'laundry_production');
+      await page.waitForTimeout(900);
+      await checkZeroOverflow(page, 'Workshop Produksi', 'Mobile 390x844');
+
+      // Klik tab "Prioritas SLA & Batch"
+      const slaTabBtn = page.locator('button:has-text("Prioritas SLA")').first();
+      await slaTabBtn.waitFor({ state: 'visible', timeout: 8000 });
+      await slaTabBtn.click();
+      await page.waitForTimeout(700);
+      await checkZeroOverflow(page, 'Prioritas SLA & Batch', 'Mobile 390x844');
+
+      // Verifikasi container filter tier tidak jebol keluar card
+      const filterCheck = await page.evaluate(() => {
+        const regulerBtn = Array.from(document.querySelectorAll('button')).find(
+          (b: any) => (b.textContent || '').trim() === 'Reguler'
+        ) as any;
+        if (!regulerBtn) return { ok: false, reason: 'Tombol filter "Reguler" tidak ditemukan' };
+        const filterContainer = regulerBtn.parentElement;
+        const cardContainer = filterContainer?.closest('.rounded-2xl');
+        if (!filterContainer || !cardContainer) return { ok: false, reason: 'Container filter/card tidak ditemukan' };
+        const cRect = cardContainer.getBoundingClientRect();
+        const fRect = filterContainer.getBoundingClientRect();
+        const ok = fRect.right <= cRect.right + 2;
+        return { ok, reason: ok ? 'OK' : `Filter container right (${fRect.right}) > card right (${cRect.right})` };
+      });
+      assert((filterCheck as any).ok, (filterCheck as any).reason);
+      console.log('   ✅ Prioritas SLA & Batch bebas overflow & filter Reguler aman di dalam card.');
+
+      // 6B. Buka Modal "Batch Mesin"
+      const batchBtn = page.locator('button:has-text("Batch Mesin")').first();
+      await batchBtn.click();
+      await page.waitForSelector('text=Manajemen Batch Mesin Cuci', { timeout: 6000 });
+      await page.waitForTimeout(400);
+      await checkZeroOverflow(page, 'Modal Batch Mesin', 'Mobile 390x844');
+
+      // Verifikasi tab "Buat Batch Baru" bebas tanda "+" ganda dan klik
+      const createBatchTab = page.locator('button:has-text("Buat Batch Baru")').first();
+      const createBatchTxt = ((await createBatchTab.textContent()) || '').trim();
+      assert(
+        !createBatchTxt.startsWith('+') && !createBatchTxt.includes('++'),
+        `Tab Buat Batch Baru tidak boleh memiliki tanda "+" ganda, didapat: "${createBatchTxt}"`
+      );
+      await createBatchTab.click();
+      await page.waitForTimeout(400);
+      await checkZeroOverflow(page, 'Modal Batch Mesin — Tab Buat Batch', 'Mobile 390x844');
+
+      // Verifikasi tinggi 2 tombol Tahap Siklus Mesin simetris
+      const cycleBtnCheck = await page.evaluate(() => {
+        const washing = Array.from(document.querySelectorAll('button')).find((b: any) =>
+          (b.textContent || '').includes('Mesin Cuci')
+        ) as any;
+        const drying = Array.from(document.querySelectorAll('button')).find((b: any) =>
+          (b.textContent || '').includes('Mesin Pengering')
+        ) as any;
+        if (!washing || !drying) return { ok: false, reason: 'Tombol Mesin Cuci/Pengering tidak ditemukan' };
+        const h1 = washing.getBoundingClientRect().height;
+        const h2 = drying.getBoundingClientRect().height;
+        const diff = Math.abs(h1 - h2);
+        return { ok: diff <= 2 && h1 >= 48, h1, h2, reason: `h1=${h1}, h2=${h2}` };
+      });
+      assert((cycleBtnCheck as any).ok, `Tombol siklus mesin harus seragam: ${(cycleBtnCheck as any).reason}`);
+      console.log(`   ✅ Modal Batch Mesin rapi: tombol siklus simetris (${(cycleBtnCheck as any).h1}px vs ${(cycleBtnCheck as any).h2}px).`);
+
+      // Tutup Modal Batch Mesin
+      await page.locator('div.fixed.inset-0.z-50 button').filter({ has: page.locator('svg') }).first().click();
+      await page.waitForTimeout(300);
+
+      // 6C. Buka Modal "Kelola Mesin"
+      const manageMachineBtn = page.locator('button:has-text("Kelola Mesin")').first();
+      await manageMachineBtn.click();
+      await page.waitForSelector('text=Kelola Mesin Cuci & Pengering', { timeout: 6000 });
+      await page.waitForTimeout(400);
+      await checkZeroOverflow(page, 'Modal Kelola Mesin', 'Mobile 390x844');
+
+      const addMachineBtnCheck = await page.evaluate(() => {
+        const btn = Array.from(document.querySelectorAll('button')).find(
+          (b: any) => (b.textContent || '').trim() === 'Tambah Mesin'
+        ) as any;
+        if (!btn) return { ok: false, reason: 'Tombol "Tambah Mesin" tidak ditemukan' };
+        const rect = btn.getBoundingClientRect();
+        return { ok: rect.height >= 34 && rect.height <= 44, height: rect.height };
+      });
+      assert(
+        (addMachineBtnCheck as any).ok,
+        `Tombol Tambah Mesin harus proporsional 1 baris (34-44px), didapat: ${(addMachineBtnCheck as any).height}px`
+      );
+      console.log(`   ✅ Modal Kelola Mesin proporsional: tombol Tambah Mesin = ${(addMachineBtnCheck as any).height}px.`);
+
+      // Tutup Modal Kelola Mesin
+      await page.locator('div.fixed.inset-0.z-50 button').filter({ has: page.locator('svg') }).first().click();
+      await page.waitForTimeout(300);
+
+      // 6D. Navigasi ke Katalog Layanan & Buka Modal "Atur Tahapan Produksi"
+      await navigateToTab(page, 'laundry_services');
+      await page.waitForTimeout(800);
+      const stageSettingsBtn = page.locator('button:has-text("Atur Tahapan Produksi")').first();
+      await stageSettingsBtn.waitFor({ state: 'visible', timeout: 8000 });
+      await stageSettingsBtn.click();
+      await page.waitForSelector('text=Pengaturan Tahapan Produksi', { timeout: 6000 });
+      await page.waitForTimeout(500);
+      await checkZeroOverflow(page, 'Modal Pengaturan Tahapan Produksi', 'Mobile 390x844');
+
+      const stageAudit = await page.evaluate(() => {
+        const bodyText = document.body.innerText || '';
+        const hasSmartOwner = bodyText.includes('SmartOwner');
+        const hasSmartKasir = bodyText.includes('SmartKasir');
+        return { hasSmartOwner, hasSmartKasir };
+      });
+      assert(!stageAudit.hasSmartOwner, 'Teks "SmartOwner" masih muncul di UI!');
+      assert(!stageAudit.hasSmartKasir, 'Teks "SmartKasir" masih muncul di UI!');
+      console.log('   ✅ Modal Pengaturan Tahapan Produksi bebas overflow & bebas teks "SmartOwner"/"SmartKasir".');
+
+      // Tutup Modal Pengaturan Tahapan Produksi
+      await page.locator('button:has-text("Batal")').first().click();
+      await page.waitForTimeout(300);
+
+      results.push({
+        name: 'Mobile Workshop, SLA Queue & Modals Hygiene (390x844, Zero SmartOwner)',
+        status: 'PASS',
+        durationMs: Date.now() - t6_workshop,
+      });
+      console.log('   ✅ PASS: Seluruh modal workshop/layanan proporsional di 390x844 & bebas SmartOwner.');
+    } catch (err: any) {
+      results.push({
+        name: 'Mobile Workshop, SLA Queue & Modals Hygiene (390x844, Zero SmartOwner)',
+        status: 'FAIL',
+        durationMs: Date.now() - t6_workshop,
+        error: err.message,
+      });
+      console.error('   ❌ FAIL:', err.message);
+    }
+
+    // =========================================================================
+    // SKENARIO 7: ROLE CASHIER MOBILE/PWA (LOGIN PIN 5-DIGIT, HAMBURGER MENU,
     // PRINTER MODAL, HEADER RINGKAS & FULL-WIDTH CTA TANPA SHORTCUT F2)
     // =========================================================================
     const t6 = Date.now();
     try {
-      console.log('\n▶️ [SKENARIO 6] Role CASHIER Mobile/PWA (PIN Login, Hamburger, Printer Modal, CTA Full-Width)...');
+      console.log('\n▶️ [SKENARIO 7] Role CASHIER Mobile/PWA (PIN Login, Hamburger, Printer Modal, CTA Full-Width)...');
 
       // 6.0 Reset session & buka halaman login pada viewport Mobile 390x844
       await page.setViewportSize(VIEWPORTS.mobile);

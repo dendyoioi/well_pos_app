@@ -870,7 +870,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                 type="button"
                                 onClick={() => setShowStageSettingsModal(true)}
                                 className="w-full sm:w-auto h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs sm:text-sm border border-slate-300 shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-                                title="Atur tahapan produksi toko (11 preset standar SmartOwner atau kustom)"
+                                title="Atur tahapan produksi toko (11 preset standar Well POS atau kustom)"
                             >
                                 <Sliders className="w-4 h-4 text-slate-600" />
                                 <span>Atur Tahapan Produksi</span>

@@ -207,15 +207,15 @@ export const LaundryBatchBoardModal: React.FC<LaundryBatchBoardModalProps> = ({
       <div className="bg-white w-full sm:max-w-3xl sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
               <Layers className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
                 Manajemen Batch Mesin Cuci &amp; Dryer
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1 sm:line-clamp-none">
                 Gabung beberapa order kiloan sejenis ke 1 siklus mesin tanpa kehilangan traceability
               </p>
             </div>
@@ -223,37 +223,37 @@ export const LaundryBatchBoardModal: React.FC<LaundryBatchBoardModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-200 bg-white px-5 shrink-0">
+        <div className="flex border-b border-slate-200 bg-white px-4 sm:px-5 shrink-0 overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab('list')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3 px-3 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'list'
                 ? 'border-blue-900 text-blue-900'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-3.5 h-3.5 shrink-0" />
             <span>Daftar Batch Mesin ({batches.length})</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('create')}
-            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3 px-3 sm:px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'create'
                 ? 'border-blue-900 text-blue-900'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Buat Batch Baru {selectedOrderIds.length > 0 && `(${selectedOrderIds.length} Order)`}</span>
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span>Buat Batch Baru {selectedOrderIds.length > 0 && `(${selectedOrderIds.length} Order)`}</span>
           </button>
         </div>
 
@@ -461,30 +461,48 @@ export const LaundryBatchBoardModal: React.FC<LaundryBatchBoardModalProps> = ({
                 <label className="block text-xs font-bold text-slate-800 mb-1.5">
                   Tahap Siklus Mesin <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setStage('WASHING')}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[52px] text-center cursor-pointer ${
                       stage === 'WASHING'
                         ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Mesin Cuci (Washing)</span>
+                    <Sparkles className="w-4 h-4 shrink-0" />
+                    <span className="flex flex-col sm:flex-row items-center sm:gap-1 leading-tight">
+                      <span>Mesin Cuci</span>
+                      <span
+                        className={`text-[10.5px] sm:text-xs font-semibold ${
+                          stage === 'WASHING' ? 'text-blue-100' : 'text-slate-500'
+                        }`}
+                      >
+                        (Washing)
+                      </span>
+                    </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setStage('DRYING')}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[52px] text-center cursor-pointer ${
                       stage === 'DRYING'
                         ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Mesin Pengering (Drying)</span>
+                    <RotateCcw className="w-4 h-4 shrink-0" />
+                    <span className="flex flex-col sm:flex-row items-center sm:gap-1 leading-tight">
+                      <span>Mesin Pengering</span>
+                      <span
+                        className={`text-[10.5px] sm:text-xs font-semibold ${
+                          stage === 'DRYING' ? 'text-amber-100' : 'text-slate-500'
+                        }`}
+                      >
+                        (Drying)
+                      </span>
+                    </span>
                   </button>
                 </div>
               </div>
@@ -572,7 +590,7 @@ export const LaundryBatchBoardModal: React.FC<LaundryBatchBoardModalProps> = ({
 
               {/* Pemilihan Pesanan Aktif */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 mb-1.5">
                   <label className="text-xs font-bold text-slate-800">
                     Pilih Nota Pesanan ({selectedOrderIds.length} dipilih - {calculatedWeight} kg)
                   </label>

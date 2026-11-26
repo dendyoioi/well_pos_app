@@ -2239,7 +2239,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   Kasir Laundry
                 </h1>
                 <span className="hidden lg:inline text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
-                  SmartKasir Mode
+                  Mode Kasir
                 </span>
               </div>
               <p className="text-[10px] lg:text-xs text-slate-500 truncate">

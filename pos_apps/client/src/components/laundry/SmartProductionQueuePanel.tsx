@@ -147,47 +147,45 @@ export const SmartProductionQueuePanel: React.FC<SmartProductionQueuePanelProps>
       </div>
 
       {/* Toolbar Search & Filter */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nota atau nama pelanggan..."
-              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 bg-slate-50 focus:bg-white transition-all"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          </div>
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center gap-2.5">
+        <div className="relative w-full sm:flex-1">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari nota atau nama pelanggan..."
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 bg-slate-50 focus:bg-white transition-all"
+          />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        </div>
 
-          <div className="flex items-center gap-1">
-            {['ALL', 'CRITICAL', 'URGENT', 'HIGH', 'NORMAL'].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTierFilter(t)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  tierFilter === t
-                    ? t === 'CRITICAL'
-                      ? 'bg-rose-700 text-white shadow-xs'
-                      : t === 'URGENT'
-                      ? 'bg-amber-600 text-white shadow-xs'
-                      : 'bg-blue-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {t === 'ALL'
-                  ? 'Semua'
-                  : t === 'CRITICAL'
-                  ? 'Kritis'
-                  : t === 'URGENT'
-                  ? 'Mendesak'
-                  : t === 'HIGH'
-                  ? 'Tinggi'
-                  : 'Reguler'}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full sm:w-auto pb-0.5 sm:pb-0">
+          {['ALL', 'CRITICAL', 'URGENT', 'HIGH', 'NORMAL'].map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTierFilter(t)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                tierFilter === t
+                  ? t === 'CRITICAL'
+                    ? 'bg-rose-700 text-white shadow-xs'
+                    : t === 'URGENT'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-blue-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {t === 'ALL'
+                ? 'Semua'
+                : t === 'CRITICAL'
+                ? 'Kritis'
+                : t === 'URGENT'
+                ? 'Mendesak'
+                : t === 'HIGH'
+                ? 'Tinggi'
+                : 'Reguler'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -342,22 +340,22 @@ export const SmartProductionQueuePanel: React.FC<SmartProductionQueuePanelProps>
 
       {/* Floating Action Bar jika ada order dipilih */}
       {selectedOrderIds.length > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-blue-950 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center">
+        <div className="fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-40 bg-blue-950 text-white px-4 sm:px-5 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-3 sm:gap-4 w-[calc(100%-2rem)] sm:w-auto max-w-md animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
               {selectedOrderIds.length}
             </span>
-            <span className="text-xs font-bold">Pesanan Terpilih</span>
+            <span className="text-xs font-bold whitespace-nowrap">Pesanan Terpilih</span>
           </div>
 
-          <div className="h-4 w-px bg-blue-800" />
+          <div className="h-4 w-px bg-blue-800 hidden sm:block" />
 
           <button
             type="button"
             onClick={() => onOpenBatchWithOrders?.(selectedOrderIds)}
-            className="px-4 py-1.5 bg-white text-blue-950 hover:bg-blue-50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md"
+            className="px-3.5 sm:px-4 py-1.5 bg-white text-blue-950 hover:bg-blue-50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <Layers className="w-4 h-4 text-blue-900" />
+            <Layers className="w-4 h-4 text-blue-900 shrink-0" />
             <span>Gabung ke Batch Mesin</span>
           </button>
         </div>

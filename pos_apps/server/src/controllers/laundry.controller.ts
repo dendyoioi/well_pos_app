@@ -3887,7 +3887,7 @@ export const resetLaundryStageSettings = async (req: Request, res: Response) => 
 
     return res.status(200).json({
       status: 'success',
-      message: 'Pengaturan tahapan produksi berhasil direset ke standar 11 tahapan SmartOwner',
+      message: 'Pengaturan tahapan produksi berhasil direset ke standar 11 tahapan Well POS',
       data: DEFAULT_PRODUCTION_STAGES,
     });
   } catch (error: any) {
