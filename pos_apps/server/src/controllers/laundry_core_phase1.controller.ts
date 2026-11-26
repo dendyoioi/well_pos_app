@@ -445,23 +445,37 @@ export const getLostAndFound = async (req: Request, res: Response) => {
   }
 };
 
-const LOST_AND_FOUND_CATEGORIES = [
-  'POCKET_ITEM',
-  'UNCLAIMED_GARMENT',
-  'VALUABLES',
-  'CLOTHING',
-  'ACCESSORIES',
-  'OTHER',
-] as const;
+const isValidPhotoUrl = (val?: string | null): boolean => {
+  if (val === null || val === undefined || val === '') return true;
+  const trimmed = val.trim();
+  if (trimmed.toLowerCase().startsWith('data:image/')) return false;
+  return (
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('/uploads/')
+  );
+};
 
 const createLostAndFoundSchema = z.object({
   outletId: z.string().min(1, 'Outlet ID wajib diisi'),
   orderId: z.string().nullable().optional(),
   customerId: z.string().nullable().optional(),
-  itemCategory: z.enum(LOST_AND_FOUND_CATEGORIES).default('POCKET_ITEM'),
+  itemCategory: z
+    .string()
+    .trim()
+    .min(2, 'Kategori minimal 2 karakter')
+    .max(60, 'Kategori maksimal 60 karakter')
+    .default('POCKET_ITEM'),
   itemName: z.string().min(1, 'Nama barang wajib diisi'),
   description: z.string().nullable().optional(),
-  photoUrl: z.string().nullable().optional(),
+  photoUrl: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .refine((val) => isValidPhotoUrl(val), {
+      message: 'URL foto tidak valid atau masih berupa Base64; unggah foto terlebih dahulu',
+    }),
   storageLocation: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
@@ -561,9 +575,21 @@ export const createLostAndFound = async (req: Request, res: Response) => {
 
 const updateLostAndFoundSchema = z.object({
   itemName: z.string().min(1, 'Nama barang wajib diisi').optional(),
-  itemCategory: z.enum(LOST_AND_FOUND_CATEGORIES).optional(),
+  itemCategory: z
+    .string()
+    .trim()
+    .min(2, 'Kategori minimal 2 karakter')
+    .max(60, 'Kategori maksimal 60 karakter')
+    .optional(),
   description: z.string().nullable().optional(),
-  photoUrl: z.string().nullable().optional(),
+  photoUrl: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .refine((val) => isValidPhotoUrl(val), {
+      message: 'URL foto tidak valid atau masih berupa Base64; unggah foto terlebih dahulu',
+    }),
   status: z.enum(['FOUND', 'NOTIFIED', 'RETURNED', 'DISPOSED']).optional(),
   claimedByName: z.string().nullable().optional(),
   storageLocation: z.string().nullable().optional(),

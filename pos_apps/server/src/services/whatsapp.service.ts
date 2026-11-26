@@ -1093,6 +1093,123 @@ export class WhatsAppService {
       };
     }
   }
+
+  /**
+   * Kirim pesan teks bebas via WhatsApp Gateway (Fonnte API dengan Fallback Simulator)
+   */
+  public async sendPlainMessage(data: {
+    tenantId: string;
+    outletId?: string;
+    targetPhone: string;
+    message: string;
+  }): Promise<WhatsAppSendResult> {
+    try {
+      if (!data.targetPhone || !data.targetPhone.trim()) {
+        return {
+          status: 'error',
+          success: false,
+          message: 'Nomor WhatsApp penerima tidak tersedia',
+          targetPhone: '',
+          isMock: false,
+          provider: 'FONNTE',
+        };
+      }
+
+      const cleanPhone = this.normalizePhone(data.targetPhone);
+
+      let receiptConfig: any = null;
+      try {
+        if (data.outletId) {
+          const outlet = await prisma.outlet.findUnique({
+            where: { id: data.outletId },
+            select: { receiptConfig: true },
+          });
+          receiptConfig = outlet?.receiptConfig;
+        }
+        if (!receiptConfig && data.tenantId) {
+          const outletFallback = await prisma.outlet.findFirst({
+            where: { tenantId: data.tenantId },
+            select: { receiptConfig: true },
+          });
+          receiptConfig = outletFallback?.receiptConfig;
+        }
+      } catch (dbErr) {
+        console.warn('[WHATSAPP PLAIN MSG] Gagal membaca receiptConfig outlet:', dbErr);
+      }
+
+      const { apiKey, enabled } = this.resolveApiKey(receiptConfig);
+
+      if (!enabled) {
+        return {
+          status: 'error',
+          success: false,
+          message: 'Layanan WhatsApp Gateway dinonaktifkan untuk toko ini',
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+        };
+      }
+
+      if (!apiKey) {
+        console.log(`[WHATSAPP MOCK/UNCONFIGURED] Pesan tes ke +${cleanPhone}:\n${data.message}`);
+        return {
+          status: 'success',
+          success: true,
+          message: `(Mock) Pesan WhatsApp tercatat untuk +${cleanPhone} (Token Fonnte belum dikonfigurasi)`,
+          targetPhone: cleanPhone,
+          isMock: true,
+          provider: 'FONNTE',
+        };
+      }
+
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target: cleanPhone,
+          message: data.message,
+          countryCode: '62',
+        }),
+      });
+
+      const resJson: any = await response.json();
+      if (response.ok && resJson.status === true) {
+        return {
+          status: 'success',
+          success: true,
+          message: `Pesan WhatsApp berhasil dikirim ke +${cleanPhone}`,
+          targetPhone: cleanPhone,
+          isMock: false,
+          provider: 'FONNTE',
+          externalResponse: resJson,
+        };
+      }
+
+      const errorMsg = resJson.reason || resJson.message || 'Gagal mengirim pesan via Fonnte API';
+      return {
+        status: 'error',
+        success: false,
+        message: `Fonnte: ${errorMsg}`,
+        targetPhone: cleanPhone,
+        isMock: false,
+        provider: 'FONNTE',
+        externalResponse: resJson,
+      };
+    } catch (err: any) {
+      console.error('[WHATSAPP PLAIN MSG ERROR]', err);
+      return {
+        status: 'error',
+        success: false,
+        message: `Koneksi gateway WhatsApp terputus: ${err.message}`,
+        targetPhone: data.targetPhone || '',
+        isMock: false,
+        provider: 'FONNTE',
+      };
+    }
+  }
 }
 
 export const whatsAppService = new WhatsAppService();

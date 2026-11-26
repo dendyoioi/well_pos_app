@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma';
+import { whatsAppService } from './whatsapp.service';
 
 export type CanonicalEventKey =
   | 'ORDER_CREATED'
@@ -156,13 +157,25 @@ export interface DispatchDomainEventParams {
   };
   variables: Record<string, string | number | undefined | null>;
   simulateOnly?: boolean;
+  messageTemplateOverride?: string | null;
+  channelsOverride?: NotificationChannel[] | null;
 }
 
 /**
  * Dispatch event domain notifikasi terpusat
  */
 export async function dispatchDomainEvent(params: DispatchDomainEventParams) {
-  const { tenantId, outletId, eventKey, recipient, reference, variables, simulateOnly = false } = params;
+  const {
+    tenantId,
+    outletId,
+    eventKey,
+    recipient,
+    reference,
+    variables,
+    simulateOnly = false,
+    messageTemplateOverride,
+    channelsOverride,
+  } = params;
 
   // 1. Ambil aturan efektif
   const effectiveRules = await getEffectiveAutomationRules(tenantId, outletId);
@@ -170,9 +183,11 @@ export async function dispatchDomainEvent(params: DispatchDomainEventParams) {
 
   const isEnabled = matchedRule ? matchedRule.isEnabled : true;
   const rawTemplate =
+    (messageTemplateOverride && messageTemplateOverride.trim() ? messageTemplateOverride : null) ||
     matchedRule?.messageTemplate ||
     (DEFAULT_AUTOMATION_RULES[eventKey as CanonicalEventKey]?.messageTemplate || 'Notifikasi dari {{outletName}}');
   const channels =
+    (channelsOverride && channelsOverride.length > 0 ? channelsOverride : null) ||
     matchedRule?.channels ||
     (DEFAULT_AUTOMATION_RULES[eventKey as CanonicalEventKey]?.channels || ['IN_APP']);
 
@@ -218,9 +233,20 @@ export async function dispatchDomainEvent(params: DispatchDomainEventParams) {
         status = 'SENT';
         sentAt = now;
       } else {
-        // Mode operasional normal / simulasi lokal
-        status = 'SENT';
-        sentAt = now;
+        const waRes = await whatsAppService.sendPlainMessage({
+          tenantId,
+          outletId: outletId || undefined,
+          targetPhone: recipient.phone,
+          message: messageBody,
+        });
+        if (waRes.success) {
+          status = 'SENT';
+          sentAt = now;
+        } else {
+          status = 'FAILED';
+          errorMessage = waRes.message || 'Gagal mengirim pesan WhatsApp';
+          sentAt = null;
+        }
       }
     } else if (ch === 'IN_APP') {
       status = 'SENT';

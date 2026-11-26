@@ -388,7 +388,10 @@ async function runLaundryCorePhase3E2E() {
 
     // Jalankan Simulasi Kirim saat nonaktif -> harus SKIPPED
     await orderReadyCard.locator('button:has-text("Simulasi Kirim")').click();
-    await page.locator('text=DI-SKIP').waitFor({ timeout: 8000 });
+    await notifModal.locator('h3:has-text("Simulasi Pengiriman Notifikasi")').waitFor({ timeout: 5000 });
+    await notifModal.locator('button:has-text("Jalankan Simulasi")').click();
+    await page.locator('text=DI-SKIP').first().waitFor({ timeout: 8000 });
+    await notifModal.locator('button:has-text("Tutup Simulasi")').click();
     console.log('   ✅ [UI] Simulasi notifikasi saat nonaktif terbukti menghasilkan status SKIPPED.');
 
     // 4.4 Nyalakan kembali saklar (Toggle On)
@@ -399,7 +402,10 @@ async function runLaundryCorePhase3E2E() {
 
     // Jalankan Simulasi Kirim saat aktif -> harus TERKIRIM
     await orderReadyCard.locator('button:has-text("Simulasi Kirim")').click();
-    await page.locator('text=TERKIRIM').waitFor({ timeout: 8000 });
+    await notifModal.locator('h3:has-text("Simulasi Pengiriman Notifikasi")').waitFor({ timeout: 5000 });
+    await notifModal.locator('button:has-text("Jalankan Simulasi")').click();
+    await page.locator('text=TERKIRIM').first().waitFor({ timeout: 8000 });
+    await notifModal.locator('button:has-text("Tutup Simulasi")').click();
     console.log('   ✅ [UI] Simulasi notifikasi saat aktif terbukti menghasilkan status TERKIRIM.');
 
     // 4.5 Cek tab Riwayat Log lagi untuk memastikan log simulasi masuk

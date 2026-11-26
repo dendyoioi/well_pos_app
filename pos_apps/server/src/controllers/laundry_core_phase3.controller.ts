@@ -849,6 +849,9 @@ const simulateNotificationSchema = z.object({
   recipientName: z.string().optional().nullable(),
   recipientPhone: z.string().optional().nullable(),
   recipientEmail: z.string().email().optional().nullable(),
+  messageTemplate: z.string().optional().nullable(),
+  channels: z.array(z.enum(['IN_APP', 'WHATSAPP', 'EMAIL'])).optional().nullable(),
+  sendRealTest: z.boolean().optional().default(false),
   variables: z.record(z.any()).optional(),
 });
 
@@ -865,16 +868,52 @@ export const simulateNotification = async (req: Request, res: Response) => {
       });
     }
 
-    const { outletId, eventKey, recipientName, recipientPhone, recipientEmail, variables } =
-      parseResult.data;
+    const {
+      outletId,
+      eventKey,
+      recipientName,
+      recipientPhone,
+      recipientEmail,
+      messageTemplate,
+      channels,
+      sendRealTest,
+      variables,
+    } = parseResult.data;
+
+    const cleanPhone = recipientPhone?.trim() || null;
+    if (sendRealTest && !cleanPhone) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nomor WhatsApp tujuan wajib diisi untuk mengirim pesan tes nyata.',
+      });
+    }
+
+    // Ambil nama outlet nyata dari database (hindari hardcode)
+    let resolvedOutletName = 'Well POS Laundry';
+    try {
+      const targetOutlet = outletId
+        ? await prisma.outlet.findFirst({
+            where: { id: outletId, tenantId: user.tenantId },
+            select: { name: true },
+          })
+        : await prisma.outlet.findFirst({
+            where: { tenantId: user.tenantId },
+            select: { name: true },
+          });
+      if (targetOutlet?.name) {
+        resolvedOutletName = targetOutlet.name;
+      }
+    } catch {
+      // Gunakan fallback default jika lookup outlet gagal
+    }
 
     const logs = await dispatchDomainEvent({
       tenantId: user.tenantId,
       outletId: outletId || null,
       eventKey: eventKey as CanonicalEventKey,
       recipient: {
-        name: recipientName || 'Pelanggan Simulasi',
-        phone: recipientPhone || null,
+        name: recipientName?.trim() || 'Pelanggan Simulasi',
+        phone: cleanPhone,
         email: recipientEmail || null,
       },
       reference: {
@@ -882,23 +921,38 @@ export const simulateNotification = async (req: Request, res: Response) => {
         id: `SIM-${Date.now()}`,
       },
       variables: {
-        customerName: recipientName || 'Bpk. Pelanggan',
-        outletName: 'Outlet Laundry Simulator',
+        customerName: recipientName?.trim() || 'Bpk. Pelanggan',
+        outletName: resolvedOutletName,
         invoiceNumber: 'INV-SIM-001',
+        estimatedReadyAt: new Date(Date.now() + 24 * 3600 * 1000).toLocaleString('id-ID', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
+        rackCode: 'RAK-A-01',
         requestCode: 'PKP-SIM-001',
+        courierName: 'Kurir Well POS',
+        courierPhone: '+6281234567890',
+        referenceCode: 'PKP-SIM-001',
         reason: 'Penerima tidak berada di lokasi',
         rescheduledAt: new Date(Date.now() + 24 * 3600 * 1000).toLocaleString('id-ID'),
         remainingQuota: '10 kg',
         expiryDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toLocaleDateString('id-ID'),
         ...(variables || {}),
       },
-      simulateOnly: true,
+      messageTemplateOverride: messageTemplate || undefined,
+      channelsOverride: channels || undefined,
+      simulateOnly: !(sendRealTest && Boolean(cleanPhone)),
     });
+
+    const renderedMessage = logs[0]?.messageBody || '';
 
     return res.json({
       status: 'success',
       data: logs,
-      message: 'Simulasi notifikasi berhasil dijalankan',
+      renderedMessage,
+      message: sendRealTest
+        ? 'Pengujian kirim notifikasi nyata telah diproses'
+        : 'Simulasi notifikasi berhasil dijalankan',
     });
   } catch (error: any) {
     console.error('Error in simulateNotification:', error);

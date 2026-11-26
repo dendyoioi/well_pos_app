@@ -253,7 +253,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [cashExpenseModalOpen, setCashExpenseModalOpen] = useState(false);
   const canCashOut = Boolean(
     currentUser &&
-      (['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role) || currentUser.canCashOut === true)
+    (['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role) || currentUser.canCashOut === true)
   );
 
   // Absensi Staf Kasir (Pilar 4)
@@ -413,52 +413,52 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         const pendingOrders = await getPendingOfflineOrders(activeOutlet?.id, 'LAUNDRY', {
           includeExhausted,
         });
-      if (pendingOrders.length === 0) {
-        await refreshOfflineQueueCount();
-        setIsSyncingOffline(false);
-        return;
-      }
+        if (pendingOrders.length === 0) {
+          await refreshOfflineQueueCount();
+          setIsSyncingOffline(false);
+          return;
+        }
 
-      let successCount = 0;
-      let failCount = 0;
+        let successCount = 0;
+        let failCount = 0;
 
-      for (const offlineOrder of pendingOrders) {
-        try {
-          await markOfflineOrderSyncing(offlineOrder.offlineId);
-          const idempotencyKey = offlineOrder.clientRequestId || offlineOrder.offlineId;
-          const res = await api.createLaundryOrder(offlineOrder.payload, { idempotencyKey });
-          if (res.status === 'success' && res.data) {
-            await markOfflineOrderSuccess(offlineOrder.offlineId, res.data);
-            successCount++;
-          } else {
-            await markOfflineOrderFailed(offlineOrder.offlineId, res.message || 'Gagal sinkron');
+        for (const offlineOrder of pendingOrders) {
+          try {
+            await markOfflineOrderSyncing(offlineOrder.offlineId);
+            const idempotencyKey = offlineOrder.clientRequestId || offlineOrder.offlineId;
+            const res = await api.createLaundryOrder(offlineOrder.payload, { idempotencyKey });
+            if (res.status === 'success' && res.data) {
+              await markOfflineOrderSuccess(offlineOrder.offlineId, res.data);
+              successCount++;
+            } else {
+              await markOfflineOrderFailed(offlineOrder.offlineId, res.message || 'Gagal sinkron');
+              failCount++;
+            }
+          } catch (syncErr: any) {
+            await markOfflineOrderFailed(offlineOrder.offlineId, syncErr.message || 'Network error');
             failCount++;
           }
-        } catch (syncErr: any) {
-          await markOfflineOrderFailed(offlineOrder.offlineId, syncErr.message || 'Network error');
-          failCount++;
         }
-      }
 
-      await clearSyncedOfflineOrders();
-      await refreshOfflineQueueCount();
+        await clearSyncedOfflineOrders();
+        await refreshOfflineQueueCount();
 
-      if (successCount > 0) {
-        setFeedbackToast({
-          message: `${successCount} transaksi laundry offline berhasil disinkronkan ke server!`,
-          type: 'success',
-        });
-        setTimeout(() => setFeedbackToast(null), 4000);
-        fetchCustomers();
-        loadCurrentShift();
-      }
-      if (failCount > 0) {
-        setFeedbackToast({
-          message: `${failCount} transaksi laundry offline gagal disinkronkan. Akan dicoba lagi otomatis.`,
-          type: 'error',
-        });
-        setTimeout(() => setFeedbackToast(null), 5000);
-      }
+        if (successCount > 0) {
+          setFeedbackToast({
+            message: `${successCount} transaksi laundry offline berhasil disinkronkan ke server!`,
+            type: 'success',
+          });
+          setTimeout(() => setFeedbackToast(null), 4000);
+          fetchCustomers();
+          loadCurrentShift();
+        }
+        if (failCount > 0) {
+          setFeedbackToast({
+            message: `${failCount} transaksi laundry offline gagal disinkronkan. Akan dicoba lagi otomatis.`,
+            type: 'error',
+          });
+          setTimeout(() => setFeedbackToast(null), 5000);
+        }
       } catch (err: any) {
         console.error('Error saat menyinkronkan antrean laundry offline:', err);
       } finally {
@@ -553,7 +553,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           setPerfumes(res.data.filter((p: LaundryPerfume) => p.isActive));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     if (activeOutlet?.id) {
       try {
         const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -563,9 +563,9 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               outletId: activeOutlet.id,
               clientTimezone: clientTz,
             })
-            .catch(() => {});
+            .catch(() => { });
         }
-      } catch {}
+      } catch { }
       api
         .getLaundryDepositConfig(activeOutlet.id)
         .then((res) => {
@@ -573,7 +573,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
             setDepositConfig(res.data.config);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [activeOutlet?.id]);
 
@@ -731,7 +731,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         if (res.status === 'success' && res.data?.config) {
           setDepositConfig(res.data.config);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [topupModalOpen, activeOutlet?.id]);
 
@@ -1229,8 +1229,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     paymentChoice === 'PAID'
       ? cartTotals.grandTotal
       : paymentChoice === 'PARTIAL'
-      ? numDeposit
-      : 0;
+        ? numDeposit
+        : 0;
   const changeAmount = paymentMethod === 'CASH' && paymentChoice === 'PAID' ? Math.max(0, numCashReceived - targetPayAmount) : 0;
 
   // Eksekusi Pembuatan Transaksi Laundry
@@ -1500,383 +1500,378 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
   const renderCartBody = () => (
     <>
-          {/* Header Status Pelanggan Terpilih */}
-          <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold shrink-0 ${
-                  isCustomerFilled
-                    ? "bg-blue-100 text-blue-900 border border-blue-200"
-                    : "bg-slate-100 text-slate-400"
-                }`}
-              >
-                <User className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
+      {/* Header Status Pelanggan Terpilih */}
+      <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold shrink-0 ${isCustomerFilled
+              ? "bg-blue-100 text-blue-900 border border-blue-200"
+              : "bg-slate-100 text-slate-400"
+              }`}
+          >
+            <User className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-black text-slate-900 truncate">
+                {isCustomerFilled ? customerName : "Belum Ada Pelanggan"}
+              </span>
+              {selectedCustomerId && (
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                  Member CRM
+                </span>
+              )}
+              {selectedCustomerId && selectedCustomer && isLoyaltyActive && (
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5 shrink-0">
+                  <Star className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                  <span>{Number(selectedCustomer.loyaltyPoints || 0).toLocaleString('id-ID')} Poin</span>
+                  {selectedCustomer.tier && <span className="opacity-75">({selectedCustomer.tier})</span>}
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-500 truncate">
+              {isCustomerFilled
+                ? customerPhone
+                  ? `+62 ${customerPhone.replace(/^\+?62/, '')}`
+                  : 'Tanpa No. WhatsApp'
+                : 'Klik layanan untuk input nama'}
+            </div>
+            {selectedCustomerId && (
+              <div className="flex flex-col gap-1.5 mt-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-black text-slate-900 truncate">
-                    {isCustomerFilled ? customerName : "Belum Ada Pelanggan"}
-                  </span>
-                  {selectedCustomerId && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
-                      Member CRM
+                  {loadingWallet ? (
+                    <span className="text-[9.5px] text-slate-400 flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin text-blue-900" />
+                      <span>Memuat dompet...</span>
                     </span>
-                  )}
-                  {selectedCustomerId && selectedCustomer && isLoyaltyActive && (
-                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5 shrink-0">
-                      <Star className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
-                      <span>{Number(selectedCustomer.loyaltyPoints || 0).toLocaleString('id-ID')} Poin</span>
-                      {selectedCustomer.tier && <span className="opacity-75">({selectedCustomer.tier})</span>}
-                    </span>
+                  ) : (
+                    <>
+                      <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
+                        Saldo: Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
+                      </span>
+                      <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200">
+                        Kuota: {Number(customerWallet?.quotaKg || 0)} Kg
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setTopupModalOpen(true)}
+                        className="text-[9.5px] font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors"
+                        title="Top-up saldo atau kuota pelanggan"
+                      >
+                        + Top-up
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrefModalOpen(true)}
+                        className="text-[9.5px] font-black text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors flex items-center gap-1"
+                        title="Atur preferensi laundry & nomor alternatif pelanggan"
+                      >
+                        <Sliders className="w-2.5 h-2.5 text-blue-800" />
+                        <span>Preferensi</span>
+                      </button>
+                    </>
                   )}
                 </div>
-                <div className="text-[11px] text-slate-500 truncate">
-                  {isCustomerFilled
-                    ? customerPhone
-                      ? `+62 ${customerPhone.replace(/^\+?62/, '')}`
-                      : 'Tanpa No. WhatsApp'
-                    : 'Klik layanan untuk input nama'}
-                </div>
-                {selectedCustomerId && (
-                  <div className="flex flex-col gap-1.5 mt-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {loadingWallet ? (
-                        <span className="text-[9.5px] text-slate-400 flex items-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin text-blue-900" />
-                          <span>Memuat dompet...</span>
-                        </span>
-                      ) : (
-                        <>
-                          <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
-                            Saldo: Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}
-                          </span>
-                          <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200">
-                            Kuota: {Number(customerWallet?.quotaKg || 0)} Kg
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setTopupModalOpen(true)}
-                            className="text-[9.5px] font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors"
-                            title="Top-up saldo atau kuota pelanggan"
-                          >
-                            + Top-up
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrefModalOpen(true)}
-                            className="text-[9.5px] font-black text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors flex items-center gap-1"
-                            title="Atur preferensi laundry & nomor alternatif pelanggan"
-                          >
-                            <Sliders className="w-2.5 h-2.5 text-blue-800" />
-                            <span>Preferensi</span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {selectedCustomer?.laundryPreferences && (
-                      <CustomerPreferenceBadges preferences={selectedCustomer.laundryPreferences} />
-                    )}
-                  </div>
+                {selectedCustomer?.laundryPreferences && (
+                  <CustomerPreferenceBadges preferences={selectedCustomer.laundryPreferences} />
                 )}
               </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              {isCustomerFilled ? (
-                <button
-                  type="button"
-                  onClick={handleResetCustomer}
-                  className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-500 hover:text-rose-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                  title="Ganti / Reset Pelanggan"
-                >
-                  Ganti
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setCustomerSearchModalOpen(true)}
-                  className="px-2.5 py-1 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
-                >
-                  <Search className="w-3 h-3" />
-                  <span>
-                    Pilih<span className="hidden lg:inline"> (F2)</span>
-                  </span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Wrapper Scrollable Terpadu: Item Cucian + Moda Antar-Jemput + Pembayaran */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-200">
-            {/* Bagian 1: Daftar Item di Keranjang */}
-            <div className="p-3 space-y-2.5 bg-slate-50/60">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                <span className="text-xs font-bold text-slate-700">
-                  Item Cucian ({cartItems.length})
-                </span>
-                {cartItems.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setCartItems([])}
-                    className="text-[11px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Kosongkan
-                  </button>
-                )}
-              </div>
-
-              {cartItems.length === 0 ? (
-                <div className="py-6 sm:py-8 text-center text-slate-400 text-xs space-y-1">
-                  <Shirt className="w-7 h-7 mx-auto text-slate-300" />
-                  <p className="font-semibold text-slate-600">Keranjang Masih Kosong</p>
-                  <p className="text-[11px]">Klik salah satu layanan di sebelah kiri untuk mulai menimbang atau memasukkan cucian.</p>
-                </div>
-              ) : (
-              cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 leading-snug">{item.name}</h4>
-                      <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="font-bold text-slate-800">
-                          {item.quantity.toFixed(2)} {item.unit}
-                        </span>
-                        {item.isUnderMinimum && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-black border border-amber-300">
-                            Min. {item.minOrderQty} Kg (Asli: {item.actualQuantity.toFixed(2)} Kg)
-                          </span>
-                        )}
-                        <span>•</span>
-                        <span>{item.totalPieces} Pcs</span>
-                        <span>•</span>
-                        <span className="text-blue-700 font-medium">{item.perfumeVariant}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFromCart(item.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                      title="Hapus Item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {item.addons && item.addons.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-0.5">
-                      {item.addons.map((ad) => (
-                        <span
-                          key={ad.id}
-                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 text-[9.5px] font-bold border border-purple-200"
-                        >
-                          ✨ {ad.name} (+Rp {ad.total.toLocaleString('id-ID')})
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {item.notes && (
-                    <div className="p-1 rounded bg-amber-50 border border-amber-200 text-[10px] text-amber-900">
-                      Catatan: {item.notes}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                    <span className="text-[10px] text-slate-400">
-                      @ Rp {item.unitPrice.toLocaleString('id-ID')}
-                    </span>
-                    <span className="font-black text-slate-900">
-                      Rp {item.subtotal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              ))
             )}
           </div>
+        </div>
 
-          {/* Bagian 2: Ringkasan Finansial, Moda Antar-Jemput & Opsi Pembayaran */}
-          <div className="bg-white p-3 space-y-2.5">
-            {/* Info Estimasi Selesai */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isCustomerFilled ? (
+            <button
+              type="button"
+              onClick={handleResetCustomer}
+              className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-500 hover:text-rose-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Ganti / Reset Pelanggan"
+            >
+              Ganti
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCustomerSearchModalOpen(true)}
+              className="px-2.5 py-1 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
+            >
+              <Search className="w-3 h-3" />
+              <span>
+                Pilih<span className="hidden lg:inline"> (F2)</span>
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Wrapper Scrollable Terpadu: Item Cucian + Moda Antar-Jemput + Pembayaran */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-200">
+        {/* Bagian 1: Daftar Item di Keranjang */}
+        <div className="p-3 space-y-2.5 bg-slate-50/60">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+            <span className="text-xs font-bold text-slate-700">
+              Item Cucian ({cartItems.length})
+            </span>
             {cartItems.length > 0 && (
-              <div className="p-2 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs text-blue-950">
-                <span className="flex items-center gap-1 font-semibold">
-                  <Clock className="w-3.5 h-3.5 text-blue-700" />
-                  Estimasi Selesai:
-                </span>
-                <span className="font-black text-blue-900">
-                  {cartTotals.readyDate.toLocaleDateString('id-ID', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setCartItems([])}
+                className="text-[11px] text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Kosongkan
+              </button>
             )}
+          </div>
 
-            {/* Opsi Pengantaran & Penjemputan Pelanggan (Delivery) */}
-            <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-blue-900" />
-                  <span>Moda Antar-Jemput</span>
-                </label>
-                {deliveryType !== 'NONE' && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                    cartTotals.isFreeDelivery
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-blue-100 text-blue-900'
-                  }`}>
-                    {cartTotals.isFreeDelivery ? `Gratis Ongkir (${cartTotals.freeDeliveryReason})` : `Ongkir: Rp ${cartTotals.deliveryFee.toLocaleString('id-ID')}`}
-                  </span>
-                )}
-              </div>
-
-              {/* Segmented Button Tipe Delivery */}
-              <div className="grid grid-cols-4 gap-1">
-                {[
-                  { key: 'NONE', label: 'Ambil Sendiri' },
-                  { key: 'PICKUP_ONLY', label: 'Jemput Saja' },
-                  { key: 'DELIVERY_ONLY', label: 'Antar Saja' },
-                  { key: 'PICKUP_AND_DELIVERY', label: 'Jemput & Antar' },
-                ].map((dt) => (
-                  <button
-                    key={dt.key}
-                    type="button"
-                    onClick={() => setDeliveryType(dt.key as any)}
-                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border transition-all text-center leading-tight cursor-pointer ${
-                      deliveryType === dt.key
-                        ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {dt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Detail Zona & Alamat jika bukan Ambil Sendiri */}
-              {deliveryType !== 'NONE' && (
-                <div className="pt-2 border-t border-slate-200/80 space-y-2 animate-fadeIn">
-                  {deliveryConfig?.zones && deliveryConfig.zones.length > 0 && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600">Pilih Zona / Tarif Antar</label>
-                      <div className="relative">
-                        <select
-                          value={deliveryZoneId}
-                          onChange={(e) => setDeliveryZoneId(e.target.value)}
-                          className="w-full appearance-none pr-10 pl-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-900"
-                        >
-                          {deliveryConfig.zones.map((z) => (
-                            <option key={z.id} value={z.id}>
-                              {z.name} — Rp {Number(z.fee).toLocaleString('id-ID')}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
-                      </div>
+          {cartItems.length === 0 ? (
+            <div className="py-6 sm:py-8 text-center text-slate-400 text-xs space-y-1">
+              <Shirt className="w-7 h-7 mx-auto text-slate-300" />
+              <p className="font-semibold text-slate-600">Keranjang Masih Kosong</p>
+              <p className="text-[11px]">Klik salah satu layanan di sebelah kiri untuk mulai menimbang atau memasukkan cucian.</p>
+            </div>
+          ) : (
+            cartItems.map((item) => (
+              <div
+                key={item.id}
+                className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 leading-snug">{item.name}</h4>
+                    <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="font-bold text-slate-800">
+                        {item.quantity.toFixed(2)} {item.unit}
+                      </span>
+                      {item.isUnderMinimum && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-black border border-amber-300">
+                          Min. {item.minOrderQty} Kg (Asli: {item.actualQuantity.toFixed(2)} Kg)
+                        </span>
+                      )}
+                      <span>•</span>
+                      <span>{item.totalPieces} Pcs</span>
+                      <span>•</span>
+                      <span className="text-blue-700 font-medium">{item.perfumeVariant}</span>
                     </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600">Alamat Lengkap Pengantaran / Penjemputan</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Masukkan alamat lengkap (jalan, nomor, patokan rumah)..."
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900 resize-none"
-                    />
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600">Catatan Khusus Kurir (Opsional)</label>
-                    <input
-                      type="text"
-                      placeholder="Contoh: Tolong jemput sebelum jam 2 siang, pagar hitam"
-                      value={deliveryNotes}
-                      onChange={(e) => setDeliveryNotes(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFromCart(item.id)}
+                    className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                    title="Hapus Item"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+
+                {item.addons && item.addons.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {item.addons.map((ad) => (
+                      <span
+                        key={ad.id}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-900 text-[9.5px] font-bold border border-purple-200"
+                      >
+                        ✨ {ad.name} (+Rp {ad.total.toLocaleString('id-ID')})
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {item.notes && (
+                  <div className="p-1 rounded bg-amber-50 border border-amber-200 text-[10px] text-amber-900">
+                    Catatan: {item.notes}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-400">
+                    @ Rp {item.unitPrice.toLocaleString('id-ID')}
+                  </span>
+                  <span className="font-black text-slate-900">
+                    Rp {item.subtotal.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Bagian 2: Ringkasan Finansial, Moda Antar-Jemput & Opsi Pembayaran */}
+        <div className="bg-white p-3 space-y-2.5">
+          {/* Info Estimasi Selesai */}
+          {cartItems.length > 0 && (
+            <div className="p-2 rounded-xl bg-blue-50/80 border border-blue-200 flex items-center justify-between text-xs text-blue-950">
+              <span className="flex items-center gap-1 font-semibold">
+                <Clock className="w-3.5 h-3.5 text-blue-700" />
+                Estimasi Selesai:
+              </span>
+              <span className="font-black text-blue-900">
+                {cartTotals.readyDate.toLocaleDateString('id-ID', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+          )}
+
+          {/* Opsi Pengantaran & Penjemputan Pelanggan (Delivery) */}
+          <div className="space-y-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-blue-900" />
+                <span>Moda Antar-Jemput</span>
+              </label>
+              {deliveryType !== 'NONE' && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${cartTotals.isFreeDelivery
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-blue-100 text-blue-900'
+                  }`}>
+                  {cartTotals.isFreeDelivery ? `Gratis Ongkir (${cartTotals.freeDeliveryReason})` : `Ongkir: Rp ${cartTotals.deliveryFee.toLocaleString('id-ID')}`}
+                </span>
               )}
             </div>
 
-            {/* Skema Bayar */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">
-                Status Pembayaran Kasir
-              </label>
-              <div className="grid grid-cols-3 gap-1">
-                {[
-                  { key: 'PAID', label: 'Lunas di Awal', color: 'border-emerald-500 bg-emerald-50 text-emerald-900' },
-                  { key: 'PARTIAL', label: 'Uang Muka (DP)', color: 'border-amber-500 bg-amber-50 text-amber-900' },
-                  { key: 'UNPAID', label: 'Bayar di Akhir', color: 'border-slate-400 bg-slate-100 text-slate-800' },
-                ].map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setPaymentChoice(opt.key as any)}
-                    className={`py-1.5 px-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
-                      paymentChoice === opt.key ? `${opt.color} shadow-xs ring-1 ring-blue-900` : 'bg-white border-slate-200 text-slate-600'
+            {/* Segmented Button Tipe Delivery */}
+            <div className="grid grid-cols-4 gap-1">
+              {[
+                { key: 'NONE', label: 'Ambil Sendiri' },
+                { key: 'PICKUP_ONLY', label: 'Jemput Saja' },
+                { key: 'DELIVERY_ONLY', label: 'Antar Saja' },
+                { key: 'PICKUP_AND_DELIVERY', label: 'Jemput & Antar' },
+              ].map((dt) => (
+                <button
+                  key={dt.key}
+                  type="button"
+                  onClick={() => setDeliveryType(dt.key as any)}
+                  className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border transition-all text-center leading-tight cursor-pointer ${deliveryType === dt.key
+                    ? 'bg-blue-900 text-white border-blue-900 shadow-2xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+                >
+                  {dt.label}
+                </button>
+              ))}
             </div>
 
-            {/* Jika DP: Input Nominal DP */}
-            {paymentChoice === 'PARTIAL' && (
-              <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
-                <label className="block text-[10px] font-bold text-amber-900">
-                  Nominal Uang Muka / DP (Rp)
-                </label>
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="20000"
-                  className="w-full px-2 py-1 text-xs rounded-lg border border-amber-300 bg-white font-bold"
-                />
-                <div className="text-[10px] text-amber-800 flex justify-between">
-                  <span>Sisa Tagihan saat Ambil:</span>
-                  <span className="font-extrabold">
-                    Rp {Math.max(0, cartTotals.grandTotal - (parseFloat(depositAmount) || 0)).toLocaleString('id-ID')}
-                  </span>
+            {/* Detail Zona & Alamat jika bukan Ambil Sendiri */}
+            {deliveryType !== 'NONE' && (
+              <div className="pt-2 border-t border-slate-200/80 space-y-2 animate-fadeIn">
+                {deliveryConfig?.zones && deliveryConfig.zones.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600">Pilih Zona / Tarif Antar</label>
+                    <div className="relative">
+                      <select
+                        value={deliveryZoneId}
+                        onChange={(e) => setDeliveryZoneId(e.target.value)}
+                        className="w-full appearance-none pr-10 pl-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-900"
+                      >
+                        {deliveryConfig.zones.map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.name} — Rp {Number(z.fee).toLocaleString('id-ID')}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600">Alamat Lengkap Pengantaran / Penjemputan</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Masukkan alamat lengkap (jalan, nomor, patokan rumah)..."
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-600">Catatan Khusus Kurir (Opsional)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Tolong jemput sebelum jam 2 siang, pagar hitam"
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-900"
+                  />
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Metode Bayar (jika ada uang diterima) */}
-            {paymentChoice !== 'UNPAID' && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  {[
-                    { key: 'CASH', label: 'Tunai', isCash: true },
-                    { key: 'QRIS', label: 'QRIS', icon: QrCode },
-                    { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
-                  ]
-                    .filter((m) => m.key !== 'QRIS' || isQrisActive)
-                    .map((m) => {
+          {/* Skema Bayar */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-bold text-slate-700">
+              Status Pembayaran Kasir
+            </label>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { key: 'PAID', label: 'Lunas di Awal', color: 'border-emerald-500 bg-emerald-50 text-emerald-900' },
+                { key: 'PARTIAL', label: 'Uang Muka (DP)', color: 'border-amber-500 bg-amber-50 text-amber-900' },
+                { key: 'UNPAID', label: 'Bayar di Akhir', color: 'border-slate-400 bg-slate-100 text-slate-800' },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setPaymentChoice(opt.key as any)}
+                  className={`py-1.5 px-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${paymentChoice === opt.key ? `${opt.color} shadow-xs ring-1 ring-blue-900` : 'bg-white border-slate-200 text-slate-600'
+                    }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Jika DP: Input Nominal DP */}
+          {paymentChoice === 'PARTIAL' && (
+            <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
+              <label className="block text-[10px] font-bold text-amber-900">
+                Nominal Uang Muka / DP (Rp)
+              </label>
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="20000"
+                className="w-full px-2 py-1 text-xs rounded-lg border border-amber-300 bg-white font-bold"
+              />
+              <div className="text-[10px] text-amber-800 flex justify-between">
+                <span>Sisa Tagihan saat Ambil:</span>
+                <span className="font-extrabold">
+                  Rp {Math.max(0, cartTotals.grandTotal - (parseFloat(depositAmount) || 0)).toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Metode Bayar (jika ada uang diterima) */}
+          {paymentChoice !== 'UNPAID' && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                {[
+                  { key: 'CASH', label: 'Tunai', isCash: true },
+                  { key: 'QRIS', label: 'QRIS', icon: QrCode },
+                  { key: 'TRANSFER', label: 'Transfer', icon: CreditCard },
+                ]
+                  .filter((m) => m.key !== 'QRIS' || isQrisActive)
+                  .map((m) => {
                     const Icon = (m as any).icon;
                     return (
                       <button
                         key={m.key}
                         type="button"
                         onClick={() => setPaymentMethod(m.key as any)}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                          paymentMethod === m.key
-                            ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 cursor-pointer transition-all ${paymentMethod === m.key
+                          ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
                       >
                         {m.isCash ? (
                           <span className="font-black text-[11px] leading-none px-1.5 py-0.5 rounded bg-blue-800 text-white">
@@ -1889,449 +1884,445 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                       </button>
                     );
                   })}
+              </div>
+
+              {/* Opsi Pembayaran via Saldo Deposit atau Kuota Kiloan Pelanggan */}
+              {selectedCustomerId && customerWallet && (
+                <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                  {/* Tombol Saldo Deposit */}
+                  <button
+                    type="button"
+                    disabled={Number(customerWallet.balanceAmount) <= 0}
+                    onClick={() => setPaymentMethod('CUSTOMER_DEPOSIT')}
+                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'CUSTOMER_DEPOSIT'
+                      ? 'bg-blue-950 border-blue-950 text-white shadow-xs'
+                      : Number(customerWallet.balanceAmount) > 0
+                        ? 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'
+                        : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                      }`}
+                    title={
+                      Number(customerWallet.balanceAmount) <= 0
+                        ? 'Saldo deposit kosong'
+                        : `Gunakan Saldo (Tersedia: Rp ${Number(customerWallet.balanceAmount).toLocaleString('id-ID')})`
+                    }
+                  >
+                    <span className="flex items-center gap-1 truncate">
+                      <Wallet className="w-3.5 h-3.5 shrink-0" />
+                      <span>Saldo Deposit</span>
+                    </span>
+                    <span className="font-extrabold text-[10px] shrink-0">
+                      Rp {Math.floor(Number(customerWallet.balanceAmount)).toLocaleString('id-ID')}
+                    </span>
+                  </button>
+
+                  {/* Tombol Kuota Kiloan */}
+                  <button
+                    type="button"
+                    disabled={Number(customerWallet.quotaKg) <= 0}
+                    onClick={() => setPaymentMethod('LAUNDRY_QUOTA')}
+                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${paymentMethod === 'LAUNDRY_QUOTA'
+                      ? 'bg-purple-950 border-purple-950 text-white shadow-xs'
+                      : Number(customerWallet.quotaKg) > 0
+                        ? 'bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100'
+                        : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                      }`}
+                    title={
+                      Number(customerWallet.quotaKg) <= 0
+                        ? 'Kuota kiloan kosong'
+                        : `Gunakan Kuota (Tersedia: ${Number(customerWallet.quotaKg)} Kg)`
+                    }
+                  >
+                    <span className="flex items-center gap-1 truncate">
+                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                      <span>Kuota Kiloan</span>
+                    </span>
+                    <span className="font-extrabold text-[10px] shrink-0">
+                      {Number(customerWallet.quotaKg)} Kg
+                    </span>
+                  </button>
                 </div>
+              )}
 
-                {/* Opsi Pembayaran via Saldo Deposit atau Kuota Kiloan Pelanggan */}
-                {selectedCustomerId && customerWallet && (
-                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                    {/* Tombol Saldo Deposit */}
-                    <button
-                      type="button"
-                      disabled={Number(customerWallet.balanceAmount) <= 0}
-                      onClick={() => setPaymentMethod('CUSTOMER_DEPOSIT')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
-                        paymentMethod === 'CUSTOMER_DEPOSIT'
-                          ? 'bg-blue-950 border-blue-950 text-white shadow-xs'
-                          : Number(customerWallet.balanceAmount) > 0
-                          ? 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'
-                          : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
-                      }`}
-                      title={
-                        Number(customerWallet.balanceAmount) <= 0
-                          ? 'Saldo deposit kosong'
-                          : `Gunakan Saldo (Tersedia: Rp ${Number(customerWallet.balanceAmount).toLocaleString('id-ID')})`
-                      }
-                    >
-                      <span className="flex items-center gap-1 truncate">
-                        <Wallet className="w-3.5 h-3.5 shrink-0" />
-                        <span>Saldo Deposit</span>
-                      </span>
-                      <span className="font-extrabold text-[10px] shrink-0">
-                        Rp {Math.floor(Number(customerWallet.balanceAmount)).toLocaleString('id-ID')}
-                      </span>
-                    </button>
-
-                    {/* Tombol Kuota Kiloan */}
-                    <button
-                      type="button"
-                      disabled={Number(customerWallet.quotaKg) <= 0}
-                      onClick={() => setPaymentMethod('LAUNDRY_QUOTA')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border flex items-center justify-between transition-all cursor-pointer ${
-                        paymentMethod === 'LAUNDRY_QUOTA'
-                          ? 'bg-purple-950 border-purple-950 text-white shadow-xs'
-                          : Number(customerWallet.quotaKg) > 0
-                          ? 'bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100'
-                          : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
-                      }`}
-                      title={
-                        Number(customerWallet.quotaKg) <= 0
-                          ? 'Kuota kiloan kosong'
-                          : `Gunakan Kuota (Tersedia: ${Number(customerWallet.quotaKg)} Kg)`
-                      }
-                    >
-                      <span className="flex items-center gap-1 truncate">
-                        <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                        <span>Kuota Kiloan</span>
-                      </span>
-                      <span className="font-extrabold text-[10px] shrink-0">
-                        {Number(customerWallet.quotaKg)} Kg
-                      </span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Kartu Pratinjau QRIS Statis (Pilar 1 - Gelombang 2) */}
-                {paymentMethod === 'QRIS' && (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-fadeIn text-center">
-                    {qrisImageUrl ? (
-                      <div className="flex flex-col items-center">
-                        <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs inline-block">
-                          <img
-                            src={qrisImageUrl}
-                            alt="Barcode QRIS Toko"
-                            className="w-36 h-36 max-h-[180px] object-contain rounded-lg"
-                          />
-                        </div>
-                        <div className="mt-1.5 space-y-0.5">
-                          {qrisConfig?.merchantName && (
-                            <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
-                              {qrisConfig.merchantName}
-                            </p>
-                          )}
-                          {qrisConfig?.nmid && (
-                            <p className="text-[10px] font-mono text-slate-500 font-bold">
-                              NMID: {qrisConfig.nmid}
-                            </p>
-                          )}
-                          <p className="text-xs font-black text-blue-900 pt-0.5">
-                            Tagihan: Rp {targetPayAmount.toLocaleString('id-ID')}
-                          </p>
-                        </div>
-                        <p className="text-[10.5px] text-slate-500 font-medium mt-1 leading-tight">
-                          Minta pelanggan scan QRIS lalu pastikan dana masuk sebelum konfirmasi.
-                        </p>
+              {/* Kartu Pratinjau QRIS Statis (Pilar 1 - Gelombang 2) */}
+              {paymentMethod === 'QRIS' && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-fadeIn text-center">
+                  {qrisImageUrl ? (
+                    <div className="flex flex-col items-center">
+                      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-xs inline-block">
+                        <img
+                          src={qrisImageUrl}
+                          alt="Barcode QRIS Toko"
+                          className="w-36 h-36 max-h-[180px] object-contain rounded-lg"
+                        />
                       </div>
-                    ) : (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col items-center gap-1.5 text-center">
-                        <QrCode className="w-8 h-8 text-amber-500" />
-                        <p className="text-xs font-bold text-amber-900">
-                          Barcode QRIS Belum Dikonfigurasi
-                        </p>
-                        <p className="text-[10.5px] text-amber-700 leading-tight">
-                          Unggah foto/gambar QRIS toko pada menu Pengaturan Pembayaran agar pelanggan bisa scan QRIS di kasir.
-                        </p>
-                        {currentUser?.role && ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role) ? (
-                          <button
-                            type="button"
-                            onClick={() => onNavigateTab('settings_payment')}
-                            className="mt-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer"
-                          >
-                            Buka Pengaturan Pembayaran
-                          </button>
-                        ) : (
-                          <p className="text-[10px] text-amber-600 font-semibold mt-0.5">
-                            Minta Owner/Admin mengunggah QRIS toko di Pengaturan Pembayaran.
+                      <div className="mt-1.5 space-y-0.5">
+                        {qrisConfig?.merchantName && (
+                          <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                            {qrisConfig.merchantName}
                           </p>
                         )}
+                        {qrisConfig?.nmid && (
+                          <p className="text-[10px] font-mono text-slate-500 font-bold">
+                            NMID: {qrisConfig.nmid}
+                          </p>
+                        )}
+                        <p className="text-xs font-black text-blue-900 pt-0.5">
+                          Tagihan: Rp {targetPayAmount.toLocaleString('id-ID')}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Info Pemakaian Saldo Deposit Pelanggan */}
-            {paymentChoice !== 'UNPAID' && paymentMethod === 'CUSTOMER_DEPOSIT' && (
-              <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-xs space-y-1 animate-fadeIn">
-                <div className="flex items-center justify-between font-bold text-blue-950">
-                  <span className="flex items-center gap-1.5">
-                    <Wallet className="w-4 h-4 text-blue-700" />
-                    <span>Saldo Deposit Pelanggan</span>
-                  </span>
-                  <span>Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-blue-800">
-                  <span>Dipotong untuk transaksi ini:</span>
-                  <span className="font-black text-rose-600">- Rp {targetPayAmount.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-blue-200 font-extrabold text-blue-950">
-                  <span>Sisa Saldo Deposit Nanti:</span>
-                  <span className={Number(customerWallet?.balanceAmount || 0) < targetPayAmount ? 'text-rose-600' : 'text-emerald-700'}>
-                    Rp {Math.max(0, Number(customerWallet?.balanceAmount || 0) - targetPayAmount).toLocaleString('id-ID')}
-                  </span>
-                </div>
-                {Number(customerWallet?.balanceAmount || 0) < targetPayAmount && (
-                  <p className="text-[10px] font-bold text-rose-600 pt-0.5">
-                    ⚠️ Saldo tidak cukup. Silakan top-up terlebih dahulu atau pilih metode lain.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Info Pemakaian Kuota Kiloan Pelanggan */}
-            {paymentChoice !== 'UNPAID' && paymentMethod === 'LAUNDRY_QUOTA' && (
-              <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-xs space-y-1 animate-fadeIn">
-                <div className="flex items-center justify-between font-bold text-purple-950">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-purple-700" />
-                    <span>Kuota Kiloan Pelanggan</span>
-                  </span>
-                  <span>{Number(customerWallet?.quotaKg || 0)} Kg</span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-purple-800">
-                  <span>Dipotong untuk cucian ini:</span>
-                  <span className="font-black text-purple-950">
-                    - {cartTotals.totalKg > 0 ? cartTotals.totalKg : 1} Kg
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-purple-200 font-extrabold text-purple-950">
-                  <span>Sisa Kuota Nanti:</span>
-                  <span className={Number(customerWallet?.quotaKg || 0) < (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1) ? 'text-rose-600' : 'text-emerald-700'}>
-                    {Math.max(
-                      0,
-                      Number(customerWallet?.quotaKg || 0) - (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1)
-                    )}{' '}
-                    Kg
-                  </span>
-                </div>
-                {Number(customerWallet?.quotaKg || 0) < (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1) && (
-                  <p className="text-[10px] font-bold text-rose-600 pt-0.5">
-                    ⚠️ Kuota kiloan tidak mencukupi bobot cucian.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Input Uang Tunai Diterima jika Cash Lunas */}
-            {paymentChoice === 'PAID' && paymentMethod === 'CASH' && (
-              <div className="space-y-1 pt-1">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                  <span>Uang Tunai Diterima</span>
-                  {numCashReceived > 0 && numCashReceived >= targetPayAmount && (
-                    <span className="text-emerald-700">Kembalian: Rp {changeAmount.toLocaleString('id-ID')}</span>
+                      <p className="text-[10.5px] text-slate-500 font-medium mt-1 leading-tight">
+                        Minta pelanggan scan QRIS lalu pastikan dana masuk sebelum konfirmasi.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col items-center gap-1.5 text-center">
+                      <QrCode className="w-8 h-8 text-amber-500" />
+                      <p className="text-xs font-bold text-amber-900">
+                        Barcode QRIS Belum Dikonfigurasi
+                      </p>
+                      <p className="text-[10.5px] text-amber-700 leading-tight">
+                        Unggah foto/gambar QRIS toko pada menu Pengaturan Pembayaran agar pelanggan bisa scan QRIS di kasir.
+                      </p>
+                      {currentUser?.role && ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role) ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab('settings_payment')}
+                          className="mt-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Buka Pengaturan Pembayaran
+                        </button>
+                      ) : (
+                        <p className="text-[10px] text-amber-600 font-semibold mt-0.5">
+                          Minta Owner/Admin mengunggah QRIS toko di Pengaturan Pembayaran.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Contoh: 50.000"
-                  value={cashReceived}
-                  onChange={(e) => setCashReceived(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-900"
-                />
-                <div className="flex gap-1 overflow-x-auto">
-                  {[targetPayAmount, 20000, 50000, 100000].map((amt, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCashReceived(String(amt))}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 whitespace-nowrap cursor-pointer"
-                    >
-                      {idx === 0 ? 'Uang Pas' : `Rp ${amt.toLocaleString('id-ID')}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 1. Voucher Promo Terkelola (Pilar 2) */}
-            <div className="space-y-1.5 pt-1 border-t border-slate-100">
-              <label className="block text-[11px] font-bold text-slate-700">
-                Voucher &amp; Promo
-              </label>
-              {appliedPromotion ? (
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs animate-fadeIn">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Ticket className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <div className="min-w-0">
-                      <span className="font-black text-emerald-950 block truncate">
-                        {appliedPromotion.name} ({appliedPromotion.code})
-                      </span>
-                      <span className="text-[10.5px] text-emerald-700 font-bold">
-                        Hemat Rp {cartTotals.promoDiscount.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAppliedPromotion(null)}
-                    className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-800 cursor-pointer transition-colors"
-                    title="Hapus Voucher"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setVoucherModalOpen(true)}
-                  className="w-full py-2 px-3 rounded-xl border border-dashed border-blue-400 bg-blue-50/60 hover:bg-blue-100/60 text-blue-900 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Ticket className="w-4 h-4 text-blue-700" />
-                    <span>Pilih / Pakai Voucher Promo</span>
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-blue-700" />
-                </button>
               )}
             </div>
+          )}
 
-            {/* 2. Tukar Poin Loyalitas Member (Pilar 3) */}
-            {isLoyaltyActive && selectedCustomerId && selectedCustomer && cartItems.length > 0 && cartTotals.availablePoints >= minPointsToRedeem && (
-              <div className="space-y-1.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs animate-fadeIn">
-                <div className="flex items-center justify-between font-bold text-amber-950">
-                  <span className="flex items-center gap-1.5 text-[11px]">
-                    <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                    <span>Tukar Poin Member</span>
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold border border-amber-300">
-                    Tersedia: {cartTotals.availablePoints.toLocaleString('id-ID')} Poin
-                  </span>
-                </div>
+          {/* Info Pemakaian Saldo Deposit Pelanggan */}
+          {paymentChoice !== 'UNPAID' && paymentMethod === 'CUSTOMER_DEPOSIT' && (
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-xs space-y-1 animate-fadeIn">
+              <div className="flex items-center justify-between font-bold text-blue-950">
+                <span className="flex items-center gap-1.5">
+                  <Wallet className="w-4 h-4 text-blue-700" />
+                  <span>Saldo Deposit Pelanggan</span>
+                </span>
+                <span>Rp {Number(customerWallet?.balanceAmount || 0).toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-blue-800">
+                <span>Dipotong untuk transaksi ini:</span>
+                <span className="font-black text-rose-600">- Rp {targetPayAmount.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-blue-200 font-extrabold text-blue-950">
+                <span>Sisa Saldo Deposit Nanti:</span>
+                <span className={Number(customerWallet?.balanceAmount || 0) < targetPayAmount ? 'text-rose-600' : 'text-emerald-700'}>
+                  Rp {Math.max(0, Number(customerWallet?.balanceAmount || 0) - targetPayAmount).toLocaleString('id-ID')}
+                </span>
+              </div>
+              {Number(customerWallet?.balanceAmount || 0) < targetPayAmount && (
+                <p className="text-[10px] font-bold text-rose-600 pt-0.5">
+                  ⚠️ Saldo tidak cukup. Silakan top-up terlebih dahulu atau pilih metode lain.
+                </p>
+              )}
+            </div>
+          )}
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max={cartTotals.maxRedeemablePoints}
-                    value={pointsToRedeem || ''}
-                    placeholder="0"
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10) || 0;
-                      setPointsToRedeem(Math.min(val, cartTotals.maxRedeemablePoints));
-                    }}
-                    className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white font-extrabold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
+          {/* Info Pemakaian Kuota Kiloan Pelanggan */}
+          {paymentChoice !== 'UNPAID' && paymentMethod === 'LAUNDRY_QUOTA' && (
+            <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-xs space-y-1 animate-fadeIn">
+              <div className="flex items-center justify-between font-bold text-purple-950">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-purple-700" />
+                  <span>Kuota Kiloan Pelanggan</span>
+                </span>
+                <span>{Number(customerWallet?.quotaKg || 0)} Kg</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-purple-800">
+                <span>Dipotong untuk cucian ini:</span>
+                <span className="font-black text-purple-950">
+                  - {cartTotals.totalKg > 0 ? cartTotals.totalKg : 1} Kg
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-purple-200 font-extrabold text-purple-950">
+                <span>Sisa Kuota Nanti:</span>
+                <span className={Number(customerWallet?.quotaKg || 0) < (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1) ? 'text-rose-600' : 'text-emerald-700'}>
+                  {Math.max(
+                    0,
+                    Number(customerWallet?.quotaKg || 0) - (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1)
+                  )}{' '}
+                  Kg
+                </span>
+              </div>
+              {Number(customerWallet?.quotaKg || 0) < (cartTotals.totalKg > 0 ? cartTotals.totalKg : 1) && (
+                <p className="text-[10px] font-bold text-rose-600 pt-0.5">
+                  ⚠️ Kuota kiloan tidak mencukupi bobot cucian.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Input Uang Tunai Diterima jika Cash Lunas */}
+          {paymentChoice === 'PAID' && paymentMethod === 'CASH' && (
+            <div className="space-y-1 pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                <span>Uang Tunai Diterima</span>
+                {numCashReceived > 0 && numCashReceived >= targetPayAmount && (
+                  <span className="text-emerald-700">Kembalian: Rp {changeAmount.toLocaleString('id-ID')}</span>
+                )}
+              </div>
+              <input
+                type="text"
+                placeholder="Contoh: 50.000"
+                value={cashReceived}
+                onChange={(e) => setCashReceived(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-900"
+              />
+              <div className="flex gap-1 overflow-x-auto">
+                {[targetPayAmount, 20000, 50000, 100000].map((amt, idx) => (
                   <button
+                    key={idx}
                     type="button"
-                    onClick={() => {
-                      setPointsToRedeem(cartTotals.maxRedeemablePoints);
-                    }}
-                    className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-400 cursor-pointer transition-colors"
+                    onClick={() => setCashReceived(String(amt))}
+                    className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 whitespace-nowrap cursor-pointer"
                   >
-                    Pakai Maksimal
+                    {idx === 0 ? 'Uang Pas' : `Rp ${amt.toLocaleString('id-ID')}`}
                   </button>
-                  {pointsToRedeem > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setPointsToRedeem(0)}
-                      className="px-1.5 py-1 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span>Maksimal tukar: {cartTotals.maxRedeemablePoints.toLocaleString('id-ID')} Poin (maks. 50% subtotal)</span>
-                </div>
-
-                {cartTotals.pointDiscount > 0 && (
-                  <div className="flex items-center justify-between text-[10.5px] text-amber-900 font-bold pt-0.5">
-                    <span>Potongan Tagihan Poin:</span>
-                    <span className="text-emerald-700 font-black">
-                      -Rp {cartTotals.pointDiscount.toLocaleString('id-ID')} ({cartTotals.safePointsToRedeem} Poin)
+          {/* 1. Voucher Promo Terkelola (Pilar 2) */}
+          <div className="space-y-1.5 pt-1 border-t border-slate-100">
+            <label className="block text-[11px] font-bold text-slate-700">
+              Voucher &amp; Promo
+            </label>
+            {appliedPromotion ? (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs animate-fadeIn">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Ticket className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-black text-emerald-950 block truncate">
+                      {appliedPromotion.name} ({appliedPromotion.code})
+                    </span>
+                    <span className="text-[10.5px] text-emerald-700 font-bold">
+                      Hemat Rp {cartTotals.promoDiscount.toLocaleString('id-ID')}
                     </span>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* 3. Diskon Manual Kasir */}
-            <div className="pt-1 border-t border-slate-100">
-              <div className="flex items-center justify-between">
+                </div>
                 <button
                   type="button"
-                  onClick={() => setShowDiscountInput(!showDiscountInput)}
-                  className="text-[11px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                  onClick={() => setAppliedPromotion(null)}
+                  className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-800 cursor-pointer transition-colors"
+                  title="Hapus Voucher"
                 >
-                  <Tag className="w-3 h-3" />
-                  <span>{showDiscountInput ? 'Sembunyikan Diskon Manual' : '+ Tambah Diskon Manual'}</span>
+                  <X className="w-4 h-4" />
                 </button>
-                {cartTotals.manualDiscount > 0 && (
-                  <span className="text-xs font-bold text-rose-600">
-                    -Rp {cartTotals.manualDiscount.toLocaleString('id-ID')}
-                  </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setVoucherModalOpen(true)}
+                className="w-full py-2 px-3 rounded-xl border border-dashed border-blue-400 bg-blue-50/60 hover:bg-blue-100/60 text-blue-900 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Ticket className="w-4 h-4 text-blue-700" />
+                  <span>Pilih / Pakai Voucher Promo</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-blue-700" />
+              </button>
+            )}
+          </div>
+
+          {/* 2. Tukar Poin Loyalitas Member (Pilar 3) */}
+          {isLoyaltyActive && selectedCustomerId && selectedCustomer && cartItems.length > 0 && cartTotals.availablePoints >= minPointsToRedeem && (
+            <div className="space-y-1.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs animate-fadeIn">
+              <div className="flex items-center justify-between font-bold text-amber-950">
+                <span className="flex items-center gap-1.5 text-[11px]">
+                  <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                  <span>Tukar Poin Member</span>
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold border border-amber-300">
+                  Tersedia: {cartTotals.availablePoints.toLocaleString('id-ID')} Poin
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max={cartTotals.maxRedeemablePoints}
+                  value={pointsToRedeem || ''}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10) || 0;
+                    setPointsToRedeem(Math.min(val, cartTotals.maxRedeemablePoints));
+                  }}
+                  className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white font-extrabold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPointsToRedeem(cartTotals.maxRedeemablePoints);
+                  }}
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-400 cursor-pointer transition-colors"
+                >
+                  Pakai Maksimal
+                </button>
+                {pointsToRedeem > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPointsToRedeem(0)}
+                    className="px-1.5 py-1 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-50 cursor-pointer"
+                  >
+                    Reset
+                  </button>
                 )}
               </div>
 
-              {showDiscountInput && (
-                <div className="mt-2 p-2 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 animate-fadeIn">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setDiscountType('FIXED')}
-                      className={`flex-1 py-1 text-[10px] font-bold rounded-lg border transition-all ${
-                        discountType === 'FIXED' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-slate-600'
-                      }`}
-                    >
-                      Nominal (Rp)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDiscountType('PERCENT')}
-                      className={`flex-1 py-1 text-[10px] font-bold rounded-lg border transition-all ${
-                        discountType === 'PERCENT' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-slate-600'
-                      }`}
-                    >
-                      Persen (%)
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder={discountType === 'FIXED' ? 'Nominal diskon Rp...' : 'Persen diskon (cth: 10)...'}
-                    value={discountValue}
-                    onChange={(e) => setDiscountValue(e.target.value)}
-                    className="w-full px-2 py-1 text-xs rounded-lg border border-slate-300 font-bold bg-white"
-                  />
+              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                <span>Maksimal tukar: {cartTotals.maxRedeemablePoints.toLocaleString('id-ID')} Poin (maks. 50% subtotal)</span>
+              </div>
+
+              {cartTotals.pointDiscount > 0 && (
+                <div className="flex items-center justify-between text-[10.5px] text-amber-900 font-bold pt-0.5">
+                  <span>Potongan Tagihan Poin:</span>
+                  <span className="text-emerald-700 font-black">
+                    -Rp {cartTotals.pointDiscount.toLocaleString('id-ID')} ({cartTotals.safePointsToRedeem} Poin)
+                  </span>
                 </div>
               )}
             </div>
+          )}
+
+          {/* 3. Diskon Manual Kasir */}
+          <div className="pt-1 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowDiscountInput(!showDiscountInput)}
+                className="text-[11px] font-bold text-blue-900 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+              >
+                <Tag className="w-3 h-3" />
+                <span>{showDiscountInput ? 'Sembunyikan Diskon Manual' : '+ Tambah Diskon Manual'}</span>
+              </button>
+              {cartTotals.manualDiscount > 0 && (
+                <span className="text-xs font-bold text-rose-600">
+                  -Rp {cartTotals.manualDiscount.toLocaleString('id-ID')}
+                </span>
+              )}
+            </div>
+
+            {showDiscountInput && (
+              <div className="mt-2 p-2 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 animate-fadeIn">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDiscountType('FIXED')}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg border transition-all ${discountType === 'FIXED' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-slate-600'
+                      }`}
+                  >
+                    Nominal (Rp)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiscountType('PERCENT')}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg border transition-all ${discountType === 'PERCENT' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-slate-600'
+                      }`}
+                  >
+                    Persen (%)
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder={discountType === 'FIXED' ? 'Nominal diskon Rp...' : 'Persen diskon (cth: 10)...'}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  className="w-full px-2 py-1 text-xs rounded-lg border border-slate-300 font-bold bg-white"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky Action Footer: Ringkasan Total Tagihan & Tombol Terima Cucian (F2) */}
+      <div className="shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4 space-y-2 shadow-lg pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+        {/* Subtotal & Grand Total */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>Subtotal ({cartItems.length} Layanan):</span>
+            <span>Rp {cartTotals.subtotal.toLocaleString('id-ID')}</span>
+          </div>
+          {deliveryType !== 'NONE' && (
+            <div className="flex items-center justify-between text-xs text-blue-900 font-bold">
+              <span>Ongkos Antar-Jemput:</span>
+              <span>
+                {cartTotals.deliveryFee === 0 ? (
+                  <span className="text-emerald-700">GRATIS</span>
+                ) : (
+                  `Rp ${cartTotals.deliveryFee.toLocaleString('id-ID')}`
+                )}
+              </span>
+            </div>
+          )}
+          {cartTotals.promoDiscount > 0 && (
+            <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
+              <span>Voucher ({appliedPromotion?.code}):</span>
+              <span>-Rp {cartTotals.promoDiscount.toLocaleString('id-ID')}</span>
+            </div>
+          )}
+          {cartTotals.manualDiscount > 0 && (
+            <div className="flex items-center justify-between text-xs text-rose-600 font-bold">
+              <span>Diskon Manual:</span>
+              <span>-Rp {cartTotals.manualDiscount.toLocaleString('id-ID')}</span>
+            </div>
+          )}
+          {cartTotals.pointDiscount > 0 && (
+            <div className="flex items-center justify-between text-xs text-amber-700 font-bold">
+              <span>Tukar Poin ({cartTotals.safePointsToRedeem} Poin):</span>
+              <span>-Rp {cartTotals.pointDiscount.toLocaleString('id-ID')}</span>
+            </div>
+          )}
+          <div className="flex items-baseline justify-between pt-1 border-t border-slate-100">
+            <span className="text-xs font-bold text-slate-900">TOTAL TAGIHAN:</span>
+            <span className="text-lg font-black text-blue-900">
+              Rp {cartTotals.grandTotal.toLocaleString('id-ID')}
+            </span>
           </div>
         </div>
 
-        {/* Sticky Action Footer: Ringkasan Total Tagihan & Tombol Terima Cucian (F2) */}
-          <div className="shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4 space-y-2 shadow-lg pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
-            {/* Subtotal & Grand Total */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Subtotal ({cartItems.length} Layanan):</span>
-                <span>Rp {cartTotals.subtotal.toLocaleString('id-ID')}</span>
-              </div>
-              {deliveryType !== 'NONE' && (
-                <div className="flex items-center justify-between text-xs text-blue-900 font-bold">
-                  <span>Ongkos Antar-Jemput:</span>
-                  <span>
-                    {cartTotals.deliveryFee === 0 ? (
-                      <span className="text-emerald-700">GRATIS</span>
-                    ) : (
-                      `Rp ${cartTotals.deliveryFee.toLocaleString('id-ID')}`
-                    )}
-                  </span>
-                </div>
-              )}
-              {cartTotals.promoDiscount > 0 && (
-                <div className="flex items-center justify-between text-xs text-emerald-700 font-bold">
-                  <span>Voucher ({appliedPromotion?.code}):</span>
-                  <span>-Rp {cartTotals.promoDiscount.toLocaleString('id-ID')}</span>
-                </div>
-              )}
-              {cartTotals.manualDiscount > 0 && (
-                <div className="flex items-center justify-between text-xs text-rose-600 font-bold">
-                  <span>Diskon Manual:</span>
-                  <span>-Rp {cartTotals.manualDiscount.toLocaleString('id-ID')}</span>
-                </div>
-              )}
-              {cartTotals.pointDiscount > 0 && (
-                <div className="flex items-center justify-between text-xs text-amber-700 font-bold">
-                  <span>Tukar Poin ({cartTotals.safePointsToRedeem} Poin):</span>
-                  <span>-Rp {cartTotals.pointDiscount.toLocaleString('id-ID')}</span>
-                </div>
-              )}
-              <div className="flex items-baseline justify-between pt-1 border-t border-slate-100">
-                <span className="text-xs font-bold text-slate-900">TOTAL TAGIHAN:</span>
-                <span className="text-lg font-black text-blue-900">
-                  Rp {cartTotals.grandTotal.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-
-            {/* Tombol Eksekusi Bayar / Simpan Order (F2) */}
-            <div className="pt-1 flex items-center justify-between gap-2">
-              <div className="hidden lg:block text-[10px] text-slate-400 font-semibold leading-tight">
-                <span>Shortcut F2:</span>
-                <span className="block text-slate-600">Simpan &amp; Cetak</span>
-              </div>
-
-              <button
-                type="button"
-                disabled={processingOrder || cartItems.length === 0}
-                onClick={handleProcessOrder}
-                className="w-full lg:w-auto px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-900/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <span>
-                  {processingOrder ? (
-                    'Memproses...'
-                  ) : (
-                    <>
-                      Terima Cucian &amp; Struk<span className="hidden lg:inline"> (F2)</span>
-                    </>
-                  )}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+        {/* Tombol Eksekusi Bayar / Simpan Order (F2) */}
+        <div className="pt-1 flex items-center justify-between gap-2">
+          <div className="hidden lg:block text-[10px] text-slate-400 font-semibold leading-tight">
+            <span>Shortcut F2:</span>
+            <span className="block text-slate-600">Simpan &amp; Cetak</span>
           </div>
+
+          <button
+            type="button"
+            disabled={processingOrder || cartItems.length === 0}
+            onClick={handleProcessOrder}
+            className="w-full lg:w-auto px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-900/20 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <span>
+              {processingOrder ? (
+                'Memproses...'
+              ) : (
+                <>
+                  Terima Cucian &amp; Struk<span className="hidden lg:inline"> (F2)</span>
+                </>
+              )}
+            </span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </>
   );
 
@@ -2340,8 +2331,8 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* 1. Header Toolbar Terminal Kasir Laundry */}
       <header className="bg-white border-b border-slate-200 px-3 py-2 lg:px-4 lg:py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 lg:gap-3 shadow-xs shrink-0">
         {/* Baris atas: Hamburger (mobile < md CASHIER) + Ikon + Judul + Status Shift (mobile) */}
-        <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2 w-full lg:w-auto shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
             {/* Hamburger Menu — hanya tampil di mobile (< md) jika prop onOpenMobileMenu tersedia (role CASHIER) */}
             {onOpenMobileMenu && (
               <button
@@ -2394,7 +2385,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         </div>
 
         {/* Action Buttons Toolbar */}
-        <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto scrollbar-none pb-0.5 w-full lg:w-auto lg:flex-wrap lg:overflow-visible lg:pb-0 shrink-0">
+        <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto scrollbar-none pb-0.5 w-full lg:w-auto lg:flex-1 lg:min-w-0 lg:justify-end lg:flex-wrap lg:overflow-visible lg:pb-0">
           {/* Shift Controls (Pilar 1) */}
           {!currentShift ? (
             <button
@@ -2522,11 +2513,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* Banner Status Offline / Pending Sync */}
       {(!isOnline || offlineQueueCount.pending > 0) && (
         <div
-          className={`px-4 py-2.5 border-b flex items-center justify-between flex-wrap sm:flex-nowrap gap-2 sm:gap-3 text-xs shrink-0 transition-colors min-w-0 ${
-            !isOnline
-              ? 'bg-amber-50 border-amber-200 text-amber-950'
-              : 'bg-blue-50 border-blue-200 text-blue-950'
-          }`}
+          className={`px-4 py-2.5 border-b flex items-center justify-between flex-wrap sm:flex-nowrap gap-2 sm:gap-3 text-xs shrink-0 transition-colors min-w-0 ${!isOnline
+            ? 'bg-amber-50 border-amber-200 text-amber-950'
+            : 'bg-blue-50 border-blue-200 text-blue-950'
+            }`}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {!isOnline ? (
@@ -2603,11 +2593,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                   key={cat}
                   type="button"
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    activeCategory === cat
-                      ? 'bg-blue-900 text-white shadow-xs'
-                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                  }`}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${activeCategory === cat
+                    ? 'bg-blue-900 text-white shadow-xs'
+                    : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+                    }`}
                 >
                   {getCategoryLabel(cat)}
                 </button>
@@ -2687,21 +2676,19 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                       key={srv.id}
                       type="button"
                       onClick={() => handleSelectService(srv)}
-                      className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between group relative ${
-                        isCustomerFilled
-                          ? 'border-slate-200 bg-white hover:border-blue-900 hover:shadow-md cursor-pointer'
-                          : 'border-slate-200/80 bg-slate-50/70 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer'
-                      }`}
+                      className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between group relative ${isCustomerFilled
+                        ? 'border-slate-200 bg-white hover:border-blue-900 hover:shadow-md cursor-pointer'
+                        : 'border-slate-200/80 bg-slate-50/70 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer'
+                        }`}
                       title={!isCustomerFilled ? 'Silakan isi data pelanggan terlebih dahulu' : undefined}
                     >
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <span
-                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                              isKg
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            }`}
+                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isKg
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}
                           >
                             {srv.category}
                           </span>
@@ -3018,18 +3005,16 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                           key={pf.name}
                           type="button"
                           onClick={() => setItemPerfume(pf.name)}
-                          className={`px-2 py-1.5 rounded-lg text-xs font-medium border text-left transition-all cursor-pointer flex items-center justify-between gap-1 ${
-                            isSelected
-                              ? 'bg-blue-900 border-blue-900 text-white font-bold shadow-2xs'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                          }`}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium border text-left transition-all cursor-pointer flex items-center justify-between gap-1 ${isSelected
+                            ? 'bg-blue-900 border-blue-900 text-white font-bold shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
                         >
                           <span className="truncate">{pf.name}</span>
                           {extra > 0 && (
                             <span
-                              className={`text-[9.5px] px-1 py-0.5 rounded font-black shrink-0 ${
-                                isSelected ? 'bg-amber-400 text-blue-950' : 'bg-amber-100 text-amber-900'
-                              }`}
+                              className={`text-[9.5px] px-1 py-0.5 rounded font-black shrink-0 ${isSelected ? 'bg-amber-400 text-blue-950' : 'bg-amber-100 text-amber-900'
+                                }`}
                             >
                               +Rp {extra.toLocaleString('id-ID')}
                             </span>
@@ -3071,17 +3056,16 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                               isSelected ? prev.filter((id) => id !== addon.id) : [...prev, addon.id]
                             );
                           }}
-                          className={`p-2 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                            isSelected
-                              ? 'border-purple-600 bg-purple-50/80 shadow-2xs'
-                              : 'border-slate-200 bg-white hover:bg-slate-50'
-                          }`}
+                          className={`p-2 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${isSelected
+                            ? 'border-purple-600 bg-purple-50/80 shadow-2xs'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                            }`}
                         >
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="w-3.5 h-3.5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer pointer-events-none"
                             />
                             <div>
@@ -3285,11 +3269,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     <div
                       key={cust.id}
                       onClick={() => handleSelectCustomer(cust)}
-                      className={`pt-2.5 first:pt-0 p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${
-                        isSelected
-                          ? 'bg-blue-50/80 border-blue-300 shadow-xs ring-1 ring-blue-900'
-                          : 'border-slate-100 bg-white hover:bg-slate-50 hover:border-slate-200'
-                      }`}
+                      className={`pt-2.5 first:pt-0 p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${isSelected
+                        ? 'bg-blue-50/80 border-blue-300 shadow-xs ring-1 ring-blue-900'
+                        : 'border-slate-100 bg-white hover:bg-slate-50 hover:border-slate-200'
+                        }`}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -3330,11 +3313,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                           e.stopPropagation();
                           handleSelectCustomer(cust);
                         }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
-                          isSelected
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-blue-900 hover:bg-blue-800 text-white group-hover:shadow-xs'
-                        }`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${isSelected
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-blue-900 hover:bg-blue-800 text-white group-hover:shadow-xs'
+                          }`}
                       >
                         {isSelected ? (
                           <>
@@ -3357,23 +3339,23 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                 const matchAddress = c.address && c.address.toLowerCase().includes(q);
                 return matchName || matchPhone || matchAddress;
               }).length === 0 && (
-                <div className="py-12 text-center text-slate-400 text-xs space-y-2">
-                  <User className="w-8 h-8 mx-auto text-slate-300" />
-                  <p>Tidak ada pelanggan yang cocok dengan &quot;{memberSearchQuery}&quot;</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewCustName(memberSearchQuery);
-                      setCustomerSearchModalOpen(false);
-                      setQuickAddModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-blue-900 text-white font-bold text-xs hover:bg-blue-800 cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Daftarkan &quot;{memberSearchQuery}&quot; sebagai Pelanggan Baru</span>
-                  </button>
-                </div>
-              )}
+                  <div className="py-12 text-center text-slate-400 text-xs space-y-2">
+                    <User className="w-8 h-8 mx-auto text-slate-300" />
+                    <p>Tidak ada pelanggan yang cocok dengan &quot;{memberSearchQuery}&quot;</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCustName(memberSearchQuery);
+                        setCustomerSearchModalOpen(false);
+                        setQuickAddModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-blue-900 text-white font-bold text-xs hover:bg-blue-800 cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Daftarkan &quot;{memberSearchQuery}&quot; sebagai Pelanggan Baru</span>
+                    </button>
+                  </div>
+                )}
             </div>
 
             {/* Footer Modal */}
@@ -3510,11 +3492,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                             setRegAmount(100000);
                             setRegBonusAmount(0);
                           }}
-                          className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${
-                            regTopupType === 'BALANCE'
-                              ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                          }`}
+                          className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${regTopupType === 'BALANCE'
+                            ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
                         >
                           <div className="flex items-center gap-1">
                             <Wallet className="w-3.5 h-3.5" />
@@ -3529,11 +3510,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                             setRegKg(10);
                             setRegQuotaBonusKg(0);
                           }}
-                          className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${
-                            regTopupType === 'QUOTA_KG'
-                              ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                          }`}
+                          className={`py-2 px-3 rounded-xl border text-left font-bold text-xs transition-all cursor-pointer ${regTopupType === 'QUOTA_KG'
+                            ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
                         >
                           <div className="flex items-center gap-1">
                             <Sparkles className="w-3.5 h-3.5" />
@@ -3559,11 +3539,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                                       setRegPricePaid(Number(pkg.price));
                                       if (pkg.validityDays) setRegValidityDays(String(pkg.validityDays) as any);
                                     }}
-                                    className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
-                                      regPricePaid === Number(pkg.price) && regAmount === Number(pkg.balanceAmount || pkg.price)
-                                        ? 'bg-blue-900 text-white border-blue-900 font-bold'
-                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                    }`}
+                                    className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${regPricePaid === Number(pkg.price) && regAmount === Number(pkg.balanceAmount || pkg.price)
+                                      ? 'bg-blue-900 text-white border-blue-900 font-bold'
+                                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                      }`}
                                   >
                                     <div className="font-extrabold text-[11px] truncate">{pkg.name}</div>
                                     <div className="text-[10px]">Rp {Number(pkg.price).toLocaleString('id-ID')}</div>
@@ -3599,11 +3578,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                                       setRegPricePaid(Number(pkg.price));
                                       if (pkg.validityDays) setRegValidityDays(String(pkg.validityDays) as any);
                                     }}
-                                    className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
-                                      regPricePaid === Number(pkg.price) && regKg === Number(pkg.quotaKg)
-                                        ? 'bg-purple-900 text-white border-purple-900 font-bold'
-                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                    }`}
+                                    className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${regPricePaid === Number(pkg.price) && regKg === Number(pkg.quotaKg)
+                                      ? 'bg-purple-900 text-white border-purple-900 font-bold'
+                                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                      }`}
                                   >
                                     <div className="font-extrabold text-[11px] truncate">{pkg.name}</div>
                                     <div className="text-[10px]">{pkg.quotaKg} Kg (Rp {Number(pkg.price).toLocaleString('id-ID')})</div>
@@ -3643,11 +3621,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                               key={m}
                               type="button"
                               onClick={() => setRegPaymentMethod(m)}
-                              className={`py-1.5 text-center text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                                regPaymentMethod === m
-                                  ? 'bg-blue-900 text-white border-blue-900'
-                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                              }`}
+                              className={`py-1.5 text-center text-xs font-bold rounded-xl border transition-all cursor-pointer ${regPaymentMethod === m
+                                ? 'bg-blue-900 text-white border-blue-900'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                }`}
                             >
                               {m === 'CASH' ? 'Tunai' : m}
                             </button>
@@ -3748,11 +3725,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setTopupType('BALANCE')}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                        topupType === 'BALANCE'
-                          ? 'border-blue-900 bg-blue-50/80 ring-2 ring-blue-900/20'
-                          : 'border-slate-200 hover:bg-slate-50'
-                      }`}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${topupType === 'BALANCE'
+                        ? 'border-blue-900 bg-blue-50/80 ring-2 ring-blue-900/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                        }`}
                     >
                       <div className="flex items-center gap-1.5 font-black text-blue-950 text-xs mb-0.5">
                         <Wallet className="w-4 h-4 text-blue-700" />
@@ -3766,11 +3742,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setTopupType('QUOTA_KG')}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                        topupType === 'QUOTA_KG'
-                          ? 'border-purple-900 bg-purple-50/80 ring-2 ring-purple-900/20'
-                          : 'border-slate-200 hover:bg-slate-50'
-                      }`}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${topupType === 'QUOTA_KG'
+                        ? 'border-purple-900 bg-purple-50/80 ring-2 ring-purple-900/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                        }`}
                     >
                       <div className="flex items-center gap-1.5 font-black text-purple-950 text-xs mb-0.5">
                         <Sparkles className="w-4 h-4 text-purple-700" />
@@ -3804,11 +3779,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                                   setTopupBonusAmount(String(pkg.bonusAmount || 0));
                                   if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
                                 }}
-                                className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
-                                  topupAmount === String(pkg.balanceAmount || pkg.price)
-                                    ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                                }`}
+                                className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${topupAmount === String(pkg.balanceAmount || pkg.price)
+                                  ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                                  }`}
                               >
                                 <div className="font-extrabold text-xs">{pkg.name}</div>
                                 <div className="text-[11px] font-bold">
@@ -3845,11 +3819,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                             setTopupPricePaid(String(amt));
                             setTopupBonusAmount('0');
                           }}
-                          className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${
-                            topupAmount === String(amt)
-                              ? 'bg-blue-900 text-white border-blue-900'
-                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                          }`}
+                          className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${topupAmount === String(amt)
+                            ? 'bg-blue-900 text-white border-blue-900'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
                         >
                           Rp {(amt / 1000).toLocaleString('id-ID')}rb
                         </button>
@@ -3866,11 +3839,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         {(depositConfig.packages.filter((p) => p.type === 'QUOTA_KG').length > 0
                           ? depositConfig.packages.filter((p) => p.type === 'QUOTA_KG')
                           : [
-                              { id: '1', quotaKg: 5, price: 35000, name: '5 Kg' },
-                              { id: '2', quotaKg: 10, price: 70000, name: '10 Kg' },
-                              { id: '3', quotaKg: 20, price: 130000, name: '20 Kg' },
-                              { id: '4', quotaKg: 50, price: 300000, name: '50 Kg' },
-                            ]
+                            { id: '1', quotaKg: 5, price: 35000, name: '5 Kg' },
+                            { id: '2', quotaKg: 10, price: 70000, name: '10 Kg' },
+                            { id: '3', quotaKg: 20, price: 130000, name: '20 Kg' },
+                            { id: '4', quotaKg: 50, price: 300000, name: '50 Kg' },
+                          ]
                         ).map((pkg) => (
                           <button
                             key={pkg.id || pkg.quotaKg}
@@ -3881,11 +3854,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                               setTopupPricePaid(String(pkg.price));
                               if (pkg.validityDays) setTopupValidityDays(String(pkg.validityDays) as any);
                             }}
-                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
-                              topupKg === String(pkg.quotaKg) && topupPricePaid === String(pkg.price)
-                                ? 'bg-purple-900 text-white border-purple-900'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                            }`}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${topupKg === String(pkg.quotaKg) && topupPricePaid === String(pkg.price)
+                              ? 'bg-purple-900 text-white border-purple-900'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
                           >
                             <div className="font-black text-sm flex items-center justify-between">
                               <span>{pkg.quotaKg} Kg</span>
@@ -3952,11 +3924,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                             key={opt.val}
                             type="button"
                             onClick={() => setTopupValidityDays(opt.val as any)}
-                            className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${
-                              topupValidityDays === opt.val
-                                ? 'bg-purple-900 text-white border-purple-900'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                            }`}
+                            className={`py-1.5 px-1 rounded-xl text-[10.5px] font-bold border transition-all cursor-pointer ${topupValidityDays === opt.val
+                              ? 'bg-purple-900 text-white border-purple-900'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
                           >
                             {opt.label}
                           </button>
@@ -3979,29 +3950,28 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                     ]
                       .filter((m) => m.key !== 'QRIS' || isQrisActive)
                       .map((m) => {
-                      const Icon = (m as any).icon;
-                      return (
-                        <button
-                          key={m.key}
-                          type="button"
-                          onClick={() => setTopupPaymentMethod(m.key as any)}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            topupPaymentMethod === m.key
+                        const Icon = (m as any).icon;
+                        return (
+                          <button
+                            key={m.key}
+                            type="button"
+                            onClick={() => setTopupPaymentMethod(m.key as any)}
+                            className={`py-2 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${topupPaymentMethod === m.key
                               ? 'bg-blue-900 border-blue-900 text-white shadow-xs'
                               : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          {m.isCash ? (
-                            <span className="font-black text-[10px] leading-none px-1 py-0.5 rounded bg-blue-800 text-white">
-                              Rp
-                            </span>
-                          ) : (
-                            Icon && <Icon className="w-3.5 h-3.5" />
-                          )}
-                          <span>{m.label}</span>
-                        </button>
-                      );
-                    })}
+                              }`}
+                          >
+                            {m.isCash ? (
+                              <span className="font-black text-[10px] leading-none px-1 py-0.5 rounded bg-blue-800 text-white">
+                                Rp
+                              </span>
+                            ) : (
+                              Icon && <Icon className="w-3.5 h-3.5" />
+                            )}
+                            <span>{m.label}</span>
+                          </button>
+                        );
+                      })}
                   </div>
                   {topupPaymentMethod === 'CASH' && (
                     <p className="text-[10px] text-emerald-700 font-bold mt-1.5">
@@ -4163,11 +4133,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       {/* Floating Feedback Toast */}
       {feedbackToast && (
         <div
-          className={`fixed bottom-24 lg:bottom-6 inset-x-3 sm:inset-x-auto sm:right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${
-            feedbackToast.type === 'success'
-              ? 'bg-emerald-950 text-emerald-100 border-emerald-700'
-              : 'bg-rose-950 text-rose-100 border-rose-700'
-          }`}
+          className={`fixed bottom-24 lg:bottom-6 inset-x-3 sm:inset-x-auto sm:right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-bold animate-fadeIn transition-all ${feedbackToast.type === 'success'
+            ? 'bg-emerald-950 text-emerald-100 border-emerald-700'
+            : 'bg-rose-950 text-rose-100 border-rose-700'
+            }`}
         >
           {feedbackToast.type === 'success' ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />

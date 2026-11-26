@@ -2432,17 +2432,21 @@ export const BackofficeLayout: React.FC<BackofficeLayoutProps> = ({
                   <span className="text-[10px]">Workshop</span>
                 </button>
 
-                {/* Central Elevated Action: Terima Cucian (Drop-off Cepat) */}
+                {/* Central Elevated Action: Buka Menu Kasir Resmi */}
                 <div className="relative -top-4 flex flex-col items-center px-1">
                   <button
                     type="button"
-                    onClick={() => setQuickDropoffOpen(true)}
-                    className="w-12 h-12 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-95 transition-transform cursor-pointer border-2 border-white"
-                    title="Input Cepat (Drop-off)"
+                    onClick={() => onTabChange('pos')}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-transform cursor-pointer border-2 border-white ${
+                      activeTab === 'pos'
+                        ? 'bg-blue-950 text-amber-300 shadow-blue-950/40'
+                        : 'bg-blue-900 hover:bg-blue-800 text-white shadow-blue-900/40'
+                    }`}
+                    title="Buka Menu Kasir Laundry"
                   >
-                    <Plus className="w-6 h-6 stroke-[2.5]" />
+                    <Zap className="w-6 h-6 fill-amber-300 text-amber-300" />
                   </button>
-                  <span className="text-[9px] font-black text-blue-900 mt-0.5">Input Cepat</span>
+                  <span className="text-[9px] font-black text-blue-900 mt-0.5">Kasir</span>
                 </div>
 
                 {/* Tab 3: Rak Simpan */}

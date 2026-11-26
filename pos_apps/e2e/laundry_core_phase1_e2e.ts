@@ -262,7 +262,7 @@ async function runLaundryCorePhase1E2E() {
     // 1.2 Buka POS Kasir Laundry
     console.log('   Navigasi ke Terminal Kasir Laundry...');
     await navigateToTab(page, 'pos');
-    await page.waitForSelector('h1:has-text("Kasir Laundry & Cuci Kiloan")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Kasir Laundry")', { timeout: 10000 });
 
     // 1.3 Buka modal cari member (Pilih F2)
     const selectCustBtn = page.locator('button:has-text("Pilih (F2)")');

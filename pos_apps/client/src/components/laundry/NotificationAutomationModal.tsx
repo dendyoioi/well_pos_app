@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Bell,
@@ -8,12 +8,15 @@ import {
   AlertCircle,
   Send,
   RotateCw,
-  ChevronDown,
   Info,
   Check,
   AlertTriangle,
+  ArrowLeft,
+  Eye,
+  Smartphone,
 } from 'lucide-react';
-import { laundryCore3Api } from '../../services/api';
+import { authStorage, laundryCore3Api } from '../../services/api';
+import { WhatsAppInput } from '../ui';
 import type {
   NotificationAutomationRuleItem,
   NotificationDispatchLogItem,
@@ -24,8 +27,35 @@ import type {
 interface NotificationAutomationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  activeOutlet?: { id: string; name: string } | null;
+  activeOutlet?: { id: string; name: string; phone?: string | null } | null;
 }
+
+const renderPreviewMessage = (
+  template: string,
+  recipientName: string,
+  outletName: string
+): string => {
+  if (!template) return '';
+  const sampleVars: Record<string, string> = {
+    customerName: recipientName.trim() || 'Pelanggan Uji Coba',
+    outletName: outletName || 'Well POS Laundry',
+    invoiceNumber: 'INV-SIM-001',
+    estimatedReadyAt: new Date(Date.now() + 24 * 3600 * 1000).toLocaleString('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }),
+    rackCode: 'RAK-A-01',
+    requestCode: 'PKP-SIM-001',
+    courierName: 'Kurir Well POS',
+    courierPhone: '+6281234567890',
+    referenceCode: 'PKP-SIM-001',
+    reason: 'Penerima tidak berada di lokasi',
+    rescheduledAt: new Date(Date.now() + 24 * 3600 * 1000).toLocaleString('id-ID'),
+    remainingQuota: '10 kg',
+    expiryDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toLocaleDateString('id-ID'),
+  };
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => sampleVars[key] ?? '');
+};
 
 export const NotificationAutomationModal: React.FC<NotificationAutomationModalProps> = ({
   isOpen,
@@ -39,6 +69,18 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
   const [loadingRules, setLoadingRules] = useState<boolean>(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [simulatingKey, setSimulatingKey] = useState<string | null>(null);
+
+  // Interactive Simulator state
+  const [simRule, setSimRule] = useState<NotificationAutomationRuleItem | null>(null);
+  const [simRecipientName, setSimRecipientName] = useState<string>('Pelanggan Uji Coba');
+  const [simRecipientPhone, setSimRecipientPhone] = useState<string>('+6281234567890');
+  const [simSendRealTest, setSimSendRealTest] = useState<boolean>(false);
+  const [simResult, setSimResult] = useState<{
+    status: string;
+    renderedMessage: string;
+    summaryText: string;
+    error?: string;
+  } | null>(null);
 
   // Logs state
   const [logs, setLogs] = useState<NotificationDispatchLogItem[]>([]);
@@ -101,6 +143,9 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
       } else {
         loadLogs();
       }
+    } else {
+      setSimRule(null);
+      setSimResult(null);
     }
   }, [isOpen, activeTab, statusFilter, activeOutlet?.id]);
 
@@ -151,24 +196,79 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
     }
   };
 
-  const handleSimulateRule = async (rule: NotificationAutomationRuleItem) => {
+  const handleOpenSimulator = (rule: NotificationAutomationRuleItem) => {
+    const activeUser = authStorage.getUser();
+    const defaultPhoneRaw =
+      activeOutlet?.phone ||
+      (activeUser as { phone?: string } | null)?.phone ||
+      '+6281234567890';
+    setSimRecipientName(activeUser?.name || 'Pelanggan Uji Coba');
+    setSimRecipientPhone(defaultPhoneRaw || '+6281234567890');
+    setSimSendRealTest(false);
+    setSimResult(null);
+    setSimRule(rule);
+  };
+
+  const liveRenderedPreview = useMemo(() => {
+    if (!simRule) return '';
+    return renderPreviewMessage(
+      simRule.messageTemplate,
+      simRecipientName,
+      activeOutlet?.name || 'Well POS Laundry'
+    );
+  }, [simRule, simRecipientName, activeOutlet?.name]);
+
+  const handleExecuteSimulate = async () => {
+    if (!simRule) return;
+    if (simSendRealTest && !simRecipientPhone.trim()) {
+      showToast('Masukkan nomor WhatsApp tujuan terlebih dahulu untuk mengirim tes nyata.', 'error');
+      return;
+    }
+
     try {
-      setSimulatingKey(rule.eventKey);
+      setSimulatingKey(simRule.eventKey);
       const res = await laundryCore3Api.simulateNotification({
         outletId: activeOutlet?.id || null,
-        eventKey: rule.eventKey,
-        recipientName: 'Pelanggan Uji Coba',
-        recipientPhone: '+6281234567890',
+        eventKey: simRule.eventKey,
+        recipientName: simRecipientName.trim() || 'Pelanggan Uji Coba',
+        recipientPhone: simRecipientPhone.trim() || null,
+        messageTemplate: simRule.messageTemplate,
+        channels: simRule.channels,
+        sendRealTest: simSendRealTest,
       });
+
       if (res.status === 'success' && res.data && res.data.length > 0) {
         const firstLog = res.data[0];
+        const rendered = res.renderedMessage || firstLog.messageBody || liveRenderedPreview;
+        const failedLog = res.data.find((l) => l.status === 'FAILED');
+
         if (firstLog.status === 'SKIPPED') {
-          showToast(`[SIMULASI] Event ${rule.eventKey} DI-SKIP karena saklar dinonaktifkan.`, 'success');
+          setSimResult({
+            status: 'SKIPPED',
+            renderedMessage: rendered,
+            summaryText: `[SIMULASI] Event ${simRule.eventKey} DI-SKIP karena saklar aturan dinonaktifkan.`,
+          });
+          showToast(`[SIMULASI] Event ${simRule.eventKey} DI-SKIP karena saklar dinonaktifkan.`, 'success');
+        } else if (failedLog) {
+          setSimResult({
+            status: 'FAILED',
+            renderedMessage: rendered,
+            summaryText: `Pengiriman kanal ${failedLog.channel} gagal.`,
+            error: failedLog.errorMessage || 'Periksa konfigurasi WhatsApp Gateway / nomor tujuan.',
+          });
+          showToast(failedLog.errorMessage || 'Sebagian kanal gagal dikirim.', 'error');
         } else {
-          showToast(`[SIMULASI] Event ${rule.eventKey} TERKIRIM (${firstLog.channel})!`, 'success');
+          const modeText = simSendRealTest ? 'TES NYATA' : 'SIMULASI';
+          setSimResult({
+            status: 'SENT',
+            renderedMessage: rendered,
+            summaryText: `[${modeText}] Event ${simRule.eventKey} TERKIRIM via ${res.data.map((l) => l.channel).join(', ')}.`,
+          });
+          showToast(`[${modeText}] Event ${simRule.eventKey} TERKIRIM (${firstLog.channel})!`, 'success');
         }
+        loadLogs();
       } else {
-        showToast('Simulasi notifikasi selesai.');
+        showToast(res.message || 'Simulasi notifikasi selesai.', res.status === 'error' ? 'error' : 'success');
       }
     } catch {
       showToast('Gagal menjalankan simulasi notifikasi.', 'error');
@@ -236,21 +336,21 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
       <div className="bg-white w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl max-h-[92dvh] sm:max-h-[90vh] shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden animate-slideUp sm:animate-zoomIn">
         {/* HEADER MODAL */}
-        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs">
+        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50/50 gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-xs shrink-0">
               <Bell className="w-5 h-5 text-amber-300" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-bold text-slate-900 text-base sm:text-lg leading-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-bold text-slate-900 text-sm sm:text-lg leading-tight truncate">
                   Pusat Otomasi &amp; Notifikasi Pelanggan
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 whitespace-nowrap shrink-0">
                   Core Phase 3
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5 truncate">
                 {activeOutlet?.name || 'Seluruh Outlet Toko'} • Pengiriman pesan terintegrasi
               </p>
             </div>
@@ -259,7 +359,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition"
+            className="w-9 h-9 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -279,42 +379,172 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
             ) : (
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             )}
-            <span>{toastMsg.text}</span>
+            <span className="break-words min-w-0">{toastMsg.text}</span>
           </div>
         )}
 
         {/* TAB NAVIGATION */}
-        <div className="flex border-b border-slate-200 bg-white px-4 pt-2 gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('rules')}
-            className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-              activeTab === 'rules'
-                ? 'border-blue-900 text-blue-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>Aturan &amp; Template (7 Event)</span>
-          </button>
+        {!simRule && (
+          <div className="flex border-b border-slate-200 bg-white px-4 pt-2 gap-2 shrink-0 overflow-x-auto scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setActiveTab('rules')}
+              className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'rules'
+                  ? 'border-blue-900 text-blue-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Settings className="w-4 h-4 shrink-0" />
+              <span>Aturan &amp; Template (7 Event)</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('logs')}
-            className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-              activeTab === 'logs'
-                ? 'border-blue-900 text-blue-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <ListFilter className="w-4 h-4" />
-            <span>Riwayat Log Pengiriman ({logSummary.total})</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('logs')}
+              className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'logs'
+                  ? 'border-blue-900 text-blue-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <ListFilter className="w-4 h-4 shrink-0" />
+              <span>Riwayat Log Pengiriman ({logSummary.total})</span>
+            </button>
+          </div>
+        )}
 
         {/* BODY KONTEN */}
         <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 min-h-0 bg-slate-50/50 space-y-4">
-          {activeTab === 'rules' ? (
+          {simRule ? (
+            /* MINI-PANEL INTERAKTIF: SIMULASI & UJI PENGIRIMAN */
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSimRule(null);
+                    setSimResult(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Kembali ke Daftar Aturan</span>
+                </button>
+                <span className="font-mono text-[11px] bg-blue-50 text-blue-900 px-2.5 py-1 rounded-lg border border-blue-200 font-bold">
+                  {simRule.eventKey}
+                </span>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  Simulasi Pengiriman Notifikasi — {renderEventFriendlyName(simRule.eventKey)}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Uji pratinjau isi pesan terkini dan pilih apakah hanya mencatat log simulasi atau mengirim WhatsApp tes nyata.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Nama Penerima Uji
+                  </label>
+                  <input
+                    type="text"
+                    value={simRecipientName}
+                    onChange={(e) => setSimRecipientName(e.target.value)}
+                    placeholder="Pelanggan Uji Coba"
+                    className="w-full h-11 sm:h-10 px-3.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <WhatsAppInput
+                    label="Nomor WhatsApp Tujuan"
+                    value={simRecipientPhone}
+                    onChange={setSimRecipientPhone}
+                    placeholder="81234567890"
+                  />
+                </div>
+              </div>
+
+              {/* Mode Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Mode Pengujian</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setSimSendRealTest(false)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                      !simSendRealTest
+                        ? 'border-blue-900 bg-blue-50/70 ring-2 ring-blue-900/10'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                      <Eye className="w-4 h-4 text-blue-900 shrink-0" />
+                      <span>Simulasi Log &amp; Preview Saja</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Menguji aturan aktif/nonaktif &amp; mencatat log tanpa mengirim pesan ke gateway eksternal.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSimSendRealTest(true)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                      simSendRealTest
+                        ? 'border-emerald-700 bg-emerald-50/70 ring-2 ring-emerald-700/10'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                      <Smartphone className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span>Kirim Pesan Tes Nyata ke WhatsApp</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Menembak langsung WhatsApp Gateway outlet ke nomor di atas bila aturan aktif.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Pratinjau Pesan Hasil Render */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-700">Pratinjau Pesan Hasil Render</span>
+                  <span className="text-[11px] text-slate-400">
+                    Outlet: <strong className="text-slate-600">{activeOutlet?.name || 'Well POS Laundry'}</strong>
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-900 text-slate-100 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed border border-slate-800">
+                  {liveRenderedPreview || '(Template pesan kosong)'}
+                </div>
+              </div>
+
+              {/* Hasil Pengujian Terakhir */}
+              {simResult && (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                    simResult.status === 'FAILED'
+                      ? 'bg-rose-50 border-rose-200 text-rose-900'
+                      : simResult.status === 'SKIPPED'
+                      ? 'bg-slate-100 border-slate-300 text-slate-800'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  }`}
+                >
+                  <div className="font-bold">{simResult.summaryText}</div>
+                  {simResult.error && (
+                    <div className="text-[11px] text-rose-700 font-semibold break-words">
+                      Detail: {simResult.error}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'rules' ? (
             /* TAB 1: DAFTAR ATURAN & TEMPLATE */
             loadingRules ? (
               <div className="py-12 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-3">
@@ -325,9 +555,9 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
               <div className="space-y-4">
                 <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-blue-950 text-xs flex items-start gap-2">
                   <Info className="w-4 h-4 text-blue-900 shrink-0 mt-0.5" />
-                  <div>
+                  <div className="min-w-0">
                     <span className="font-bold">Variabel Template yang Didukung:</span>
-                    <p className="text-slate-600 mt-0.5">
+                    <p className="text-slate-600 mt-0.5 break-words">
                       <code className="text-blue-900 bg-white px-1 py-0.5 rounded border">{'{{customerName}}'}</code>,{' '}
                       <code className="text-blue-900 bg-white px-1 py-0.5 rounded border">{'{{invoiceNumber}}'}</code>,{' '}
                       <code className="text-blue-900 bg-white px-1 py-0.5 rounded border">{'{{outletName}}'}</code>,{' '}
@@ -348,7 +578,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {/* TOGGLE SWITCH */}
                         <button
                           type="button"
@@ -364,8 +594,8 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                           />
                         </button>
 
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-slate-900 text-sm">
                               {renderEventFriendlyName(rule.eventKey)}
                             </h3>
@@ -380,7 +610,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                       </div>
 
                       {/* CHANNELS CHECKBOXES */}
-                      <div className="flex items-center gap-2 pl-14 sm:pl-0">
+                      <div className="flex items-center flex-wrap gap-2 pl-14 sm:pl-0">
                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
                           Kanal:
                         </span>
@@ -428,31 +658,21 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                     </div>
 
                     {/* ACTIONS */}
-                    <div className="flex items-center justify-end gap-2 pt-1">
+                    <div className="flex items-center justify-end gap-2 pt-1 flex-wrap">
                       <button
                         type="button"
-                        onClick={() => handleSimulateRule(rule)}
-                        disabled={simulatingKey === rule.eventKey}
-                        className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
+                        onClick={() => handleOpenSimulator(rule)}
+                        className="h-10 sm:h-8 px-3 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
                       >
-                        {simulatingKey === rule.eventKey ? (
-                          <>
-                            <div className="w-3.5 h-3.5 border-2 border-slate-700 border-t-transparent rounded-full animate-spin" />
-                            <span>Simulasi...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-3.5 h-3.5" />
-                            <span>Simulasi Kirim</span>
-                          </>
-                        )}
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Simulasi Kirim</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleSaveRule(rule)}
                         disabled={savingKey === rule.eventKey}
-                        className="px-4 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
+                        className="h-10 sm:h-8 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                       >
                         {savingKey === rule.eventKey ? (
                           <>
@@ -478,74 +698,64 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="font-bold text-slate-400 uppercase tracking-wider mr-1">Rekap:</span>
-                  <span className="px-2.5 py-1 rounded-full bg-slate-100 font-bold text-slate-700">
-                    Total: {logSummary.total}
+                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 font-bold rounded-lg border border-emerald-100">
+                    {logSummary.totalSent} Terkirim
                   </span>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
-                    Terkirim: {logSummary.totalSent}
+                  <span className="px-2.5 py-1 bg-rose-50 text-rose-800 font-bold rounded-lg border border-rose-100">
+                    {logSummary.totalFailed} Gagal
                   </span>
-                  <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 font-bold border border-rose-200">
-                    Gagal: {logSummary.totalFailed}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
-                    Di-skip: {logSummary.totalSkipped}
+                  <span className="px-2.5 py-1 bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200">
+                    {logSummary.totalSkipped} Di-skip
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="appearance-none pr-9 pl-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900"
-                    >
-                      <option value="ALL">Semua Status</option>
-                      <option value="SENT">Terkirim (SENT)</option>
-                      <option value="FAILED">Gagal (FAILED)</option>
-                      <option value="SKIPPED">Di-skip (SKIPPED)</option>
-                      <option value="RETRIED">Dikirim Ulang (RETRIED)</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={loadLogs}
-                    className="p-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-600 transition"
-                    title="Segarkan data log"
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="h-10 sm:h-9 px-3 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white"
                   >
-                    <RotateCw className={`w-3.5 h-3.5 ${loadingLogs ? 'animate-spin' : ''}`} />
-                  </button>
+                    <option value="ALL">Semua Status</option>
+                    <option value="SENT">Terkirim</option>
+                    <option value="FAILED">Gagal</option>
+                    <option value="SKIPPED">Di-skip (Off)</option>
+                    <option value="RETRIED">Dikirim Ulang</option>
+                  </select>
                 </div>
               </div>
 
-              {/* LIST LOGS */}
               {loadingLogs ? (
                 <div className="py-12 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-3">
                   <div className="w-8 h-8 border-3 border-blue-900 border-t-transparent rounded-full animate-spin" />
-                  <span>Memuat log pengiriman notifikasi...</span>
+                  <span>Memuat riwayat notifikasi...</span>
                 </div>
               ) : logs.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
-                  Tidak ada catatan log notifikasi yang cocok.
+                <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center space-y-2">
+                  <Bell className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-sm font-bold text-slate-700">Belum Ada Riwayat Pengiriman</p>
+                  <p className="text-xs text-slate-500">
+                    Gunakan tombol "Simulasi Kirim" pada Tab Aturan untuk menguji template &amp; melihat log.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {logs.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-start justify-between gap-3"
+                      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
-                      <div className="space-y-1 flex-1 min-w-0 text-xs">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono font-bold text-slate-900">{item.eventKey}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900">
-                            {item.channel}
-                          </span>
+                      <div className="space-y-1.5 flex-1 text-xs min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {renderLogStatusBadge(item.status)}
+                          <span className="font-mono text-[11px] font-bold bg-blue-50 text-blue-900 px-2 py-0.5 rounded">
+                            {item.eventKey}
+                          </span>
+                          <span className="font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                            Via {item.channel}
+                          </span>
                           {item.retryCount > 0 && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
-                              Retry {item.retryCount}x
+                            <span className="text-[11px] text-amber-700 font-medium">
+                              (Percobaan ke-{item.retryCount + 1})
                             </span>
                           )}
                           <span className="text-slate-400 text-[11px] ml-auto">
@@ -559,12 +769,12 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                           {item.recipientPhone ? `(${item.recipientPhone})` : ''}
                         </div>
 
-                        <p className="text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-2 font-mono text-[11px] whitespace-pre-wrap">
+                        <p className="text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-2 font-mono text-[11px] whitespace-pre-wrap break-words">
                           {item.messageBody}
                         </p>
 
                         {item.errorMessage && (
-                          <p className="text-rose-700 font-medium text-[11px] flex items-center gap-1">
+                          <p className="text-rose-700 font-medium text-[11px] flex items-center gap-1 break-words">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                             <span>Error: {item.errorMessage}</span>
                           </p>
@@ -577,7 +787,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                             type="button"
                             onClick={() => handleRetryLog(item.id)}
                             disabled={retryingLogId === item.id}
-                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
+                            className="h-10 sm:h-9 px-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                           >
                             <RotateCw
                               className={`w-3.5 h-3.5 ${retryingLogId === item.id ? 'animate-spin' : ''}`}
@@ -595,19 +805,56 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
         </div>
 
         {/* STICKY ACTION FOOTER */}
-        <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            {activeTab === 'rules'
-              ? 'Seluruh otomasi terkirim secara instan tanpa biaya token per order.'
-              : `Menampilkan ${logs.length} riwayat aktivitas notifikasi.`}
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition"
-          >
-            Tutup
-          </button>
+        <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {simRule ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setSimRule(null);
+                  setSimResult(null);
+                }}
+                className="h-11 sm:h-10 px-4 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Tutup Simulasi
+              </button>
+              <button
+                type="button"
+                disabled={simulatingKey === simRule.eventKey}
+                onClick={handleExecuteSimulate}
+                className="h-11 sm:h-10 px-5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {simulatingKey === simRule.eventKey ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Memproses...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>
+                      {simSendRealTest ? 'Kirim Pesan Tes Nyata' : 'Jalankan Simulasi'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-slate-500">
+                {activeTab === 'rules'
+                  ? 'Seluruh otomasi terkirim secara instan tanpa biaya token per order.'
+                  : `Menampilkan ${logs.length} riwayat aktivitas notifikasi.`}
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-11 sm:h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition cursor-pointer"
+              >
+                Tutup
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

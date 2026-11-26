@@ -103,7 +103,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
               outletId: activeOutlet.id,
               clientTimezone: clientTz,
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       } catch {
         // Abaikan jika lingkungan browser tidak mendukung resolvedOptions
@@ -113,7 +113,7 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
 
   // Jaga layar tablet/HP kasir tetap menyala (Screen Wake Lock) agar OS tidak mematikan koneksi Bluetooth
   useEffect(() => {
-    screenWakeLock.requestWakeLock().catch(() => {});
+    screenWakeLock.requestWakeLock().catch(() => { });
     return () => {
       screenWakeLock.releaseWakeLock();
     };
@@ -1894,11 +1894,11 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           outletId: activeOutlet?.id || '',
           outlet: activeOutlet
             ? {
-                name: activeOutlet.name,
-                address: activeOutlet.address || null,
-                phone: activeOutlet.phone || null,
-                receiptConfig: (activeOutlet as any).receiptConfig,
-              }
+              name: activeOutlet.name,
+              address: activeOutlet.address || null,
+              phone: activeOutlet.phone || null,
+              receiptConfig: (activeOutlet as any).receiptConfig,
+            }
             : undefined,
           cashier: {
             name: activeUser?.name || 'Kasir',
@@ -2259,11 +2259,10 @@ export const PosTerminalView: React.FC<PosTerminalViewProps> = ({
           {/* Banner Status Offline / Antrean Offline PWA (Desktop/Tablet) */}
           {(!isOnline || pendingOfflineCount > 0) && (
             <div
-              className={`px-4 py-2.5 border-b flex items-center justify-between flex-wrap sm:flex-nowrap gap-2 sm:gap-3 text-xs shrink-0 transition-colors min-w-0 ${
-                !isOnline
-                  ? 'bg-rose-50 border-rose-200 text-rose-950'
-                  : 'bg-amber-50 border-amber-200 text-amber-950'
-              }`}
+              className={`px-4 py-2.5 border-b flex items-center justify-between flex-wrap sm:flex-nowrap gap-2 sm:gap-3 text-xs shrink-0 transition-colors min-w-0 ${!isOnline
+                ? 'bg-rose-50 border-rose-200 text-rose-950'
+                : 'bg-amber-50 border-amber-200 text-amber-950'
+                }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {!isOnline ? (

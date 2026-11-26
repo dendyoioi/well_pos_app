@@ -4625,8 +4625,11 @@ export const laundryCore3Api = {
     recipientName?: string | null;
     recipientPhone?: string | null;
     recipientEmail?: string | null;
+    messageTemplate?: string | null;
+    channels?: NotificationChannel[] | null;
+    sendRealTest?: boolean;
     variables?: Record<string, any>;
-  }): Promise<{ status: string; data: NotificationDispatchLogItem[]; message?: string }> => {
+  }): Promise<{ status: string; data: NotificationDispatchLogItem[]; renderedMessage?: string; message?: string }> => {
     const res = await fetch('/api/laundry/core3/automation/simulate', {
       method: 'POST',
       headers: {

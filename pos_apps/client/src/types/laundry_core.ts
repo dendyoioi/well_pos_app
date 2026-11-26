@@ -44,7 +44,12 @@ export interface OrderQcUpdateResponse {
   status: string;
 }
 
-export type LostAndFoundCategory = 'POCKET_ITEM' | 'UNCLAIMED_GARMENT';
+export type LostAndFoundCategory =
+  | 'POCKET_ITEM'
+  | 'UNCLAIMED_GARMENT'
+  | 'ACCESSORIES'
+  | 'DOCUMENTS'
+  | (string & {});
 export type LostAndFoundStatus = 'FOUND' | 'NOTIFIED' | 'RETURNED' | 'DISPOSED';
 
 export interface LaundryLostAndFoundItem {

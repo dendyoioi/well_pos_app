@@ -5,7 +5,6 @@ import {
   Archive,
   ChevronRight,
   ChevronDown,
-  Plus,
   Phone,
   Printer,
   CheckCircle2,
@@ -13,7 +12,6 @@ import {
   Coins,
   Send,
   Truck,
-  Award,
   Scale,
   Clock,
   QrCode,
@@ -30,7 +28,6 @@ import type { LaundryQueueOrder, LaundryRack } from '../types/laundry';
 import { LAUNDRY_11_STAGES } from '../types/laundry';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
 import { LaundryStageTrackerModal } from '../components/laundry/LaundryStageTrackerModal';
-import { LaundryProductionKpiModal } from '../components/laundry/LaundryProductionKpiModal';
 import { LaundrySortingModal } from '../components/LaundrySortingModal';
 import { LaundryBarcodeScannerModal } from '../components/laundry/LaundryBarcodeScannerModal';
 import { LaundryRewashModal } from '../components/laundry/LaundryRewashModal';
@@ -94,9 +91,6 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   // State Modal Sortir & QC Rincian Helai
   const [sortingModalOpen, setSortingModalOpen] = useState(false);
   const [selectedOrderForSorting, setSelectedOrderForSorting] = useState<LaundryQueueOrder | null>(null);
-
-  // State Modal Penilaian Kinerja Staf (KPI)
-  const [kpiModalOpen, setKpiModalOpen] = useState(false);
 
   // State Modal Klaim Garansi Cuci Ulang (Rewash Rp 0)
   const [rewashModalOpen, setRewashModalOpen] = useState(false);
@@ -355,7 +349,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
             type="button"
             onClick={() => setScannerOpen(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Pindai QR / Barcode Nota dengan Scanner USB atau Kamera"
+            title="Pindai QR/Barcode Struk Nota Induk"
           >
             <QrCode className="w-4 h-4 text-blue-200" />
             <span>Scan Nota</span>
@@ -366,20 +360,10 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
             type="button"
             onClick={() => setTagScannerOpen(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-extrabold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Pindai QR / Barcode Tag Pakaian Satuan"
+            title="Pindai QR/Barcode Label Tag per Potong Pakaian via Kamera / Scanner USB"
           >
             <Tag className="w-4 h-4 text-sky-700" />
-            <span>Scan Tag</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setKpiModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer whitespace-nowrap"
-            title="Lihat Rekapitulasi Output & Penilaian Kinerja Staf"
-          >
-            <Award className="w-4 h-4 text-amber-700" />
-            <span>Penilaian Staf (KPI)</span>
+            <span>Scan Tag Pakaian</span>
           </button>
 
           <button
@@ -404,15 +388,6 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
               <span>Otomasi Notifikasi</span>
             </button>
           )}
-
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'))}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer whitespace-nowrap"
-            title="Input Cepat (Drop-off)"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Input Cepat</span>
-          </button>
         </div>
       </div>
 
@@ -1035,12 +1010,6 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           }}
         />
       )}
-
-      {/* Modal Leaderboard & Penilaian Kinerja Staf (KPI) */}
-      <LaundryProductionKpiModal
-        isOpen={kpiModalOpen}
-        onClose={() => setKpiModalOpen(false)}
-      />
 
       {/* Modal Klaim Garansi Cuci Ulang (Rewash Rp 0) */}
       {rewashModalOpen && selectedOrderForRewash && (
