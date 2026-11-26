@@ -121,6 +121,9 @@ model Tenant {
   laundryBatches               LaundryBatch[]
   laundryBatchItems            LaundryBatchItem[]
   laundryOrderItemTracks       LaundryOrderItemTrack[]
+  laundryPickupRequests        LaundryPickupRequest[]
+  notificationAutomationRules  NotificationAutomationRule[]
+  notificationDispatchLogs     NotificationDispatchLog[]
 
   @@map("tenants")
 }
@@ -283,6 +286,8 @@ model User {
   changedLaundryPriceHistories LaundryServicePriceHistory[]   @relation("LaundryPriceHistoryChangedBy")
   operatedLaundryBatches       LaundryBatch[]                 @relation("LaundryBatchOperator")
   handedOverLaundryItemTracks  LaundryOrderItemTrack[]        @relation("LaundryItemHandedOverBy")
+  assignedLaundryPickupRequests LaundryPickupRequest[]        @relation("AssignedLaundryDriver")
+  updatedNotificationAutomationRules NotificationAutomationRule[] @relation("RuleUpdatedBy")
 
   @@unique([tenantId, userCode])
   @@unique([tenantId, email])
@@ -358,6 +363,9 @@ model Outlet {
   laundryServicePriceHistories LaundryServicePriceHistory[]
   laundryBatches               LaundryBatch[]
   laundryOrderItemTracks       LaundryOrderItemTrack[]
+  laundryPickupRequests        LaundryPickupRequest[]
+  notificationAutomationRules  NotificationAutomationRule[]
+  notificationDispatchLogs     NotificationDispatchLog[]
 
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
@@ -449,6 +457,7 @@ model Customer {
   laundryWallet   CustomerLaundryWallet?
   laundryFeedbacks LaundryCustomerFeedback[]
   lostAndFoundItems LaundryLostAndFound[]
+  laundryPickupRequests LaundryPickupRequest[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, phone])
@@ -927,6 +936,7 @@ model Order {
   lostAndFoundItems    LaundryLostAndFound[]
   laundryBatchItems    LaundryBatchItem[]
   laundryOrderItemTracks LaundryOrderItemTrack[]
+  convertedPickupRequests LaundryPickupRequest[] @relation("ConvertedOrderPickupRequests")
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, outletId, createdAt])
@@ -1700,6 +1710,10 @@ model LaundryOrderDetail {
   isBomDeducted         Boolean   @default(false) @map("is_bom_deducted")
   bomDeductedAt         DateTime? @map("bom_deducted_at")
   lastReminderSentAt    DateTime? @map("last_reminder_sent_at")
+  deliveryAttemptCount      Int       @default(0) @map("delivery_attempt_count")
+  deliveryLastFailureReason String?   @map("delivery_last_failure_reason") @db.Text
+  deliveryRescheduledAt     DateTime? @map("delivery_rescheduled_at")
+  deliveryRouteOrder        Int?      @map("delivery_route_order")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -2429,4 +2443,89 @@ model LaundryOrderItemTrack {
   @@index([tenantId, orderId])
   @@index([tenantId, outletId, currentStage])
   @@map("laundry_order_item_tracks")
+}
+
+model LaundryPickupRequest {
+  id                String    @id @default(uuid())
+  tenantId          String    @map("tenant_id")
+  outletId          String    @map("outlet_id")
+  customerId        String?   @map("customer_id")
+  requestCode       String    @map("request_code") // e.g. "PKP-261126-001"
+  customerName      String    @map("customer_name")
+  customerPhone     String    @map("customer_phone")
+  pickupAddress     String    @map("pickup_address") @db.Text
+  pickupNotes       String?   @map("pickup_notes") @db.Text
+  preferredPickupAt DateTime? @map("preferred_pickup_at")
+  estimatedWeightKg Decimal?  @map("estimated_weight_kg") @db.Decimal(10, 3)
+  serviceCategory   String?   @map("service_category") // 'KILOAN' | 'SATUAN' | 'EXPRESS' | 'SEPATU_TAS'
+  status            String    @default("PENDING") // 'PENDING' | 'CONFIRMED' | 'DRIVER_ASSIGNED' | 'PICKED_UP' | 'FAILED_ATTEMPT' | 'CONVERTED' | 'CANCELLED'
+  courierName       String?   @map("courier_name")
+  courierPhone      String?   @map("courier_phone")
+  assignedDriverId  String?   @map("assigned_driver_id")
+  routeOrder        Int?      @map("route_order")
+  attemptCount      Int       @default(0) @map("attempt_count")
+  lastFailureReason String?   @map("last_failure_reason") @db.Text
+  rescheduledAt     DateTime? @map("rescheduled_at")
+  pickedUpAt        DateTime? @map("picked_up_at")
+  convertedOrderId  String?   @map("converted_order_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet          Outlet    @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedDriver  User?     @relation("AssignedLaundryDriver", fields: [assignedDriverId], references: [id], onDelete: SetNull)
+  convertedOrder  Order?    @relation("ConvertedOrderPickupRequests", fields: [convertedOrderId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, requestCode])
+  @@index([tenantId, outletId, status, createdAt])
+  @@index([tenantId, customerPhone])
+  @@map("laundry_pickup_requests")
+}
+
+model NotificationAutomationRule {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  outletId        String?  @map("outlet_id") // NULL = berlaku untuk seluruh outlet tenant
+  eventKey        String   @map("event_key") // 'ORDER_CREATED' | 'ORDER_READY' | 'ORDER_OVERDUE' | 'PICKUP_REQUEST_CONFIRMED' | 'DELIVERY_FAILED' | 'CUSTOMER_DORMANT_WINBACK' | 'QUOTA_EXPIRING'
+  isEnabled       Boolean  @default(true) @map("is_enabled")
+  channels        Json     @default("[\"IN_APP\", \"WHATSAPP\"]") // array string kanal aktif
+  messageTemplate String   @map("message_template") @db.Text
+  updatedById     String?  @map("updated_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet    Outlet?  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  updatedBy User?    @relation("RuleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, outletId, eventKey])
+  @@index([tenantId, eventKey, isEnabled])
+  @@map("notification_automation_rules")
+}
+
+model NotificationDispatchLog {
+  id             String    @id @default(uuid())
+  tenantId       String    @map("tenant_id")
+  outletId       String?   @map("outlet_id")
+  eventKey       String    @map("event_key")
+  channel        String    // 'WHATSAPP' | 'IN_APP' | 'EMAIL'
+  recipientName  String?   @map("recipient_name")
+  recipientPhone String?   @map("recipient_phone")
+  recipientEmail String?   @map("recipient_email")
+  referenceType  String?   @map("reference_type") // 'ORDER' | 'PICKUP_REQUEST' | 'CUSTOMER' | 'SYSTEM'
+  referenceId    String?   @map("reference_id")
+  messageBody    String    @map("message_body") @db.Text
+  status         String    @default("SENT") // 'SENT' | 'FAILED' | 'SKIPPED' | 'RETRIED'
+  retryCount     Int       @default(0) @map("retry_count")
+  errorMessage   String?   @map("error_message") @db.Text
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outlet Outlet? @relation(fields: [outletId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, eventKey, status, createdAt])
+  @@index([tenantId, outletId, createdAt])
+  @@map("notification_dispatch_logs")
 }

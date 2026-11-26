@@ -58,6 +58,17 @@ import type {
   GarmentCategory,
   TrackedItemStage,
 } from '../types/laundry_core2';
+import type {
+  PublicPortalOutletInfo,
+  PublicPortalSessionResponse,
+  PublicPortalMeResponse,
+  LaundryPickupRequestRecord,
+  DriverBoardResponse,
+  NotificationAutomationRuleItem,
+  NotificationDispatchLogItem,
+  NotificationChannel,
+  PickupRequestStatus,
+} from '../types/laundry_core3';
 
 const TOKEN_KEY = 'pos_auth_token';
 const USER_KEY = 'pos_auth_user';
@@ -4369,6 +4380,226 @@ export const laundryCore2Api = {
     return res.json();
   },
 };
+
+// ============================================================================
+// LAUNDRY CORE ENGINE PHASE 3: GROWTH, SELF-SERVICE & AUTOMATION
+// ============================================================================
+
+export const publicLaundryPortalApi = {
+  getOutletInfo: async (
+    outletId: string
+  ): Promise<{ status: string; data: PublicPortalOutletInfo; message?: string }> => {
+    const res = await fetch(`/api/public/laundry/portal/outlet/${encodeURIComponent(outletId)}`);
+    return res.json();
+  },
+
+  createSession: async (payload: {
+    outletId: string;
+    phone: string;
+  }): Promise<{ status: string; data: PublicPortalSessionResponse; message?: string }> => {
+    const res = await fetch('/api/public/laundry/portal/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getMe: async (
+    portalToken: string
+  ): Promise<{ status: string; data: PublicPortalMeResponse; message?: string }> => {
+    const res = await fetch('/api/public/laundry/portal/me', {
+      headers: { Authorization: `Bearer ${portalToken}` },
+    });
+    return res.json();
+  },
+
+  createPickupRequest: async (
+    portalToken: string,
+    payload: {
+      customerName: string;
+      customerPhone?: string;
+      pickupAddress: string;
+      pickupNotes?: string | null;
+      preferredPickupAt?: string | null;
+      estimatedWeightKg?: number | null;
+      serviceCategory?: string | null;
+    }
+  ): Promise<{ status: string; data: LaundryPickupRequestRecord; message?: string }> => {
+    const res = await fetch('/api/public/laundry/portal/pickup-requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${portalToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+};
+
+export const laundryCore3Api = {
+  getPickupRequests: async (params?: {
+    outletId?: string;
+    status?: string;
+  }): Promise<{ status: string; data: LaundryPickupRequestRecord[]; message?: string }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.status) searchParams.append('status', params.status);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/laundry/core3/pickup-requests${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  assignPickupRequest: async (
+    id: string,
+    payload: {
+      courierName?: string | null;
+      courierPhone?: string | null;
+      assignedDriverId?: string | null;
+      routeOrder?: number | null;
+      status?: PickupRequestStatus;
+    }
+  ): Promise<{ status: string; data: LaundryPickupRequestRecord; message?: string }> => {
+    const res = await fetch(`/api/laundry/core3/pickup-requests/${id}/assign`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  markPickupFailedAttempt: async (
+    id: string,
+    payload: {
+      reason: string;
+      rescheduledAt?: string | null;
+    }
+  ): Promise<{ status: string; data: LaundryPickupRequestRecord; message?: string }> => {
+    const res = await fetch(`/api/laundry/core3/pickup-requests/${id}/failed-attempt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getDriverBoard: async (
+    outletId?: string
+  ): Promise<{ status: string; data: DriverBoardResponse; message?: string }> => {
+    const searchParams = new URLSearchParams();
+    if (outletId) searchParams.append('outletId', outletId);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/laundry/core3/driver-board${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  markOrderDeliveryFailed: async (
+    orderId: string,
+    payload: {
+      reason: string;
+      rescheduledAt?: string | null;
+    }
+  ): Promise<{ status: string; data: any; message?: string }> => {
+    const res = await fetch(`/api/laundry/core3/orders/${orderId}/delivery-failed`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getAutomationRules: async (
+    outletId?: string
+  ): Promise<{ status: string; data: NotificationAutomationRuleItem[]; message?: string }> => {
+    const searchParams = new URLSearchParams();
+    if (outletId) searchParams.append('outletId', outletId);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/laundry/core3/automation/rules${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateAutomationRule: async (
+    eventKey: string,
+    payload: {
+      outletId?: string | null;
+      isEnabled: boolean;
+      channels: NotificationChannel[];
+      messageTemplate: string;
+    }
+  ): Promise<{ status: string; data: NotificationAutomationRuleItem; message?: string }> => {
+    const res = await fetch(`/api/laundry/core3/automation/rules/${encodeURIComponent(eventKey)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  getNotificationLogs: async (params?: {
+    outletId?: string;
+    eventKey?: string;
+    status?: string;
+  }): Promise<{ status: string; data: NotificationDispatchLogItem[]; summary: { total: number; totalSent: number; totalFailed: number; totalSkipped: number }; message?: string }> => {
+    const searchParams = new URLSearchParams();
+    if (params?.outletId) searchParams.append('outletId', params.outletId);
+    if (params?.eventKey) searchParams.append('eventKey', params.eventKey);
+    if (params?.status && params.status !== 'ALL') searchParams.append('status', params.status);
+    const queryString = searchParams.toString();
+    const res = await fetch(`/api/laundry/core3/automation/logs${queryString ? `?${queryString}` : ''}`, {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  retryNotificationLog: async (
+    logId: string
+  ): Promise<{ status: string; data: NotificationDispatchLogItem; message?: string }> => {
+    const res = await fetch(`/api/laundry/core3/automation/logs/${logId}/retry`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  simulateNotification: async (payload: {
+    outletId?: string | null;
+    eventKey: string;
+    recipientName?: string | null;
+    recipientPhone?: string | null;
+    recipientEmail?: string | null;
+    variables?: Record<string, any>;
+  }): Promise<{ status: string; data: NotificationDispatchLogItem[]; message?: string }> => {
+    const res = await fetch('/api/laundry/core3/automation/simulate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+};
+
 
 
 

@@ -20,9 +20,13 @@ import {
   X,
   Loader2,
   Trash2,
+  Share2,
+  Bell,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
+import { DriverAssignmentBoardPanel } from '../components/laundry/DriverAssignmentBoardPanel';
+import { NotificationAutomationModal } from '../components/laundry/NotificationAutomationModal';
 import type {
   LaundryTransferManifest,
   AvailableOrderForManifest,
@@ -37,8 +41,12 @@ interface LaundryTransfersViewProps {
 }
 
 export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ activeOutlet }) => {
-  // Main Tab State: 'DELIVERY' | 'WORKSHOP'
-  const [activeMainTab, setActiveMainTab] = useState<'DELIVERY' | 'WORKSHOP'>('DELIVERY');
+  const currentUser = authStorage.getUser();
+  const canAccessAutomation = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser?.role || '');
+
+  // Main Tab State: 'DRIVER_BOARD' | 'DELIVERY' | 'WORKSHOP'
+  const [activeMainTab, setActiveMainTab] = useState<'DRIVER_BOARD' | 'DELIVERY' | 'WORKSHOP'>('DRIVER_BOARD');
+  const [showAutomationModal, setShowAutomationModal] = useState<boolean>(false);
 
   // ==========================================
   // TAB 1: DELIVERY PELANGGAN STATE
@@ -500,12 +508,40 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full lg:w-auto justify-end shrink-0">
+        <div className="flex items-center gap-2 w-full lg:w-auto justify-end shrink-0 flex-wrap">
           {activeOutlet && (
             <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-bold text-slate-700">
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
               <span>Toko: {activeOutlet.name}</span>
             </div>
+          )}
+
+          {activeOutlet?.id && (
+            <button
+              type="button"
+              onClick={() => {
+                const portalUrl = `${window.location.origin}/#portal?outletId=${activeOutlet.id}`;
+                navigator.clipboard.writeText(portalUrl);
+                showToast('Tautan Portal Pelanggan berhasil disalin ke clipboard!');
+              }}
+              className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Salin link portal pelanggan untuk dibagikan via WhatsApp"
+            >
+              <Share2 className="w-4 h-4 text-blue-900" />
+              <span>Link Portal Pelanggan</span>
+            </button>
+          )}
+
+          {canAccessAutomation && (
+            <button
+              type="button"
+              onClick={() => setShowAutomationModal(true)}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Atur saklar dan template notifikasi otomatis pelanggan"
+            >
+              <Bell className="w-4 h-4 text-amber-600" />
+              <span>Otomasi Notifikasi</span>
+            </button>
           )}
 
           {activeMainTab === 'DELIVERY' ? (
@@ -520,7 +556,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
               <Settings className="w-4 h-4 text-slate-600" />
               <span>Atur Tarif &amp; Zona</span>
             </button>
-          ) : (
+          ) : activeMainTab === 'WORKSHOP' ? (
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
@@ -529,49 +565,67 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
               <Plus className="w-4 h-4" />
               <span>Buat Surat Jalan</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* Main Tab Navigation (Tab 1: Delivery Pelanggan, Tab 2: Transfer Workshop) */}
-      {hasMultipleOutletsOrManifests && (
-        <div className="flex border-b border-slate-200 gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('DELIVERY')}
-            className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-              activeMainTab === 'DELIVERY'
-                ? 'border-blue-900 text-blue-900 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Truck className="w-4 h-4" />
-            <span>Delivery Pelanggan</span>
-            {(deliveryKpis.pendingPickup > 0 || deliveryKpis.readyToDeliver > 0) && (
-              <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-black">
-                {deliveryKpis.pendingPickup + deliveryKpis.readyToDeliver}
-              </span>
-            )}
-          </button>
+      {/* Main Tab Navigation */}
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('DRIVER_BOARD')}
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            activeMainTab === 'DRIVER_BOARD'
+              ? 'border-blue-900 text-blue-900 bg-white'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Truck className="w-4 h-4" />
+          <span>Papan Kurir &amp; Jemput Mandiri</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveMainTab('WORKSHOP')}
-            className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-              activeMainTab === 'WORKSHOP'
-                ? 'border-blue-900 text-blue-900 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>Transfer Workshop / Surat Jalan</span>
-            {manifests.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-black">
-                {manifests.length}
-              </span>
-            )}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('DELIVERY')}
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            activeMainTab === 'DELIVERY'
+              ? 'border-blue-900 text-blue-900 bg-white'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Truck className="w-4 h-4" />
+          <span>Delivery Pelanggan</span>
+          {(deliveryKpis.pendingPickup > 0 || deliveryKpis.readyToDeliver > 0) && (
+            <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-black">
+              {deliveryKpis.pendingPickup + deliveryKpis.readyToDeliver}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('WORKSHOP')}
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            activeMainTab === 'WORKSHOP'
+              ? 'border-blue-900 text-blue-900 bg-white'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Transfer &amp; Manifest Workshop</span>
+          {manifests.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-black">
+              {manifests.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ==================================================== */}
+      {/* TAMPILAN TAB 0: PAPAN KURIR & JEMPUT MANDIRI        */}
+      {/* ==================================================== */}
+      {activeMainTab === 'DRIVER_BOARD' && (
+        <DriverAssignmentBoardPanel activeOutlet={activeOutlet} />
       )}
 
       {/* ==================================================== */}
@@ -1851,6 +1905,12 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
           <span>{toast.message}</span>
         </div>
       )}
+      {/* Notification Automation Modal (Core Phase 3) */}
+      <NotificationAutomationModal
+        isOpen={showAutomationModal}
+        onClose={() => setShowAutomationModal(false)}
+        activeOutlet={activeOutlet}
+      />
     </div>
   );
 };

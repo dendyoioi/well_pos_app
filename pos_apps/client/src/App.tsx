@@ -26,6 +26,9 @@ const MaintenancePage = lazy(() =>
 const PublicLaundryTrackingPage = lazy(() =>
   import('./pages/PublicLaundryTrackingPage').then((m) => ({ default: m.PublicLaundryTrackingPage }))
 );
+const CustomerLaundryPortalPage = lazy(() =>
+  import('./pages/CustomerLaundryPortalPage').then((m) => ({ default: m.CustomerLaundryPortalPage }))
+);
 const OwnerPortalPage = lazy(() =>
   import('./pages/OwnerPortalPage').then((m) => ({ default: m.OwnerPortalPage }))
 );
@@ -91,11 +94,27 @@ export const App: React.FC = () => {
     return { outletId: '', table: '01' };
   });
 
-  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track'>(() => {
+  const [portalOutletId, setPortalOutletId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const search = new URLSearchParams(window.location.search);
+      if (search.get('outletId')) return search.get('outletId') || '';
+      const hash = window.location.hash;
+      const qIdx = hash.indexOf('?');
+      if (qIdx !== -1) {
+        const p = new URLSearchParams(hash.slice(qIdx));
+        return p.get('outletId') || '';
+      }
+    }
+    return '';
+  });
+
+  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track' | 'portal'>(() => {
+    if (typeof window !== 'undefined') {
+      const search = new URLSearchParams(window.location.search);
+      if (search.has('portal')) return 'portal';
       if (search.has('track') || window.location.pathname.startsWith('/track')) return 'track';
       const hash = window.location.hash.toLowerCase();
+      if (hash.startsWith('#portal')) return 'portal';
       if (hash.startsWith('#track')) return 'track';
       if (hash.startsWith('#menu')) return 'menu';
       if (hash === '#pos' || hash === '#login') return 'pos-login';
@@ -160,7 +179,14 @@ export const App: React.FC = () => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       const lower = hash.toLowerCase();
-      if (lower.startsWith('#track')) {
+      if (lower.startsWith('#portal')) {
+        const qIdx = hash.indexOf('?');
+        if (qIdx !== -1) {
+          const p = new URLSearchParams(hash.slice(qIdx));
+          setPortalOutletId(p.get('outletId') || '');
+        }
+        setViewMode('portal');
+      } else if (lower.startsWith('#track')) {
         const qIdx = hash.indexOf('?');
         if (qIdx !== -1) {
           const p = new URLSearchParams(hash.slice(qIdx));
@@ -428,8 +454,14 @@ export const App: React.FC = () => {
       <DialogProvider>
         <PullToRefresh>
           <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
-          {/* JIKA MODE TRACKING PUBLIK LAUNDRY VIA SCAN QR STRUK */}
-          {viewMode === 'track' ? (
+          {/* JIKA MODE PORTAL MANDIRI PELANGGAN LAUNDRY */}
+          {viewMode === 'portal' ? (
+            <div className="flex-1 flex flex-col">
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <CustomerLaundryPortalPage outletId={portalOutletId} />
+              </Suspense>
+            </div>
+          ) : viewMode === 'track' ? (
             <div className="flex-1 flex flex-col">
               <Suspense fallback={<ViewLoadingFallback />}>
                 <PublicLaundryTrackingPage initialInvoiceNumber={trackInvoice} />

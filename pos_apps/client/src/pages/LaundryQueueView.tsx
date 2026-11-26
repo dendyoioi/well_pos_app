@@ -22,9 +22,10 @@ import {
   ShieldAlert,
   PackageSearch,
   Tag,
+  Bell,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
 import type { LaundryQueueOrder, LaundryRack } from '../types/laundry';
 import { LAUNDRY_11_STAGES } from '../types/laundry';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
@@ -38,6 +39,7 @@ import { LaundryQcAndWeightModal } from '../components/laundry/LaundryQcAndWeigh
 import { LaundryLostAndFoundDrawer } from '../components/laundry/LaundryLostAndFoundDrawer';
 import { LaundryTagScannerModal } from '../components/laundry/LaundryTagScannerModal';
 import { LaundryItemTrackingModal } from '../components/laundry/LaundryItemTrackingModal';
+import { NotificationAutomationModal } from '../components/laundry/NotificationAutomationModal';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -52,6 +54,10 @@ const PIPELINE_COLUMNS = [
 ] as const;
 
 export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet }) => {
+  const currentUser = authStorage.getUser();
+  const canAccessAutomation = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser?.role || '');
+  const [automationModalOpen, setAutomationModalOpen] = useState(false);
+
   const [orders, setOrders] = useState<LaundryQueueOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -385,6 +391,19 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
             <PackageSearch className="w-4 h-4 text-purple-700" />
             <span>Lost &amp; Found</span>
           </button>
+
+          {/* Core Phase 3: Otomasi Notifikasi */}
+          {canAccessAutomation && (
+            <button
+              type="button"
+              onClick={() => setAutomationModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer whitespace-nowrap"
+              title="Atur Aturan Otomasi & Template Notifikasi Pelanggan"
+            >
+              <Bell className="w-4 h-4 text-amber-600" />
+              <span>Otomasi Notifikasi</span>
+            </button>
+          )}
 
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('wellpos:open_quick_dropoff'))}
@@ -1117,6 +1136,13 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           onUpdated={() => fetchOrders()}
         />
       )}
+
+      {/* Modal Otomasi Notifikasi (Core Phase 3) */}
+      <NotificationAutomationModal
+        isOpen={automationModalOpen}
+        onClose={() => setAutomationModalOpen(false)}
+        activeOutlet={activeOutlet}
+      />
 
       {/* Floating Feedback Toast WhatsApp Gateway */}
       {waToast && (

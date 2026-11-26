@@ -1239,6 +1239,92 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
         ON "laundry_order_item_tracks"("tenant_id", "outlet_id", "current_stage");
     `,
   },
+  {
+    id: '20261126_03_laundry_core_phase3_growth_automation',
+    description: 'Menambahkan laundry_pickup_requests, notification_automation_rules, notification_dispatch_logs, dan kolom delivery failure di laundry_order_details (Laundry Core Phase 3 Growth, Self-Service & Automation)',
+    sql: `
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_attempt_count" INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_last_failure_reason" TEXT;
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_rescheduled_at" TIMESTAMP(3);
+      ALTER TABLE "laundry_order_details" ADD COLUMN IF NOT EXISTS "delivery_route_order" INTEGER;
+
+      CREATE TABLE IF NOT EXISTS "laundry_pickup_requests" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "customer_id" TEXT REFERENCES "customers"("id") ON DELETE SET NULL,
+        "request_code" TEXT NOT NULL,
+        "customer_name" TEXT NOT NULL,
+        "customer_phone" TEXT NOT NULL,
+        "pickup_address" TEXT NOT NULL,
+        "pickup_notes" TEXT,
+        "preferred_pickup_at" TIMESTAMP(3),
+        "estimated_weight_kg" DECIMAL(10, 3),
+        "service_category" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "courier_name" TEXT,
+        "courier_phone" TEXT,
+        "assigned_driver_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "route_order" INTEGER,
+        "attempt_count" INTEGER NOT NULL DEFAULT 0,
+        "last_failure_reason" TEXT,
+        "rescheduled_at" TIMESTAMP(3),
+        "picked_up_at" TIMESTAMP(3),
+        "converted_order_id" TEXT REFERENCES "orders"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_pickup_requests_tenant_id_request_code_key"
+        ON "laundry_pickup_requests"("tenant_id", "request_code");
+      CREATE INDEX IF NOT EXISTS "laundry_pickup_requests_tenant_id_outlet_id_status_created_at_idx"
+        ON "laundry_pickup_requests"("tenant_id", "outlet_id", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "laundry_pickup_requests_tenant_id_customer_phone_idx"
+        ON "laundry_pickup_requests"("tenant_id", "customer_phone");
+
+      CREATE TABLE IF NOT EXISTS "notification_automation_rules" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT REFERENCES "outlets"("id") ON DELETE CASCADE,
+        "event_key" TEXT NOT NULL,
+        "is_enabled" BOOLEAN NOT NULL DEFAULT true,
+        "channels" JSONB NOT NULL DEFAULT '["IN_APP", "WHATSAPP"]'::jsonb,
+        "message_template" TEXT NOT NULL,
+        "updated_by_id" TEXT REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "notification_automation_rules_tenant_id_outlet_id_event_key_key"
+        ON "notification_automation_rules"("tenant_id", "outlet_id", "event_key");
+      CREATE INDEX IF NOT EXISTS "notification_automation_rules_tenant_id_event_key_is_enabled_idx"
+        ON "notification_automation_rules"("tenant_id", "event_key", "is_enabled");
+
+      CREATE TABLE IF NOT EXISTS "notification_dispatch_logs" (
+        "id" TEXT PRIMARY KEY,
+        "tenant_id" TEXT NOT NULL REFERENCES "tenants"("id") ON DELETE CASCADE,
+        "outlet_id" TEXT REFERENCES "outlets"("id") ON DELETE SET NULL,
+        "event_key" TEXT NOT NULL,
+        "channel" TEXT NOT NULL,
+        "recipient_name" TEXT,
+        "recipient_phone" TEXT,
+        "recipient_email" TEXT,
+        "reference_type" TEXT,
+        "reference_id" TEXT,
+        "message_body" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'SENT',
+        "retry_count" INTEGER NOT NULL DEFAULT 0,
+        "error_message" TEXT,
+        "sent_at" TIMESTAMP(3),
+        "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS "notification_dispatch_logs_tenant_id_event_key_status_created_at_idx"
+        ON "notification_dispatch_logs"("tenant_id", "event_key", "status", "created_at");
+      CREATE INDEX IF NOT EXISTS "notification_dispatch_logs_tenant_id_outlet_id_created_at_idx"
+        ON "notification_dispatch_logs"("tenant_id", "outlet_id", "created_at");
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

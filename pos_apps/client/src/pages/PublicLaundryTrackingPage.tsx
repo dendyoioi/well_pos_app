@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Send,
   ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -285,6 +286,31 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 </div>
               </div>
             </div>
+
+            {/* Banner Akses Portal Pelanggan */}
+            {(data.outlet?.id || (data as any).outletId) && (
+              <a
+                href={`/#portal?outletId=${data.outlet?.id || (data as any).outletId}`}
+                className="block bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-4 rounded-2xl shadow-sm hover:from-blue-800 hover:to-indigo-800 transition group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-300 shrink-0">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs sm:text-sm text-white">
+                        Cek Saldo &amp; Minta Jemput di Portal Pelanggan
+                      </p>
+                      <p className="text-[11px] text-blue-200">
+                        Lihat sisa kuota kiloan, saldo deposit, atau minta kurir jemput pakaian ke rumah
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-blue-200 group-hover:translate-x-1 transition-transform shrink-0" />
+                </div>
+              </a>
+            )}
 
             {/* Multi-Layanan / Rincian Layanan Cucian */}
             {Array.isArray(data.items) && data.items.length > 0 && (
