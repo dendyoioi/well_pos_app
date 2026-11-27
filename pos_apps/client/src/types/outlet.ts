@@ -102,14 +102,95 @@ export const DEFAULT_OUTLET_FEES: OutletFee[] = [
   },
 ];
 
-export function normalizeOutletFees(savedFees?: OutletFee[] | null): OutletFee[] {
+export const DEFAULT_LAUNDRY_OUTLET_FEES: OutletFee[] = [
+  {
+    id: 'fee_tax',
+    name: 'PPN Layanan Laundry',
+    type: 'PERCENTAGE',
+    rate: 11,
+    channelScope: 'ALL',
+    isActive: false,
+    category: 'DEFAULT_TAX_SERVICE',
+  },
+  {
+    id: 'fee_delivery',
+    name: 'Ongkir Kurir Laundry',
+    type: 'FIXED',
+    rate: 10000,
+    channelScope: 'DELIVERY',
+    isActive: false,
+    category: 'DEFAULT_TAX_SERVICE',
+  },
+  {
+    id: 'fee_plastic_s',
+    name: 'Plastik / Kresek Laundry',
+    type: 'FIXED',
+    rate: 500,
+    channelScope: 'ALL',
+    isActive: false,
+    category: 'ON_DEMAND_PACKAGING',
+    isQuickAccess: false,
+  },
+  {
+    id: 'fee_hanger',
+    name: 'Hanger Baju / Jas',
+    type: 'FIXED',
+    rate: 2000,
+    channelScope: 'ALL',
+    isActive: false,
+    category: 'ON_DEMAND_PACKAGING',
+    isQuickAccess: false,
+  },
+  {
+    id: 'fee_cover_jas',
+    name: 'Cover Plastik Jas / Gaun',
+    type: 'FIXED',
+    rate: 3000,
+    channelScope: 'ALL',
+    isActive: false,
+    category: 'ON_DEMAND_PACKAGING',
+    isQuickAccess: false,
+  },
+  {
+    id: 'fee_spunbond',
+    name: 'Tas Laundry Spunbond',
+    type: 'FIXED',
+    rate: 5000,
+    channelScope: 'ALL',
+    isActive: false,
+    category: 'ON_DEMAND_PACKAGING',
+    isQuickAccess: false,
+  },
+];
+
+const FNB_RESIDUE_IDS = new Set(['fee_service', 'fee_online', 'fee_cutlery', 'fee_box', 'fee_paperbag']);
+const FNB_RESIDUE_NAMES = new Set([
+  'Biaya Layanan Meja',
+  'Biaya Platform Online',
+  'Set Sendok & Garpu Higienis',
+  'Box Kemasan / Mika',
+  'Paper Bag Kraft',
+]);
+
+export function normalizeOutletFees(
+  savedFees?: OutletFee[] | null,
+  isLaundryMode?: boolean
+): OutletFee[] {
   if (!savedFees || !Array.isArray(savedFees) || savedFees.length === 0) {
-    return DEFAULT_OUTLET_FEES;
+    return isLaundryMode ? DEFAULT_LAUNDRY_OUTLET_FEES : DEFAULT_OUTLET_FEES;
   }
 
   const result: OutletFee[] = [];
+  let hadInactiveFnbResidue = false;
 
   for (const saved of savedFees) {
+    if (isLaundryMode && !saved.isActive) {
+      if (FNB_RESIDUE_IDS.has(saved.id) || FNB_RESIDUE_NAMES.has(saved.name)) {
+        hadInactiveFnbResidue = true;
+        continue;
+      }
+    }
+
     let category = saved.category;
     if (!category) {
       const isTaxOrService =
@@ -122,11 +203,35 @@ export function normalizeOutletFees(savedFees?: OutletFee[] | null): OutletFee[]
       category = isTaxOrService ? 'DEFAULT_TAX_SERVICE' : 'ON_DEMAND_PACKAGING';
     }
 
+    let normalizedName = saved.name;
+    let normalizedRate = saved.rate;
+    if (isLaundryMode && !saved.isActive) {
+      if (saved.id === 'fee_tax' && saved.name === 'PPN / PB1 Pajak Restoran') {
+        normalizedName = 'PPN Layanan Laundry';
+        if (saved.rate === 10) normalizedRate = 11;
+      } else if (saved.id === 'fee_delivery' && saved.name === 'Ongkir Kurir Toko') {
+        normalizedName = 'Ongkir Kurir Laundry';
+      } else if (saved.id === 'fee_plastic_s' && saved.name === 'Plastik / Kresek Sedang') {
+        normalizedName = 'Plastik / Kresek Laundry';
+      }
+    }
+
     result.push({
       ...saved,
+      name: normalizedName,
+      rate: normalizedRate,
       category,
       isQuickAccess: saved.isQuickAccess ?? (category === 'ON_DEMAND_PACKAGING'),
     });
+  }
+
+  if (isLaundryMode && (hadInactiveFnbResidue || !result.some((f) => f.category === 'ON_DEMAND_PACKAGING'))) {
+    const existingIds = new Set(result.map((f) => f.id));
+    for (const defLaundry of DEFAULT_LAUNDRY_OUTLET_FEES) {
+      if (defLaundry.category === 'ON_DEMAND_PACKAGING' && !existingIds.has(defLaundry.id)) {
+        result.push(defLaundry);
+      }
+    }
   }
 
   return result;

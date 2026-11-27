@@ -542,32 +542,32 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
         </div>
       </div>
 
-      {/* Sub-Tab Navigation Bar */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none border border-slate-200/80">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('ORDER');
-            setSearchQuery('');
-          }}
-          className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
-            activeTab === 'ORDER'
-              ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-          }`}
-        >
-          <Receipt className="w-3.5 h-3.5 shrink-0" />
-          <span>Voucher Transaksi (Nota)</span>
-          <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold whitespace-nowrap shrink-0 ${
-              activeTab === 'ORDER' ? 'bg-blue-800 text-white' : 'bg-slate-200 text-slate-600'
+      {/* Sub-Tab Navigation Bar — sembunyikan saat hanya ada 1 tab di mode Laundry */}
+      {!isLaundryMode && (
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none border border-slate-200/80">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('ORDER');
+              setSearchQuery('');
+            }}
+            className={`h-9 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+              activeTab === 'ORDER'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            {promotions.filter((p) => (p.scope || 'ORDER') === 'ORDER').length}
-          </span>
-        </button>
+            <Receipt className="w-3.5 h-3.5 shrink-0" />
+            <span>Voucher Transaksi (Nota)</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold whitespace-nowrap shrink-0 ${
+                activeTab === 'ORDER' ? 'bg-blue-800 text-white' : 'bg-slate-200 text-slate-600'
+              }`}
+            >
+              {promotions.filter((p) => (p.scope || 'ORDER') === 'ORDER').length}
+            </span>
+          </button>
 
-        {!isLaundryMode && (
           <button
             type="button"
             onClick={() => {
@@ -590,8 +590,8 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               {promotions.filter((p) => p.scope === 'ITEM').length}
             </span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 3 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

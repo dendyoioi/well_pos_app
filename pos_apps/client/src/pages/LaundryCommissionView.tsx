@@ -38,6 +38,67 @@ import { TableSkeleton } from '../components/ui/TableSkeleton';
 import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { StaffPerformanceEvaluationView } from '../components/laundry/StaffPerformanceEvaluationView';
 import { WorkforceEnterprisePanel } from '../components/enterprise/WorkforceEnterprisePanel';
+import { useDialog } from '../context/DialogContext';
+
+const escapeHtml = (unsafe: string): string =>
+  unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const printHtmlViaIframe = (
+  iframeId: string,
+  htmlContent: string,
+  onError: (msg: string) => void
+) => {
+  try {
+    let iframe = document.getElementById(iframeId) as HTMLIFrameElement | null;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = iframeId;
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.opacity = '0.01';
+      iframe.style.pointerEvents = 'none';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc || !iframe.contentWindow) {
+      const popup = window.open('', '_blank', 'width=900,height=700');
+      if (!popup) {
+        onError('Pop-up cetak diblokir browser. Izinkan pop-up untuk mencetak laporan.');
+        return;
+      }
+      popup.document.open();
+      popup.document.write(htmlContent);
+      popup.document.close();
+      popup.focus();
+      setTimeout(() => popup.print(), 250);
+      return;
+    }
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+    setTimeout(() => {
+      try {
+        iframe?.contentWindow?.focus();
+        iframe?.contentWindow?.print();
+      } catch {
+        onError('Gagal membuka dialog cetak. Periksa izin browser Anda.');
+      }
+    }, 200);
+  } catch {
+    onError('Gagal menyiapkan dokumen cetak laporan.');
+  }
+};
 
 interface LaundryCommissionViewProps {
   activeOutlet: Outlet | null;
@@ -67,6 +128,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   activeOutlet,
   currentUser,
 }) => {
+  const dialog = useDialog();
   const isSupervisorOrAbove = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role);
 
   const [period, setPeriod] = useState<PeriodType>('THIS_MONTH');
@@ -185,15 +247,15 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   const handleSubmitAdvance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeOutlet?.id) {
-      alert('Toko / Outlet aktif tidak ditemukan');
+      dialog.toast('Toko / Outlet aktif tidak ditemukan', 'error');
       return;
     }
     if (!advanceStaffName.trim()) {
-      alert('Nama karyawan wajib diisi.');
+      dialog.toast('Nama karyawan wajib diisi.', 'error');
       return;
     }
     if (!advanceAmount || advanceAmount <= 0) {
-      alert('Nominal kasbon harus lebih dari Rp 0.');
+      dialog.toast('Nominal kasbon harus lebih dari Rp 0.', 'error');
       return;
     }
 
@@ -219,10 +281,10 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         fetchAdvances();
         fetchCommissions();
       } else {
-        alert(res.message || 'Gagal mencatat kasbon');
+        dialog.toast(res.message || 'Gagal mencatat kasbon', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem', 'error');
     } finally {
       setSubmittingAdvance(false);
     }
@@ -232,11 +294,11 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
     e.preventDefault();
     if (!selectedAdvanceForRepay) return;
     if (!repayAmount || repayAmount <= 0) {
-      alert('Nominal pelunasan harus lebih dari Rp 0.');
+      dialog.toast('Nominal pelunasan harus lebih dari Rp 0.', 'error');
       return;
     }
     if (repayAmount > selectedAdvanceForRepay.remainingAmount) {
-      alert(`Nominal melebihi sisa kasbon (maks. ${formatRupiah(selectedAdvanceForRepay.remainingAmount)}).`);
+      dialog.toast(`Nominal melebihi sisa kasbon (maks. ${formatRupiah(selectedAdvanceForRepay.remainingAmount)}).`, 'error');
       return;
     }
 
@@ -256,10 +318,10 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
         fetchAdvances();
         fetchCommissions();
       } else {
-        alert(res.message || 'Gagal memproses pelunasan');
+        dialog.toast(res.message || 'Gagal memproses pelunasan', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem', 'error');
     } finally {
       setSubmittingRepay(false);
     }
@@ -373,7 +435,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
   // Ekspor rekap komisi ke CSV
   const handleExportCsv = () => {
     if (!report || !report.staff || report.staff.length === 0) {
-      alert('Tidak ada data komisi untuk diekspor pada rentang tanggal ini.');
+      dialog.toast('Tidak ada data komisi untuk diekspor pada rentang tanggal ini.', 'info');
       return;
     }
 
@@ -422,6 +484,173 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
     document.body.removeChild(link);
   };
 
+  // Cetak Rekap Komisi A4 Terstruktur via Hidden Iframe (+ Pop-up fallback)
+  const handlePrintCommissionRecap = () => {
+    if (!report || !report.staff || report.staff.length === 0) {
+      dialog.toast('Belum ada data komisi pada periode ini untuk dicetak.', 'info');
+      return;
+    }
+
+    const safeOutlet = escapeHtml(activeOutlet?.name || 'Well POS Laundry');
+    const safePeriod = escapeHtml(`${startDate} s/d ${endDate}`);
+    const printedAt = escapeHtml(
+      new Date().toLocaleString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    );
+
+    const totalStaff = report.staff.length;
+    const grandCommission = report.staff.reduce((s, r) => s + Number(r.totalCommission || 0), 0);
+    const totalWashKg = report.staff.reduce((s, r) => s + Number(r.washingKg || 0), 0);
+    const totalIronKg = report.staff.reduce((s, r) => s + Number(r.ironingKg || 0), 0);
+
+    const rowsHtml = report.staff
+      .map((s, idx) => {
+        const roleLabel =
+          s.roleType === 'BOTH'
+            ? 'Operator & Kurir'
+            : s.roleType === 'COURIER'
+            ? 'Kurir Delivery'
+            : 'Operator Produksi';
+        const totalTrips = Number(s.deliveryTrips || 0) + Number(s.pickupTrips || 0);
+        return `
+          <tr>
+            <td style="text-align:center;">${idx + 1}</td>
+            <td><strong>${escapeHtml(s.name)}</strong><br/><span style="color:#64748b;font-size:10px;">${escapeHtml(roleLabel)}</span></td>
+            <td style="text-align:right;">${s.washingKg > 0 ? `${s.washingKg.toFixed(1)} Kg<br/><span style="color:#475569;font-size:10px;">${escapeHtml(formatRupiah(s.washingCommission))}</span>` : '-'}</td>
+            <td style="text-align:right;">${s.dryingKg > 0 ? `${s.dryingKg.toFixed(1)} Kg<br/><span style="color:#475569;font-size:10px;">${escapeHtml(formatRupiah(s.dryingCommission))}</span>` : '-'}</td>
+            <td style="text-align:right;">${s.ironingKg > 0 ? `${s.ironingKg.toFixed(1)} Kg<br/><span style="color:#475569;font-size:10px;">${escapeHtml(formatRupiah(s.ironingCommission))}</span>` : '-'}</td>
+            <td style="text-align:right;">${s.packingOrders > 0 ? `${s.packingOrders} Nota<br/><span style="color:#475569;font-size:10px;">${escapeHtml(formatRupiah(s.packingCommission))}</span>` : '-'}</td>
+            <td style="text-align:right;">${totalTrips > 0 ? `${totalTrips} Trip<br/><span style="color:#475569;font-size:10px;">${escapeHtml(formatRupiah(s.deliveryCommission))}</span>` : '-'}</td>
+            <td style="text-align:right;color:${s.rewashPenalty > 0 ? '#be123c' : '#64748b'};">${s.rewashPenalty > 0 ? `-${escapeHtml(formatRupiah(s.rewashPenalty))}` : '-'}</td>
+            <td style="text-align:right;font-weight:800;color:#1e3a8a;">${escapeHtml(formatRupiah(s.totalCommission))}</td>
+          </tr>`;
+      })
+      .join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Rekap Komisi Staf - ${safeOutlet}</title>
+    <style>
+      @page { size: A4 landscape; margin: 12mm; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 11px; }
+      .header { border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+      .header h1 { margin: 0 0 3px 0; font-size: 17px; color: #172554; }
+      .header p { margin: 0; font-size: 11px; color: #475569; }
+      .meta { text-align: right; font-size: 11px; color: #475569; }
+      .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+      .card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; background: #f8fafc; }
+      .card-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 3px; }
+      .card-value { font-size: 14px; font-weight: 800; color: #0f172a; }
+      table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+      th, td { border-bottom: 1px solid #e2e8f0; padding: 7px 8px; font-size: 11px; vertical-align: top; }
+      th { background: #f1f5f9; text-align: left; font-weight: 700; color: #334155; text-transform: uppercase; font-size: 9.5px; }
+      .footer { margin-top: 16px; font-size: 10px; color: #64748b; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>Rekapitulasi Komisi Staf Produksi &amp; Kurir</h1>
+        <p>${safeOutlet}</p>
+      </div>
+      <div class="meta">
+        <div><strong>Periode:</strong> ${safePeriod}</div>
+        <div><strong>Dicetak:</strong> ${printedAt}</div>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="card-label">Jumlah Staf</div><div class="card-value">${totalStaff} Orang</div></div>
+      <div class="card"><div class="card-label">Total Tonase Cuci</div><div class="card-value">${totalWashKg.toFixed(1)} Kg</div></div>
+      <div class="card"><div class="card-label">Total Tonase Setrika</div><div class="card-value">${totalIronKg.toFixed(1)} Kg</div></div>
+      <div class="card"><div class="card-label">Total Komisi Bersih</div><div class="card-value">${escapeHtml(formatRupiah(grandCommission))}</div></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:center;width:30px;">No</th>
+          <th>Nama Staf</th>
+          <th style="text-align:right;">Cuci</th>
+          <th style="text-align:right;">Kering</th>
+          <th style="text-align:right;">Setrika</th>
+          <th style="text-align:right;">Packing</th>
+          <th style="text-align:right;">Kurir</th>
+          <th style="text-align:right;">Penalti</th>
+          <th style="text-align:right;">Total Bersih</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="footer">Dokumen Rekap Komisi Staf Laundry — Well POS</div>
+  </body>
+</html>`;
+
+    printHtmlViaIframe('commission-recap-print-iframe', html, (msg) => dialog.toast(msg, 'error'));
+  };
+
+  // Cetak Slip Komisi Individu Terstruktur
+  const handlePrintStaffSlip = (staff: LaundryStaffCommissionRow) => {
+    const safeOutlet = escapeHtml(activeOutlet?.name || 'WELL POS LAUNDRY');
+    const safeName = escapeHtml(staff.name);
+    const safePeriod = escapeHtml(`${startDate} s/d ${endDate}`);
+    const roleLabel = escapeHtml(
+      staff.roleType === 'BOTH'
+        ? 'Operator & Kurir'
+        : staff.roleType === 'COURIER'
+        ? 'Kurir Delivery'
+        : 'Operator Produksi'
+    );
+    const items: string[] = [];
+    if (staff.washingKg > 0) items.push(`<div class="row"><span>Cuci (${staff.washingKg} Kg)</span><strong>${escapeHtml(formatRupiah(staff.washingCommission))}</strong></div>`);
+    if (staff.dryingKg > 0) items.push(`<div class="row"><span>Kering (${staff.dryingKg} Kg)</span><strong>${escapeHtml(formatRupiah(staff.dryingCommission))}</strong></div>`);
+    if (staff.ironingKg > 0) items.push(`<div class="row"><span>Setrika (${staff.ironingKg} Kg)</span><strong>${escapeHtml(formatRupiah(staff.ironingCommission))}</strong></div>`);
+    if (staff.packingOrders > 0) items.push(`<div class="row"><span>Packing (${staff.packingOrders} Nota)</span><strong>${escapeHtml(formatRupiah(staff.packingCommission))}</strong></div>`);
+    if (staff.deliveryTrips + staff.pickupTrips > 0) items.push(`<div class="row"><span>Kurir (${staff.deliveryTrips + staff.pickupTrips} Trip)</span><strong>${escapeHtml(formatRupiah(staff.deliveryCommission))}</strong></div>`);
+    if (staff.cashierCommission && staff.cashierCommission > 0) items.push(`<div class="row"><span>Komisi Kasir</span><strong>${escapeHtml(formatRupiah(staff.cashierCommission))}</strong></div>`);
+    if (staff.rewashPenalty > 0) items.push(`<div class="row" style="color:#be123c;"><span>Penalti Rewash (${staff.rewashCount} Kasus)</span><strong>-${escapeHtml(formatRupiah(staff.rewashPenalty))}</strong></div>`);
+
+    const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Slip Komisi - ${safeName}</title>
+    <style>
+      @page { size: A5 portrait; margin: 12mm; }
+      body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #0f172a; margin: 0; padding: 12px; font-size: 12px; }
+      .box { border: 1px dashed #94a3b8; border-radius: 10px; padding: 16px; max-width: 380px; margin: 0 auto; }
+      .center { text-align: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; margin-bottom: 10px; }
+      .title { font-weight: 800; font-size: 14px; text-transform: uppercase; }
+      .sub { font-size: 11px; color: #475569; margin-top: 2px; }
+      .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 12px; }
+      .total { border-top: 2px solid #0f172a; margin-top: 12px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; }
+      .foot { text-align: center; font-size: 10px; color: #64748b; margin-top: 14px; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="center">
+        <div class="title">${safeOutlet}</div>
+        <div class="sub">SLIP INSENTIF &amp; KOMISI KERJA</div>
+        <div class="sub">Periode: ${safePeriod}</div>
+      </div>
+      <div class="row"><span>Nama Staf:</span><strong>${safeName}</strong></div>
+      <div class="row" style="border-bottom:1px solid #e2e8f0;padding-bottom:8px;"><span>Peran:</span><span>${roleLabel}</span></div>
+      ${items.join('')}
+      <div class="total"><span>TOTAL KOMISI</span><span>${escapeHtml(formatRupiah(staff.totalCommission))}</span></div>
+      <div class="foot">Dicetak via Well POS • ${escapeHtml(new Date().toLocaleDateString('id-ID'))}</div>
+    </div>
+  </body>
+</html>`;
+
+    printHtmlViaIframe('commission-slip-print-iframe', html, (msg) => dialog.toast(msg, 'error'));
+  };
+
   // Pagination slice data staf
   const paginatedStaff = useMemo(() => {
     if (!report?.staff) return [];
@@ -464,7 +693,14 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             type="button"
             onClick={handleExportCsv}
             disabled={loading || !report?.staff?.length}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+            title={
+              loading
+                ? 'Memuat data komisi...'
+                : !report?.staff?.length
+                ? 'Tersedia otomatis setelah ada data pada periode terpilih'
+                : 'Ekspor rekap komisi staf ke CSV / Excel'
+            }
+            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
           >
             <Download className="w-4 h-4 text-slate-600" />
             <span>Export CSV</span>
@@ -472,9 +708,16 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
 
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handlePrintCommissionRecap}
             disabled={loading || !report?.staff?.length}
-            className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+            title={
+              loading
+                ? 'Memuat data komisi...'
+                : !report?.staff?.length
+                ? 'Tersedia otomatis setelah ada data pada periode terpilih'
+                : 'Cetak rekap komisi staf terstruktur (A4)'
+            }
+            className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
           >
             <Printer className="w-4 h-4" />
             <span>Cetak Rekap</span>
@@ -2098,7 +2341,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
             <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => handlePrintStaffSlip(selectedStaffForSlip)}
                 className="px-4 py-2 text-xs font-bold border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5 text-slate-500" />
@@ -2293,7 +2536,7 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                 disabled={payoutLoading}
                 onClick={async () => {
                   if (!activeOutlet?.id) {
-                    alert('Toko / Outlet aktif tidak ditemukan');
+                    dialog.toast('Toko / Outlet aktif tidak ditemukan', 'error');
                     return;
                   }
                   setPayoutLoading(true);
@@ -2318,10 +2561,10 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                       fetchCommissions();
                       fetchAdvances();
                     } else {
-                      alert(`Gagal mencatat pencairan komisi: ${res.message}`);
+                      dialog.toast(`Gagal mencatat pencairan komisi: ${res.message}`, 'error');
                     }
                   } catch (err: any) {
-                    alert(`Terjadi kesalahan: ${err?.message || 'Gagal menghubungi server'}`);
+                    dialog.toast(`Terjadi kesalahan: ${err?.message || 'Gagal menghubungi server'}`, 'error');
                   } finally {
                     setPayoutLoading(false);
                   }

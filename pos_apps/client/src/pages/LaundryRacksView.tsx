@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
+import { useDialog } from '../context/DialogContext';
 import type { LaundryRack, LaundryAutoReminderResult } from '../types/laundry';
 
 interface LaundryRacksViewProps {
@@ -146,6 +147,7 @@ const INITIAL_MOCK_RACKS: LaundryRack[] = [
 ];
 
 export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet }) => {
+  const dialog = useDialog();
   const [racks, setRacks] = useState<LaundryRack[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -206,10 +208,10 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
         setShowReminderModal(false);
         fetchRacks();
       } else {
-        alert(res.message || 'Gagal mengirim pengingat otomatis');
+        dialog.toast(res.message || 'Gagal mengirim pengingat otomatis', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem saat mengirim pengingat');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem saat mengirim pengingat', 'error');
     } finally {
       setReminderSubmitting(false);
     }
@@ -263,24 +265,40 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
     return count;
   }, [racks]);
 
-  const filteredRacks = racks.filter((rack) => {
-    const matchesCategory =
-      selectedCategory === 'ALL'
-        ? true
-        : selectedCategory === 'STAGNANT'
-        ? (rack.activeOrders || []).some((o) => getDaysInRack(o) >= 7)
-        : rack.category === selectedCategory;
-    const matchesSearch =
-      rack.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rack.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (rack.locationNote && rack.locationNote.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+  const filteredRacks = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return racks.filter((rack) => {
+      const matchesCategory =
+        selectedCategory === 'ALL'
+          ? true
+          : selectedCategory === 'STAGNANT'
+          ? (rack.activeOrders || []).some((o) => getDaysInRack(o) >= 7)
+          : rack.category === selectedCategory;
+      const matchesSearch =
+        !q ||
+        rack.code.toLowerCase().includes(q) ||
+        rack.name.toLowerCase().includes(q) ||
+        (rack.locationNote && rack.locationNote.toLowerCase().includes(q));
+      return matchesCategory && matchesSearch;
+    });
+  }, [racks, selectedCategory, searchQuery]);
+
+  // Sinkronkan panel detail kanan saat tab kategori, pencarian, atau daftar rak berubah
+  useEffect(() => {
+    setSelectedRack((prev) => {
+      if (filteredRacks.length === 0) return null;
+      if (prev) {
+        const matched = filteredRacks.find((r) => r.id === prev.id);
+        if (matched) return matched;
+      }
+      return filteredRacks[0];
+    });
+  }, [filteredRacks]);
 
   const handleSendWaReminder = (order: any, rack: LaundryRack) => {
     const phoneRaw = order.customerPhone;
     if (!phoneRaw) {
-      alert(`Nomor WhatsApp untuk pelanggan ${order.customerName} tidak tersedia`);
+      dialog.toast(`Nomor WhatsApp untuk pelanggan ${order.customerName} tidak tersedia`, 'error');
       return;
     }
     let cleanPhone = phoneRaw.replace(/[^0-9]/g, '');
@@ -691,6 +709,20 @@ export const LaundryRacksView: React.FC<LaundryRacksViewProps> = ({ activeOutlet
                   )}
                 </div>
               </>
+            ) : filteredRacks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center flex-1 py-12 text-center text-slate-500">
+                <Archive className="w-9 h-9 text-slate-300 mb-2.5" />
+                <p className="text-xs font-bold text-slate-700">
+                  {selectedCategory === 'STAGNANT'
+                    ? 'Tidak ada nota mengendap > 7 hari'
+                    : 'Tidak ada rak pada tab atau filter aktif'}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                  {selectedCategory === 'STAGNANT'
+                    ? 'Semua cucian siap diambil masih dalam batas waktu normal.'
+                    : 'Ubah tab kategori atau kata kunci pencarian untuk melihat rincian rak.'}
+                </p>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center flex-1 py-12 text-center text-slate-400">
                 <AlertCircle className="w-8 h-8 mb-2" />

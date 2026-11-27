@@ -673,7 +673,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 name: formName.trim(),
                 category: formCategory.trim() || (isAddon ? 'ADDON' : 'KILOAN'),
                 unit: formUnit.trim(),
-                price: parseFloat(formPrice) || 0,
+                price: Math.max(0, parseInt(String(formPrice).replace(/\D/g, ''), 10) || 0),
                 minOrderQty: isAddon ? 1 : formHasMinOrder ? parseFloat(formMinOrder) || 1 : 0,
                 durationHours: isAddon ? 0 : parseInt(formDuration, 10) || 48,
                 expressMultiplier: editingService?.expressMultiplier != null ? Number(editingService.expressMultiplier) : 1.0,
@@ -2352,26 +2352,21 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
 
                                 {/* 4. Tarif (Rp) */}
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                                        {formCategory === 'ADDON' ? 'Besaran Biaya Tambahan (Rp)' : 'Tarif Dasar (Rp)'}{' '}
-                                        <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
+                                    <CurrencyInput
+                                        label={formCategory === 'ADDON' ? 'Besaran Biaya Tambahan (Rp)' : 'Tarif Dasar (Rp)'}
                                         required
-                                        min="0"
-                                        step="500"
+                                        min={0}
                                         value={formPrice}
-                                        onChange={(e) => setFormPrice(e.target.value)}
-                                        className="w-full px-3 py-2 text-xs font-black rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-slate-50 focus:bg-white text-slate-900"
+                                        onChange={(numVal) => setFormPrice(String(numVal))}
+                                        placeholder={formCategory === 'ADDON' ? 'Contoh: Rp 5.000' : 'Contoh: Rp 8.000'}
+                                        helperText={
+                                            formCategory === 'ADDON'
+                                                ? formUnit === 'PER_KG'
+                                                    ? `+Rp ${Number(String(formPrice).replace(/\D/g, '') || 0).toLocaleString('id-ID')} / Kg cucian`
+                                                    : `+Rp ${Number(String(formPrice).replace(/\D/g, '') || 0).toLocaleString('id-ID')} flat per cucian`
+                                                : `Rp ${Number(String(formPrice).replace(/\D/g, '') || 0).toLocaleString('id-ID')} / ${formUnit}`
+                                        }
                                     />
-                                    <span className="text-[10px] text-slate-500 mt-1 block font-semibold">
-                                        {formCategory === 'ADDON'
-                                            ? formUnit === 'PER_KG'
-                                                ? `+Rp ${Number(formPrice || 0).toLocaleString('id-ID')} / Kg cucian`
-                                                : `+Rp ${Number(formPrice || 0).toLocaleString('id-ID')} flat per cucian`
-                                            : `Rp ${Number(formPrice || 0).toLocaleString('id-ID')} / ${formUnit}`}
-                                    </span>
                                 </div>
 
                                 {/* 5. Khusus LAYANAN UTAMA: Durasi Pengerjaan */}

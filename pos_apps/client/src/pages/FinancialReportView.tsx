@@ -200,30 +200,101 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
 
   return (
     <div className="space-y-6 pb-28 sm:pb-16 font-sans">
+      {/* Header Banner (Selalu paling atas sesuai standar layout) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
+        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+          <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
+            <TrendingUp className="w-6 h-6 stroke-[2.5] shrink-0" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Laporan Penjualan &amp; Finansial
+              </h2>
+              {activeOutlet && !activeOutlet.isWarehouse && (
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-bold text-[10px]">
+                  <Store className="w-3 h-3 shrink-0" />
+                  <span>{activeOutlet.name}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Rekapitulasi pendapatan omset (Net Revenue), arus kas pembayaran kasir, pajak PPN, dan kontribusi kanal penjualan.
+            </p>
+          </div>
+        </div>
+
+        {activeReportSubTab === 'pnl' && (
+          <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
+            <button
+              onClick={() => {
+                if (isLocked) {
+                  setUpgradeModalOpen(true);
+                  return;
+                }
+                window.print();
+              }}
+              disabled={!data && !isLocked}
+              title={!data && !isLocked ? 'Tersedia otomatis setelah data laporan dimuat' : 'Cetak Laporan Finansial'}
+              className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                isLocked
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              {isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Printer className="w-4 h-4" />}
+              <span>Cetak</span>
+              {isLocked && <span className="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded text-[9px] font-black">PRO</span>}
+            </button>
+
+            <button
+              onClick={() => {
+                if (isLocked) {
+                  setUpgradeModalOpen(true);
+                  return;
+                }
+                handleExportCSV();
+              }}
+              disabled={!data && !isLocked}
+              title={!data && !isLocked ? 'Tersedia otomatis setelah data laporan dimuat' : 'Ekspor Laporan Finansial ke CSV'}
+              className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                isLocked
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                  : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
+              }`}
+            >
+              {isLocked ? <Lock className="w-4 h-4" /> : <Download className="w-4 h-4 stroke-[2.5]" />}
+              <span>Ekspor CSV</span>
+              {isLocked && <span className="px-1.5 py-0.5 bg-white/20 text-white rounded text-[9px] font-black">PRO</span>}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Subtab Navigation: Laba Rugi vs Arus Kas */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 no-print w-full sm:w-fit">
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 no-print w-full sm:w-fit overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => handleSubTabChange('pnl')}
-          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeReportSubTab === 'pnl'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
-          <TrendingUp className="w-4 h-4" />
+          <TrendingUp className="w-4 h-4 shrink-0" />
           <span>Laba Rugi &amp; Finansial (P&amp;L)</span>
         </button>
         <button
           type="button"
           onClick={() => handleSubTabChange('cashflow')}
-          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeReportSubTab === 'cashflow'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
-          <Banknote className="w-4 h-4" />
+          <Banknote className="w-4 h-4 shrink-0" />
           <span>Arus Kas Riil &amp; Performa Toko</span>
         </button>
       </div>
@@ -232,72 +303,6 @@ export const FinancialReportView: React.FC<FinancialReportViewProps> = ({ active
         <CashFlowReportTab activeOutlet={activeOutlet} />
       ) : (
         <>
-          {/* Header Banner */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm no-print">
-            <div className="flex items-center gap-3.5 min-w-0 flex-1">
-              <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
-                <TrendingUp className="w-6 h-6 stroke-[2.5] shrink-0" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    Laporan Penjualan &amp; Finansial
-                  </h2>
-                  {activeOutlet && !activeOutlet.isWarehouse && (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-bold text-[10px]">
-                      <Store className="w-3 h-3 shrink-0" />
-                      <span>{activeOutlet.name}</span>
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Rekapitulasi pendapatan omset (*Net Revenue*), arus kas pembayaran kasir, pajak PPN, dan kontribusi kanal penjualan.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
-              <button
-                onClick={() => {
-                  if (isLocked) {
-                    setUpgradeModalOpen(true);
-                    return;
-                  }
-                  window.print();
-                }}
-                disabled={!data && !isLocked}
-                className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-                  isLocked
-                    ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              >
-                {isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Printer className="w-4 h-4" />}
-                <span>Cetak</span>
-                {isLocked && <span className="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded text-[9px] font-black">PRO</span>}
-              </button>
-
-              <button
-                onClick={() => {
-                  if (isLocked) {
-                    setUpgradeModalOpen(true);
-                    return;
-                  }
-                  handleExportCSV();
-                }}
-                disabled={!data && !isLocked}
-                className={`flex-1 sm:flex-initial justify-center h-10 px-4 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer ${
-                  isLocked
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                    : 'bg-blue-900 hover:bg-blue-950 text-white shadow-blue-900/20'
-                }`}
-              >
-                {isLocked ? <Lock className="w-4 h-4" /> : <Download className="w-4 h-4 stroke-[2.5]" />}
-                <span>Ekspor CSV</span>
-                {isLocked && <span className="px-1.5 py-0.5 bg-white/20 text-white rounded text-[9px] font-black">PRO</span>}
-              </button>
-            </div>
-          </div>
 
           {/* Filter Controls Toolbar */}
           <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 no-print">

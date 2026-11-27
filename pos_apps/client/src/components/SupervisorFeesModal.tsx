@@ -14,6 +14,7 @@ import {
   Edit2,
   Check,
   Utensils,
+  Truck,
   ChevronDown,
 } from 'lucide-react';
 import type { Outlet, OutletFee, FeeType, FeeChannelScope, FeeCategory } from '../types/outlet';
@@ -21,6 +22,7 @@ import { normalizeOutletFees } from '../types/outlet';
 import { api } from '../services/api';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { useDialog } from '../context/DialogContext';
+import { checkIsLaundry } from '../utils/businessType';
 
 interface SupervisorFeesModalProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ interface SupervisorFeesModalProps {
   isDirectAuthorized?: boolean; // True if opened by Admin/Owner directly without PIN
   currentUserRole?: string;
   initialTab?: 'TAX' | 'SERVICE' | 'PACKAGING';
+  isLaundryMode?: boolean;
 }
 
 export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
@@ -40,8 +43,10 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
   isDirectAuthorized = false,
   currentUserRole,
   initialTab = 'TAX',
+  isLaundryMode: propIsLaundryMode,
 }) => {
   const dialog = useDialog();
+  const effectiveIsLaundry = propIsLaundryMode ?? checkIsLaundry(outlet);
   const isRoleDirect =
     isDirectAuthorized ||
     currentUserRole === 'ADMIN' ||
@@ -91,10 +96,10 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
       setFeeToDelete(null);
       setActiveTab(initialTab || 'TAX');
 
-      setFees(normalizeOutletFees(outlet?.feesConfig));
+      setFees(normalizeOutletFees(outlet?.feesConfig, effectiveIsLaundry));
     }
     wasOpenRef.current = isOpen;
-  }, [isOpen, outlet, isRoleDirect, initialTab]);
+  }, [isOpen, outlet, isRoleDirect, initialTab, effectiveIsLaundry]);
 
   // Handle PIN verification
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -368,7 +373,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                 }`}
               >
                 <Building2 className="w-3.5 h-3.5 text-blue-900" />
-                <span>Pajak (PB1)</span>
+                <span>{effectiveIsLaundry ? 'Pajak (PPN)' : 'Pajak (PB1)'}</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-900 font-extrabold">
                   {taxFees.length}
                 </span>
@@ -386,7 +391,11 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
-                <Utensils className="w-3.5 h-3.5 text-emerald-600" />
+                {effectiveIsLaundry ? (
+                  <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <Utensils className="w-3.5 h-3.5 text-emerald-600" />
+                )}
                 <span>Biaya Layanan &amp; Kurir</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-900 font-extrabold">
                   {serviceFees.length}
@@ -406,7 +415,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                 }`}
               >
                 <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
-                <span>Kemasan Kasir</span>
+                <span>{effectiveIsLaundry ? 'Kemasan & Hanger' : 'Kemasan Kasir'}</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 font-extrabold">
                   {packagingFees.length}
                 </span>
@@ -414,23 +423,35 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
             </div>
 
             {/* Tab Body */}
-            <div className="p-5 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+            <div className="p-5 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain">
               {/* Context info banner */}
               <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-blue-950 text-xs flex items-start gap-2.5">
                 <Sliders className="w-4 h-4 text-blue-900 mt-0.5 shrink-0" />
                 <div>
                   <span className="font-bold">
                     {activeTab === 'TAX'
-                      ? 'Pajak Daerah Restoran (PB1 / PBJT):'
+                      ? effectiveIsLaundry
+                        ? 'Pajak Layanan Laundry (PPN):'
+                        : 'Pajak Daerah Restoran (PB1 / PBJT):'
                       : activeTab === 'SERVICE'
-                      ? 'Biaya Layanan & Operasional Restoran:'
+                      ? effectiveIsLaundry
+                        ? 'Biaya Layanan & Kurir Laundry:'
+                        : 'Biaya Layanan & Operasional Restoran:'
+                      : effectiveIsLaundry
+                      ? 'Kemasan, Hanger & Cover Cucian (On-Demand):'
                       : 'Kemasan & Wadah Bawa Pulang (On-Demand):'}
                   </span>
                   <p className="text-slate-600 mt-0.5 leading-relaxed">
                     {activeTab === 'TAX'
-                      ? 'Pajak dipungut otomatis saat checkout dan disetorkan ke Bapenda (bukan hak/omzet restoran).'
+                      ? effectiveIsLaundry
+                        ? 'Pajak PPN dipungut otomatis saat checkout nota cucian dan disetorkan sesuai ketentuan perpajakan (bukan omzet toko).'
+                        : 'Pajak dipungut otomatis saat checkout dan disetorkan ke Bapenda (bukan hak/omzet restoran).'
                       : activeTab === 'SERVICE'
-                      ? 'Biaya operasional tambahan yang menjadi pendapatan toko (Service Charge, Ongkir Kurir Toko, Platform).'
+                      ? effectiveIsLaundry
+                        ? 'Biaya operasional tambahan yang menjadi pendapatan outlet laundry (Biaya Penanganan, Ongkir Kurir Jemput/Antar).'
+                        : 'Biaya operasional tambahan yang menjadi pendapatan toko (Service Charge, Ongkir Kurir Toko, Platform).'
+                      : effectiveIsLaundry
+                      ? 'Biaya plastik laundry, hanger, cover jas, atau tas spunbond yang dipilih kasir saat checkout. Tandai ⭐ Akses Cepat pada 4 item terfavorit.'
                       : 'Biaya kemasan dipilih kasir sesuai pesanan. Tandai ⭐ Akses Cepat pada 4 kemasan terfavorit untuk tampil di keranjang kasir.'}
                   </p>
                 </div>
@@ -522,13 +543,22 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                                 className="text-[10px] font-bold pl-2 pr-5 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700 outline-none cursor-pointer appearance-none"
                               >
                                 <option value="ALL">Semua Saluran</option>
-                                <option value="DINE_IN">Makan di Tempat (Dine In)</option>
-                                <option value="TAKEAWAY">Bawa Pulang (Take Away)</option>
-                                <option value="DELIVERY">Kurir Toko (Delivery)</option>
-                                <option value="ONLINE_DELIVERY">Semua Mitra Online</option>
-                                <option value="GOFOOD">Khusus GoFood</option>
-                                <option value="GRABFOOD">Khusus GrabFood</option>
-                                <option value="SHOPEEFOOD">Khusus ShopeeFood</option>
+                                {effectiveIsLaundry ? (
+                                  <>
+                                    <option value="TAKEAWAY">Drop-off Toko</option>
+                                    <option value="DELIVERY">Kurir Antar-Jemput (Delivery)</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="DINE_IN">Makan di Tempat (Dine In)</option>
+                                    <option value="TAKEAWAY">Bawa Pulang (Take Away)</option>
+                                    <option value="DELIVERY">Kurir Toko (Delivery)</option>
+                                    <option value="ONLINE_DELIVERY">Semua Mitra Online</option>
+                                    <option value="GOFOOD">Khusus GoFood</option>
+                                    <option value="GRABFOOD">Khusus GrabFood</option>
+                                    <option value="SHOPEEFOOD">Khusus ShopeeFood</option>
+                                  </>
+                                )}
                               </select>
                               <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
@@ -679,9 +709,13 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                   <div className="flex items-center justify-between">
                     <h5 className="font-bold text-xs text-blue-950 uppercase tracking-wider">
                       {activeTab === 'TAX'
-                        ? '+ Tambah Komponen Pajak Daerah Baru'
+                        ? effectiveIsLaundry
+                          ? '+ Tambah Komponen Pajak (PPN) Baru'
+                          : '+ Tambah Komponen Pajak Daerah Baru'
                         : activeTab === 'SERVICE'
                         ? '+ Tambah Biaya Layanan / Kurir Baru'
+                        : effectiveIsLaundry
+                        ? '+ Tambah Kemasan / Hanger Laundry Baru'
                         : '+ Tambah Kemasan / Biaya On-Demand Baru'}
                     </h5>
                     <button
@@ -699,6 +733,8 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                         ? 'Nama Komponen Pajak'
                         : activeTab === 'SERVICE'
                         ? 'Nama Biaya Layanan / Operasional'
+                        : effectiveIsLaundry
+                        ? 'Nama Kemasan / Perlengkapan Laundry'
                         : 'Nama Kemasan / Wadah Kasir'}
                     </label>
                     <input
@@ -706,9 +742,15 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                       required
                       placeholder={
                         activeTab === 'TAX'
-                          ? 'Contoh: PB1 Pajak Restoran Daerah 10%'
+                          ? effectiveIsLaundry
+                            ? 'Contoh: PPN Layanan Laundry 11%'
+                            : 'Contoh: PB1 Pajak Restoran Daerah 10%'
                           : activeTab === 'SERVICE'
-                          ? 'Contoh: Service Charge Meja, Ongkir Kurir Toko'
+                          ? effectiveIsLaundry
+                            ? 'Contoh: Biaya Layanan Khusus, Ongkir Kurir Laundry'
+                            : 'Contoh: Service Charge Meja, Ongkir Kurir Toko'
+                          : effectiveIsLaundry
+                          ? 'Contoh: Cover Plastik Jas, Tas Laundry Spunbond'
                           : 'Contoh: Kantong Plastik Jumbo, Box Dus Besar'
                       }
                       value={newFeeName}
@@ -747,13 +789,22 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                               className="w-full pl-3 pr-9 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 outline-none appearance-none cursor-pointer focus:border-blue-900 focus:ring-1 focus:ring-blue-900"
                             >
                               <option value="ALL">Semua Saluran</option>
-                              <option value="DINE_IN">Makan di Tempat (Dine In)</option>
-                              <option value="TAKEAWAY">Bawa Pulang (Take Away)</option>
-                              <option value="DELIVERY">Kurir Toko (Delivery)</option>
-                              <option value="ONLINE_DELIVERY">Semua Mitra Online</option>
-                              <option value="GOFOOD">Khusus GoFood</option>
-                              <option value="GRABFOOD">Khusus GrabFood</option>
-                              <option value="SHOPEEFOOD">Khusus ShopeeFood</option>
+                              {effectiveIsLaundry ? (
+                                <>
+                                  <option value="TAKEAWAY">Drop-off Toko</option>
+                                  <option value="DELIVERY">Kurir Antar-Jemput (Delivery)</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="DINE_IN">Makan di Tempat (Dine In)</option>
+                                  <option value="TAKEAWAY">Bawa Pulang (Take Away)</option>
+                                  <option value="DELIVERY">Kurir Toko (Delivery)</option>
+                                  <option value="ONLINE_DELIVERY">Semua Mitra Online</option>
+                                  <option value="GOFOOD">Khusus GoFood</option>
+                                  <option value="GRABFOOD">Khusus GrabFood</option>
+                                  <option value="SHOPEEFOOD">Khusus ShopeeFood</option>
+                                </>
+                              )}
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                           </div>
@@ -826,7 +877,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
                   onClick={() => {
                     setShowAddForm(true);
                     setNewFeeName('');
-                    setNewFeeRate(activeTab === 'TAX' ? 10 : activeTab === 'SERVICE' ? 5 : 1000);
+                    setNewFeeRate(activeTab === 'TAX' ? (effectiveIsLaundry ? 11 : 10) : activeTab === 'SERVICE' ? 5 : 1000);
                   }}
                   className="w-full py-2.5 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 text-slate-600 hover:text-blue-900 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs"
                 >
@@ -846,7 +897,7 @@ export const SupervisorFeesModal: React.FC<SupervisorFeesModalProps> = ({
 
         {/* Footer Actions */}
         {pinAuthorized && (
-          <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+          <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}

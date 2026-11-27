@@ -608,14 +608,20 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
 
         {/* Action Buttons: Khusus untuk Sub-Tab Faktur Penjualan */}
         {activeSubTab === 'invoices' && (
-          <div className="flex items-center gap-2 self-start lg:self-auto overflow-x-auto scrollbar-none w-full lg:w-auto shrink-0 pb-0.5 lg:pb-0">
+          <div className="flex items-center flex-wrap gap-2 w-full lg:w-auto shrink-0">
             {/* Tombol Ringkasan WhatsApp */}
             <button
               type="button"
               onClick={() => setWhatsappModalOpen(true)}
               disabled={loading || shiftFilteredOrders.length === 0}
-              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
-              title="Kirim atau Salin Ringkasan Penjualan ke WhatsApp"
+              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+              title={
+                loading
+                  ? 'Memuat data transaksi...'
+                  : shiftFilteredOrders.length === 0
+                  ? 'Tersedia otomatis setelah ada data transaksi pada periode terpilih'
+                  : 'Kirim atau Salin Ringkasan Penjualan ke WhatsApp'
+              }
             >
               <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Ringkasan WA</span>
@@ -634,8 +640,14 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 });
               }}
               disabled={loading || filteredOrders.length === 0}
-              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
-              title="Ekspor Daftar Faktur Penjualan ke Excel / CSV"
+              className="h-10 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+              title={
+                loading
+                  ? 'Memuat data transaksi...'
+                  : filteredOrders.length === 0
+                  ? 'Tersedia otomatis setelah ada data transaksi pada periode terpilih'
+                  : 'Ekspor Daftar Faktur Penjualan ke Excel / CSV'
+              }
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Ekspor Faktur (Excel)</span>
@@ -653,8 +665,14 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
                 });
               }}
               disabled={loading || filteredOrders.length === 0}
-              className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-40 active:scale-95 cursor-pointer whitespace-nowrap"
-              title="Cetak Dokumen Daftar Faktur Penjualan (PDF)"
+              className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+              title={
+                loading
+                  ? 'Memuat data transaksi...'
+                  : filteredOrders.length === 0
+                  ? 'Tersedia otomatis setelah ada data transaksi pada periode terpilih'
+                  : 'Cetak Dokumen Daftar Faktur Penjualan (PDF)'
+              }
             >
               <FileText className="w-4 h-4 text-blue-900 shrink-0" />
               <span>Cetak Faktur (PDF)</span>
@@ -664,11 +682,11 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
       </div>
 
       {/* Sub-Tab Navigation Switcher */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none">
+      <div className="flex items-center flex-wrap gap-2 border-b border-slate-200 pb-3">
         <button
           type="button"
           onClick={() => setActiveSubTab('invoices')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'invoices'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
@@ -688,7 +706,7 @@ _Laporan otomatis dibuat dari Backoffice Well POS_`;
         <button
           type="button"
           onClick={() => setActiveSubTab('payment_items')}
-          className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+          className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
             activeSubTab === 'payment_items'
               ? 'bg-blue-900 text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'

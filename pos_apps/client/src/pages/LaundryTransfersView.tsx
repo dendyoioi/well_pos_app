@@ -20,11 +20,11 @@ import {
   X,
   Loader2,
   Trash2,
-  Share2,
   Bell,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api, authStorage } from '../services/api';
+import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { DriverAssignmentBoardPanel } from '../components/laundry/DriverAssignmentBoardPanel';
 import { NotificationAutomationModal } from '../components/laundry/NotificationAutomationModal';
 import type {
@@ -514,22 +514,6 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
               <span>Toko: {activeOutlet.name}</span>
             </div>
-          )}
-
-          {activeOutlet?.id && (
-            <button
-              type="button"
-              onClick={() => {
-                const portalUrl = `${window.location.origin}/#portal?outletId=${activeOutlet.id}`;
-                navigator.clipboard.writeText(portalUrl);
-                showToast('Tautan Portal Pelanggan berhasil disalin ke clipboard!');
-              }}
-              className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Salin link portal pelanggan untuk dibagikan via WhatsApp"
-            >
-              <Share2 className="w-4 h-4 text-blue-900" />
-              <span>Link Portal Pelanggan</span>
-            </button>
           )}
 
           {canAccessAutomation && (
@@ -1165,32 +1149,32 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
                 </div>
 
                 {/* Gratis Ongkir Thresholds */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">
-                      Gratis Ongkir Min. Belanja (Rp)
-                    </label>
-                    <input
-                      type="number"
+                    <CurrencyInput
+                      label="Gratis Ongkir Min. Belanja (Rp)"
                       value={configDraft.freeDeliveryMinAmount}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, freeDeliveryMinAmount: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, freeDeliveryMinAmount: numVal })
                       }
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono text-xs focus:outline-none focus:border-blue-900"
+                      placeholder="Contoh: 50.000"
+                      className="w-full"
+                      inputClassName="py-2 text-xs font-mono font-bold border-slate-200"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">
+                    <label className="font-bold text-slate-700 text-xs uppercase tracking-wider block mb-1.5">
                       Gratis Ongkir Min. Berat (Kg)
                     </label>
                     <input
                       type="number"
                       step="0.5"
+                      min="0"
                       value={configDraft.freeDeliveryMinWeightKg}
                       onChange={(e) =>
                         setConfigDraft({ ...configDraft, freeDeliveryMinWeightKg: Number(e.target.value) || 0 })
                       }
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono text-xs focus:outline-none focus:border-blue-900"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-mono text-xs font-bold focus:outline-none focus:border-blue-900"
                     />
                   </div>
                 </div>
@@ -1243,7 +1227,7 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
                         key={zone.id || idx}
                         className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                           <input
                             type="text"
                             value={zone.name}
@@ -1253,18 +1237,19 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
                               updated[idx].name = e.target.value;
                               setConfigDraft({ ...configDraft, zones: updated });
                             }}
-                            className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-bold"
+                            className="flex-1 min-w-[140px] px-2.5 py-2 bg-white border border-slate-200 rounded-lg font-bold"
                           />
-                          <input
-                            type="number"
+                          <CurrencyInput
                             value={zone.fee}
-                            placeholder="Tarif (Rp)"
-                            onChange={(e) => {
+                            placeholder="Tarif"
+                            onChange={(numVal) => {
                               const updated = [...configDraft.zones];
-                              updated[idx].fee = Number(e.target.value) || 0;
+                              updated[idx].fee = numVal;
                               setConfigDraft({ ...configDraft, zones: updated });
                             }}
-                            className="w-28 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-mono"
+                            className="w-36 sm:w-40 shrink-0"
+                            inputClassName="py-1.5 pl-11 pr-2.5 text-xs font-mono font-bold bg-white border-slate-200 rounded-lg"
+                            prefixClassName="left-2 py-0.5 px-1.5 text-[10px]"
                           />
                           <button
                             type="button"
@@ -1272,7 +1257,8 @@ export const LaundryTransfersView: React.FC<LaundryTransfersViewProps> = ({ acti
                               const updated = configDraft.zones.filter((_, i) => i !== idx);
                               setConfigDraft({ ...configDraft, zones: updated });
                             }}
-                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer"
+                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer shrink-0"
+                            title="Hapus Zona"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

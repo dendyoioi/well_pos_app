@@ -78,31 +78,37 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
   // Inisialisasi data dari activeOutlet
   useEffect(() => {
     if (activeOutlet) {
-      const normalized = normalizeOutletFees(activeOutlet.feesConfig);
+      const normalized = normalizeOutletFees(activeOutlet.feesConfig, isLaundryMode);
       setFees(normalized);
     }
-  }, [activeOutlet?.id, activeOutlet?.feesConfig]);
+  }, [activeOutlet?.id, activeOutlet?.feesConfig, isLaundryMode]);
 
   // Klasifikasi data terpisah 100%
   const taxFees = useMemo(() => fees.filter(isTaxFee), [fees]);
   const serviceFees = useMemo(() => fees.filter(isServiceFee), [fees]);
   const packagingFees = useMemo(() => fees.filter(isPackagingFee), [fees]);
   const effectivePackagingList = useMemo(() => {
-    return packagingFees.length > 0
-      ? packagingFees
-      : [
-          { id: 'fee_plastic_s', name: 'Plastik / Kresek Sedang', rate: 500, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
-          { id: 'fee_box', name: 'Box Kemasan / Mika', rate: 2000, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
-          { id: 'fee_paperbag', name: 'Paper Bag Kraft', rate: 3000, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
-        ];
-  }, [packagingFees]);
+    if (packagingFees.length > 0) return packagingFees;
+    if (isLaundryMode) {
+      return [
+        { id: 'fee_plastic_s', name: 'Plastik / Kresek Laundry', rate: 500, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
+        { id: 'fee_hanger', name: 'Hanger Baju / Jas', rate: 2000, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
+        { id: 'fee_cover_jas', name: 'Cover Plastik Jas / Gaun', rate: 3000, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
+      ];
+    }
+    return [
+      { id: 'fee_plastic_s', name: 'Plastik / Kresek Sedang', rate: 500, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
+      { id: 'fee_box', name: 'Box Kemasan / Mika', rate: 2000, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
+      { id: 'fee_paperbag', name: 'Paper Bag Kraft', rate: 3000, category: 'ON_DEMAND_PACKAGING' as FeeCategory, type: 'FIXED' as FeeType, channelScope: 'ALL' as FeeChannelScope, isActive: true },
+    ];
+  }, [packagingFees, isLaundryMode]);
 
   // Tax item utama
   const primaryTax = taxFees[0] || {
     id: 'fee_tax',
-    name: 'PPN / PB1 Pajak Restoran',
+    name: isLaundryMode ? 'PPN Layanan Laundry' : 'PPN / PB1 Pajak Restoran',
     type: 'PERCENTAGE' as FeeType,
-    rate: 10,
+    rate: isLaundryMode ? 11 : 10,
     channelScope: 'ALL' as FeeChannelScope,
     isActive: false,
     category: 'DEFAULT_TAX_SERVICE' as FeeCategory,
@@ -127,7 +133,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
   const [newServiceName, setNewServiceName] = useState('');
   const [newServiceType, setNewServiceType] = useState<FeeType>('PERCENTAGE');
   const [newServiceRate, setNewServiceRate] = useState<number>(5);
-  const [newServiceScope, setNewServiceScope] = useState<FeeChannelScope>('DINE_IN');
+  const [newServiceScope, setNewServiceScope] = useState<FeeChannelScope>(isLaundryMode ? 'ALL' : 'DINE_IN');
 
   // Form Penambahan Kemasan Baru
   const [showAddPackagingForm, setShowAddPackagingForm] = useState(false);
@@ -147,8 +153,8 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
   );
   const [simSelectedPackaging, setSimSelectedPackaging] = useState<string[]>(['fee_plastic_s']);
   const [simApplyTax, setSimApplyTax] = useState<boolean>(true);
-  const [simTaxRate, setSimTaxRate] = useState<number>(primaryTax.rate || 10);
-  const [simApplyService, setSimApplyService] = useState<boolean>(true);
+  const [simTaxRate, setSimTaxRate] = useState<number>(primaryTax.rate || (isLaundryMode ? 11 : 10));
+  const [simApplyService, setSimApplyService] = useState<boolean>(!isLaundryMode);
   const [simServiceRate, setSimServiceRate] = useState<number>(5);
 
   // Hitung jumlah pin aktif kemasan
@@ -193,7 +199,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
   const handleSaveTax = () => {
     const updatedTax: OutletFee = {
       ...primaryTax,
-      name: taxName.trim() || 'PPN / PB1 Pajak Restoran',
+      name: taxName.trim() || (isLaundryMode ? 'PPN Layanan Laundry' : 'PPN / PB1 Pajak Restoran'),
       rate: Math.max(0, Number(taxRate)),
       channelScope: taxScope,
       isActive: taxIsActive,
@@ -289,7 +295,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
     if (isProtectedDefault) {
       dialog.alert({
         title: 'Komponen Bawaan Sistem',
-        message: `Komponen "${fee.name}" adalah komponen standar pajak dan tidak dapat dihapus. Anda dapat menonaktifkannya melalui tombol status toggle di Tab Pajak Restoran.`,
+        message: `Komponen "${fee.name}" adalah komponen standar pajak dan tidak dapat dihapus. Anda dapat menonaktifkannya melalui tombol status toggle di Tab Pajak.`,
         variant: 'info',
       });
       return;
@@ -405,7 +411,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
               <Percent className="w-5 h-5 text-blue-900" />
-              <span>Pajak Restoran &amp; Biaya Operasional Toko</span>
+              <span>{isLaundryMode ? 'Pajak (PPN) & Biaya Operasional Laundry' : 'Pajak Restoran & Biaya Operasional Toko'}</span>
             </h2>
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center gap-1 font-sans whitespace-nowrap shrink-0">
               <Store className="w-3 h-3 text-blue-800 shrink-0" />
@@ -413,7 +419,11 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Pemisahan transparan antara <strong>Pajak Daerah (PB1)</strong> titipan pemerintah dengan <strong>Biaya Layanan &amp; Kemasan</strong> operasional restoran.
+            {isLaundryMode ? (
+              <>Pemisahan transparan antara <strong>Pajak Layanan (PPN)</strong> titipan pemerintah dengan <strong>Biaya Layanan, Kurir &amp; Kemasan</strong> operasional laundry.</>
+            ) : (
+              <>Pemisahan transparan antara <strong>Pajak Daerah (PB1)</strong> titipan pemerintah dengan <strong>Biaya Layanan &amp; Kemasan</strong> operasional restoran.</>
+            )}
           </p>
         </div>
 
@@ -444,7 +454,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5" />
-              Pajak Daerah (PB1)
+              {isLaundryMode ? 'Pajak Layanan (PPN)' : 'Pajak Daerah (PB1)'}
             </span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
@@ -457,10 +467,10 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             </span>
           </div>
           <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-            {primaryTax.isActive ? `${primaryTax.rate}% PB1` : '0% (Non-aktif)'}
+            {primaryTax.isActive ? `${primaryTax.rate}% ${isLaundryMode ? 'PPN' : 'PB1'}` : '0% (Non-aktif)'}
           </p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">
-            Pungutan Pemda (Bapenda), bukan omzet toko
+            {isLaundryMode ? 'Titipan pajak (PPN), bukan omzet toko' : 'Pungutan Pemda (Bapenda), bukan omzet toko'}
           </p>
         </div>
 
@@ -476,7 +486,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1">
               <Percent className="w-3.5 h-3.5" />
-              Service Charge
+              {isLaundryMode ? 'Biaya Penanganan' : 'Service Charge'}
             </span>
             {(() => {
               const svc = serviceFees.find(
@@ -513,7 +523,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             })()}
           </p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">
-            Tips staf &amp; operasional meja makan
+            {isLaundryMode ? 'Biaya layanan & penanganan khusus cucian' : 'Tips staf & operasional meja makan'}
           </p>
         </div>
 
@@ -529,7 +539,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1">
               <Bike className="w-3.5 h-3.5" />
-              Kurir &amp; Platform
+              {isLaundryMode ? 'Kurir Antar-Jemput' : 'Kurir & Platform'}
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-mono">
               {
@@ -543,10 +553,10 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             </span>
           </div>
           <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-            Ongkir &amp; Online
+            {isLaundryMode ? 'Ongkir Kurir' : 'Ongkir & Online'}
           </p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">
-            Biaya flat pengantaran kurir &amp; mitra
+            {isLaundryMode ? 'Biaya pengantaran & penjemputan kurir laundry' : 'Biaya flat pengantaran kurir & mitra'}
           </p>
         </div>
 
@@ -562,7 +572,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
               <Package className="w-3.5 h-3.5" />
-              Kemasan Takeaway
+              {isLaundryMode ? 'Kemasan & Hanger' : 'Kemasan Takeaway'}
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1 font-mono">
               <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
@@ -570,10 +580,10 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             </span>
           </div>
           <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-            {packagingFees.length} Wadah
+            {packagingFees.length} {isLaundryMode ? 'Item' : 'Wadah'}
           </p>
           <p className="text-[11px] text-slate-400 font-medium mt-1">
-            Add-on kantong / box di keranjang kasir
+            {isLaundryMode ? 'Add-on plastik, hanger, atau cover jas di kasir' : 'Add-on kantong / box di keranjang kasir'}
           </p>
         </div>
       </div>
@@ -590,7 +600,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           }`}
         >
           <Building2 className="w-4 h-4 shrink-0" />
-          <span>1. Pajak Restoran (PB1 / Daerah)</span>
+          <span>{isLaundryMode ? '1. Pajak Layanan (PPN)' : '1. Pajak Restoran (PB1 / Daerah)'}</span>
           {primaryTax.isActive && (
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
           )}
@@ -619,7 +629,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
           }`}
         >
           <Package className="w-4 h-4 shrink-0" />
-          <span>3. Kemasan &amp; Wadah Kasir ({packagingFees.length})</span>
+          <span>3. {isLaundryMode ? 'Kemasan, Hanger & Cover' : 'Kemasan & Wadah Kasir'} ({packagingFees.length})</span>
         </button>
 
         <button
@@ -646,11 +656,13 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-900"></span>
                   <h3 className="font-extrabold text-base text-slate-900">
-                    Konfigurasi Pajak Daerah (PB1 / PBJT Makanan &amp; Minuman)
+                    {isLaundryMode ? 'Konfigurasi Pajak Layanan Laundry (PPN)' : 'Konfigurasi Pajak Daerah (PB1 / PBJT Makanan & Minuman)'}
                   </h3>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Pajak ini otomatis dipungut oleh kasir saat checkout dan disetorkan pemilik usaha ke Badan Pendapatan Daerah (Bapenda).
+                  {isLaundryMode
+                    ? 'Pajak ini otomatis dipungut oleh kasir saat checkout cucian dan disetorkan pemilik usaha sesuai ketentuan perpajakan.'
+                    : 'Pajak ini otomatis dipungut oleh kasir saat checkout dan disetorkan pemilik usaha ke Badan Pendapatan Daerah (Bapenda).'}
                 </p>
               </div>
 
@@ -694,7 +706,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                   type="text"
                   value={taxName}
                   onChange={(e) => setTaxName(e.target.value)}
-                  placeholder="Contoh: PPN / PB1 Pajak Restoran"
+                  placeholder={isLaundryMode ? 'Contoh: PPN Layanan Laundry' : 'Contoh: PPN / PB1 Pajak Restoran'}
                   className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
                 />
                 <span className="text-[11px] text-slate-400 mt-1 block font-medium">
@@ -725,34 +737,69 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 {/* Preset Cepat */}
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   <span className="text-[10px] font-bold text-slate-400">Preset:</span>
-                  <button
-                    type="button"
-                    onClick={() => setTaxRate(10)}
-                    className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 hover:bg-blue-100 text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    10% PB1 (Umum)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTaxRate(11)}
-                    className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    11% PPN Pusat
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTaxRate(5)}
-                    className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    5% Khusus
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTaxRate(0)}
-                    className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    0% Bebas
-                  </button>
+                  {isLaundryMode ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(11)}
+                        className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 hover:bg-blue-100 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        11% PPN (Umum)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(10)}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        10% Khusus
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(5)}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        5% Khusus
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(0)}
+                        className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        0% Bebas
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(10)}
+                        className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 hover:bg-blue-100 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        10% PB1 (Umum)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(11)}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        11% PPN Pusat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(5)}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        5% Khusus
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTaxRate(0)}
+                        className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        0% Bebas
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -768,14 +815,23 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                     className="w-full h-10 pl-3.5 pr-10 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs sm:text-sm font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all cursor-pointer"
                   >
                     <option value="ALL">Semua Transaksi Kasir (Rekomendasi)</option>
-                    <option value="DINE_IN">Khusus Makan di Tempat (Dine In)</option>
-                    <option value="TAKEAWAY">Khusus Bungkus (Takeaway)</option>
-                    <option value="DELIVERY">Khusus Pesanan Diantar (Delivery)</option>
+                    {isLaundryMode ? (
+                      <>
+                        <option value="TAKEAWAY">Khusus Drop-off Toko</option>
+                        <option value="DELIVERY">Khusus Kurir Antar-Jemput (Delivery)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="DINE_IN">Khusus Makan di Tempat (Dine In)</option>
+                        <option value="TAKEAWAY">Khusus Bungkus (Takeaway)</option>
+                        <option value="DELIVERY">Khusus Pesanan Diantar (Delivery)</option>
+                      </>
+                    )}
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
                 <span className="text-[11px] text-slate-400 mt-1 block font-medium">
-                  Umumnya pajak restoran berlaku untuk seluruh tipe pesanan.
+                  {isLaundryMode ? 'Umumnya pajak berlaku untuk seluruh tipe order laundry.' : 'Umumnya pajak restoran berlaku untuk seluruh tipe pesanan.'}
                 </span>
               </div>
             </div>
@@ -806,21 +862,41 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Kotak Edukasi Regulasi UU Pajak Daerah */}
+          {/* Kotak Edukasi Regulasi Pajak */}
           <div className="p-5 rounded-3xl bg-blue-50/70 border border-blue-200/80 text-blue-950 space-y-2">
-            <div className="flex items-center gap-2 font-black text-sm text-blue-900">
-              <HelpCircle className="w-4 h-4 text-blue-800" />
-              <span>Panduan Regulasi Resmi Pajak Restoran (UU No. 1 Tahun 2022 - HKPD):</span>
-            </div>
-            <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
-              1. <strong>Bukan PPN Kemenkeu:</strong> Makanan dan minuman yang disediakan di restoran, rumah makan, kafe, dan bar merupakan objek <strong>Pajak Barang dan Jasa Tertentu (PBJT)</strong> daerah dengan tarif maksimal <strong>10%</strong>.
-            </p>
-            <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
-              2. <strong>Dasar Pengenaan Pajak (DPP):</strong> Sesuai regulasi, PB1 10% dihitung dari <strong>(Subtotal Penjualan + Biaya Layanan / Service Charge)</strong>.
-            </p>
-            <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
-              3. <strong>Penyetoran:</strong> Pajak yang dipungut dari konsumen ini wajib dilaporkan dan disetorkan ke Bapenda setempat setiap bulannya.
-            </p>
+            {isLaundryMode ? (
+              <>
+                <div className="flex items-center gap-2 font-black text-sm text-blue-900">
+                  <HelpCircle className="w-4 h-4 text-blue-800" />
+                  <span>Panduan Penerapan Pajak Jasa Laundry (PPN):</span>
+                </div>
+                <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
+                  1. <strong>Khusus PKP / Terdaftar PPN:</strong> Layanan cuci, setrika, dan perawatan pakaian dapat dikenakan <strong>PPN (11%)</strong> apabila outlet usaha Anda berstatus Pengusaha Kena Pajak (PKP). Jika belum PKP, biarkan toggle pajak dalam status <strong>Non-aktif</strong>.
+                </p>
+                <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
+                  2. <strong>Dasar Pengenaan Pajak (DPP):</strong> PPN dihitung dari subtotal layanan cucian ditambah biaya layanan/penanganan sebelum pembulatan akhir.
+                </p>
+                <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
+                  3. <strong>Pemisahan Omzet:</strong> Nominal PPN yang dipungut di nota dicatat terpisah dari omzet bersih toko untuk memudahkan pelaporan SPT Masa PPN.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 font-black text-sm text-blue-900">
+                  <HelpCircle className="w-4 h-4 text-blue-800" />
+                  <span>Panduan Regulasi Resmi Pajak Restoran (UU No. 1 Tahun 2022 - HKPD):</span>
+                </div>
+                <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
+                  1. <strong>Bukan PPN Kemenkeu:</strong> Makanan dan minuman yang disediakan di restoran, rumah makan, kafe, dan bar merupakan objek <strong>Pajak Barang dan Jasa Tertentu (PBJT)</strong> daerah dengan tarif maksimal <strong>10%</strong>.
+                </p>
+                <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
+                  2. <strong>Dasar Pengenaan Pajak (DPP):</strong> Sesuai regulasi, PB1 10% dihitung dari <strong>(Subtotal Penjualan + Biaya Layanan / Service Charge)</strong>.
+                </p>
+                <p className="text-xs text-blue-900/90 leading-relaxed font-medium">
+                  3. <strong>Penyetoran:</strong> Pajak yang dipungut dari konsumen ini wajib dilaporkan dan disetorkan ke Bapenda setempat setiap bulannya.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -858,7 +934,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               <form onSubmit={handleAddService} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                    Tambah Biaya Operasional Resto Baru
+                    {isLaundryMode ? 'Tambah Biaya Operasional Laundry Baru' : 'Tambah Biaya Operasional Resto Baru'}
                   </h4>
                   <button
                     type="button"
@@ -879,7 +955,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                       required
                       value={newServiceName}
                       onChange={(e) => setNewServiceName(e.target.value)}
-                      placeholder="Contoh: Biaya Penanganan Meja VIP"
+                      placeholder={isLaundryMode ? 'Contoh: Biaya Penanganan Express / Antar-Jemput' : 'Contoh: Biaya Penanganan Meja VIP'}
                       className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 bg-white"
                     />
                   </div>
@@ -939,10 +1015,19 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                         className="w-full h-10 pl-3.5 pr-10 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 bg-white appearance-none cursor-pointer"
                       >
                         <option value="ALL">Semua Kanal</option>
-                        <option value="DINE_IN">Makan di Tempat (Dine In)</option>
-                        <option value="TAKEAWAY">Bawa Pulang (Takeaway)</option>
-                        <option value="DELIVERY">Kurir Toko (Delivery)</option>
-                        <option value="ONLINE_DELIVERY">Mitra Online (GoFood/Grab/Shopee)</option>
+                        {isLaundryMode ? (
+                          <>
+                            <option value="TAKEAWAY">Drop-off Toko</option>
+                            <option value="DELIVERY">Kurir Antar-Jemput (Delivery)</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="DINE_IN">Makan di Tempat (Dine In)</option>
+                            <option value="TAKEAWAY">Bawa Pulang (Takeaway)</option>
+                            <option value="DELIVERY">Kurir Toko (Delivery)</option>
+                            <option value="ONLINE_DELIVERY">Mitra Online (GoFood/Grab/Shopee)</option>
+                          </>
+                        )}
                       </select>
                       <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -1015,10 +1100,19 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                                 className="h-9 pl-2.5 pr-7 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 cursor-pointer"
                               >
                                 <option value="ALL">Semua Kanal</option>
-                                <option value="DINE_IN">Dine In</option>
-                                <option value="TAKEAWAY">Takeaway</option>
-                                <option value="DELIVERY">Delivery</option>
-                                <option value="ONLINE_DELIVERY">Online Delivery</option>
+                                {isLaundryMode ? (
+                                  <>
+                                    <option value="TAKEAWAY">Drop-off Toko</option>
+                                    <option value="DELIVERY">Delivery</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="DINE_IN">Dine In</option>
+                                    <option value="TAKEAWAY">Takeaway</option>
+                                    <option value="DELIVERY">Delivery</option>
+                                    <option value="ONLINE_DELIVERY">Online Delivery</option>
+                                  </>
+                                )}
                               </select>
                               <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
@@ -1115,7 +1209,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 <div className="flex flex-wrap items-center gap-2">
                   <Package className="w-4 h-4 text-amber-700 shrink-0" />
                   <h3 className="font-extrabold text-base text-slate-900">
-                    Wadah Kemasan &amp; Add-on Bawa Pulang (Takeaway)
+                    {isLaundryMode ? 'Kemasan, Hanger & Cover Cucian Laundry' : 'Wadah Kemasan & Add-on Bawa Pulang (Takeaway)'}
                   </h3>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 whitespace-nowrap shrink-0">
                     <Star className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
@@ -1123,7 +1217,9 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Item fisik tambahan yang dapat dipilih kasir secara on-demand saat membungkus pesanan konsumen.
+                  {isLaundryMode
+                    ? 'Item tambahan (plastik laundry, hanger, cover jas, tas spunbond) yang dapat dipilih kasir saat mengemas cucian.'
+                    : 'Item fisik tambahan yang dapat dipilih kasir secara on-demand saat membungkus pesanan konsumen.'}
                 </p>
               </div>
 
@@ -1142,7 +1238,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               <form onSubmit={handleAddPackaging} className="p-4 bg-amber-50/50 border border-amber-200 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
-                    Tambah Opsi Kemasan / Wadah Baru
+                    {isLaundryMode ? 'Tambah Opsi Kemasan / Hanger Laundry Baru' : 'Tambah Opsi Kemasan / Wadah Baru'}
                   </h4>
                   <button
                     type="button"
@@ -1156,14 +1252,14 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Nama Wadah / Kemasan
+                      {isLaundryMode ? 'Nama Kemasan / Perlengkapan Laundry' : 'Nama Wadah / Kemasan'}
                     </label>
                     <input
                       type="text"
                       required
                       value={newPackagingName}
                       onChange={(e) => setNewPackagingName(e.target.value)}
-                      placeholder="Contoh: Paper Cup Panas 12oz"
+                      placeholder={isLaundryMode ? 'Contoh: Cover Plastik Gaun / Jas, Hanger Kayu' : 'Contoh: Paper Cup Panas 12oz'}
                       className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-amber-600/20 focus:border-amber-600 bg-white"
                     />
                   </div>
@@ -1335,14 +1431,16 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 <span>Simulator Kalkulasi Kasir POS</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                Uji langsung bagaimana rumus Pajak PB1, Biaya Layanan, dan Kemasan otomatis dihitung pada layar checkout kasir.
+                {isLaundryMode
+                  ? 'Uji langsung bagaimana rumus Pajak PPN, Ongkir Kurir, dan Kemasan/Hanger otomatis dihitung pada layar checkout kasir laundry.'
+                  : 'Uji langsung bagaimana rumus Pajak PB1, Biaya Layanan, dan Kemasan otomatis dihitung pada layar checkout kasir.'}
               </p>
             </div>
 
             {/* Input Subtotal */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Simulasi Subtotal Belanja Produk
+                {isLaundryMode ? 'Simulasi Subtotal Layanan Cucian' : 'Simulasi Subtotal Belanja Produk'}
               </label>
               <CurrencyInput
                 value={simSubtotal}
@@ -1498,12 +1596,18 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 </span>
               </div>
 
-              {/* Toggle & Rate Pajak Restoran (PB1) */}
+              {/* Toggle & Rate Pajak */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200">
                 <div>
-                  <div className="text-xs font-bold text-slate-800">Pajak Restoran (PB1 / PBJT)</div>
+                  <div className="text-xs font-bold text-slate-800">
+                    {isLaundryMode ? 'Pajak Layanan Laundry (PPN)' : 'Pajak Restoran (PB1 / PBJT)'}
+                  </div>
                   <div className="text-[11px] text-slate-500">
-                    {simApplyTax ? `Dikenakan ${simTaxRate}% sesuai Perda` : 'Tidak dipungut pajak'}
+                    {simApplyTax
+                      ? isLaundryMode
+                        ? `Dikenakan ${simTaxRate}% PPN`
+                        : `Dikenakan ${simTaxRate}% sesuai Perda`
+                      : 'Tidak dipungut pajak'}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1536,48 +1640,50 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 </div>
               </div>
 
-              {/* Toggle & Rate Biaya Layanan Meja (Service Charge) */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200">
-                <div>
-                  <div className="text-xs font-bold text-slate-800">Biaya Layanan Meja (Service Charge)</div>
-                  <div className="text-[11px] text-slate-500">
-                    {simChannel === 'DINE_IN'
-                      ? simApplyService
-                        ? `Dikenakan ${simServiceRate}% untuk Makan di Tempat`
-                        : 'Layanan dinonaktifkan'
-                      : 'Otomatis Rp 0 di luar Makan di Tempat'}
+              {/* Toggle & Rate Biaya Layanan Meja (Khusus Non-Laundry / F&B) */}
+              {!isLaundryMode && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200">
+                  <div>
+                    <div className="text-xs font-bold text-slate-800">Biaya Layanan Meja (Service Charge)</div>
+                    <div className="text-[11px] text-slate-500">
+                      {simChannel === 'DINE_IN'
+                        ? simApplyService
+                          ? `Dikenakan ${simServiceRate}% untuk Makan di Tempat`
+                          : 'Layanan dinonaktifkan'
+                        : 'Otomatis Rp 0 di luar Makan di Tempat'}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {simApplyService && simChannel === 'DINE_IN' && (
+                      <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={simServiceRate}
+                          onChange={(e) => setSimServiceRate(Math.max(0, Number(e.target.value)))}
+                          className="w-12 text-xs font-bold text-center bg-transparent border-none focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-slate-600">%</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={simChannel !== 'DINE_IN'}
+                      onClick={() => setSimApplyService(!simApplyService)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40 ${
+                        simApplyService && simChannel === 'DINE_IN' ? 'bg-blue-900' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                          simApplyService && simChannel === 'DINE_IN' ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {simApplyService && simChannel === 'DINE_IN' && (
-                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={simServiceRate}
-                        onChange={(e) => setSimServiceRate(Math.max(0, Number(e.target.value)))}
-                        className="w-12 text-xs font-bold text-center bg-transparent border-none focus:outline-none"
-                      />
-                      <span className="text-xs font-bold text-slate-600">%</span>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    disabled={simChannel !== 'DINE_IN'}
-                    onClick={() => setSimApplyService(!simApplyService)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40 ${
-                      simApplyService && simChannel === 'DINE_IN' ? 'bg-blue-900' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        simApplyService && simChannel === 'DINE_IN' ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Checklist Kemasan yang Ditambahkan */}
@@ -1632,10 +1738,10 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 type="button"
                 onClick={() => {
                   setSimSubtotal(100000);
-                  setSimChannel('DINE_IN');
+                  setSimChannel(isLaundryMode ? 'TAKEAWAY' : 'DINE_IN');
                   setSimApplyTax(true);
-                  setSimTaxRate(primaryTax.rate || 10);
-                  setSimApplyService(true);
+                  setSimTaxRate(primaryTax.rate || (isLaundryMode ? 11 : 10));
+                  setSimApplyService(!isLaundryMode);
                   setSimServiceRate(5);
                   setSimSelectedPackaging(['fee_plastic_s']);
                 }}
@@ -1667,7 +1773,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               {/* Rincian Angka */}
               <div className="space-y-2.5 text-xs font-semibold">
                 <div className="flex items-center justify-between text-slate-300">
-                  <span>Subtotal Menu &amp; Produk</span>
+                  <span>{isLaundryMode ? 'Subtotal Layanan & Cucian' : 'Subtotal Menu & Produk'}</span>
                   <span className="font-bold text-white">{formatRupiah(simulationResults.subtotal)}</span>
                 </div>
 
@@ -1684,7 +1790,9 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                   <div className="flex items-center justify-between text-purple-400">
                     <span>
                       {simChannel === 'DELIVERY'
-                        ? 'Ongkir Kurir Toko'
+                        ? isLaundryMode
+                          ? 'Ongkir Kurir Laundry'
+                          : 'Ongkir Kurir Toko'
                         : 'Biaya Platform Online'}
                     </span>
                     <span className="font-bold">+{formatRupiah(simulationResults.otherFeesAmount)}</span>
@@ -1694,7 +1802,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 {simulationResults.packagingAmount > 0 && (
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-amber-400">
-                      <span>Kemasan &amp; Wadah ({simulationResults.selectedPackagingItems.length} item)</span>
+                      <span>{isLaundryMode ? 'Kemasan & Hanger' : 'Kemasan & Wadah'} ({simulationResults.selectedPackagingItems.length} item)</span>
                       <span className="font-bold">+{formatRupiah(simulationResults.packagingAmount)}</span>
                     </div>
                     <div className="pl-2 space-y-0.5 text-[10px] text-amber-300/80">
@@ -1710,7 +1818,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
 
                 <div className="flex items-center justify-between text-blue-300">
                   <div>
-                    <span>Pajak Restoran (PB1 {simTaxRate}%)</span>
+                    <span>{isLaundryMode ? `Pajak Layanan (PPN ${simTaxRate}%)` : `Pajak Restoran (PB1 ${simTaxRate}%)`}</span>
                     {!simApplyTax && (
                       <span className="text-[10px] text-slate-400 ml-1">[Non-aktif]</span>
                     )}
@@ -1729,7 +1837,9 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
               <div className="border-t border-slate-700 pt-3 flex items-center justify-between">
                 <div>
                   <span className="text-xs uppercase tracking-wider font-extrabold text-slate-400">TOTAL BAYAR KASIR</span>
-                  <div className="text-[10px] text-slate-500 font-normal">Termasuk PB1 &amp; Biaya Kanal</div>
+                  <div className="text-[10px] text-slate-500 font-normal">
+                    {isLaundryMode ? 'Termasuk PPN & Biaya Layanan' : 'Termasuk PB1 & Biaya Kanal'}
+                  </div>
                 </div>
                 <span className="text-2xl sm:text-3xl font-black text-emerald-400">
                   {formatRupiah(simulationResults.grandTotal)}
@@ -1749,7 +1859,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                   <strong className="text-white">{formatRupiah(simulationResults.merchantNetIncome)}</strong>
                 </div>
                 <div className="flex items-center justify-between text-slate-300">
-                  <span>🏛️ Titipan Pajak Pemda (PB1):</span>
+                  <span>{isLaundryMode ? '🏛️ Titipan Pajak Layanan (PPN):' : '🏛️ Titipan Pajak Pemda (PB1):'}</span>
                   <strong className="text-blue-300">{formatRupiah(simulationResults.taxAmount)}</strong>
                 </div>
               </div>
@@ -1761,7 +1871,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
                 onClick={() => {
                   const updatedTax: OutletFee = {
                     ...primaryTax,
-                    name: 'PPN / PB1 Pajak Restoran',
+                    name: isLaundryMode ? 'PPN Layanan Laundry' : 'PPN / PB1 Pajak Restoran',
                     rate: simTaxRate,
                     channelScope: 'ALL',
                     isActive: simApplyTax,
@@ -1818,6 +1928,7 @@ export const TaxesSettingsView: React.FC<TaxesSettingsViewProps> = ({
             currentUserRole === 'SUPERVISOR'
           }
           currentUserRole={currentUserRole}
+          isLaundryMode={isLaundryMode}
         />
       )}
     </div>

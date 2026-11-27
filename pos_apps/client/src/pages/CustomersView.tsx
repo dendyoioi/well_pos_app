@@ -517,6 +517,36 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-28 sm:pb-16 font-sans">
+      {/* 1. Header / Hero Section (Selalu paling atas sesuai standar layout) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
+              <Users className="w-5 h-5 shrink-0" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Master Data Pelanggan
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                Kelola basis data pelanggan, member, riwayat belanja, dan kontak WhatsApp toko Anda
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {activeSubTab === 'directory' && (
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow transition-all active:scale-95 w-full lg:w-auto shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Pelanggan Baru</span>
+          </button>
+        )}
+      </div>
+
       {/* Subtab Navigation: Direktori Pelanggan vs Buku Kasbon & Piutang */}
       <div className="p-1 bg-slate-100 rounded-2xl flex items-center gap-1.5 max-w-full w-fit border border-slate-200/60 overflow-x-auto scrollbar-none flex-nowrap">
         <button
@@ -565,32 +595,6 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
         <CustomerDebtsTab activeOutlet={activeOutlet} />
       ) : (
         <>
-          {/* 1. Header Section */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold shrink-0">
-              <Users className="w-5 h-5 shrink-0" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Master Data Pelanggan
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                Kelola basis data pelanggan, member, riwayat belanja, dan kontak WhatsApp toko Anda
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow transition-all active:scale-95 w-full lg:w-auto shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Pelanggan Baru</span>
-        </button>
-      </div>
 
       {/* 2. Key Analytics Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -101,7 +101,7 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
   const sampleRedeemDiscount = sampleRedeemPoints * (pointValueIdr || 100);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-28 sm:pb-16 font-sans animate-in fade-in duration-300">
+    <div className="space-y-6 max-w-5xl mx-auto pb-32 sm:pb-16 font-sans animate-in fade-in duration-300">
       {/* 1. Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div className="min-w-0 flex-1">
@@ -292,24 +292,12 @@ export const LoyaltySettingsView: React.FC<LoyaltySettingsViewProps> = ({
           </div>
         )}
 
-        {/* Desktop Submit Button */}
-        <div className="hidden sm:flex justify-end">
+        {/* Submit Action Bar (Dalam alur form agar aman di atas bottom navigation bar mobile) */}
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center justify-center gap-2 h-10 px-6 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-900/20 transition-all cursor-pointer disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Loyalitas Toko'}</span>
-          </button>
-        </div>
-
-        {/* Mobile Sticky Action Footer (Rule 10 AGENTS.md) */}
-        <div className="sm:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full h-11 inline-flex items-center justify-center gap-2 px-5 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-11 sm:h-10 px-6 rounded-xl bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-900/20 transition-all cursor-pointer disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Loyalitas Toko'}</span>
