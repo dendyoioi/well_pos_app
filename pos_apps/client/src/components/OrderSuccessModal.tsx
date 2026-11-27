@@ -21,6 +21,7 @@ import { getCupItemsFromOrder } from '../utils/cupLabel';
 import { ReceiptPrintBody } from './pos/ReceiptPrintBody';
 import { WhatsAppReceiptView } from './pos/WhatsAppReceiptView';
 import { EmailReceiptView } from './pos/EmailReceiptView';
+import { useDialog } from '../context/DialogContext';
 
 interface OrderSuccessModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   onClose,
   order,
 }) => {
+  const dialog = useDialog();
   const { isFree } = usePlan();
   
   const defaultOutletPaperSize = (order?.outlet?.receiptConfig?.paperSize as '58mm' | '80mm') || '58mm';
@@ -303,12 +305,12 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
     try {
       const res = await api.sendOrderWhatsApp(order.id, waRecipientPhone);
       if (res.status === 'success') {
-        alert('Struk berhasil dikirim ke nomor WhatsApp pelanggan!');
+        dialog.toast('Struk berhasil dikirim ke nomor WhatsApp pelanggan!', 'success');
       } else {
-        alert(res.message || 'Gagal mengirim WhatsApp via Gateway.');
+        dialog.toast(res.message || 'Gagal mengirim WhatsApp via Gateway.', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem pengiriman WhatsApp.');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem pengiriman WhatsApp.', 'error');
     } finally {
       setSendingWa(false);
     }

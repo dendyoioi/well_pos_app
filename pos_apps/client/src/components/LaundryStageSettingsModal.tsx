@@ -20,6 +20,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { useDialog } from '../context/DialogContext';
 import type { ProductionStageDefinition } from '../types/laundry';
 import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 
@@ -57,6 +58,7 @@ export const LaundryStageSettingsModal: React.FC<LaundryStageSettingsModalProps>
   onClose,
   onSaved,
 }) => {
+  const dialog = useDialog();
   const [stages, setStages] = useState<ProductionStageDefinition[]>(DEFAULT_PRODUCTION_STAGES);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -144,7 +146,14 @@ export const LaundryStageSettingsModal: React.FC<LaundryStageSettingsModalProps>
   };
 
   const handleResetToDefault = async () => {
-    if (!window.confirm('Kembalikan seluruh pengaturan tahapan ke standar 11 tahapan baku Well POS?')) {
+    const confirmed = await dialog.confirm({
+      title: 'Reset Tahapan Produksi',
+      message: 'Kembalikan seluruh pengaturan tahapan ke standar 11 tahapan baku Well POS?',
+      variant: 'warning',
+      confirmText: 'Ya, Reset',
+      cancelText: 'Batal',
+    });
+    if (!confirmed) {
       return;
     }
     try {

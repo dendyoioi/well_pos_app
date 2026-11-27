@@ -437,7 +437,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between items-center p-4 relative overflow-hidden bg-slate-50 text-slate-900">
+    <div className="min-h-[100dvh] w-full flex flex-col justify-between items-center px-3.5 sm:px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] relative overflow-x-hidden bg-slate-50 text-slate-900">
       {/* Background Accents */}
       <div className="absolute -top-32 -left-32 w-80 h-80 bg-blue-100/70 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-indigo-100/70 rounded-full blur-3xl pointer-events-none" />
@@ -455,7 +455,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       </header>
 
       {/* Main Container Card */}
-      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/80 relative z-10 my-auto">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl shadow-slate-200/80 relative z-10 my-auto">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-5">
           <WellPosLogo size="lg" className="mb-3" />
@@ -482,14 +482,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 setActiveTab('pos');
                 setError(null);
               }}
-              className={`py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              className={`px-2.5 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 leading-tight text-center cursor-pointer ${
                 activeTab === 'pos'
                   ? 'bg-blue-900 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-950'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Mesin Kasir (Terminal)</span>
+              <Smartphone className="w-3.5 h-3.5 shrink-0" />
+              <span className="sm:hidden">Kasir Terminal</span>
+              <span className="hidden sm:inline">Mesin Kasir (Terminal)</span>
             </button>
             <button
               type="button"
@@ -497,14 +498,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 setActiveTab('backoffice');
                 setError(null);
               }}
-              className={`py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              className={`px-2.5 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 leading-tight text-center cursor-pointer ${
                 activeTab === 'backoffice'
                   ? 'bg-blue-900 text-white shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-950'
               }`}
             >
-              <Laptop className="w-3.5 h-3.5" />
-              <span>Portal Pemilik (Email)</span>
+              <Laptop className="w-3.5 h-3.5 shrink-0" />
+              <span className="sm:hidden">Portal Pemilik</span>
+              <span className="hidden sm:inline">Portal Pemilik (Email)</span>
             </button>
           </div>
         ) : (
@@ -846,7 +848,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       value={tenantSlug}
                       onChange={(e) => setTenantSlug(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
                       placeholder="Contoh: DND-4829001"
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono tracking-wider font-bold"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 placeholder:font-sans placeholder:font-normal placeholder:tracking-normal focus:ring-2 focus:ring-blue-900/10 font-mono tracking-wider font-bold"
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
@@ -869,8 +871,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       pattern="\d{5}"
                       value={staffCode}
                       onChange={(e) => setStaffCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                      placeholder="Contoh: 00001 (Owner), 20001 (SPV)"
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-16 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 font-mono font-bold tracking-widest"
+                      placeholder="Contoh: 00001"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-16 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 placeholder:font-sans placeholder:font-normal placeholder:tracking-normal focus:ring-2 focus:ring-blue-900/10 font-mono font-bold tracking-widest"
                     />
                     <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400 font-bold pointer-events-none">
                       {staffCode.length}/5
@@ -889,12 +891,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="password"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       maxLength={6}
                       required
                       value={authPin}
                       onChange={(e) => setAuthPin(e.target.value.replace(/\D/g, ''))}
                       placeholder="••••••"
-                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm outline-none transition-all placeholder:text-slate-400 focus:ring-2 focus:ring-blue-900/10 tracking-widest font-mono text-base"
+                      className="w-full bg-white border border-slate-300 focus:border-blue-900 text-slate-900 rounded-xl pl-10 pr-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 placeholder:tracking-widest focus:ring-2 focus:ring-blue-900/10 tracking-widest font-mono"
                     />
                   </div>
                 </div>

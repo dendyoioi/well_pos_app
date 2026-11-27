@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { attendanceApi, api } from '../../services/api';
+import { useDialog } from '../../context/DialogContext';
 import type { WorkShiftTemplate, StaffWorkSchedule } from '../../types/laundry';
 import type { User } from '../../types/auth';
 
@@ -27,6 +28,7 @@ export const StaffShiftScheduleView: React.FC<StaffShiftScheduleViewProps> = ({
   activeOutletId,
   currentUser,
 }) => {
+  const dialog = useDialog();
   const isSupervisorOrAbove = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser.role);
 
   const [mode, setMode] = useState<ScheduleMode>('WEEKLY');
@@ -293,7 +295,14 @@ export const StaffShiftScheduleView: React.FC<StaffShiftScheduleViewProps> = ({
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menonaktifkan/menghapus template ini?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Hapus Template Shift',
+      message: 'Apakah Anda yakin ingin menonaktifkan/menghapus template ini?',
+      variant: 'danger',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+    });
+    if (!confirmed) return;
     try {
       const res = await attendanceApi.deleteWorkShiftTemplate(id);
       if (res.status === 'success') {
