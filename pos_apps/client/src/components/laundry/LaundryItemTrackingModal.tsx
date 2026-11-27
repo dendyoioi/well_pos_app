@@ -121,6 +121,7 @@ export const LaundryItemTrackingModal: React.FC<LaundryItemTrackingModalProps> =
   };
 
   const handleUpdateItemStage = async (itemId: string, newStage: TrackedItemStage) => {
+    setErrorMsg(null);
     try {
       const res = await laundryCore2Api.updateItem(itemId, { currentStage: newStage });
       if (res.status === 'success') {
@@ -128,9 +129,11 @@ export const LaundryItemTrackingModal: React.FC<LaundryItemTrackingModalProps> =
           prev.map((it) => (it.id === itemId ? { ...it, currentStage: newStage } : it))
         );
         onUpdated?.();
+      } else {
+        setErrorMsg(res.message || 'Gagal mengubah tahap pakaian');
       }
     } catch (err: any) {
-      alert(err?.message || 'Gagal mengubah tahap pakaian');
+      setErrorMsg(err?.message || 'Gagal mengubah tahap pakaian');
     }
   };
 
@@ -153,12 +156,13 @@ export const LaundryItemTrackingModal: React.FC<LaundryItemTrackingModalProps> =
 
   const handlePartialHandover = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (selectedItemIdsForHandover.length === 0) {
-      alert('Pilih minimal 1 pakaian untuk diserahkan');
+      setErrorMsg('Pilih minimal 1 pakaian untuk diserahkan');
       return;
     }
     if (!receivedByName.trim()) {
-      alert('Nama penerima pakaian wajib diisi');
+      setErrorMsg('Nama penerima pakaian wajib diisi');
       return;
     }
 
@@ -182,10 +186,10 @@ export const LaundryItemTrackingModal: React.FC<LaundryItemTrackingModalProps> =
         onUpdated?.();
         setTimeout(() => setSuccessMsg(null), 3000);
       } else {
-        alert(res.message || 'Gagal memproses serah terima sebagian');
+        setErrorMsg(res.message || 'Gagal memproses serah terima sebagian');
       }
     } catch (err: any) {
-      alert(err?.message || 'Terjadi kesalahan sistem saat serah terima pakaian');
+      setErrorMsg(err?.message || 'Terjadi kesalahan sistem saat serah terima pakaian');
     } finally {
       setSubmittingHandover(false);
     }

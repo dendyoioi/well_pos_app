@@ -42,6 +42,7 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
   const [feedbackPhotoUrl, setFeedbackPhotoUrl] = useState<string>('');
   const [submittingFeedback, setSubmittingFeedback] = useState<boolean>(false);
   const [feedbackSuccessMsg, setFeedbackSuccessMsg] = useState<string | null>(null);
+  const [feedbackErrorMsg, setFeedbackErrorMsg] = useState<string | null>(null);
   const [googleReviewClicked, setGoogleReviewClicked] = useState<boolean>(false);
 
   // Auto-detect invoice from URL (?track=INV-XXX or path)
@@ -92,6 +93,8 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data?.invoiceNumber || selectedRating === 0) return;
+    setFeedbackErrorMsg(null);
+    setFeedbackSuccessMsg(null);
     try {
       setSubmittingFeedback(true);
       const isComplaint = selectedRating <= 3;
@@ -110,10 +113,10 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
         );
         fetchTracking(data.invoiceNumber);
       } else {
-        alert(res.message || 'Gagal mengirim ulasan');
+        setFeedbackErrorMsg(res.message || 'Gagal mengirim ulasan');
       }
     } catch {
-      alert('Terjadi kesalahan saat mengirim ulasan');
+      setFeedbackErrorMsg('Terjadi kesalahan saat mengirim ulasan. Silakan coba lagi.');
     } finally {
       setSubmittingFeedback(false);
     }
@@ -684,6 +687,13 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                         : 'Pilih bintang 1 s/d 5'}
                     </span>
                   </div>
+
+                  {feedbackErrorMsg && (
+                    <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{feedbackErrorMsg}</span>
+                    </div>
+                  )}
 
                   {feedbackSuccessMsg && (
                     <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-2">

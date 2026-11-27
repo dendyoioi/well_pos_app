@@ -30,6 +30,7 @@ import { CurrencyInput } from '../components/ui/CurrencyInput';
 import { computePresetDateRange } from '../utils/date';
 import { checkIsLaundry } from '../utils/businessType';
 import { GlobalAuditTrailPanel } from '../components/enterprise/GlobalAuditTrailPanel';
+import { useDialog } from '../context/DialogContext';
 
 export const TARGET_ACCOUNTS_MAP: Record<string, string> = {
   KAS_BESAR: 'Kas Besar / Brankas Pusat',
@@ -62,6 +63,7 @@ const getShiftOutletName = (s: any) =>
   s.outletName || (typeof s.outlet === 'string' ? s.outlet : s.outlet?.name) || '-';
 
 export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, currentUser }) => {
+  const dialog = useDialog();
   const isLaundryMode = React.useMemo(() => {
     return checkIsLaundry(activeOutlet, currentUser);
   }, [activeOutlet, currentUser]);
@@ -167,11 +169,11 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
   const handleSubmitDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedShiftForDeposit) {
-      alert('Pilih sesi shift kasir yang bersangkutan.');
+      dialog.toast('Pilih sesi shift kasir yang bersangkutan.', 'error');
       return;
     }
     if (!depositAmount || depositAmount <= 0) {
-      alert('Nominal setoran kas harus lebih besar dari Rp 0.');
+      dialog.toast('Nominal setoran kas harus lebih besar dari Rp 0.', 'error');
       return;
     }
 
@@ -191,28 +193,37 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
         setDepositReference('');
         setDepositNotes('');
         fetchDeposits();
+        dialog.toast('Setoran kas berhasil diajukan!', 'success');
       } else {
-        alert(res.message || 'Gagal mengajukan setoran kas');
+        dialog.toast(res.message || 'Gagal mengajukan setoran kas', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan saat mengajukan setoran kas');
+      dialog.toast(err.message || 'Terjadi kesalahan saat mengajukan setoran kas', 'error');
     } finally {
       setSubmittingDeposit(false);
     }
   };
 
   const handleVerifyDeposit = async (id: string) => {
-    if (!window.confirm('Verifikasi dan terima setoran kas ini ke brankas/bank pusat?')) return;
+    const confirmed = await dialog.confirm({
+      title: 'Verifikasi Setoran Kas',
+      message: 'Verifikasi dan terima setoran kas ini ke brankas/bank pusat?',
+      variant: 'info',
+      confirmText: 'Ya, Verifikasi',
+      cancelText: 'Batal',
+    });
+    if (!confirmed) return;
     try {
       setVerifyingId(id);
       const res = await api.verifyShiftCashDeposit(id, { status: 'VERIFIED' });
       if (res.status === 'success') {
         fetchDeposits();
+        dialog.toast('Setoran kas berhasil diverifikasi!', 'success');
       } else {
-        alert(res.message || 'Gagal memverifikasi setoran kas');
+        dialog.toast(res.message || 'Gagal memverifikasi setoran kas', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem', 'error');
     } finally {
       setVerifyingId(null);
     }
@@ -221,7 +232,7 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
   const handleRejectDeposit = async () => {
     if (!rejectingDepositId) return;
     if (!rejectionReason.trim()) {
-      alert('Mohon masukkan alasan penolakan setoran kas.');
+      dialog.toast('Mohon masukkan alasan penolakan setoran kas.', 'error');
       return;
     }
     try {
@@ -234,11 +245,12 @@ export const ShiftsAuditView: React.FC<ShiftsAuditViewProps> = ({ activeOutlet, 
         setRejectingDepositId(null);
         setRejectionReason('');
         fetchDeposits();
+        dialog.toast('Setoran kas ditolak.', 'info');
       } else {
-        alert(res.message || 'Gagal menolak setoran kas');
+        dialog.toast(res.message || 'Gagal menolak setoran kas', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem', 'error');
     } finally {
       setVerifyingId(null);
     }

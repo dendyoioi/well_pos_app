@@ -179,6 +179,7 @@ export const LaundryBatchBoardModal: React.FC<LaundryBatchBoardModalProps> = ({
     batchId: string,
     status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   ) => {
+    setFeedbackMsg(null);
     try {
       setSubmitting(true);
       const res = await laundryCore2Api.updateBatchStatus(batchId, {
@@ -191,10 +192,10 @@ export const LaundryBatchBoardModal: React.FC<LaundryBatchBoardModalProps> = ({
         await loadAvailableOrders();
         onBatchUpdated?.();
       } else {
-        alert(res.message || 'Gagal memperbarui status batch');
+        setFeedbackMsg({ type: 'error', text: res.message || 'Gagal memperbarui status batch' });
       }
     } catch (err: any) {
-      alert(err?.message || 'Terjadi kesalahan saat memperbarui batch');
+      setFeedbackMsg({ type: 'error', text: err?.message || 'Terjadi kesalahan saat memperbarui batch' });
     } finally {
       setSubmitting(false);
     }

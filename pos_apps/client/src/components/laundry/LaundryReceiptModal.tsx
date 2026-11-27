@@ -22,6 +22,7 @@ import { api } from '../../services/api';
 import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 import { printElementViaThermalIframe } from '../../utils/thermalPrinter';
 import { buildLaundryProductionTagEscPos, buildReceiptEscPos } from '../../utils/escpos';
+import { useDialog } from '../../context/DialogContext';
 
 interface LaundryReceiptModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   outlet,
   initialTab = 'RECEIPT',
 }) => {
+  const dialog = useDialog();
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
   const [activeTab, setActiveTab] = useState<'RECEIPT' | 'PRODUCTION_TAG'>(initialTab);
   const [sendingGateway, setSendingGateway] = useState(false);
@@ -251,7 +253,7 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
 
   const handleShareWhatsApp = () => {
     if (!order.customerPhone) {
-      alert('Nomor WhatsApp pelanggan tidak tercatat');
+      dialog.toast('Nomor WhatsApp pelanggan tidak tercatat', 'error');
       return;
     }
 
@@ -302,7 +304,7 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
   const handleSendViaGateway = async () => {
     if (!order.customerPhone) {
-      alert('Nomor WhatsApp pelanggan tidak tercatat');
+      dialog.toast('Nomor WhatsApp pelanggan tidak tercatat', 'error');
       return;
     }
     try {
@@ -315,10 +317,10 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
         setGatewayMessage(res.message || 'Pesan notifikasi berhasil diproses gateway!');
         setTimeout(() => setGatewayMessage(null), 3500);
       } else {
-        alert(res.message || 'Gagal mengirim pesan via WhatsApp Gateway');
+        dialog.toast(res.message || 'Gagal mengirim pesan via WhatsApp Gateway', 'error');
       }
     } catch {
-      alert('Gangguan koneksi ke WhatsApp Gateway');
+      dialog.toast('Gangguan koneksi ke WhatsApp Gateway', 'error');
     } finally {
       setSendingGateway(false);
     }

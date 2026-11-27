@@ -39,6 +39,7 @@ import { LaundryBatchBoardModal } from '../components/laundry/LaundryBatchBoardM
 import { LaundryTagScannerModal } from '../components/laundry/LaundryTagScannerModal';
 import { LaundryItemTrackingModal } from '../components/laundry/LaundryItemTrackingModal';
 import { SmartProductionQueuePanel } from '../components/laundry/SmartProductionQueuePanel';
+import { useDialog } from '../context/DialogContext';
 
 interface LaundryProductionViewProps {
   activeOutlet: Outlet | null;
@@ -48,6 +49,7 @@ type StationFilter = 'ALL' | 'SORTING' | 'WASHING_DRYING' | 'IRONING_FOLDING' | 
 type SlaFilter = 'ALL' | 'DUE_TODAY' | 'OVERDUE';
 
 export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ activeOutlet }) => {
+  const dialog = useDialog();
   const [orders, setOrders] = useState<LaundryQueueOrder[]>([]);
   const [stages, setStages] = useState<ProductionStageDefinition[]>(DEFAULT_PRODUCTION_STAGES);
   const [loading, setLoading] = useState(true);
@@ -141,7 +143,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
   const handleSaveMachine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!machineFormCode.trim() || !machineFormName.trim()) {
-      alert('Kode dan nama mesin wajib diisi');
+      dialog.toast('Kode dan nama mesin wajib diisi', 'error');
       return;
     }
     setSavingMachine(true);
@@ -160,7 +162,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
           setMachineFormCode('');
           setMachineFormName('');
         } else {
-          alert(res.message || 'Gagal memperbarui mesin');
+          dialog.toast(res.message || 'Gagal memperbarui mesin', 'error');
         }
       } else {
         const res = await api.createLaundryMachine({
@@ -177,11 +179,11 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
           setMachineFormCode('');
           setMachineFormName('');
         } else {
-          alert(res.message || 'Gagal menambahkan mesin');
+          dialog.toast(res.message || 'Gagal menambahkan mesin', 'error');
         }
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
+      dialog.toast(err.message || 'Terjadi kesalahan sistem', 'error');
     } finally {
       setSavingMachine(false);
     }
@@ -196,12 +198,19 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
         refreshMachines();
       }
     } catch (err: any) {
-      alert(err.message || 'Gagal mengubah status mesin');
+      dialog.toast(err.message || 'Gagal mengubah status mesin', 'error');
     }
   };
 
   const handleDeleteMachine = async (machine: LaundryMachine) => {
-    if (!confirm(`Yakin ingin menghapus mesin ${machine.code} (${machine.name})?`)) return;
+    const confirmed = await dialog.confirm({
+      title: 'Hapus Mesin',
+      message: `Yakin ingin menghapus mesin ${machine.code} (${machine.name})?`,
+      variant: 'danger',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+    });
+    if (!confirmed) return;
     try {
       const res = await api.deleteLaundryMachine(machine.id);
       if (res.status === 'success') {
@@ -209,7 +218,7 @@ export const LaundryProductionView: React.FC<LaundryProductionViewProps> = ({ ac
         refreshMachines();
       }
     } catch (err: any) {
-      alert(err.message || 'Gagal menghapus mesin');
+      dialog.toast(err.message || 'Gagal menghapus mesin', 'error');
     }
   };
 
