@@ -300,7 +300,7 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-16 font-sans">
+    <div className="space-y-6 pb-32 sm:pb-16 font-sans">
       {/* Header Kanonikal */}
       <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -1054,11 +1054,11 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             )}
           </div>
 
-          <div className="hidden sm:flex pt-4 border-t border-slate-100 items-center justify-end">
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="h-10 px-6 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              className="w-full sm:w-auto h-11 sm:h-10 px-6 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
               {saving ? (
                 <>
@@ -1147,32 +1147,6 @@ export const ReceiptSettingsView: React.FC<ReceiptSettingsViewProps> = ({
             />
           )}
         </div>
-      </div>
-
-      {/* Mobile Sticky Action Footer (Rule 10 Kanonikal) */}
-      <div className="sm:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-between gap-3">
-        <div className="flex flex-col min-w-0">
-          <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Pengaturan Struk</span>
-          <span className="text-xs font-black text-slate-800 truncate">Kertas {paperSize} {waEnabled ? '+ WA' : ''}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => handleSave()}
-          disabled={saving}
-          className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Menyimpan...</span>
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>Simpan Struk</span>
-            </>
-          )}
-        </button>
       </div>
 
       {/* Modal Pengaturan Hardware Printer & Laci Kasir */}

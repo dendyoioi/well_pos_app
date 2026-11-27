@@ -2143,14 +2143,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({ activeOutlet }) =>
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           Harga Paket Dibayar (Rp)
                         </label>
-                        <input
-                          type="number"
+                        <CurrencyInput
                           required
                           min={1000}
-                          step={1000}
                           value={topupPricePaid}
-                          onChange={(e) => setTopupPricePaid(e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-900 text-xs"
+                          onChange={(numVal) => setTopupPricePaid(String(numVal))}
+                          placeholder="70.000"
+                          className="w-full"
+                          inputClassName="py-1.5 pl-12 pr-2.5 text-xs font-bold border-slate-300 rounded-xl"
+                          prefixClassName="left-2 py-0.5 px-1.5 text-[10px]"
                         />
                       </div>
                     </div>

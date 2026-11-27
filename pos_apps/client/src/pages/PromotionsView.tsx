@@ -1366,25 +1366,42 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
                                       </span>
                                       <span>➔ {formatRupiah(finalPrice)}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 mt-1 justify-end">
+                                    <div className="flex items-center gap-1.5 mt-1 justify-end" onClick={(e) => e.stopPropagation()}>
                                       <span className="text-[10px] text-slate-400 font-bold">Potongan:</span>
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={itemDiscVal}
-                                        onChange={(e) =>
-                                          handleUpdateItemDiscountValue(
-                                            it.productId,
-                                            it.variantId,
-                                            Number(e.target.value)
-                                          )
-                                        }
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-16 h-6 px-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-md focus:border-blue-900 outline-hidden"
-                                      />
-                                      <span className="text-[10px] font-bold text-slate-500">
-                                        {formData.discountType === 'PERCENTAGE' ? '%' : 'Rp'}
-                                      </span>
+                                      {formData.discountType === 'PERCENTAGE' ? (
+                                        <>
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={100}
+                                            value={itemDiscVal}
+                                            onChange={(e) =>
+                                              handleUpdateItemDiscountValue(
+                                                it.productId,
+                                                it.variantId,
+                                                Number(e.target.value)
+                                              )
+                                            }
+                                            className="w-16 h-6 px-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-md focus:border-blue-900 outline-hidden"
+                                          />
+                                          <span className="text-[10px] font-bold text-slate-500">%</span>
+                                        </>
+                                      ) : (
+                                        <CurrencyInput
+                                          min={0}
+                                          value={itemDiscVal}
+                                          onChange={(val) =>
+                                            handleUpdateItemDiscountValue(
+                                              it.productId,
+                                              it.variantId,
+                                              val
+                                            )
+                                          }
+                                          className="w-28"
+                                          inputClassName="h-7 py-0.5 pl-9 pr-1.5 text-right font-mono font-bold text-xs bg-white border border-slate-200 rounded-md"
+                                          prefixClassName="left-1.5 py-0 px-1 text-[9px]"
+                                        />
+                                      )}
                                     </div>
                                   </>
                                 )}

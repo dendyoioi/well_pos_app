@@ -653,11 +653,11 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const handleQuickCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustName.trim()) {
-      alert('Nama pelanggan wajib diisi');
+      dialog.toast('Nama pelanggan wajib diisi', 'error');
       return;
     }
     if (!newCustPhone.trim()) {
-      alert('Nomor WhatsApp pelanggan wajib diisi untuk kirim e-receipt & notifikasi cucian');
+      dialog.toast('Nomor WhatsApp pelanggan wajib diisi untuk kirim e-receipt & notifikasi cucian', 'error');
       return;
     }
 
@@ -714,10 +714,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
           type: 'success',
         });
       } else {
-        alert(res.message || 'Gagal mendaftarkan pelanggan baru');
+        dialog.toast(res.message || 'Gagal mendaftarkan pelanggan baru', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan saat mendaftarkan pelanggan');
+      dialog.toast(err.message || 'Terjadi kesalahan saat mendaftarkan pelanggan', 'error');
     } finally {
       setSavingNewCustomer(false);
     }
@@ -738,12 +738,12 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const handleProcessTopup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentShift) {
-      alert('Buka shift kasir terlebih dahulu untuk mencatat transaksi kasir / top-up!');
+      dialog.toast('Buka shift kasir terlebih dahulu untuk mencatat transaksi kasir / top-up!', 'error');
       setStartShiftModalOpen(true);
       return;
     }
     if (!selectedCustomerId || !activeOutlet) {
-      alert('Pelanggan dan outlet aktif wajib tersedia');
+      dialog.toast('Pelanggan dan outlet aktif wajib tersedia', 'error');
       return;
     }
     setProcessingTopup(true);
@@ -776,10 +776,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         });
         setTimeout(() => setFeedbackToast(null), 3500);
       } else {
-        alert(res.message || 'Gagal memproses top-up');
+        dialog.toast(res.message || 'Gagal memproses top-up', 'error');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi gangguan saat memproses top-up');
+      dialog.toast(err.message || 'Terjadi gangguan saat memproses top-up', 'error');
     } finally {
       setProcessingTopup(false);
     }
@@ -968,7 +968,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     if (!selectedService) return;
 
     if (modalCalculatedPrice.actualQty <= 0) {
-      alert('Jumlah / bobot timbangan cucian harus lebih besar dari 0');
+      dialog.toast('Jumlah / bobot timbangan cucian harus lebih besar dari 0', 'error');
       return;
     }
 
@@ -1236,21 +1236,21 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   // Eksekusi Pembuatan Transaksi Laundry
   const handleProcessOrder = async () => {
     if (!currentShift) {
-      alert('Buka shift kasir terlebih dahulu untuk mulai melayani transaksi cucian!');
+      dialog.toast('Buka shift kasir terlebih dahulu untuk mulai melayani transaksi cucian!', 'error');
       setStartShiftModalOpen(true);
       return;
     }
     if (cartItems.length === 0) {
-      alert('Pilih minimal satu layanan laundry ke keranjang!');
+      dialog.toast('Pilih minimal satu layanan laundry ke keranjang!', 'error');
       return;
     }
     if (!customerName.trim()) {
-      alert('Nama pelanggan wajib diisi!');
+      dialog.toast('Nama pelanggan wajib diisi!', 'error');
       return;
     }
 
     if (!activeOutlet?.id) {
-      alert('Toko fisik aktif tidak ditemukan');
+      dialog.toast('Toko fisik aktif tidak ditemukan', 'error');
       return;
     }
 
@@ -1262,7 +1262,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     );
 
     if (!navigator.onLine && isDigitalOrWallet) {
-      alert('Pembayaran digital/wallet memerlukan koneksi internet aktif. Gunakan metode Tunai atau Bayar Nanti saat offline.');
+      dialog.toast('Pembayaran digital/wallet memerlukan koneksi internet aktif. Gunakan metode Tunai atau Bayar Nanti saat offline.', 'error');
       return;
     }
 
@@ -1475,7 +1475,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       } else if ((res as any)?.offline === true && !isDigitalOrWallet) {
         await completeOfflineLaundryOrder();
       } else {
-        alert(res.message || 'Gagal memproses transaksi laundry');
+        dialog.toast(res.message || 'Gagal memproses transaksi laundry', 'error');
       }
     } catch (err: any) {
       const isNetworkFailure =
@@ -1488,10 +1488,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         try {
           await completeOfflineLaundryOrder();
         } catch {
-          alert(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+          dialog.toast(err.message || 'Terjadi kesalahan sistem saat memproses transaksi', 'error');
         }
       } else {
-        alert(err.message || 'Terjadi kesalahan sistem saat memproses transaksi');
+        dialog.toast(err.message || 'Terjadi kesalahan sistem saat memproses transaksi', 'error');
       }
     } finally {
       setProcessingOrder(false);
@@ -1835,17 +1835,18 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
               <label className="block text-[10px] font-bold text-amber-900">
                 Nominal Uang Muka / DP (Rp)
               </label>
-              <input
-                type="number"
+              <CurrencyInput
                 value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="20000"
-                className="w-full px-2 py-1 text-xs rounded-lg border border-amber-300 bg-white font-bold"
+                onChange={(numVal) => setDepositAmount(String(numVal))}
+                placeholder="20.000"
+                className="w-full"
+                inputClassName="py-1.5 pl-12 pr-2.5 text-xs rounded-lg border-amber-300 bg-white font-bold"
+                prefixClassName="left-2 py-0.5 px-1.5 text-[10px]"
               />
               <div className="text-[10px] text-amber-800 flex justify-between">
                 <span>Sisa Tagihan saat Ambil:</span>
                 <span className="font-extrabold">
-                  Rp {Math.max(0, cartTotals.grandTotal - (parseFloat(depositAmount) || 0)).toLocaleString('id-ID')}
+                  Rp {Math.max(0, cartTotals.grandTotal - (Number(String(depositAmount).replace(/\D/g, '')) || 0)).toLocaleString('id-ID')}
                 </span>
               </div>
             </div>
@@ -3897,14 +3898,15 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           Harga Dibayar Pelanggan (Rp)
                         </label>
-                        <input
-                          type="number"
+                        <CurrencyInput
                           required
                           min={0}
-                          step={1000}
                           value={topupPricePaid}
-                          onChange={(e) => setTopupPricePaid(e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-300 font-bold focus:outline-none focus:ring-2 focus:ring-purple-900 text-xs"
+                          onChange={(numVal) => setTopupPricePaid(String(numVal))}
+                          placeholder="70.000"
+                          className="w-full"
+                          inputClassName="py-1.5 pl-12 pr-2.5 text-xs font-bold border-slate-300 rounded-xl"
+                          prefixClassName="left-2 py-0.5 px-1.5 text-[10px]"
                         />
                       </div>
                     </div>

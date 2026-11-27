@@ -443,7 +443,7 @@ export const SYSTEM_LAUNDRY_PERMISSIONS_FALLBACK: PermissionDefinition[] = [
   {
     id: 'settings_tax',
     label: 'Atur Pajak (PPN) & Biaya Layanan',
-    description: 'Menentukan persentase pajak pertambahan nilai dan biaya admin per outlet',
+    description: 'Menentukan persentase pajak layanan dan biaya operasional per outlet',
     category: 'SETTINGS_GOVERNANCE',
   },
   {
@@ -1142,7 +1142,7 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
     );
 
     return (
-      <div className="max-w-7xl mx-auto space-y-6 pb-28 sm:pb-16 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6 pb-32 sm:pb-16 font-sans">
         {/* Navigation Breadcrumb Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center gap-3">
@@ -1399,25 +1399,6 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
               </div>
             </div>
 
-            {/* Mobile Sticky Action Footer (PWA Ergonomics) */}
-            <div className="lg:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 grid grid-cols-2 gap-2.5 shadow-lg">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer flex items-center justify-center whitespace-nowrap"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="h-10 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
-              >
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
-              </button>
-            </div>
-
             {/* ============================================================= */}
             {/* KOLOM KANAN (8 COLS): STUDIO WEWENANG DOMAIN OPERASIONAL       */}
             {/* ============================================================= */}
@@ -1527,11 +1508,14 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                                     perm.id === 'menu_view' ? 'Lihat Daftar Layanan & Tarif Laundry' :
                                     perm.id === 'menu_modifiers' ? 'Kelola Add-on & Takaran Bahan (BoM)' :
                                     perm.id === 'report_sales' ? 'Laporan Penjualan & Layanan Terlaris' :
+                                    perm.id === 'settings_tax' ? 'Atur Pajak (PPN) & Biaya Layanan' :
                                     perm.label
                                   ) : perm.label}
                                 </p>
                                 <p className="text-[11px] text-slate-500 leading-snug">
-                                  {perm.description}
+                                  {isLaundryMode && perm.id === 'settings_tax'
+                                    ? 'Menentukan persentase pajak layanan dan biaya operasional per outlet'
+                                    : perm.description}
                                 </p>
                               </div>
 
@@ -1566,6 +1550,25 @@ export const StaffRolesView: React.FC<StaffRolesViewProps> = ({
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Tombol Simpan Mobile (Dalam alur form di bawah daftar wewenang, aman di atas bottom nav) */}
+              <div className="lg:hidden bg-white border border-slate-200 rounded-3xl p-4 shadow-xs grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer flex items-center justify-center whitespace-nowrap"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="h-11 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:bg-slate-400 text-white font-extrabold text-xs shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                >
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
+                </button>
               </div>
             </div>
           </div>

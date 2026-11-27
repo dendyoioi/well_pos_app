@@ -1915,57 +1915,45 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">Cuci / Kg (Rp)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="50"
+                    <CurrencyInput
                       value={configDraft.washingPerKg}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, washingPerKg: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, washingPerKg: numVal })
                       }
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                      inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                     />
                   </div>
 
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">Kering / Kg (Rp)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="50"
+                    <CurrencyInput
                       value={configDraft.dryingPerKg}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, dryingPerKg: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, dryingPerKg: numVal })
                       }
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                      inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                     />
                   </div>
 
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">Setrika / Kg (Rp)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="50"
+                    <CurrencyInput
                       value={configDraft.ironingPerKg}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, ironingPerKg: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, ironingPerKg: numVal })
                       }
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                      inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                     />
                   </div>
 
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">Packing / Nota (Rp)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="50"
+                    <CurrencyInput
                       value={configDraft.packingPerOrder}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, packingPerOrder: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, packingPerOrder: numVal })
                       }
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                      inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                     />
                   </div>
                 </div>
@@ -1984,29 +1972,23 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">Antar / Delivery (per Trip)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="500"
+                    <CurrencyInput
                       value={configDraft.deliveryPerTrip}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, deliveryPerTrip: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, deliveryPerTrip: numVal })
                       }
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                      inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                     />
                   </div>
 
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">Jemput / Pickup (per Trip)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="500"
+                    <CurrencyInput
                       value={configDraft.pickupPerTrip}
-                      onChange={(e) =>
-                        setConfigDraft({ ...configDraft, pickupPerTrip: Number(e.target.value) || 0 })
+                      onChange={(numVal) =>
+                        setConfigDraft({ ...configDraft, pickupPerTrip: numVal })
                       }
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                      inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                     />
                   </div>
                 </div>
@@ -2024,18 +2006,15 @@ export const LaundryCommissionView: React.FC<LaundryCommissionViewProps> = ({
 
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Penalti per Kasus Rewash (Rp)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
+                  <CurrencyInput
                     value={configDraft.rewashPenaltyPerCase}
-                    onChange={(e) =>
+                    onChange={(numVal) =>
                       setConfigDraft({
                         ...configDraft,
-                        rewashPenaltyPerCase: Number(e.target.value) || 0,
+                        rewashPenaltyPerCase: numVal,
                       })
                     }
-                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-900/20"
+                    inputClassName="h-9 py-1.5 text-xs font-semibold border-slate-200"
                   />
                 </div>
 

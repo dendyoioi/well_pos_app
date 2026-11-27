@@ -181,7 +181,7 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 max-w-6xl pb-28 sm:pb-16 font-sans">
+    <div className="space-y-6 max-w-6xl pb-32 sm:pb-16 font-sans">
       {/* HEADER UTAMA */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -563,19 +563,13 @@ export const PaymentSettingsView: React.FC<PaymentSettingsViewProps> = ({
         )}
       </div>
 
-      {/* Mobile Sticky Action Footer (Rule 10 Kanonikal) */}
-      <div className="sm:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-between gap-3">
-        <div className="flex flex-col min-w-0">
-          <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Pengaturan Pembayaran</span>
-          <span className="text-xs font-black text-slate-800 truncate">
-            {isActive ? 'QRIS Aktif' : 'QRIS Nonaktif'} {allowCredit ? '• Kasbon Aktif' : ''}
-          </span>
-        </div>
+      {/* Tombol Simpan Mobile (Dalam alur form agar aman di atas bottom navigation bar) */}
+      <div className="sm:hidden pt-1 flex justify-end">
         <button
           type="button"
           onClick={handleSaveConfig}
           disabled={isSaving}
-          className="h-10 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+          className="w-full h-11 px-5 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {isSaving ? (
             <>

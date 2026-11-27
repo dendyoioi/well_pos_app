@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api, authStorage } from '../services/api';
+import { useDialog } from '../context/DialogContext';
 import type { LaundryQueueOrder, LaundryRack } from '../types/laundry';
 import { LAUNDRY_11_STAGES } from '../types/laundry';
 import { LaundryReceiptModal } from '../components/laundry/LaundryReceiptModal';
@@ -51,6 +52,7 @@ const PIPELINE_COLUMNS = [
 ] as const;
 
 export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet }) => {
+  const dialog = useDialog();
   const currentUser = authStorage.getUser();
   const canAccessAutomation = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(currentUser?.role || '');
   const [automationModalOpen, setAutomationModalOpen] = useState(false);
@@ -188,7 +190,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       });
       fetchOrders();
     } catch {
-      alert('Gagal memperbarui status pengerjaan cucian');
+      dialog.toast('Gagal memperbarui status pengerjaan cucian', 'error');
     }
   };
 
@@ -209,7 +211,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       });
       setTimeout(() => setWaToast(null), 4000);
     } catch {
-      alert('Gagal menetapkan nomor rak simpan');
+      dialog.toast('Gagal menetapkan nomor rak simpan', 'error');
     } finally {
       setAssigningRack(false);
     }
@@ -233,7 +235,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       });
       setTimeout(() => setWaToast(null), 4000);
     } catch {
-      alert('Gagal menyelesaikan penyerahan pakaian');
+      dialog.toast('Gagal menyelesaikan penyerahan pakaian', 'error');
     } finally {
       setProcessingHandover(false);
     }

@@ -37,6 +37,7 @@ import { LaundryServiceBomModal } from '../components/laundry/LaundryServiceBomM
 import { OutletServicePricingModal } from '../components/laundry/OutletServicePricingModal';
 import { ServicePriceHistoryModal } from '../components/laundry/ServicePriceHistoryModal';
 import { CurrencyInput } from '../components/ui';
+import { useDialog } from '../context/DialogContext';
 import type { RecipeInventoryItem } from '../types/recipe';
 
 interface LaundryServicesViewProps {
@@ -202,6 +203,7 @@ const STANDARD_UNITS = [
 ];
 
 export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ activeOutlet }) => {
+    const dialog = useDialog();
     const [services, setServices] = useState<LaundryService[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -301,19 +303,26 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
             setShowPerfumeModal(false);
             fetchPerfumes();
         } catch (err: any) {
-            alert(err?.message || 'Gagal menyimpan varian parfum');
+            dialog.toast(err?.message || 'Gagal menyimpan varian parfum', 'error');
         } finally {
             setSavingPerfume(false);
         }
     };
 
     const handleDeletePerfume = async (id: string, name: string) => {
-        if (!confirm(`Hapus varian parfum "${name}"?`)) return;
+        const confirmed = await dialog.confirm({
+            title: 'Hapus Varian Parfum',
+            message: `Hapus varian parfum "${name}"?`,
+            variant: 'danger',
+            confirmText: 'Ya, Hapus',
+            cancelText: 'Batal',
+        });
+        if (!confirmed) return;
         try {
             await api.deleteLaundryPerfume(id);
             fetchPerfumes();
         } catch (err: any) {
-            alert(err?.message || 'Gagal menghapus parfum');
+            dialog.toast(err?.message || 'Gagal menghapus parfum', 'error');
         }
     };
 
@@ -322,7 +331,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
             await api.updateLaundryPerfume(p.id, { isActive: !p.isActive });
             fetchPerfumes();
         } catch (err: any) {
-            alert(err?.message || 'Gagal mengubah status parfum');
+            dialog.toast(err?.message || 'Gagal mengubah status parfum', 'error');
         }
     };
 
@@ -422,7 +431,14 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     };
 
     const handleDeletePackage = async (packageId: string) => {
-        if (!confirm('Yakin ingin menghapus paket deposit ini dari katalog kasir?')) return;
+        const confirmed = await dialog.confirm({
+            title: 'Hapus Paket Deposit',
+            message: 'Yakin ingin menghapus paket deposit ini dari katalog kasir?',
+            variant: 'danger',
+            confirmText: 'Ya, Hapus',
+            cancelText: 'Batal',
+        });
+        if (!confirmed) return;
         try {
             const updatedPackages = depositConfig.packages.filter((p) => p.id !== packageId);
             const newConfig = { ...depositConfig, packages: updatedPackages };
@@ -486,7 +502,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 setTimeout(() => setDepositToast(null), 3000);
             }
         } catch {
-            alert('Gagal menyimpan paket deposit');
+            dialog.toast('Gagal menyimpan paket deposit', 'error');
         } finally {
             setSavingDepositConfig(false);
         }
@@ -728,7 +744,14 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
 
     // Hapus / Nonaktifkan Permanen
     const handleDeleteService = async (id: string, name: string) => {
-        if (!window.confirm(`Yakin ingin menonaktifkan "${name}"? Data tidak akan muncul di kasir.`)) return;
+        const confirmed = await dialog.confirm({
+            title: 'Nonaktifkan Layanan',
+            message: `Yakin ingin menonaktifkan "${name}"? Data tidak akan muncul di kasir.`,
+            variant: 'danger',
+            confirmText: 'Ya, Nonaktifkan',
+            cancelText: 'Batal',
+        });
+        if (!confirmed) return;
         try {
             await api.deleteLaundryService(id);
             showToast(`"${name}" telah dinonaktifkan`);

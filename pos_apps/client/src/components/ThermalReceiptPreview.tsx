@@ -129,7 +129,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
             }`}
           >
             <Monitor className="w-3.5 h-3.5" />
-            <span>80mm (Desktop/Resto)</span>
+            <span>{isLaundryMode ? '80mm (Desktop/Toko)' : '80mm (Desktop/Resto)'}</span>
           </button>
         </div>
       )}
@@ -256,7 +256,7 @@ export const ThermalReceiptPreview: React.FC<ThermalReceiptPreviewProps> = ({
             </div>
             {calculatedTax > 0 && (
               <div className="flex justify-between text-slate-600">
-                <span>Pajak (PB1):</span>
+                <span>{isLaundryMode ? 'Pajak (PPN):' : 'Pajak (PB1):'}</span>
                 <span>{formatRupiah(calculatedTax)}</span>
               </div>
             )}
