@@ -21,6 +21,11 @@ import {
   PackageSearch,
   Tag,
   Bell,
+  Ban,
+  X,
+  KeyRound,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api, authStorage } from '../services/api';
@@ -108,6 +113,78 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   // State Modal Lapor Insiden Pakaian Rusak / Hilang
   const [incidentModalOpen, setIncidentModalOpen] = useState(false);
   const [selectedOrderForIncident, setSelectedOrderForIncident] = useState<LaundryQueueOrder | null>(null);
+
+  // State Modal Void Order Laundry Pra-Produksi (Wajib PIN Khusus Void)
+  const LAUNDRY_VOID_REASONS = [
+    'Salah Input Layanan / Berat',
+    'Pelanggan Batal Drop-off',
+    'Duplikat Transaksi',
+    'Salah Pilih Pelanggan / Metode Bayar',
+    'Lainnya',
+  ];
+  const [voidModalOrder, setVoidModalOrder] = useState<LaundryQueueOrder | null>(null);
+  const [voidReasonOption, setVoidReasonOption] = useState<string>('Salah Input Layanan / Berat');
+  const [voidCustomReason, setVoidCustomReason] = useState('');
+  const [voidNotes, setVoidNotes] = useState('');
+  const [voidPin, setVoidPin] = useState('');
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
+
+  const canVoidOrder = (item: LaundryQueueOrder): boolean => {
+    return (
+      item.status === 'RECEIVED' &&
+      (!item.currentStage || item.currentStage === 'DROP_OFF') &&
+      !item.isSorted &&
+      (!item.transferStatus || item.transferStatus === 'AT_OUTLET')
+    );
+  };
+
+  const handleOpenVoidModal = (item: LaundryQueueOrder) => {
+    setVoidModalOrder(item);
+    setVoidReasonOption('Salah Input Layanan / Berat');
+    setVoidCustomReason('');
+    setVoidNotes('');
+    setVoidPin('');
+    setVoidError(null);
+  };
+
+  const handleConfirmVoidLaundryOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voidModalOrder || voidSubmitting) return;
+    setVoidError(null);
+
+    const finalReason = voidReasonOption === 'Lainnya' ? voidCustomReason.trim() : voidReasonOption;
+    if (finalReason.length < 3) {
+      setVoidError('Alasan pembatalan (void) wajib diisi minimal 3 karakter.');
+      return;
+    }
+    if (!/^\d{6}$/.test(voidPin.trim())) {
+      setVoidError('PIN Khusus Otorisasi Void wajib berupa 6 digit angka.');
+      return;
+    }
+
+    setVoidSubmitting(true);
+    try {
+      const targetOrderId = voidModalOrder.orderId || voidModalOrder.id;
+      const res = await api.voidLaundryOrder(targetOrderId, {
+        reason: finalReason,
+        notes: voidNotes.trim() || undefined,
+        pin: voidPin.trim(),
+      });
+
+      if (res.status === 'success') {
+        dialog.toast(`Nota ${voidModalOrder.invoiceNumber} berhasil di-void.`, 'success');
+        setVoidModalOrder(null);
+        await fetchOrders();
+      } else {
+        setVoidError(res.message || 'Gagal membatalkan (void) nota laundry.');
+      }
+    } catch (err: any) {
+      setVoidError(err?.message || 'Terjadi gangguan jaringan saat memproses void.');
+    } finally {
+      setVoidSubmitting(false);
+    }
+  };
 
   // State Modal QC Checklist & Berat Final (Core Phase 1)
   const [qcModalOpen, setQcModalOpen] = useState(false);
@@ -816,6 +893,19 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                             <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
                             <span>Lapor Insiden</span>
                           </button>
+
+                          {/* Tombol Void / Batalkan Pra-Produksi (Khusus Status RECEIVED & Stage DROP_OFF) */}
+                          {canVoidOrder(item) && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenVoidModal(item)}
+                              className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-rose-200 transition-all cursor-pointer active:scale-95"
+                              title="Batalkan (Void) nota sebelum masuk produksi"
+                            >
+                              <Ban className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Void / Batalkan</span>
+                            </button>
+                          )}
                         </div>
                       );
                     })
@@ -1144,6 +1234,183 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
           setTimeout(() => setWaToast(null), 3500);
         }}
       />
+
+      {/* Modal Konfirmasi Void Order Laundry Pra-Produksi */}
+      {voidModalOrder && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
+          onClick={() => !voidSubmitting && setVoidModalOrder(null)}
+        >
+          <div
+            className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-rose-100 max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Modal */}
+            <div className="px-5 py-4 bg-rose-50/80 border-b border-rose-100 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                  <Ban className="w-4.5 h-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-extrabold text-rose-950 truncate">
+                    Void / Batalkan Nota Laundry
+                  </h3>
+                  <p className="text-[11px] text-rose-700 font-medium truncate">
+                    Otorisasi PIN Khusus Void (Pra-Produksi)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={voidSubmitting}
+                onClick={() => setVoidModalOrder(null)}
+                aria-label="Tutup modal void"
+                className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmVoidLaundryOrder} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
+                {/* Ringkasan Nota */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">No. Nota:</span>
+                    <span className="font-mono font-extrabold text-slate-900">{voidModalOrder.invoiceNumber}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Pelanggan:</span>
+                    <span className="font-bold text-slate-800">{voidModalOrder.customerName || 'Pelanggan'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Total / Pembayaran:</span>
+                    <span className="font-extrabold text-rose-700">
+                      Rp {Number(voidModalOrder.grandTotal || 0).toLocaleString('id-ID')} •{' '}
+                      {voidModalOrder.paymentStatus === 'PAID'
+                        ? 'LUNAS'
+                        : voidModalOrder.paymentStatus === 'PARTIALLY_PAID'
+                        ? 'DP'
+                        : 'BELUM BAYAR'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info Banner */}
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
+                  <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <span>
+                    Void hanya berlaku sebelum cucian masuk produksi. Pembayaran tunai, deposit, atau kuota yang tercatat akan otomatis dikembalikan.
+                  </span>
+                </div>
+
+                {/* Pilihan Cepat Alasan Void */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Alasan Pembatalan (Void) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {LAUNDRY_VOID_REASONS.map((r) => {
+                      const active = voidReasonOption === r;
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setVoidReasonOption(r)}
+                          className={`px-3 py-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-rose-50 border-rose-300 text-rose-900'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{r}</span>
+                          {active && <CheckCircle2 className="w-4 h-4 text-rose-600 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {voidReasonOption === 'Lainnya' && (
+                    <input
+                      type="text"
+                      value={voidCustomReason}
+                      onChange={(e) => setVoidCustomReason(e.target.value)}
+                      placeholder="Tuliskan alasan pembatalan nota..."
+                      className="w-full mt-1.5 px-3.5 py-2 rounded-xl border border-rose-200 text-xs focus:border-rose-500 outline-none"
+                    />
+                  )}
+                </div>
+
+                {/* Catatan Opsional */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Catatan Tambahan (Opsional)</label>
+                  <textarea
+                    rows={2}
+                    value={voidNotes}
+                    onChange={(e) => setVoidNotes(e.target.value)}
+                    placeholder="Keterangan tambahan untuk log audit..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:border-blue-900 outline-none resize-none"
+                  />
+                </div>
+
+                {/* Input Wajib PIN Khusus Void */}
+                <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                  <label className="block text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4 text-rose-600" />
+                    <span>PIN Khusus Otorisasi Void (6-Digit)</span>
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={voidPin}
+                    onChange={(e) => setVoidPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="••••••"
+                    autoComplete="off"
+                    className="w-full px-4 py-2.5 text-center font-mono text-base tracking-[0.35em] font-black border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 outline-none"
+                  />
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Masukkan 6-digit PIN Khusus Void milik Owner/Admin/Supervisor (berbeda dari PIN Akses login).
+                  </p>
+                </div>
+
+                {voidError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                    <span>{voidError}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="p-4 sm:px-5 bg-slate-50 border-t border-slate-200 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={voidSubmitting}
+                  onClick={() => setVoidModalOrder(null)}
+                  className="min-h-[42px] px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={voidSubmitting || voidPin.trim().length !== 6}
+                  className="min-h-[42px] px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  {voidSubmitting ? (
+                    <span>Memproses Void...</span>
+                  ) : (
+                    <>
+                      <Ban className="w-3.5 h-3.5" />
+                      <span>Konfirmasi Void Nota</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Floating Feedback Toast WhatsApp Gateway */}
       {waToast && (

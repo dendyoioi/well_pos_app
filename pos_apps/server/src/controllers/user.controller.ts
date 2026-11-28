@@ -64,6 +64,7 @@ const createUserSchema = z.object({
   password: z.string().min(6, 'Kata sandi minimal 6 karakter').optional(),
   userCode: z.string().regex(/^\d{5}$/, 'ID Staf harus tepat 5 digit angka, contoh: 10001').optional(),
   pin: z.string().min(4, 'PIN minimal 4 digit').max(6, 'PIN maksimal 6 digit').regex(/^\d{4,6}$/, 'PIN harus berupa angka'),
+  voidPin: z.string().regex(/^\d{6}$/, 'PIN Khusus Void harus tepat 6 digit angka').optional().nullable().or(z.literal('')),
   role: z.string().default('CASHIER'),
   customRoleId: z.string().optional().nullable(),
   outletId: z.string().uuid().optional().nullable(),
@@ -76,6 +77,8 @@ const updateUserSchema = z.object({
   password: z.string().min(6, 'Kata sandi minimal 6 karakter').optional().or(z.literal('')),
   userCode: z.string().regex(/^\d{5}$/, 'ID Staf harus tepat 5 digit angka, contoh: 10001').optional(),
   pin: z.string().min(4).max(6).regex(/^\d{4,6}$/, 'PIN harus berupa angka').optional().nullable(),
+  voidPin: z.string().regex(/^\d{6}$/, 'PIN Khusus Void harus tepat 6 digit angka').optional().nullable().or(z.literal('')),
+  clearVoidPin: z.boolean().optional(),
   role: z.string().optional(),
   customRoleId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
@@ -108,6 +111,7 @@ export const getUsers = async (req: Request, res: Response) => {
         createdAt: true,
         updatedAt: true,
         pinHash: true,
+        voidPinHash: true,
         passwordHash: true,
         outletId: true,
         outlet: {
@@ -131,10 +135,11 @@ export const getUsers = async (req: Request, res: Response) => {
     tenantRoles.forEach((r) => roleMap.set(r.id, r.name));
 
     // Sanitize: jangan expose hash sensitif ke client
-    const sanitized = users.map(({ pinHash, passwordHash, ...u }) => ({
+    const sanitized = users.map(({ pinHash, voidPinHash, passwordHash, ...u }) => ({
       ...u,
       customRoleName: u.customRoleId ? roleMap.get(u.customRoleId) || null : null,
       hasPin: pinHash !== null,
+      hasVoidPin: voidPinHash !== null,
       hasPassword: passwordHash !== null,
       isInitialOwner: initialOwnerUser ? u.id === initialOwnerUser.id : false,
     }));
@@ -172,8 +177,23 @@ export const createUser = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, email, password, userCode, pin, role, customRoleId, outletId } = parseResult.data;
+    const { name, email, password, userCode, pin, voidPin, role, customRoleId, outletId } = parseResult.data;
     const systemRole = mapToSystemRole(role);
+    const trimmedVoidPin = typeof voidPin === 'string' && voidPin.trim() !== '' ? voidPin.trim() : null;
+
+    if (trimmedVoidPin && !([Role.OWNER, Role.ADMIN, Role.SUPERVISOR] as Role[]).includes(systemRole)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'PIN Khusus Void hanya berlaku untuk role Owner, Admin, atau Supervisor.',
+      });
+    }
+
+    if (trimmedVoidPin && pin && trimmedVoidPin === pin.trim()) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'PIN Khusus Void harus berbeda dari PIN Akses / Login Terminal.',
+      });
+    }
 
     // Cek apakah email sudah digunakan
     const existingUsers = await prisma.$queryRawUnsafe<any[]>(
@@ -222,6 +242,7 @@ export const createUser = async (req: Request, res: Response) => {
           passwordHash,
           userCode: userCode || null,
           pin,
+          voidPin: trimmedVoidPin,
           role: systemRole,
           customRoleId: customRoleId || null,
           outletId: assignedOutletId,
@@ -244,6 +265,7 @@ export const createUser = async (req: Request, res: Response) => {
         canCashOut: true,
         isActive: true,
         createdAt: true,
+        voidPinHash: true,
         outlet: {
           select: {
             id: true,
@@ -253,9 +275,11 @@ export const createUser = async (req: Request, res: Response) => {
       },
     });
 
+    const { voidPinHash: createdVoidPinHash, ...userDbSafe } = userDb || ({} as any);
     const newUser = {
-      ...userDb,
+      ...userDbSafe,
       pin: result.legacyData.pin,
+      hasVoidPin: Boolean(createdVoidPinHash),
     };
 
     return res.status(201).json({
@@ -306,15 +330,16 @@ export const updateUser = async (req: Request, res: Response) => {
     }
     const user = userRows[0];
 
-    const { name, email, password, pin, role, customRoleId, userCode, isActive, outletId } = parseResult.data;
+    const { name, email, password, pin, voidPin, clearVoidPin, role, customRoleId, userCode, isActive, outletId } = parseResult.data;
+
+    const currentCredentialRecord = await prisma.user.findUnique({
+      where: { id },
+      select: { userCode: true, role: true, pinHash: true, voidPinHash: true },
+    });
 
     // Jika userCode diubah, pastikan tidak duplikat di tenant
     if (userCode) {
-      const currentUserRecord = await prisma.user.findUnique({
-        where: { id },
-        select: { userCode: true },
-      });
-      if (currentUserRecord && userCode !== currentUserRecord.userCode) {
+      if (currentCredentialRecord && userCode !== currentCredentialRecord.userCode) {
         const existingCode = await prisma.user.findFirst({
           where: { tenantId, userCode, id: { not: id } },
         });
@@ -370,6 +395,53 @@ export const updateUser = async (req: Request, res: Response) => {
       targetRole = mapToSystemRole(role);
     }
 
+    const effectiveRole = targetRole || currentRole || currentCredentialRecord?.role || Role.CASHIER;
+    const isVoidPinPrivilegedRole = ([Role.OWNER, Role.ADMIN, Role.SUPERVISOR] as Role[]).includes(effectiveRole);
+    const trimmedVoidPinInput = typeof voidPin === 'string' && voidPin.trim() !== '' ? voidPin.trim() : null;
+
+    if (trimmedVoidPinInput && !isVoidPinPrivilegedRole) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'PIN Khusus Void hanya berlaku untuk role Owner, Admin, atau Supervisor.',
+      });
+    }
+
+    let voidPinUpdate: string | null | undefined = undefined;
+    if (!isVoidPinPrivilegedRole) {
+      if (currentCredentialRecord?.voidPinHash) {
+        voidPinUpdate = null;
+      }
+    } else if (clearVoidPin === true) {
+      voidPinUpdate = null;
+    } else if (trimmedVoidPinInput) {
+      voidPinUpdate = trimmedVoidPinInput;
+    }
+
+    // Validasi wajib berbeda antara PIN Akses (pinHash) & PIN Khusus Void (voidPinHash)
+    const trimmedAccessPinInput = typeof pin === 'string' && pin.trim() !== '' ? pin.trim() : null;
+    if (voidPinUpdate && trimmedAccessPinInput && voidPinUpdate === trimmedAccessPinInput) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'PIN Khusus Void harus berbeda dari PIN Akses / Login Terminal.',
+      });
+    }
+    if (voidPinUpdate && !trimmedAccessPinInput && currentCredentialRecord?.pinHash) {
+      if (await bcrypt.compare(voidPinUpdate, currentCredentialRecord.pinHash)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'PIN Khusus Void harus berbeda dari PIN Akses / Login Terminal.',
+        });
+      }
+    }
+    if (trimmedAccessPinInput && voidPinUpdate === undefined && currentCredentialRecord?.voidPinHash) {
+      if (await bcrypt.compare(trimmedAccessPinInput, currentCredentialRecord.voidPinHash)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'PIN Akses tidak boleh sama dengan PIN Khusus Void.',
+        });
+      }
+    }
+
     const updateData: any = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
@@ -391,6 +463,7 @@ export const updateUser = async (req: Request, res: Response) => {
           email,
           passwordHash: updateData.passwordHash,
           pin: pin !== undefined ? (pin || null) : undefined,
+          voidPin: voidPinUpdate,
           role: targetRole,
           customRoleId: customRoleId !== undefined ? (customRoleId || null) : undefined,
           userCode: userCode !== undefined ? (userCode || null) : undefined,
@@ -414,6 +487,8 @@ export const updateUser = async (req: Request, res: Response) => {
         canCashOut: true,
         isActive: true,
         updatedAt: true,
+        pinHash: true,
+        voidPinHash: true,
         outlet: {
           select: {
             id: true,
@@ -423,9 +498,12 @@ export const updateUser = async (req: Request, res: Response) => {
       },
     });
 
+    const { pinHash: updatedPinHash, voidPinHash: updatedVoidPinHash, ...updatedDbSafe } = userDb || ({} as any);
     const updatedUser = {
-      ...userDb,
+      ...updatedDbSafe,
       pin: pin !== undefined ? (pin || null) : null,
+      hasPin: Boolean(updatedPinHash),
+      hasVoidPin: Boolean(updatedVoidPinHash),
     };
 
     invalidateUserAuthCache(id);

@@ -63,12 +63,12 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
 
   const currentMaxQty = Number(orderItem.quantity || 1);
   const finalReason = isOtherReason ? customReason.trim() : selectedReason;
-  const isPinRequired = !isPrivileged;
+  const isPinRequired = true;
   const isFormValid =
     voidQty > 0 &&
     voidQty <= currentMaxQty &&
     finalReason.length > 0 &&
-    (!isPinRequired || pin.trim().length >= 4);
+    pin.trim().length === 6;
 
   const prodName =
     orderItem.product?.name || orderItem.productName || orderItem.name || 'Produk';
@@ -253,18 +253,18 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
             />
           </div>
 
-          {/* Otorisasi PIN Supervisor / Owner */}
+          {/* Otorisasi PIN Khusus Void */}
           <div className="pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <KeyRound className="w-3.5 h-3.5 text-amber-600" />
-                <span>Otorisasi PIN Supervisor / Owner</span>
+                <span>PIN Khusus Otorisasi Void (6-Digit)</span>
                 {isPinRequired && <span className="text-rose-500">*</span>}
               </label>
               {isPrivileged && (
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" />
-                  Mode {currentUser?.role} Aktif
+                  {currentUser?.role}
                 </span>
               )}
             </div>
@@ -272,21 +272,20 @@ export const VoidOrderItemModal: React.FC<VoidOrderItemModalProps> = ({
             <div className="relative">
               <input
                 type="password"
-                maxLength={32}
-                placeholder={isPrivileged ? 'Opsional: Masukkan PIN Supervisor / Kata Sandi Owner' : 'Masukkan PIN Supervisor atau Kata Sandi Owner'}
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="•••••• (6-digit PIN Void)"
                 value={pin}
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 disabled={loading}
-                className="w-full px-3.5 py-2.5 pr-10 border border-slate-300 rounded-xl text-xs font-mono tracking-widest text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                className="w-full px-3.5 py-2.5 pr-10 border border-slate-300 rounded-xl text-sm font-mono font-black tracking-[0.35em] text-center text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
               />
               <div className="absolute right-3 top-2.5 text-slate-400 pointer-events-none">
                 <Lock className="w-4 h-4" />
               </div>
             </div>
-            <p className="mt-1 text-[11px] text-slate-400">
-              {isPrivileged
-                ? 'Sebagai Supervisor/Owner, Anda dapat langsung mengesahkan tanpa PIN, atau masukkan PIN rekan pengawas.'
-                : 'Kasir wajib memanggil Supervisor/Owner untuk memasukkan PIN persetujuan (atau kata sandi Owner) sebelum item dapat dibatalkan.'}
+            <p className="mt-1 text-[11px] text-slate-500">
+              Wajib masukkan 6-digit PIN Khusus Void milik Owner/Admin/Supervisor (berbeda dari PIN Akses login).
             </p>
           </div>
         </div>

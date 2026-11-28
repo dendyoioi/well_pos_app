@@ -40,6 +40,7 @@ import {
   getLaundryDeliveries,
   updateLaundryDeliveryStatus,
   rewashLaundryOrder,
+  voidLaundryOrder,
   getLaundryCommissionConfig,
   updateLaundryCommissionConfig,
   getLaundryCommissions,
@@ -144,6 +145,7 @@ router.post('/orders', createLaundryOrder);
 router.patch('/orders/:id/status', updateLaundryStatus);
 router.post('/orders/:id/send-whatsapp', sendLaundryWhatsApp);
 router.post('/orders/:id/rewash', rewashLaundryOrder);
+router.post('/orders/:id/void', voidLaundryOrder);
 
 // --- Modul Sortir Pakaian & Bukti Foto Kondisi Anti-Komplain ---
 router.post('/upload-photo', uploadLaundryConditionPhoto);

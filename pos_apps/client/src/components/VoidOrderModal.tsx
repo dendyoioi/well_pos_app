@@ -59,8 +59,8 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
   if (!isOpen || !order) return null;
 
   const finalReason = isOtherReason ? customReason.trim() : selectedReason;
-  const isPinRequired = !isPrivileged;
-  const isFormValid = finalReason.length > 0 && (!isPinRequired || pin.trim().length >= 4);
+  const isPinRequired = true;
+  const isFormValid = finalReason.length > 0 && pin.trim().length === 6;
 
   const handleConfirmVoid = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,40 +220,35 @@ export const VoidOrderModal: React.FC<VoidOrderModalProps> = ({
             </div>
           </div>
 
-          {/* Supervisor / Owner Approval PIN */}
+          {/* Supervisor / Owner Dedicated Void Approval PIN */}
           <div className="pt-2 border-t border-slate-100 space-y-2">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <KeyRound className="w-4 h-4 text-rose-600" />
-                <span>PIN Persetujuan Supervisor / Owner</span>
+                <span>PIN Khusus Otorisasi Void (6-Digit)</span>
                 {isPinRequired && <span className="text-rose-500">*</span>}
               </label>
               {isPrivileged && (
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" />
-                  <span>{currentUser.role} Login</span>
+                  <span>{currentUser.role}</span>
                 </span>
               )}
             </div>
 
-            {isPrivileged ? (
-              <p className="text-[11px] text-slate-500">
-                Anda sedang login sebagai <strong>{currentUser?.name || currentUser?.role}</strong>. Otorisasi otomatis aktif (PIN opsional).
-              </p>
-            ) : (
-              <p className="text-[11px] text-slate-500">
-                Kasir wajib meminta Supervisor atau Owner untuk memasukkan PIN otorisasi (4–6 digit) atau kata sandi Owner di bawah ini.
-              </p>
-            )}
+            <p className="text-[11px] text-slate-500">
+              Wajib masukkan <strong>PIN Khusus Otorisasi Void (6-Digit)</strong> milik Owner, Admin, atau Supervisor (berbeda dari PIN Akses login).
+            </p>
 
             <div className="relative">
               <input
                 type="password"
-                maxLength={32}
+                inputMode="numeric"
+                maxLength={6}
                 value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder={isPrivileged ? 'PIN Otorisasi (Opsional)' : 'Masukkan PIN Supervisor atau Kata Sandi Owner'}
-                className="w-full px-4 py-2.5 text-center font-mono text-base tracking-[0.2em] font-black border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 transition-all bg-slate-50 focus:bg-white"
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="•••••• (6-digit PIN Void)"
+                className="w-full px-4 py-2.5 text-center font-mono text-base tracking-[0.35em] font-black border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 transition-all bg-slate-50 focus:bg-white"
                 autoComplete="off"
               />
             </div>

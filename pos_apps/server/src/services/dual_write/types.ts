@@ -172,6 +172,7 @@ export interface CreateUserDTO {
   passwordHash: string;
   userCode?: string | null;
   pin?: string | null;
+  voidPin?: string | null;
   role: string;
   customRoleId?: string | null;
   outletId?: string | null;
@@ -187,6 +188,7 @@ export interface UpdateUserDTO {
   passwordHash?: string;
   userCode?: string | null;
   pin?: string | null;
+  voidPin?: string | null;
   role?: string;
   customRoleId?: string | null;
   outletId?: string | null;

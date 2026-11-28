@@ -10,6 +10,7 @@ import { idempotencyService } from '../services/idempotency.service';
 import { storageService } from '../services/storage.service';
 import { promotionService } from '../services/promotion.service';
 import { loyaltyService } from '../services/loyalty.service';
+import { verifyVoidPin } from '../utils/voidPinAuth';
 
 // ==========================================
 // 1. SCHEMAS
@@ -10117,7 +10118,7 @@ export const submitPublicOrderComplaint = async (req: Request, res: Response) =>
         stage: 'HANDOVER',
         reportedById: order.userId,
         notes: `[Keluhan Mandiri Pelanggan] ${evidenceNotes}`,
-        photoUrls,
+        photoUrls: [],
         estimatedCompensation: 0,
         status: 'OPEN',
         customerClaimToken,
@@ -10148,5 +10149,261 @@ export const submitPublicOrderComplaint = async (req: Request, res: Response) =>
   } catch (error: any) {
     console.error('Error submitPublicOrderComplaint:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal menyimpan pengajuan keluhan pelanggan' });
+  }
+};
+
+// ============================================================================
+// VOID ORDER LAUNDRY PRA-PRODUKSI (WAJIB PIN KHUSUS VOID)
+// ============================================================================
+
+const voidLaundryOrderSchema = z.object({
+  reason: z.string().trim().min(3, 'Alasan pembatalan (void) minimal 3 karakter').max(255),
+  notes: z.string().trim().max(1000).optional().nullable(),
+  pin: z.string().trim().optional().default(''),
+});
+
+export const voidLaundryOrder = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { id } = req.params;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+    if (!id) {
+      return res.status(400).json({ status: 'error', message: 'ID nota laundry wajib disertakan' });
+    }
+
+    const parseResult = voidLaundryOrderSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const firstErr = Object.values(parseResult.error.flatten().fieldErrors).flat()[0];
+      return res.status(400).json({
+        status: 'error',
+        message: firstErr || 'Validasi data void laundry gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { reason, notes, pin } = parseResult.data;
+
+    // 1. Validasi PIN Khusus Otorisasi Void — WAJIB untuk semua role termasuk Owner/Admin/Supervisor
+    const voidAuth = await verifyVoidPin(tenantId, pin);
+    if (!voidAuth.ok) {
+      return res.status(voidAuth.status).json({
+        status: 'error',
+        code: voidAuth.code,
+        message: voidAuth.message,
+      });
+    }
+    const approver = voidAuth.approver;
+
+    const txResult = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { id, tenantId },
+        include: {
+          laundryDetail: true,
+          payments: true,
+          customerDebts: true,
+          laundryBatchItems: { select: { id: true } },
+          customerLaundryWalletLedgers: true,
+        },
+      });
+
+      if (!order || !order.laundryDetail) {
+        const err: any = new Error('Nota laundry tidak ditemukan');
+        err.httpStatus = 404;
+        throw err;
+      }
+
+      if (order.orderStatus === OrderStatus.VOIDED || order.orderStatus === OrderStatus.CANCELLED) {
+        const err: any = new Error('Nota laundry ini sudah dibatalkan/di-void sebelumnya.');
+        err.httpStatus = 400;
+        throw err;
+      }
+
+      const detail = order.laundryDetail;
+      const isPreProduction =
+        detail.status === 'RECEIVED' &&
+        detail.currentStage === 'DROP_OFF' &&
+        detail.isSorted === false &&
+        detail.isBomDeducted === false &&
+        (!detail.transferStatus || detail.transferStatus === 'AT_OUTLET') &&
+        (order.laundryBatchItems?.length || 0) === 0;
+
+      if (!isPreProduction) {
+        const err: any = new Error(
+          'Void ditolak: Cucian sudah masuk tahap sortir/produksi atau workshop. Gunakan alur Insiden / Refund untuk penanganan lebih lanjut.'
+        );
+        err.httpStatus = 400;
+        err.code = 'LAUNDRY_VOID_AFTER_PRODUCTION_FORBIDDEN';
+        throw err;
+      }
+
+      const cleanNotes = notes ? notes.trim() : '';
+      const auditTag = `[VOID LAUNDRY: ${reason}${cleanNotes ? ` - ${cleanNotes}` : ''} | Disetujui: ${approver.name} (${approver.role})]`;
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          orderStatus: OrderStatus.VOIDED,
+          paymentStatus: PaymentStatus.UNPAID,
+          notes: order.notes ? `${order.notes} ${auditTag}` : auditTag,
+          updatedAt: new Date(),
+        },
+      });
+
+      await tx.laundryOrderDetail.update({
+        where: { id: detail.id },
+        data: {
+          status: 'CANCELLED',
+          currentStage: 'VOIDED',
+          rackCode: null,
+          ...(detail.deliveryStatus ? { deliveryStatus: 'CANCELLED' } : {}),
+        },
+      });
+
+      await tx.paymentTransaction.updateMany({
+        where: {
+          orderId: order.id,
+          tenantId: order.tenantId,
+          status: { in: [PaymentTxStatus.CAPTURED, PaymentTxStatus.PENDING] },
+        },
+        data: { status: PaymentTxStatus.VOIDED },
+      });
+
+      // Pembalikan expectedEnding Shift OPEN untuk pembayaran CASH CAPTURED (tanpa double CashMovement)
+      const capturedCashTotal = (order.payments || [])
+        .filter((p) => p.paymentMethod === PaymentMethod.CASH && p.status === PaymentTxStatus.CAPTURED)
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      if (capturedCashTotal > 0 && order.shiftId) {
+        const activeShift = await tx.shift.findUnique({
+          where: { id: order.shiftId },
+          select: { id: true, status: true, expectedEnding: true },
+        });
+        if (activeShift && activeShift.status === ShiftStatus.OPEN) {
+          await tx.shift.update({
+            where: { id: activeShift.id },
+            data: {
+              expectedEnding: { decrement: capturedCashTotal },
+            },
+          });
+        }
+      }
+
+      // Pembalikan Saldo & Kuota Dompet Laundry Atomik
+      const negativeLedgers = (order.customerLaundryWalletLedgers || []).filter(
+        (l) => Number(l.deltaAmount || 0) < 0 || Number(l.deltaKg || 0) < 0
+      );
+
+      for (const neg of negativeLedgers) {
+        const refundBal = Number(neg.deltaAmount || 0) < 0 ? Math.abs(Number(neg.deltaAmount || 0)) : 0;
+        const refundKg = Number(neg.deltaKg || 0) < 0 ? Math.abs(Number(neg.deltaKg || 0)) : 0;
+        if (refundBal <= 0 && refundKg <= 0) continue;
+
+        const wallet = await tx.customerLaundryWallet.findUnique({
+          where: { id: neg.walletId },
+        });
+        if (wallet) {
+          const balBefore = Number(wallet.balanceAmount || 0);
+          const balAfter = balBefore + refundBal;
+          const kgBefore = Number(wallet.quotaKg || 0);
+          const kgAfter = kgBefore + refundKg;
+
+          await tx.customerLaundryWallet.update({
+            where: { id: wallet.id },
+            data: {
+              balanceAmount: balAfter,
+              quotaKg: kgAfter,
+            },
+          });
+
+          await tx.customerLaundryWalletLedger.create({
+            data: {
+              tenantId: order.tenantId,
+              outletId: order.outletId,
+              walletId: wallet.id,
+              orderId: order.id,
+              shiftId: order.shiftId || null,
+              cashierId: req.user?.id || null,
+              ledgerType: 'VOID_REFUND',
+              deltaAmount: refundBal,
+              balanceBefore: balBefore,
+              balanceAfter: balAfter,
+              deltaKg: refundKg,
+              kgBefore,
+              kgAfter,
+              notes: `Pengembalian saldo/kuota karena void nota laundry ${order.invoiceNumber}: ${reason}`,
+            },
+          });
+        }
+      }
+
+      // Batalkan Kasbon / Piutang Pelanggan terkait order
+      if ((order.customerDebts || []).some((d) => d.status === 'UNPAID' || d.status === 'PARTIAL')) {
+        await tx.customerDebt.updateMany({
+          where: {
+            tenantId: order.tenantId,
+            orderId: order.id,
+            status: { in: ['UNPAID', 'PARTIAL'] },
+          },
+          data: {
+            status: 'CANCELLED',
+            remainingAmount: 0,
+            notes: `Dibatalkan otomatis karena VOID LAUNDRY (${order.invoiceNumber})`,
+          },
+        });
+      }
+
+      await tx.laundryStageLog.create({
+        data: {
+          tenantId: order.tenantId,
+          orderId: order.id,
+          laundryDetailId: detail.id,
+          stage: 'VOIDED',
+          operatorId: req.user?.id || null,
+          operatorName: req.user?.name || approver.name,
+          completedAt: new Date(),
+          durationMinutes: 0,
+          notes: auditTag,
+        },
+      });
+
+      await tx.globalAuditLog.create({
+        data: {
+          tenantId: order.tenantId,
+          outletId: order.outletId,
+          actorUserId: req.user?.id || null,
+          actorName: req.user?.name || approver.name,
+          actorRole: String(req.user?.role || approver.role),
+          module: 'ORDER',
+          action: 'LAUNDRY_ORDER_VOID',
+          entityType: 'Order',
+          entityId: order.id,
+          summary: `Void nota laundry ${order.invoiceNumber} — ${reason} (Disetujui: ${approver.name} [${approver.role}])`,
+        },
+      });
+
+      return {
+        orderId: order.id,
+        invoiceNumber: order.invoiceNumber,
+        approvedBy: approver.name,
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Nota laundry berhasil di-void.',
+      data: txResult,
+    });
+  } catch (error: any) {
+    if (error?.httpStatus) {
+      return res.status(error.httpStatus).json({
+        status: 'error',
+        ...(error.code ? { code: error.code } : {}),
+        message: error.message,
+      });
+    }
+    console.error('Error voidLaundryOrder:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal membatalkan (void) nota laundry' });
   }
 };

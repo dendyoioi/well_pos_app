@@ -1558,6 +1558,13 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       CREATE UNIQUE INDEX IF NOT EXISTS "laundry_incidents_customer_claim_token_key" ON "laundry_incidents" ("customer_claim_token") WHERE "customer_claim_token" IS NOT NULL;
     `,
   },
+  {
+    id: '2026_11_29_add_users_void_pin_hash',
+    description: 'Menambahkan kolom void_pin_hash pada tabel users untuk PIN 6-digit khusus otorisasi Void (terpisah dari PIN Akses)',
+    sql: `
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "void_pin_hash" TEXT;
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

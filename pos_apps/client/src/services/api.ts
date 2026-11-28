@@ -927,7 +927,7 @@ export const api = {
   voidOrder: async (
     orderId: string,
     payload: { pin?: string; reason: string; notes?: string }
-  ): Promise<{ status: string; message: string; data?: any }> => {
+  ): Promise<{ status: string; code?: string; message: string; data?: any }> => {
     const res = await fetch(`/api/orders/${orderId}/void`, {
       method: 'POST',
       headers: {
@@ -942,8 +942,23 @@ export const api = {
   voidOrderItem: async (
     orderId: string,
     payload: { orderItemId: string; quantityToVoid?: number; pin?: string; reason: string; notes?: string }
-  ): Promise<{ status: string; message: string; data?: any }> => {
+  ): Promise<{ status: string; code?: string; message: string; data?: any }> => {
     const res = await fetch(`/api/orders/${orderId}/void-item`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  voidLaundryOrder: async (
+    orderId: string,
+    payload: { pin: string; reason: string; notes?: string }
+  ): Promise<{ status: string; code?: string; message: string; data?: { orderId: string; invoiceNumber: string; approvedBy: string } }> => {
+    const res = await fetch(`/api/laundry/orders/${orderId}/void`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1332,6 +1347,7 @@ export const api = {
     password?: string;
     userCode?: string;
     pin: string;
+    voidPin?: string | null;
     role: string;
     customRoleId?: string | null;
     outletId?: string | null;
@@ -1356,6 +1372,8 @@ export const api = {
       password?: string;
       userCode?: string;
       pin?: string | null;
+      voidPin?: string | null;
+      clearVoidPin?: boolean;
       role?: string;
       customRoleId?: string | null;
       isActive?: boolean;

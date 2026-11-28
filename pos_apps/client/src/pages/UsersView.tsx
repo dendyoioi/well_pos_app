@@ -45,6 +45,7 @@ interface StaffUser {
   customRoleId?: string | null;
   customRoleName?: string | null;
   hasPin: boolean;
+  hasVoidPin?: boolean;
   hasPassword: boolean;
   isActive: boolean;
   createdAt: string;
@@ -113,6 +114,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     email: '',
     password: '',
     pin: '',
+    voidPin: '',
     role: 'CASHIER',
     customRoleId: null as string | null,
     outletId: '',
@@ -122,9 +124,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  // Toggle "Ubah Password" dan "Ubah PIN" di mode EDIT
+  // Toggle "Ubah Password", "Ubah PIN" dan "PIN Khusus Void" di mode EDIT
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [showPinField, setShowPinField] = useState(false);
+  const [showVoidPinField, setShowVoidPinField] = useState(false);
+  const [showVoidPinValue, setShowVoidPinValue] = useState(false);
+  const [clearVoidPin, setClearVoidPin] = useState(false);
 
   // Auto-generate 5-digit Staff ID sesuai standar hierarki:
   // 00001–09999: Owner/Admin | 10001–49999: Kasir | 50001–99999: Staf Lain
@@ -210,12 +215,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
       email: '',
       password: '',
       pin: '',
+      voidPin: '',
       role: defaultCreateRole,
       customRoleId: null,
       outletId: activeOutlet?.id || (outlets.length > 0 ? outlets[0].id : ''),
       canCashOut: false,
       isActive: true,
     });
+    setShowVoidPinField(false);
+    setShowVoidPinValue(false);
+    setClearVoidPin(false);
     setFormError(null);
     setFormMode('CREATE');
     setViewMode('FORM');
@@ -234,6 +243,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
       email: u.email,
       password: '',
       pin: '',
+      voidPin: '',
       role: u.role,
       customRoleId: u.customRoleId || null,
       outletId: u.outletId || u.outlet?.id || '',
@@ -246,6 +256,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
     // Reset toggle ubah credential
     setShowPasswordField(false);
     setShowPinField(false);
+    setShowVoidPinField(false);
+    setShowVoidPinValue(false);
+    setClearVoidPin(false);
     setShowPassword(false);
   };
 
@@ -285,6 +298,17 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
       return setFormError('Kode PIN harus berupa 4 sampai 6 digit angka');
     }
 
+    const isVoidPinRole = ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(formData.role);
+    const trimmedVoidPin = isVoidPinRole ? formData.voidPin.trim() : '';
+    if (trimmedVoidPin && !/^\d{6}$/.test(trimmedVoidPin)) {
+      return setFormError('PIN Khusus Otorisasi Void harus tepat 6 digit angka');
+    }
+    if (trimmedVoidPin && formData.pin.trim() && trimmedVoidPin === formData.pin.trim()) {
+      const msg = 'PIN Khusus Void harus berbeda dari PIN Akses / Login Terminal.';
+      dialog.toast(msg, 'error');
+      return setFormError(msg);
+    }
+
     setSubmitting(true);
     try {
       if (formMode === 'CREATE') {
@@ -294,6 +318,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
           password: formData.password,
           userCode: formData.userCode.trim(),
           pin: formData.pin || '123456',
+          ...(trimmedVoidPin ? { voidPin: trimmedVoidPin } : {}),
           role: formData.role,
           customRoleId: formData.customRoleId || null,
           outletId: formData.outletId || null,
@@ -320,6 +345,13 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
         // Hanya kirim PIN jika user membuka form Ubah PIN dan menginput PIN baru
         if (showPinField && formData.pin && formData.pin.trim()) {
           payload.pin = formData.pin.trim();
+        }
+        if (isVoidPinRole) {
+          if (clearVoidPin) {
+            payload.clearVoidPin = true;
+          } else if (showVoidPinField && trimmedVoidPin) {
+            payload.voidPin = trimmedVoidPin;
+          }
         }
         // Hanya kirim userCode jika benar-benar diubah oleh user
         if (isUserCodeChanged && formData.userCode.trim()) {
@@ -850,6 +882,92 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                 Digunakan untuk login cepat dan otorisasi buka kasir pada aplikasi POS tablet/handheld.
               </p>
             </div>
+
+            {/* PIN Khusus Otorisasi Void (6-Digit) - Khusus OWNER / ADMIN / SUPERVISOR */}
+            {['OWNER', 'ADMIN', 'SUPERVISOR'].includes(formData.role) && (
+              <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-200/80 space-y-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <label className="text-xs font-extrabold text-rose-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-rose-600" />
+                    <span>PIN Khusus Otorisasi Void (6-Digit)</span>
+                  </label>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                    Terpisah dari PIN Akses
+                  </span>
+                </div>
+
+                {formMode === 'EDIT' && !showVoidPinField ? (
+                  <div className="flex flex-wrap items-center gap-2.5 px-3.5 py-3 bg-white border border-rose-200/80 rounded-2xl">
+                    {clearVoidPin ? (
+                      <span className="text-xs font-semibold text-rose-700">
+                        PIN Void akan dihapus saat data disimpan
+                      </span>
+                    ) : selectedUser?.hasVoidPin ? (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-rose-800">
+                        <CheckCircle2 className="w-4 h-4 text-rose-600" />
+                        <span>PIN Void Aktif</span>
+                        <span className="font-mono tracking-widest text-slate-400">••••••</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                        <span>PIN Void Belum Diatur</span>
+                      </span>
+                    )}
+
+                    <div className="ml-auto flex items-center gap-3">
+                      {selectedUser?.hasVoidPin && (
+                        <button
+                          type="button"
+                          onClick={() => setClearVoidPin((prev) => !prev)}
+                          className="text-xs font-bold text-rose-700 hover:text-rose-900 underline underline-offset-2 cursor-pointer"
+                        >
+                          {clearVoidPin ? 'Batalkan Hapus' : 'Hapus PIN Void'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClearVoidPin(false);
+                          setShowVoidPinField(true);
+                          setFormData((f) => ({ ...f, voidPin: '' }));
+                        }}
+                        className="text-xs font-bold text-blue-900 hover:text-blue-700 underline underline-offset-2 cursor-pointer"
+                      >
+                        {selectedUser?.hasVoidPin ? 'Ubah PIN Void' : 'Set PIN Void'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type={showVoidPinValue ? 'text' : 'password'}
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={formData.voidPin}
+                      onChange={(e) =>
+                        setFormData({ ...formData, voidPin: e.target.value.replace(/\D/g, '').slice(0, 6) })
+                      }
+                      placeholder="Masukkan 6 digit angka PIN Khusus Void"
+                      className="w-full px-4 py-3 pr-11 bg-white border border-rose-200 rounded-2xl text-xs sm:text-sm font-mono font-bold text-rose-950 focus:outline-none focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 tracking-[0.3em]"
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowVoidPinValue((prev) => !prev)}
+                      aria-label={showVoidPinValue ? 'Sembunyikan PIN Void' : 'Lihat PIN Void'}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
+                      {showVoidPinValue ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-rose-900/80 leading-relaxed">
+                  Wajib berbeda dari PIN Akses login. Digunakan khusus untuk menyetujui pembatalan (Void) nota.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* CARD 2: PENGATURAN LANJUTAN */}
@@ -1356,6 +1474,19 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                                   💸 Bisa Kas Keluar
                                 </span>
                               )}
+                              {['OWNER', 'ADMIN', 'SUPERVISOR'].includes(u.role) && (
+                                u.hasVoidPin ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                                    <Shield className="w-2.5 h-2.5" />
+                                    <span>PIN Void Aktif</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                    <AlertCircle className="w-2.5 h-2.5" />
+                                    <span>PIN Void Belum Diatur</span>
+                                  </span>
+                                )
+                              )}
                             </div>
                           </td>
 
@@ -1505,11 +1636,26 @@ export const UsersView: React.FC<UsersViewProps> = ({ activeOutlet, onNavigateTo
                         </div>
                       </div>
 
-                      {/* Petty Cash Out Flag if any */}
+                      {/* Petty Cash Out & Void PIN Badges if any */}
                       {(u.canCashOut || ['OWNER', 'ADMIN', 'SUPERVISOR'].includes(u.role)) && (
-                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
-                          <span>💸</span>
-                          <span>Izin Kas Keluar Aktif (Petty Cash Out)</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
+                            <span>💸</span>
+                            <span>Izin Kas Keluar Aktif</span>
+                          </div>
+                          {['OWNER', 'ADMIN', 'SUPERVISOR'].includes(u.role) && (
+                            u.hasVoidPin ? (
+                              <div className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200 flex items-center gap-1">
+                                <Shield className="w-3 h-3" />
+                                <span>PIN Void Aktif</span>
+                              </div>
+                            ) : (
+                              <div className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>PIN Void Belum Diatur</span>
+                              </div>
+                            )
+                          )}
                         </div>
                       )}
 

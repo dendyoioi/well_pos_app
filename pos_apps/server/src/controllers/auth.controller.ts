@@ -256,6 +256,7 @@ export const loginWithPassword = async (req: Request, res: Response) => {
           businessPermissions: roleDetails.businessPermissions,
           canCashOut: user.canCashOut ?? false,
           hasPin: !!user.pinHash,
+          hasVoidPin: !!user.voidPinHash,
           tenantId: user.tenantId,
           tenant: user.tenant
             ? {
@@ -330,6 +331,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
         customRoleId: true,
         canCashOut: true,
         pinHash: true,
+        voidPinHash: true,
         tokenVersion: true,
         tenantId: true,
         outletId: true,
@@ -419,6 +421,7 @@ export const loginWithPin = async (req: Request, res: Response) => {
           businessPermissions: roleDetails.businessPermissions,
           canCashOut: (user as any).canCashOut ?? false,
           hasPin: !!user.pinHash,
+          hasVoidPin: !!user.voidPinHash,
           tenantId: user.tenantId,
           tenant: (user as any).tenant || null,
           outlet: user.outlet,
@@ -500,6 +503,7 @@ export const getProfile = async (req: Request, res: Response) => {
         businessPermissions: roleDetails.businessPermissions,
         canCashOut: user.canCashOut ?? false,
         hasPin: !!user.pinHash,
+        hasVoidPin: !!user.voidPinHash,
         tenantId: user.tenantId,
         tenant: user.tenant
           ? {

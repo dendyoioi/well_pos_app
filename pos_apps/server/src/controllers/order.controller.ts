@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { verifyVoidPin } from '../utils/voidPinAuth';
 import { PaymentMethod, PaymentStatus, PaymentTxStatus, StockMovementType, ShiftStatus, Role, OrderStatus, RefundReason, PointTxType } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { sendOrderReceiptEmail } from '../services/mail.service';
@@ -2340,55 +2340,16 @@ export const voidOrder = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Alasan pembatalan (void) wajib diisi' });
     }
 
-    // 1. Validasi Otorisasi / Approval PIN dari Supervisor atau Owner
-    const isPrivilegedUser = currentUser && [Role.SUPERVISOR, Role.ADMIN, Role.OWNER].includes(currentUser.role);
-    let approvedByUser: { id: string; name: string; role: Role } | null = null;
-
-    if (pin && typeof pin === 'string' && pin.trim().length > 0) {
-      // Cari supervisor / admin / owner aktif pada tenant ini
-      const spvCandidates = await prisma.user.findMany({
-        where: {
-          tenantId: tenantId || undefined,
-          role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
-          isActive: true,
-        },
-        select: { id: true, name: true, role: true, pinHash: true, passwordHash: true },
-      });
-
-      for (const spv of spvCandidates) {
-        // Cek PIN 4-6 digit supervisor/owner
-        if (spv.pinHash && (await bcrypt.compare(pin.trim(), spv.pinHash))) {
-          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
-          break;
-        }
-        // Fleksibilitas: Jika Owner/Admin belum membuat PIN khusus, izinkan otorisasi via kata sandi akun Owner/Admin
-        if (spv.passwordHash && (await bcrypt.compare(pin.trim(), spv.passwordHash))) {
-          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
-          break;
-        }
-      }
-
-      if (!approvedByUser) {
-        const hasConfiguredPin = spvCandidates.some((s) => s.pinHash !== null);
-        const errMsg = hasConfiguredPin
-          ? 'PIN Supervisor atau Owner tidak valid'
-          : 'Toko belum memiliki Supervisor atau Owner dengan PIN aktif. Silakan masukkan kata sandi Owner atau atur PIN di menu Pengguna & Staf.';
-        return res.status(403).json({
-          status: 'error',
-          code: 'INVALID_SUPERVISOR_PIN',
-          message: errMsg,
-        });
-      }
-    } else if (isPrivilegedUser) {
-      // Pengguna saat ini sudah berstatus Supervisor/Admin/Owner dan melakukan void langsung
-      approvedByUser = { id: currentUser.id, name: currentUser.name || currentUser.email, role: currentUser.role };
-    } else {
-      return res.status(403).json({
+    // 1. Validasi Otorisasi PIN Khusus Void (OWNER / ADMIN / SUPERVISOR) — wajib untuk semua role
+    const voidAuth = await verifyVoidPin(tenantId, pin);
+    if (!voidAuth.ok) {
+      return res.status(voidAuth.status).json({
         status: 'error',
-        code: 'SUPERVISOR_PIN_REQUIRED',
-        message: 'PIN persetujuan dari Supervisor atau Owner wajib dimasukkan',
+        code: voidAuth.code,
+        message: voidAuth.message,
       });
     }
+    const approvedByUser = voidAuth.approver;
 
     // 2. Cari order yang akan di-void
     const order = await prisma.order.findFirst({
@@ -2401,6 +2362,8 @@ export const voidOrder = async (req: Request, res: Response) => {
         payments: true,
         customer: true,
         promotion: true,
+        laundryDetail: true,
+        laundryBatchItems: { select: { id: true } },
       },
     });
 
@@ -2410,6 +2373,26 @@ export const voidOrder = async (req: Request, res: Response) => {
 
     if (order.orderStatus === OrderStatus.VOIDED) {
       return res.status(400).json({ status: 'error', message: 'Transaksi ini sudah dibatalkan (VOIDED) sebelumnya' });
+    }
+
+    if (order.laundryDetail) {
+      const ld = order.laundryDetail;
+      const isPreProduction =
+        ld.status === 'RECEIVED' &&
+        ld.currentStage === 'DROP_OFF' &&
+        ld.isSorted === false &&
+        ld.isBomDeducted === false &&
+        (!ld.transferStatus || ld.transferStatus === 'AT_OUTLET') &&
+        (order.laundryBatchItems?.length || 0) === 0;
+
+      if (!isPreProduction) {
+        return res.status(400).json({
+          status: 'error',
+          code: 'LAUNDRY_VOID_AFTER_PRODUCTION_FORBIDDEN',
+          message:
+            'Void ditolak: Cucian sudah masuk tahap sortir/produksi atau workshop. Gunakan alur Insiden / Refund untuk penanganan lebih lanjut.',
+        });
+      }
     }
 
     const approverLabel = `${approvedByUser.name} (${approvedByUser.role})`;
@@ -2637,13 +2620,13 @@ export const voidOrder = async (req: Request, res: Response) => {
       });
 
       if (laundryDetail) {
-        // 1) Kosongkan rak penyimpanan dan ubah status laundry ke CANCELLED
+        // 1) Kosongkan rak penyimpanan dan ubah status laundry ke CANCELLED / VOIDED
         await tx.laundryOrderDetail.update({
           where: { id: laundryDetail.id },
           data: {
             rackCode: null,
             status: 'CANCELLED',
-            currentStage: 'CANCELLED',
+            currentStage: 'VOIDED',
             ...(laundryDetail.deliveryStatus ? { deliveryStatus: 'CANCELLED' } : {}),
           },
         });
@@ -2791,51 +2774,16 @@ export const voidOrderItem = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Alasan pembatalan item wajib diisi' });
     }
 
-    // 1. Validasi Otorisasi / Approval PIN dari Supervisor atau Owner
-    const isPrivilegedUser = currentUser && [Role.SUPERVISOR, Role.ADMIN, Role.OWNER].includes(currentUser.role);
-    let approvedByUser: { id: string; name: string; role: Role } | null = null;
-
-    if (pin && typeof pin === 'string' && pin.trim().length > 0) {
-      const spvCandidates = await prisma.user.findMany({
-        where: {
-          tenantId: tenantId || undefined,
-          role: { in: [Role.SUPERVISOR, Role.ADMIN, Role.OWNER] },
-          isActive: true,
-        },
-        select: { id: true, name: true, role: true, pinHash: true, passwordHash: true },
-      });
-
-      for (const spv of spvCandidates) {
-        if (spv.pinHash && (await bcrypt.compare(pin.trim(), spv.pinHash))) {
-          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
-          break;
-        }
-        if (spv.passwordHash && (await bcrypt.compare(pin.trim(), spv.passwordHash))) {
-          approvedByUser = { id: spv.id, name: spv.name, role: spv.role };
-          break;
-        }
-      }
-
-      if (!approvedByUser) {
-        const hasConfiguredPin = spvCandidates.some((s) => s.pinHash !== null);
-        const errMsg = hasConfiguredPin
-          ? 'PIN Supervisor atau Owner tidak valid'
-          : 'Toko belum memiliki Supervisor atau Owner dengan PIN aktif. Silakan masukkan kata sandi Owner atau atur PIN di menu Pengguna & Staf.';
-        return res.status(403).json({
-          status: 'error',
-          code: 'INVALID_SUPERVISOR_PIN',
-          message: errMsg,
-        });
-      }
-    } else if (isPrivilegedUser) {
-      approvedByUser = { id: currentUser.id, name: currentUser.name || currentUser.email, role: currentUser.role };
-    } else {
-      return res.status(403).json({
+    // 1. Validasi Otorisasi PIN Khusus Void (OWNER / ADMIN / SUPERVISOR) — wajib untuk semua role
+    const voidAuth = await verifyVoidPin(tenantId, pin);
+    if (!voidAuth.ok) {
+      return res.status(voidAuth.status).json({
         status: 'error',
-        code: 'SUPERVISOR_PIN_REQUIRED',
-        message: 'PIN persetujuan dari Supervisor atau Owner wajib dimasukkan',
+        code: voidAuth.code,
+        message: voidAuth.message,
       });
     }
+    const approvedByUser = voidAuth.approver;
 
     // 2. Ambil detail pesanan & item target
     const order = await prisma.order.findFirst({

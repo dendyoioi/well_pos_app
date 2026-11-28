@@ -77,6 +77,11 @@ export class UserDualWriteService extends BaseDualWriteService {
         pinHash = null;
       }
 
+      let voidPinHash: string | null = null;
+      if (dto.voidPin && dto.voidPin.trim() !== '') {
+        voidPinHash = await bcrypt.hash(dto.voidPin.trim(), 10);
+      }
+
       // 2. MUTATION VIA PARAMETERIZED RAW SQL (OD-14.1-02)
       const userId = crypto.randomUUID();
       const isActive = dto.isActive !== undefined ? dto.isActive : true;
@@ -86,10 +91,10 @@ export class UserDualWriteService extends BaseDualWriteService {
         tx,
         `INSERT INTO "users" (
           "id", "outlet_id", "name", "email", "password_hash",
-          "role", "is_active", "created_at", "updated_at", "tenant_id", "user_code", "pin_hash", "can_cash_out", "custom_role_id"
+          "role", "is_active", "created_at", "updated_at", "tenant_id", "user_code", "pin_hash", "void_pin_hash", "can_cash_out", "custom_role_id"
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6::"Role", $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8, $9, $10, $11, $12
+          $6::"Role", $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8, $9, $10, $11, $12, $13
         );`,
         userId,
         dto.outletId || null,
@@ -101,6 +106,7 @@ export class UserDualWriteService extends BaseDualWriteService {
         tenantId,
         userCode,
         pinHash,
+        voidPinHash,
         canCashOut,
         dto.customRoleId || null
       );
@@ -115,6 +121,7 @@ export class UserDualWriteService extends BaseDualWriteService {
         outletId: dto.outletId || null,
         userCode,
         hasPin: pinHash !== null,
+        hasVoidPin: voidPinHash !== null,
         canCashOut,
         isActive,
       };
@@ -128,6 +135,7 @@ export class UserDualWriteService extends BaseDualWriteService {
           userCode,
           customRoleId: dto.customRoleId || null,
           hasPinHash: pinHash !== null,
+          hasVoidPinHash: voidPinHash !== null,
         },
       };
     } catch (err: any) {
@@ -168,6 +176,15 @@ export class UserDualWriteService extends BaseDualWriteService {
         }
       }
 
+      let voidPinHashUpdate: string | null | undefined = undefined;
+      if (dto.voidPin !== undefined) {
+        if (dto.voidPin && dto.voidPin.trim() !== '') {
+          voidPinHashUpdate = await bcrypt.hash(dto.voidPin.trim(), 10);
+        } else {
+          voidPinHashUpdate = null;
+        }
+      }
+
       // Fetch existing user
       const existing = await this.queryRaw<any>(
         tx,
@@ -205,65 +222,52 @@ export class UserDualWriteService extends BaseDualWriteService {
 
       // Update user with Parameterized Raw SQL
       let targetAffected = 0;
-      if (pinHashUpdate !== undefined) {
-        await this.executeRaw(
-          tx,
-          `UPDATE "users" 
-           SET "name" = $1, "email" = $2, "password_hash" = $3,
-               "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6, "pin_hash" = $7,
-               "can_cash_out" = $8,
-               "user_code" = $11,
-               "custom_role_id" = $12,
-               "token_version" = CASE WHEN $13::boolean THEN "token_version" + 1 ELSE "token_version" END,
-               "updated_at" = CURRENT_TIMESTAMP
-           WHERE "id" = $9 AND "tenant_id" = $10;`,
-          name,
-          email,
-          passwordHash,
-          role,
-          outletId,
-          isActive,
-          pinHashUpdate,
-          canCashOut,
-          userId,
-          tenantId,
-          userCode,
-          customRoleId,
-          shouldIncrementToken
-        );
-        targetAffected = 1;
-      } else {
-        await this.executeRaw(
-          tx,
-          `UPDATE "users" 
-           SET "name" = $1, "email" = $2, "password_hash" = $3,
-               "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6,
-               "can_cash_out" = $7,
-               "user_code" = $10,
-               "custom_role_id" = $11,
-               "token_version" = CASE WHEN $12::boolean THEN "token_version" + 1 ELSE "token_version" END,
-               "updated_at" = CURRENT_TIMESTAMP
-           WHERE "id" = $8 AND "tenant_id" = $9;`,
-          name,
-          email,
-          passwordHash,
-          role,
-          outletId,
-          isActive,
-          canCashOut,
-          userId,
-          tenantId,
-          userCode,
-          customRoleId,
-          shouldIncrementToken
-        );
-      }
+      const shouldUpdatePin = pinHashUpdate !== undefined;
+      const shouldUpdateVoidPin = voidPinHashUpdate !== undefined;
+      await this.executeRaw(
+        tx,
+        `UPDATE "users" 
+         SET "name" = $1, "email" = $2, "password_hash" = $3,
+             "role" = $4::"Role", "outlet_id" = $5, "is_active" = $6,
+             "pin_hash" = CASE WHEN $13::boolean THEN $7 ELSE "pin_hash" END,
+             "void_pin_hash" = CASE WHEN $15::boolean THEN $14 ELSE "void_pin_hash" END,
+             "can_cash_out" = $8,
+             "user_code" = $11,
+             "custom_role_id" = $12,
+             "token_version" = CASE WHEN $16::boolean THEN "token_version" + 1 ELSE "token_version" END,
+             "updated_at" = CURRENT_TIMESTAMP
+         WHERE "id" = $9 AND "tenant_id" = $10;`,
+        name,
+        email,
+        passwordHash,
+        role,
+        outletId,
+        isActive,
+        pinHashUpdate ?? null,
+        canCashOut,
+        userId,
+        tenantId,
+        userCode,
+        customRoleId,
+        shouldUpdatePin,
+        voidPinHashUpdate ?? null,
+        shouldUpdateVoidPin,
+        shouldIncrementToken
+      );
+      targetAffected = 1;
 
       return {
         legacyData: { id: userId, name, email, role, customRoleId, outletId, isActive, canCashOut, userCode },
         targetSynced: true,
         targetRecordsAffected: targetAffected,
-        targetDetails: { userId, userCode, customRoleId, pinHashUpdated: pinHashUpdate !== undefined, tokenVersionIncremented: shouldIncrementToken },
+        targetDetails: {
+          userId,
+          userCode,
+          customRoleId,
+          pinHashUpdated: pinHashUpdate !== undefined,
+          voidPinHashUpdated: voidPinHashUpdate !== undefined,
+          tokenVersionIncremented: shouldIncrementToken,
+        },
       };
     } catch (err: any) {
       if (ctx.strictAtomic !== false) {

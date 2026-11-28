@@ -24,6 +24,7 @@ export interface User {
   role: UserRole;
   pin?: string | null;
   hasPin?: boolean;
+  hasVoidPin?: boolean;
   tenantId?: string | null;
   outletId?: string | null;
   canCashOut?: boolean;
