@@ -659,6 +659,14 @@ export interface LaundryAutoReminderResult {
 export type LaundryIncidentType = 'DAMAGED' | 'LOST' | 'STAIN_REMAINING' | 'MIXED_UP';
 export type LaundryIncidentStatus = 'OPEN' | 'INVESTIGATING' | 'RESOLVED' | 'COMPENSATED';
 
+export type IncidentPayoutMethod = 'CASH_DRAWER' | 'BANK_TRANSFER' | 'CUSTOMER_WALLET';
+
+export interface IncidentCustomerBankInfo {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+}
+
 export interface LaundryIncident {
   id: string;
   tenantId: string;
@@ -674,22 +682,82 @@ export interface LaundryIncident {
   photoUrls?: string[] | null;
   estimatedCompensation: number;
   approvedCompensation: number;
+  refundAmount?: number;
+  payoutMethod?: IncidentPayoutMethod | string | null;
+  payoutReference?: string | null;
+  rewashTriggered?: boolean;
   status: LaundryIncidentStatus | string;
   resolutionNotes?: string | null;
   approvedById?: string | null;
   resolvedAt?: string | null;
+  settledAt?: string | null;
+  settledById?: string | null;
+  refundId?: string | null;
+  cashMovementId?: string | null;
+  walletLedgerId?: string | null;
+  customerClaimToken?: string | null;
+  customerClaimantName?: string | null;
+  customerClaimantPhone?: string | null;
+  customerEvidenceNotes?: string | null;
+  customerEvidencePhotos?: string[] | null;
+  customerBankInfo?: IncidentCustomerBankInfo | null;
+  customerEvidenceSubmittedAt?: string | null;
+  customerAcknowledgedAt?: string | null;
+  maxRefundableAmount?: number;
   createdAt: string;
   updatedAt: string;
   order?: {
     id: string;
     invoiceNumber: string;
     totalAmount: number;
+    paidAmount?: number;
     orderStatus?: string;
+    paymentStatus?: string;
+    customerId?: string | null;
     customer?: { id?: string; name: string; phone?: string | null } | null;
   };
   reportedBy?: { id: string; name: string; role: string };
   responsibleStaff?: { id: string; name: string; role: string } | null;
   approvedBy?: { id: string; name: string; role: string } | null;
+}
+
+export interface PublicIncidentClaimData {
+  token: string;
+  tenantName: string;
+  outlet: {
+    name: string;
+    address?: string | null;
+    phone?: string | null;
+  };
+  order: {
+    invoiceNumber: string;
+    createdAt: string;
+    totalAmount: number;
+    paidAmount: number;
+  };
+  customerName: string;
+  incidentType: LaundryIncidentType | string;
+  itemDescription: string;
+  stage?: string | null;
+  notes: string;
+  photoUrls: string[];
+  status: LaundryIncidentStatus | string;
+  estimatedCompensation: number;
+  createdAt: string;
+  customerClaimantName?: string | null;
+  customerClaimantPhone?: string | null;
+  customerEvidenceNotes?: string | null;
+  customerEvidencePhotos: string[];
+  customerBankInfo?: IncidentCustomerBankInfo | null;
+  customerEvidenceSubmittedAt?: string | null;
+  customerAcknowledgedAt?: string | null;
+  settledAt?: string | null;
+  rewashTriggered?: boolean;
+  refundAmount?: number;
+  approvedCompensation?: number;
+  payoutMethod?: IncidentPayoutMethod | string | null;
+  payoutReference?: string | null;
+  resolutionNotes?: string | null;
 }
 
 export interface WorkShiftTemplate {

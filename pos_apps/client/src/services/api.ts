@@ -3594,6 +3594,76 @@ export const api = {
     return res.json();
   },
 
+  generateLaundryIncidentClaimToken: async (
+    id: string
+  ): Promise<{ status: string; data?: { id: string; customerClaimToken: string }; message?: string }> => {
+    const res = await fetch(`/api/laundry/incidents/${id}/claim-token`, {
+      method: 'POST',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  settleLaundryIncident: async (
+    id: string,
+    data: {
+      triggerRewash: boolean;
+      refundAmount: number;
+      compensationAmount: number;
+      payoutMethod?: 'CASH_DRAWER' | 'BANK_TRANSFER' | 'CUSTOMER_WALLET' | null;
+      payoutReference?: string | null;
+      resolutionNotes: string;
+    }
+  ): Promise<{ status: string; data?: LaundryIncident; message?: string }> => {
+    const res = await fetch(`/api/laundry/incidents/${id}/settle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // --- Endpoint Publik Klaim & Bukti Insiden Pelanggan (Tanpa Auth Header) ---
+  getPublicIncidentClaim: async (token: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/public/incident-claim/${encodeURIComponent(token)}`);
+    return res.json();
+  },
+
+  uploadPublicIncidentClaimPhoto: async (token: string, image: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/public/incident-claim/${encodeURIComponent(token)}/photo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image }),
+    });
+    return res.json();
+  },
+
+  submitPublicIncidentClaimEvidence: async (
+    token: string,
+    data: {
+      claimantName: string;
+      claimantPhone: string;
+      evidenceNotes: string;
+      photoUrls: string[];
+      bankInfo?: {
+        bankName: string;
+        accountNumber: string;
+        accountHolder: string;
+      } | null;
+      agreedToTerms: boolean;
+    }
+  ): Promise<any> => {
+    const res = await fetch(`/api/laundry/public/incident-claim/${encodeURIComponent(token)}/evidence`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   // --- Modul Evaluasi Performa Karyawan (Fase B) ---
   getStaffPerformance: async (params?: {
     outletId?: string;

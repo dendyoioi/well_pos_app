@@ -66,6 +66,11 @@ import {
   createLaundryIncident,
   getLaundryIncidents,
   updateLaundryIncident,
+  generateLaundryIncidentClaimToken,
+  settleLaundryIncident,
+  getPublicIncidentClaim,
+  uploadPublicIncidentClaimPhoto,
+  submitPublicIncidentClaimEvidence,
   getStaffPerformance,
   createStaffPerformanceReview,
   getStaffPerformanceReviews,
@@ -77,10 +82,13 @@ import {
 
 const router = Router();
 
-// --- 0. Endpoint Publik Tanpa Autentikasi (Live QR Tracking & Feedback Pelanggan) ---
+// --- 0. Endpoint Publik Tanpa Autentikasi (Live QR Tracking, Feedback & Klaim Bukti Insiden Pelanggan) ---
 router.get('/public/track/:invoiceNumber', getPublicLaundryTracking);
 router.post('/public/track/:invoiceNumber/feedback', submitPublicLaundryFeedback);
 router.patch('/public/track/:invoiceNumber/feedback/google-click', trackGoogleReviewClick);
+router.get('/public/incident-claim/:token', getPublicIncidentClaim);
+router.post('/public/incident-claim/:token/photo', uploadPublicIncidentClaimPhoto);
+router.post('/public/incident-claim/:token/evidence', submitPublicIncidentClaimEvidence);
 
 // Proteksi seluruh endpoint operasional di bawah ini dengan Autentikasi & Multi-Tenant Isolation
 router.use(authenticate);
@@ -182,9 +190,11 @@ router.patch('/feedbacks/:id/resolve', authorize(Role.OWNER, Role.ADMIN, Role.SU
 router.get('/customers/dormant', getDormantLaundryCustomers);
 router.post('/customers/:customerId/send-winback', sendCustomerWinback);
 
-// --- Modul Manajemen Insiden Pakaian Rusak / Hilang (Fase B) ---
+// --- Modul Manajemen Insiden Pakaian Rusak / Hilang (Fase B & Penyelesaian Terpadu) ---
 router.post('/incidents', createLaundryIncident);
 router.get('/incidents', getLaundryIncidents);
+router.post('/incidents/:id/claim-token', generateLaundryIncidentClaimToken);
+router.post('/incidents/:id/settle', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), settleLaundryIncident);
 router.patch('/incidents/:id', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryIncident);
 
 // --- Modul Evaluasi Performa Karyawan (Fase B) ---

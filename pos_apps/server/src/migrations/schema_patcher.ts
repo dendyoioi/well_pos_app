@@ -1534,6 +1534,30 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       ALTER TABLE "tenants" ADD COLUMN IF NOT EXISTS "laundry_categories" JSONB;
     `,
   },
+  {
+    id: '2026_11_29_add_laundry_incident_settlement_and_customer_claim',
+    description: 'Add settlement payout, refund/rewash linkage, and public customer claim evidence columns on laundry_incidents',
+    sql: `
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "refund_amount" DECIMAL(15, 2) NOT NULL DEFAULT 0;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "payout_method" VARCHAR(30);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "payout_reference" VARCHAR(120);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "rewash_triggered" BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "settled_at" TIMESTAMP(3);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "settled_by_id" TEXT;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "refund_id" TEXT;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "cash_movement_id" TEXT;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "wallet_ledger_id" TEXT;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_claim_token" VARCHAR(64);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_claimant_name" VARCHAR(120);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_claimant_phone" VARCHAR(40);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_evidence_notes" TEXT;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_evidence_photos" JSONB;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_bank_info" JSONB;
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_evidence_submitted_at" TIMESTAMP(3);
+      ALTER TABLE "laundry_incidents" ADD COLUMN IF NOT EXISTS "customer_acknowledged_at" TIMESTAMP(3);
+      CREATE UNIQUE INDEX IF NOT EXISTS "laundry_incidents_customer_claim_token_key" ON "laundry_incidents" ("customer_claim_token") WHERE "customer_claim_token" IS NOT NULL;
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;

@@ -2070,10 +2070,27 @@ model LaundryIncident {
   photoUrls             Json?     @map("photo_urls") // array of uploaded photo URLs
   estimatedCompensation Decimal   @default(0) @map("estimated_compensation") @db.Decimal(15, 2)
   approvedCompensation  Decimal   @default(0) @map("approved_compensation") @db.Decimal(15, 2)
+  refundAmount          Decimal   @default(0) @map("refund_amount") @db.Decimal(15, 2)
+  payoutMethod          String?   @map("payout_method") @db.VarChar(30) // CASH_DRAWER | BANK_TRANSFER | CUSTOMER_WALLET
+  payoutReference       String?   @map("payout_reference") @db.VarChar(120)
+  rewashTriggered       Boolean   @default(false) @map("rewash_triggered")
   status                String    @default("OPEN") // OPEN | INVESTIGATING | RESOLVED | COMPENSATED
   resolutionNotes       String?   @map("resolution_notes") @db.Text
   approvedById          String?   @map("approved_by_id")
   resolvedAt            DateTime? @map("resolved_at")
+  settledAt             DateTime? @map("settled_at")
+  settledById           String?   @map("settled_by_id")
+  refundId              String?   @map("refund_id")
+  cashMovementId        String?   @map("cash_movement_id")
+  walletLedgerId        String?   @map("wallet_ledger_id")
+  customerClaimToken    String?   @unique @map("customer_claim_token") @db.VarChar(64)
+  customerClaimantName  String?   @map("customer_claimant_name") @db.VarChar(120)
+  customerClaimantPhone String?   @map("customer_claimant_phone") @db.VarChar(40)
+  customerEvidenceNotes String?   @map("customer_evidence_notes") @db.Text
+  customerEvidencePhotos Json?    @map("customer_evidence_photos")
+  customerBankInfo      Json?     @map("customer_bank_info")
+  customerEvidenceSubmittedAt DateTime? @map("customer_evidence_submitted_at")
+  customerAcknowledgedAt DateTime? @map("customer_acknowledged_at")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 

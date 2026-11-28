@@ -27,6 +27,9 @@ const MaintenancePage = lazy(() =>
 const PublicLaundryTrackingPage = lazy(() =>
   import('./pages/PublicLaundryTrackingPage').then((m) => ({ default: m.PublicLaundryTrackingPage }))
 );
+const PublicIncidentClaimPage = lazy(() =>
+  import('./pages/PublicIncidentClaimPage').then((m) => ({ default: m.PublicIncidentClaimPage }))
+);
 const CustomerLaundryPortalPage = lazy(() =>
   import('./pages/CustomerLaundryPortalPage').then((m) => ({ default: m.CustomerLaundryPortalPage }))
 );
@@ -83,6 +86,18 @@ export const App: React.FC = () => {
     return '';
   });
 
+  const [incidentClaimToken, setIncidentClaimToken] = useState<string>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/incident-claim/')) {
+      return path.replace('/incident-claim/', '').split('/')[0] || '';
+    }
+    const hash = window.location.hash;
+    if (hash.toLowerCase().startsWith('#incident-claim/')) {
+      return hash.slice('#incident-claim/'.length).split('/')[0] || '';
+    }
+    return '';
+  });
+
   const [menuParams, setMenuParams] = useState<{ outletId: string; table: string }>(() => {
     const hash = window.location.hash;
     if (hash.startsWith('#menu')) {
@@ -109,12 +124,14 @@ export const App: React.FC = () => {
     return '';
   });
 
-  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track' | 'portal'>(() => {
+  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track' | 'portal' | 'incident-claim'>(() => {
     if (typeof window !== 'undefined') {
       const search = new URLSearchParams(window.location.search);
+      if (window.location.pathname.startsWith('/incident-claim/')) return 'incident-claim';
       if (search.has('portal')) return 'portal';
       if (search.has('track') || window.location.pathname.startsWith('/track')) return 'track';
       const hash = window.location.hash.toLowerCase();
+      if (hash.startsWith('#incident-claim/')) return 'incident-claim';
       if (hash.startsWith('#portal')) return 'portal';
       if (hash.startsWith('#track')) return 'track';
       if (hash.startsWith('#menu')) return 'menu';
@@ -180,7 +197,10 @@ export const App: React.FC = () => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       const lower = hash.toLowerCase();
-      if (lower.startsWith('#portal')) {
+      if (lower.startsWith('#incident-claim/')) {
+        setIncidentClaimToken(hash.slice('#incident-claim/'.length).split('/')[0] || '');
+        setViewMode('incident-claim');
+      } else if (lower.startsWith('#portal')) {
         const qIdx = hash.indexOf('?');
         if (qIdx !== -1) {
           const p = new URLSearchParams(hash.slice(qIdx));
@@ -475,8 +495,14 @@ export const App: React.FC = () => {
       <DialogProvider>
         <PullToRefresh>
           <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
-          {/* JIKA MODE PORTAL MANDIRI PELANGGAN LAUNDRY */}
-          {viewMode === 'portal' ? (
+          {/* JIKA MODE PORTAL KLAIM & BUKTI INSIDEN PELANGGAN PUBLIK */}
+          {viewMode === 'incident-claim' ? (
+            <div className="flex-1 flex flex-col">
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <PublicIncidentClaimPage token={incidentClaimToken} />
+              </Suspense>
+            </div>
+          ) : viewMode === 'portal' ? (
             <div className="flex-1 flex flex-col">
               <Suspense fallback={<ViewLoadingFallback />}>
                 <CustomerLaundryPortalPage outletId={portalOutletId} />

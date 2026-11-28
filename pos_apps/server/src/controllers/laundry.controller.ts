@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
-import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Role, Prisma } from '@prisma/client';
+import { PaymentStatus, OrderStatus, PaymentMethod, PaymentTxStatus, ShiftStatus, Role, RefundReason, Prisma } from '@prisma/client';
 import { whatsAppService, LaundryNotificationData } from '../services/whatsapp.service';
 import { idempotencyService } from '../services/idempotency.service';
 import { storageService } from '../services/storage.service';
@@ -7903,6 +7904,7 @@ export const createLaundryIncident = async (req: Request, res: Response) => {
       },
       include: {
         customer: true,
+        refunds: { select: { amount: true } },
       },
     });
 
@@ -7923,6 +7925,8 @@ export const createLaundryIncident = async (req: Request, res: Response) => {
       finalEstimatedComp = Math.min(Number(order.totalAmount) * 5, 100000);
     }
 
+    const customerClaimToken = crypto.randomBytes(24).toString('hex');
+
     const incident = await prisma.laundryIncident.create({
       data: {
         tenantId,
@@ -7939,6 +7943,7 @@ export const createLaundryIncident = async (req: Request, res: Response) => {
         estimatedCompensation: finalEstimatedComp,
         approvedCompensation: 0,
         status: 'OPEN',
+        customerClaimToken,
       },
       include: {
         order: {
@@ -7946,18 +7951,29 @@ export const createLaundryIncident = async (req: Request, res: Response) => {
             id: true,
             invoiceNumber: true,
             totalAmount: true,
+            paidAmount: true,
+            orderStatus: true,
+            paymentStatus: true,
+            customerId: true,
             customer: { select: { id: true, name: true, phone: true } },
           },
         },
         reportedBy: { select: { id: true, name: true, role: true } },
         responsibleStaff: { select: { id: true, name: true, role: true } },
+        approvedBy: { select: { id: true, name: true, role: true } },
       },
     });
+
+    const existingRefunds = order.refunds.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    const maxRefundableAmount = Math.max(0, Number(order.paidAmount || 0) - existingRefunds);
 
     return res.status(201).json({
       status: 'success',
       message: 'Laporan insiden berhasil dicatat',
-      data: incident,
+      data: {
+        ...incident,
+        maxRefundableAmount,
+      },
     });
   } catch (error: any) {
     console.error('Error createLaundryIncident:', error);
@@ -8008,8 +8024,12 @@ export const getLaundryIncidents = async (req: Request, res: Response) => {
             id: true,
             invoiceNumber: true,
             totalAmount: true,
+            paidAmount: true,
             orderStatus: true,
+            paymentStatus: true,
+            customerId: true,
             customer: { select: { id: true, name: true, phone: true } },
+            refunds: { select: { amount: true } },
           },
         },
         reportedBy: { select: { id: true, name: true, role: true } },
@@ -8019,13 +8039,695 @@ export const getLaundryIncidents = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Lazy backfill token untuk insiden lama yang belum memiliki customerClaimToken
+    const enrichedIncidents = await Promise.all(
+      incidents.map(async (inc) => {
+        let token = inc.customerClaimToken;
+        if (!token) {
+          token = crypto.randomBytes(24).toString('hex');
+          try {
+            await prisma.laundryIncident.update({
+              where: { id: inc.id },
+              data: { customerClaimToken: token },
+            });
+          } catch (errToken) {
+            console.warn(`Gagal lazy backfill claim token untuk insiden ${inc.id}:`, errToken);
+          }
+        }
+
+        const existingRefunds = (inc.order?.refunds || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+        const maxRefundableAmount = Math.max(0, Number(inc.order?.paidAmount || 0) - existingRefunds);
+        const { refunds: _ignoredRefunds, ...cleanOrder } = inc.order || {};
+
+        return {
+          ...inc,
+          customerClaimToken: token,
+          order: inc.order ? cleanOrder : undefined,
+          maxRefundableAmount,
+        };
+      })
+    );
+
     return res.status(200).json({
       status: 'success',
-      data: incidents,
+      data: enrichedIncidents,
     });
   } catch (error: any) {
     console.error('Error getLaundryIncidents:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal mengambil daftar insiden' });
+  }
+};
+
+export const generateLaundryIncidentClaimToken = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    const incident = await prisma.laundryIncident.findFirst({
+      where: { id, tenantId },
+      select: { id: true, customerClaimToken: true },
+    });
+
+    if (!incident) {
+      return res.status(404).json({ status: 'error', message: 'Insiden tidak ditemukan' });
+    }
+
+    if (incident.customerClaimToken) {
+      return res.status(200).json({
+        status: 'success',
+        data: { id: incident.id, customerClaimToken: incident.customerClaimToken },
+      });
+    }
+
+    const newToken = crypto.randomBytes(24).toString('hex');
+    const updated = await prisma.laundryIncident.update({
+      where: { id: incident.id },
+      data: { customerClaimToken: newToken },
+      select: { id: true, customerClaimToken: true },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error generateLaundryIncidentClaimToken:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal membuat link klaim pelanggan' });
+  }
+};
+
+const settleLaundryIncidentSchema = z.object({
+  triggerRewash: z.boolean().default(false),
+  refundAmount: z.number().min(0, 'Nominal refund tidak boleh negatif').default(0),
+  compensationAmount: z.number().min(0, 'Nominal kompensasi tidak boleh negatif').default(0),
+  payoutMethod: z.enum(['CASH_DRAWER', 'BANK_TRANSFER', 'CUSTOMER_WALLET']).optional().nullable(),
+  payoutReference: z.string().max(120, 'Nomor referensi maksimal 120 karakter').optional().nullable(),
+  resolutionNotes: z.string().trim().min(3, 'Catatan penyelesaian minimal 3 karakter'),
+});
+
+class IncidentHttpError extends Error {
+  statusCode: number;
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+export const settleLaundryIncident = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const userId = req.user?.id;
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (!tenantId || !userId) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(userRole)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat menyelesaikan dan mencairkan insiden',
+      });
+    }
+
+    const { id } = req.params;
+    const parseResult = settleLaundryIncidentSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi form penyelesaian insiden gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const {
+      triggerRewash,
+      refundAmount,
+      compensationAmount,
+      payoutMethod,
+      payoutReference,
+      resolutionNotes,
+    } = parseResult.data;
+
+    if (!triggerRewash && refundAmount <= 0 && compensationAmount <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Pilih minimal satu penyelesaian: Garansi Cuci Ulang, Refund Biaya Cuci, atau Kompensasi Ganti Rugi.',
+      });
+    }
+
+    const totalCashOut = Number(refundAmount) + Number(compensationAmount);
+    if (totalCashOut > 0 && !payoutMethod) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Metode pencairan wajib dipilih apabila terdapat nominal Refund atau Kompensasi.',
+      });
+    }
+
+    const now = new Date();
+
+    const settledIncident = await prisma.$transaction(async (tx) => {
+      const incident = await tx.laundryIncident.findFirst({
+        where: { id, tenantId },
+        include: {
+          order: {
+            include: {
+              refunds: { select: { amount: true } },
+              laundryDetail: true,
+              customer: true,
+            },
+          },
+        },
+      });
+
+      if (!incident) {
+        throw new IncidentHttpError(404, 'Insiden tidak ditemukan');
+      }
+
+      if (incident.settledAt) {
+        throw new IncidentHttpError(400, 'Insiden ini sudah diselesaikan dan dicairkan sebelumnya.');
+      }
+
+      const existingRefunds = (incident.order.refunds || []).reduce(
+        (sum, r) => sum + Number(r.amount || 0),
+        0
+      );
+      const paidAmount = Number(incident.order.paidAmount || 0);
+      const maxRefundable = Math.max(0, paidAmount - existingRefunds);
+
+      if (refundAmount > maxRefundable) {
+        throw new IncidentHttpError(
+          400,
+          `Nominal refund (Rp ${refundAmount.toLocaleString('id-ID')}) melebihi batas maksimal yang dapat di-refund (Rp ${maxRefundable.toLocaleString('id-ID')}).`
+        );
+      }
+
+      // 1. Garansi Cuci Ulang (Rewash Rp 0)
+      if (triggerRewash) {
+        const detail = incident.order.laundryDetail;
+        if (!detail) {
+          throw new IncidentHttpError(400, 'Detail pesanan laundry tidak ditemukan untuk diproses cuci ulang.');
+        }
+
+        const reasonTag = `[REWASH/GARANSI INSIDEN: ${resolutionNotes}]`;
+        const updatedDefectNotes = detail.defectNotes
+          ? `${detail.defectNotes}\n${reasonTag}`
+          : reasonTag;
+
+        await tx.laundryOrderDetail.update({
+          where: { id: detail.id },
+          data: {
+            status: 'WASHING_DRYING',
+            currentStage: 'SPOTTING',
+            rackCode: null,
+            pickedUpAt: null,
+            pickedUpBy: null,
+            defectNotes: updatedDefectNotes,
+          },
+        });
+
+        await tx.order.update({
+          where: { id: incident.orderId },
+          data: {
+            orderStatus: OrderStatus.IN_PROGRESS,
+          },
+        });
+
+        await tx.laundryStageLog.create({
+          data: {
+            tenantId,
+            orderId: incident.orderId,
+            laundryDetailId: detail.id,
+            stage: 'REWASH',
+            operatorId: userId,
+            operatorName: (req.user as any)?.name || 'Owner / Supervisor',
+            weightKg: detail.totalWeightKg,
+            piecesCount: detail.totalPieces,
+            completedAt: now,
+            durationMinutes: 0,
+            notes: `Cuci Ulang Garansi (Rp 0) dari Insiden (${incident.incidentType}): ${resolutionNotes}`,
+          },
+        });
+      }
+
+      // 2. Refund Biaya Cuci
+      let createdRefundId: string | null = null;
+      if (refundAmount > 0) {
+        const refundNumber = `REF-INC-${incident.order.invoiceNumber}-${Date.now().toString().slice(-4)}`;
+        const createdRefund = await tx.refund.create({
+          data: {
+            tenantId,
+            orderId: incident.orderId,
+            refundNumber,
+            amount: new Prisma.Decimal(refundAmount),
+            reason: RefundReason.DISSATISFIED_SERVICE,
+            notes: `Refund Insiden (${incident.incidentType}) Nota ${incident.order.invoiceNumber}: ${resolutionNotes}`,
+          },
+        });
+        createdRefundId = createdRefund.id;
+
+        const nextPaymentStatus =
+          existingRefunds + refundAmount >= paidAmount && paidAmount > 0
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED;
+
+        await tx.order.update({
+          where: { id: incident.orderId },
+          data: {
+            paymentStatus: nextPaymentStatus,
+          },
+        });
+      }
+
+      // 3. Pencairan Dana (Refund + Kompensasi Ganti Rugi)
+      let createdCashMovementId: string | null = null;
+      let createdWalletLedgerId: string | null = null;
+
+      if (totalCashOut > 0 && payoutMethod) {
+        if (payoutMethod === 'CASH_DRAWER') {
+          const openShift = await tx.shift.findFirst({
+            where: {
+              tenantId,
+              outletId: incident.outletId,
+              status: ShiftStatus.OPEN,
+            },
+            orderBy: { startTime: 'desc' },
+          });
+
+          if (!openShift) {
+            throw new IncidentHttpError(
+              400,
+              'Tidak ada shift kasir yang sedang aktif di outlet ini untuk pencairan tunai laci.'
+            );
+          }
+
+          const cashMovement = await tx.cashMovement.create({
+            data: {
+              tenantId,
+              outletId: incident.outletId,
+              shiftId: openShift.id,
+              userId,
+              type: 'CASH_OUT',
+              category: 'LAUNDRY_INCIDENT_PAYOUT',
+              amount: new Prisma.Decimal(totalCashOut),
+              notes: `Pencairan Insiden (${incident.incidentType}) Nota ${incident.order.invoiceNumber}: ${resolutionNotes}`,
+            },
+          });
+          createdCashMovementId = cashMovement.id;
+
+          await tx.shift.update({
+            where: { id: openShift.id },
+            data: {
+              expectedEnding: {
+                decrement: totalCashOut,
+              },
+            },
+          });
+        } else if (payoutMethod === 'CUSTOMER_WALLET') {
+          const customerId = incident.order.customerId;
+          if (!customerId) {
+            throw new IncidentHttpError(
+              400,
+              'Order ini tidak terhubung dengan data pelanggan untuk pencairan ke Saldo Deposit.'
+            );
+          }
+
+          let wallet = await tx.customerLaundryWallet.findUnique({
+            where: {
+              tenantId_customerId: {
+                tenantId,
+                customerId,
+              },
+            },
+          });
+
+          if (!wallet) {
+            wallet = await tx.customerLaundryWallet.create({
+              data: {
+                tenantId,
+                customerId,
+                balanceAmount: 0,
+                quotaKg: 0,
+              },
+            });
+          }
+
+          const balanceBefore = Number(wallet.balanceAmount);
+          const balanceAfter = balanceBefore + totalCashOut;
+          const quotaCurrent = Number(wallet.quotaKg);
+
+          await tx.customerLaundryWallet.update({
+            where: { id: wallet.id },
+            data: {
+              balanceAmount: balanceAfter,
+            },
+          });
+
+          const ledger = await tx.customerLaundryWalletLedger.create({
+            data: {
+              walletId: wallet.id,
+              tenantId,
+              outletId: incident.outletId,
+              orderId: incident.orderId,
+              cashierId: userId,
+              ledgerType: 'INCIDENT_COMPENSATION',
+              deltaAmount: totalCashOut,
+              balanceBefore,
+              balanceAfter,
+              deltaKg: 0,
+              kgBefore: quotaCurrent,
+              kgAfter: quotaCurrent,
+              paymentMethod: 'CUSTOMER_WALLET',
+              notes: `Kompensasi/Refund Insiden (${incident.incidentType}) Nota ${incident.order.invoiceNumber}: ${resolutionNotes}`,
+            },
+          });
+          createdWalletLedgerId = ledger.id;
+        }
+        // BANK_TRANSFER: hanya menyimpan payoutMethod & payoutReference pada insiden
+      }
+
+      const finalStatus = compensationAmount > 0 || refundAmount > 0 ? 'COMPENSATED' : 'RESOLVED';
+
+      const updatedIncident = await tx.laundryIncident.update({
+        where: { id: incident.id },
+        data: {
+          approvedCompensation: new Prisma.Decimal(compensationAmount),
+          refundAmount: new Prisma.Decimal(refundAmount),
+          payoutMethod: totalCashOut > 0 ? payoutMethod : null,
+          payoutReference: payoutReference?.trim() || null,
+          rewashTriggered: triggerRewash,
+          status: finalStatus,
+          resolutionNotes,
+          approvedById: userId,
+          settledById: userId,
+          settledAt: now,
+          resolvedAt: now,
+          refundId: createdRefundId,
+          cashMovementId: createdCashMovementId,
+          walletLedgerId: createdWalletLedgerId,
+        },
+        include: {
+          order: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              totalAmount: true,
+              paidAmount: true,
+              orderStatus: true,
+              paymentStatus: true,
+              customerId: true,
+              customer: { select: { id: true, name: true, phone: true } },
+            },
+          },
+          reportedBy: { select: { id: true, name: true, role: true } },
+          responsibleStaff: { select: { id: true, name: true, role: true } },
+          approvedBy: { select: { id: true, name: true, role: true } },
+        },
+      });
+
+      const nextMaxRefundable = Math.max(0, paidAmount - (existingRefunds + refundAmount));
+
+      return {
+        ...updatedIncident,
+        maxRefundableAmount: nextMaxRefundable,
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Penyelesaian insiden berhasil disahkan dan dicairkan',
+      data: settledIncident,
+    });
+  } catch (error: any) {
+    if (error instanceof IncidentHttpError) {
+      return res.status(error.statusCode).json({ status: 'error', message: error.message });
+    }
+    console.error('Error settleLaundryIncident:', error);
+    return res.status(500).json({ status: 'error', message: error.message || 'Gagal memproses penyelesaian insiden' });
+  }
+};
+
+// ==========================================
+// 19B. ENDPOINT PUBLIK PORTAL KLAIM & BUKTI PELANGGAN (TANPA AUTH)
+// ==========================================
+
+function maskPublicCustomerName(rawName?: string | null): string {
+  const clean = (rawName || 'Pelanggan').trim();
+  if (!clean) return 'Pelanggan';
+  const parts = clean.split(/\s+/);
+  if (parts.length > 1) {
+    return `${parts[0]} ${parts[1].charAt(0)}***`;
+  }
+  return clean.length > 3 ? `${clean.slice(0, 3)}***` : `${clean}***`;
+}
+
+export const getPublicIncidentClaim = async (req: Request, res: Response) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ status: 'error', message: 'Token klaim tidak valid' });
+    }
+
+    const incident = await prisma.laundryIncident.findUnique({
+      where: { customerClaimToken: token },
+      include: {
+        tenant: { select: { name: true } },
+        outlet: { select: { name: true, address: true, phone: true } },
+        order: {
+          select: {
+            invoiceNumber: true,
+            createdAt: true,
+            totalAmount: true,
+            paidAmount: true,
+            customer: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    if (!incident) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Tautan klaim insiden tidak ditemukan atau sudah tidak berlaku.',
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        token: incident.customerClaimToken,
+        tenantName: incident.tenant?.name || 'Well POS Laundry',
+        outlet: {
+          name: incident.outlet?.name || 'Outlet Laundry',
+          address: incident.outlet?.address || null,
+          phone: incident.outlet?.phone || null,
+        },
+        order: {
+          invoiceNumber: incident.order?.invoiceNumber || '-',
+          createdAt: incident.order?.createdAt,
+          totalAmount: Number(incident.order?.totalAmount || 0),
+          paidAmount: Number(incident.order?.paidAmount || 0),
+        },
+        customerName: maskPublicCustomerName(incident.order?.customer?.name),
+        incidentType: incident.incidentType,
+        itemDescription: incident.itemDescription,
+        stage: incident.stage,
+        notes: incident.notes,
+        photoUrls: Array.isArray(incident.photoUrls) ? incident.photoUrls : [],
+        status: incident.status,
+        estimatedCompensation: Number(incident.estimatedCompensation || 0),
+        createdAt: incident.createdAt,
+        customerClaimantName: incident.customerClaimantName,
+        customerClaimantPhone: incident.customerClaimantPhone,
+        customerEvidenceNotes: incident.customerEvidenceNotes,
+        customerEvidencePhotos: Array.isArray(incident.customerEvidencePhotos) ? incident.customerEvidencePhotos : [],
+        customerBankInfo: incident.customerBankInfo,
+        customerEvidenceSubmittedAt: incident.customerEvidenceSubmittedAt,
+        customerAcknowledgedAt: incident.customerAcknowledgedAt,
+        settledAt: incident.settledAt,
+        rewashTriggered: incident.rewashTriggered,
+        refundAmount: Number(incident.refundAmount || 0),
+        approvedCompensation: Number(incident.approvedCompensation || 0),
+        payoutMethod: incident.payoutMethod,
+        payoutReference: incident.payoutReference,
+        resolutionNotes: incident.settledAt ? incident.resolutionNotes : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getPublicIncidentClaim:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat data klaim insiden' });
+  }
+};
+
+export const uploadPublicIncidentClaimPhoto = async (req: Request, res: Response) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ status: 'error', message: 'Token klaim tidak valid' });
+    }
+
+    const incident = await prisma.laundryIncident.findUnique({
+      where: { customerClaimToken: token },
+      select: { id: true, tenantId: true, settledAt: true },
+    });
+
+    if (!incident) {
+      return res.status(404).json({ status: 'error', message: 'Tautan klaim insiden tidak ditemukan' });
+    }
+
+    if (incident.settledAt) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Insiden ini sudah diselesaikan dan ditutup sehingga tidak dapat menerima unggahan foto baru.',
+      });
+    }
+
+    const { image } = req.body;
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Data foto (Base64 Data URL) wajib disertakan' });
+    }
+
+    const matches = image.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ status: 'error', message: 'Format Data URL gambar tidak valid' });
+    }
+
+    const rawSubtype = matches[1].toLowerCase();
+    const ALLOWED_MIME_EXTS: Record<string, string> = {
+      jpeg: 'jpg',
+      jpg: 'jpg',
+      png: 'png',
+      webp: 'webp',
+    };
+
+    if (!ALLOWED_MIME_EXTS[rawSubtype]) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Format gambar tidak didukung. Hanya file JPG, JPEG, PNG, dan WebP yang diizinkan.',
+      });
+    }
+
+    const ext = ALLOWED_MIME_EXTS[rawSubtype];
+    const buffer = Buffer.from(matches[2], 'base64');
+
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    if (buffer.length > MAX_FILE_SIZE) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Ukuran foto melebihi batas maksimal 2 MB (ukuran file: ${(buffer.length / (1024 * 1024)).toFixed(2)} MB)`,
+      });
+    }
+
+    const contentType = `image/${rawSubtype === 'jpg' ? 'jpeg' : rawSubtype}`;
+    const uploadResult = await storageService.uploadBuffer({
+      buffer,
+      contentType,
+      ext,
+      tenantId: incident.tenantId,
+      module: 'laundry-incident-claims',
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Foto bukti pelanggan berhasil diunggah',
+      data: {
+        url: uploadResult.url,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error uploadPublicIncidentClaimPhoto:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengunggah foto bukti pelanggan' });
+  }
+};
+
+const publicIncidentEvidenceSchema = z.object({
+  claimantName: z.string().trim().min(2, 'Nama lengkap wajib diisi (minimal 2 karakter)').max(120),
+  claimantPhone: z.string().trim().min(8, 'Nomor WhatsApp tidak valid').max(40),
+  evidenceNotes: z.string().trim().min(5, 'Kronologi / keterangan wajib diisi (minimal 5 karakter)'),
+  photoUrls: z.array(z.string().min(1)).max(3, 'Maksimal 3 foto bukti yang dapat diunggah').default([]),
+  bankInfo: z
+    .object({
+      bankName: z.string().trim().min(2, 'Nama bank wajib diisi').max(60),
+      accountNumber: z.string().trim().min(4, 'Nomor rekening wajib diisi').max(40),
+      accountHolder: z.string().trim().min(2, 'Nama pemilik rekening wajib diisi').max(80),
+    })
+    .optional()
+    .nullable(),
+  agreedToTerms: z.literal(true, {
+    errorMap: () => ({ message: 'Anda wajib menyetujui pernyataan kebenaran bukti & Berita Acara.' }),
+  }),
+});
+
+export const submitPublicIncidentClaimEvidence = async (req: Request, res: Response) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ status: 'error', message: 'Token klaim tidak valid' });
+    }
+
+    const incident = await prisma.laundryIncident.findUnique({
+      where: { customerClaimToken: token },
+      select: { id: true, status: true, settledAt: true },
+    });
+
+    if (!incident) {
+      return res.status(404).json({ status: 'error', message: 'Tautan klaim insiden tidak ditemukan' });
+    }
+
+    if (incident.settledAt) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Insiden ini sudah diselesaikan dan ditutup sehingga bukti tidak dapat diubah lagi.',
+      });
+    }
+
+    const parseResult = publicIncidentEvidenceSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi form bukti klaim gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { claimantName, claimantPhone, evidenceNotes, photoUrls, bankInfo } = parseResult.data;
+    const now = new Date();
+
+    const updated = await prisma.laundryIncident.update({
+      where: { id: incident.id },
+      data: {
+        customerClaimantName: claimantName,
+        customerClaimantPhone: claimantPhone,
+        customerEvidenceNotes: evidenceNotes,
+        customerEvidencePhotos: photoUrls,
+        customerBankInfo: bankInfo ? (bankInfo as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        customerEvidenceSubmittedAt: now,
+        customerAcknowledgedAt: now,
+        ...(incident.status === 'OPEN' ? { status: 'INVESTIGATING' } : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        customerClaimantName: true,
+        customerClaimantPhone: true,
+        customerEvidenceNotes: true,
+        customerEvidencePhotos: true,
+        customerBankInfo: true,
+        customerEvidenceSubmittedAt: true,
+        customerAcknowledgedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Bukti dan kronologi klaim Anda berhasil dikirim untuk ditinjau pihak outlet.',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error submitPublicIncidentClaimEvidence:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menyimpan bukti klaim pelanggan' });
   }
 };
 
