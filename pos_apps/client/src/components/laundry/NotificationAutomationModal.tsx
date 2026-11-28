@@ -16,7 +16,8 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { authStorage, laundryCore3Api } from '../../services/api';
-import { WhatsAppInput } from '../ui';
+import { WhatsAppInput, WhatsAppChatPreview } from '../ui';
+import { buildWhatsAppUrl } from '../../utils/phone';
 import type {
   NotificationAutomationRuleItem,
   NotificationDispatchLogItem,
@@ -221,7 +222,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
   const handleExecuteSimulate = async () => {
     if (!simRule) return;
     if (simSendRealTest && !simRecipientPhone.trim()) {
-      showToast('Masukkan nomor WhatsApp tujuan terlebih dahulu untuk mengirim tes nyata.', 'error');
+      showToast('Masukkan nomor WhatsApp tujuan terlebih dahulu untuk mengirim tes manual.', 'error');
       return;
     }
 
@@ -234,8 +235,16 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
         recipientPhone: simRecipientPhone.trim() || null,
         messageTemplate: simRule.messageTemplate,
         channels: simRule.channels,
-        sendRealTest: simSendRealTest,
+        sendRealTest: false,
       });
+
+      if (simSendRealTest) {
+        window.open(
+          buildWhatsAppUrl(simRecipientPhone, liveRenderedPreview),
+          '_blank',
+          'noopener,noreferrer'
+        );
+      }
 
       if (res.status === 'success' && res.data && res.data.length > 0) {
         const firstLog = res.data[0];
@@ -246,7 +255,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
           setSimResult({
             status: 'SKIPPED',
             renderedMessage: rendered,
-            summaryText: `[SIMULASI] Event ${simRule.eventKey} DI-SKIP karena saklar aturan dinonaktifkan.`,
+            summaryText: `[SIMULASI] Event ${simRule.eventKey} DI-SKIP karena saklar aturan dinonaktifkan.${simSendRealTest ? ' Chat wa.me tetap dibuka untuk pratinjau manual.' : ''}`,
           });
           showToast(`[SIMULASI] Event ${simRule.eventKey} DI-SKIP karena saklar dinonaktifkan.`, 'success');
         } else if (failedLog) {
@@ -254,17 +263,24 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
             status: 'FAILED',
             renderedMessage: rendered,
             summaryText: `Pengiriman kanal ${failedLog.channel} gagal.`,
-            error: failedLog.errorMessage || 'Periksa konfigurasi WhatsApp Gateway / nomor tujuan.',
+            error: failedLog.errorMessage || 'Periksa nomor tujuan.',
           });
-          showToast(failedLog.errorMessage || 'Sebagian kanal gagal dikirim.', 'error');
+          showToast(failedLog.errorMessage || 'Sebagian kanal gagal dicatat.', 'error');
         } else {
-          const modeText = simSendRealTest ? 'TES NYATA' : 'SIMULASI';
+          const modeText = simSendRealTest ? 'TES MANUAL WA' : 'SIMULASI';
           setSimResult({
             status: 'SENT',
             renderedMessage: rendered,
-            summaryText: `[${modeText}] Event ${simRule.eventKey} TERKIRIM via ${res.data.map((l) => l.channel).join(', ')}.`,
+            summaryText: simSendRealTest
+              ? `[${modeText}] Log simulasi event ${simRule.eventKey} tercatat & chat WhatsApp dibuka.`
+              : `[${modeText}] Event ${simRule.eventKey} dicatat ke riwayat log (${res.data.map((l) => l.channel).join(', ')}).`,
           });
-          showToast(`[${modeText}] Event ${simRule.eventKey} TERKIRIM (${firstLog.channel})!`, 'success');
+          showToast(
+            simSendRealTest
+              ? 'Log tersimpan & WhatsApp dibuka ke nomor tujuan!'
+              : `[${modeText}] Event ${simRule.eventKey} tercatat di riwayat log!`,
+            'success'
+          );
         }
         loadLogs();
       } else {
@@ -487,7 +503,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                       <span>Simulasi Log &amp; Preview Saja</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Menguji aturan aktif/nonaktif &amp; mencatat log tanpa mengirim pesan ke gateway eksternal.
+                      Menguji aturan aktif/nonaktif &amp; mencatat log simulasi tanpa membuka aplikasi WhatsApp.
                     </p>
                   </button>
 
@@ -502,26 +518,29 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                   >
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
                       <Smartphone className="w-4 h-4 text-emerald-700 shrink-0" />
-                      <span>Kirim Pesan Tes Nyata ke WhatsApp</span>
+                      <span>Kirim Tes Manual via WhatsApp (wa.me)</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Menembak langsung WhatsApp Gateway outlet ke nomor di atas bila aturan aktif.
+                      Mencatat log simulasi dan langsung membuka WhatsApp ke nomor tujuan dengan pesan hasil render.
                     </p>
                   </button>
                 </div>
               </div>
 
-              {/* Pratinjau Pesan Hasil Render */}
+              {/* Pratinjau Pesan Hasil Render (Antarmuka Chat WhatsApp) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-700">Pratinjau Pesan Hasil Render</span>
+                  <span className="font-bold text-slate-700">Pratinjau Pesan WhatsApp</span>
                   <span className="text-[11px] text-slate-400">
                     Outlet: <strong className="text-slate-600">{activeOutlet?.name || 'Well POS Laundry'}</strong>
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-900 text-slate-100 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed border border-slate-800">
-                  {liveRenderedPreview || '(Template pesan kosong)'}
-                </div>
+                <WhatsAppChatPreview
+                  senderName={activeOutlet?.name || 'Well POS Laundry'}
+                  recipientLabel={simRecipientName || 'Pelanggan Uji Coba'}
+                  recipientPhone={simRecipientPhone}
+                  message={liveRenderedPreview || '(Template pesan kosong)'}
+                />
               </div>
 
               {/* Hasil Pengujian Terakhir */}
@@ -822,7 +841,11 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                 type="button"
                 disabled={simulatingKey === simRule.eventKey}
                 onClick={handleExecuteSimulate}
-                className="h-11 sm:h-10 px-5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition flex items-center justify-center gap-2 cursor-pointer"
+                className={`h-11 sm:h-10 px-5 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer ${
+                  simSendRealTest
+                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                    : 'bg-blue-900 hover:bg-blue-800 shadow-blue-900/20'
+                }`}
               >
                 {simulatingKey === simRule.eventKey ? (
                   <>
@@ -833,7 +856,7 @@ export const NotificationAutomationModal: React.FC<NotificationAutomationModalPr
                   <>
                     <Send className="w-4 h-4" />
                     <span>
-                      {simSendRealTest ? 'Kirim Pesan Tes Nyata' : 'Jalankan Simulasi'}
+                      {simSendRealTest ? 'Buka & Kirim Tes di WhatsApp' : 'Jalankan Simulasi Log'}
                     </span>
                   </>
                 )}

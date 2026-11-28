@@ -6,17 +6,17 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  Send,
-  ExternalLink,
+  MessageCircle,
   X,
   Sparkles,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Outlet } from '../../types/outlet';
 import { TablePagination } from '../TablePagination';
-import { TableSkeleton, EmptyState } from '../ui';
+import { TableSkeleton, EmptyState, WhatsAppChatPreview } from '../ui';
 import { useDialog } from '../../context/DialogContext';
 import { formatRupiah } from '../../utils/currency';
+import { buildWhatsAppUrl } from '../../utils/phone';
 
 interface LaundryCustomerWinbackTabProps {
   activeOutlet?: Outlet | null;
@@ -51,7 +51,6 @@ export const LaundryCustomerWinbackTab: React.FC<LaundryCustomerWinbackTabProps>
   // Win-back Send Modal
   const [selectedCustomer, setSelectedCustomer] = useState<DormantCustomer | null>(null);
   const [customDiscountText, setCustomDiscountText] = useState<string>('Diskon 10% untuk cuci berikutnya');
-  const [sendingWinback, setSendingWinback] = useState<boolean>(false);
 
   const fetchDormantCustomers = async () => {
     try {
@@ -135,28 +134,23 @@ export const LaundryCustomerWinbackTab: React.FC<LaundryCustomerWinbackTabProps>
     setCustomDiscountText('Diskon 10% untuk cuci berikutnya');
   };
 
-  const handleSendViaGateway = async () => {
-    if (!selectedCustomer) return;
-    try {
-      setSendingWinback(true);
-      const res = await api.sendCustomerWinback(selectedCustomer.id, {
-        outletId: activeOutlet?.id,
-        customMessage: customDiscountText.trim() ? `Voucher Spesial: ${customDiscountText.trim()}` : undefined,
-      });
+  const buildWinbackMessage = (customer: DormantCustomer, discountNote: string): string => {
+    const storeName = activeOutlet?.name || 'Well POS Laundry';
+    const promoNote = discountNote.trim() ? `\n\n🎁 *Promo Spesial Untuk Anda:*\n${discountNote.trim()}` : '';
 
-      if (res.status === 'success') {
-        dialog.toast(res.message || 'Pesan win-back berhasil dikirim via WhatsApp Gateway!', 'success');
-        setSelectedCustomer(null);
-        fetchDormantCustomers();
-      } else {
-        dialog.toast(res.message || 'Gagal mengirim pesan WhatsApp Gateway', 'error');
-      }
-    } catch {
-      dialog.toast('Terjadi kesalahan saat memproses WhatsApp Gateway', 'error');
-    } finally {
-      setSendingWinback(false);
-    }
+    return `Halo Kak *${customer.name}*! 👋
+
+Sudah lama nih pakaian Kakak tidak mampir di *${storeName}* (${customer.daysInactive} hari lalu terakhir berkunjung). Kami rindu memberikan cucian wangi & rapi untuk Kakak! ✨${promoNote}
+
+Yuk laundry pakaian Kakak hari ini. Kami siap melayani dengan sepenuh hati! 🧺
+
+*${storeName}*`;
   };
+
+  const winbackPreviewMessage = useMemo(() => {
+    if (!selectedCustomer) return '';
+    return buildWinbackMessage(selectedCustomer, customDiscountText);
+  }, [selectedCustomer, customDiscountText, activeOutlet?.name]);
 
   const handleSendViaWebWa = () => {
     if (!selectedCustomer || !selectedCustomer.phone) {
@@ -164,21 +158,8 @@ export const LaundryCustomerWinbackTab: React.FC<LaundryCustomerWinbackTabProps>
       return;
     }
 
-    let phone = selectedCustomer.phone.replace(/[^0-9]/g, '');
-    if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-
-    const storeName = activeOutlet?.name || 'Well POS Laundry';
-    const promoNote = customDiscountText.trim() ? `\n\n🎁 *Promo Spesial Untuk Anda:*\n${customDiscountText.trim()}` : '';
-
-    const text = `Halo Kak *${selectedCustomer.name}*! 👋
-
-Sudah lama nih pakaian Kakak tidak mampir di *${storeName}* (${selectedCustomer.daysInactive} hari lalu terakhir berkunjung). Kami rindu memberikan cucian wangi & rapi untuk Kakak! ✨${promoNote}
-
-Yuk laundry pakaian Kakak hari ini. Kami siap melayani dengan sepenuh hati! 🧺
-
-*${storeName}*`;
-
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+    const text = buildWinbackMessage(selectedCustomer, customDiscountText);
+    window.open(buildWhatsAppUrl(selectedCustomer.phone, text), '_blank', 'noopener,noreferrer');
     setSelectedCustomer(null);
   };
 
@@ -453,22 +434,15 @@ Yuk laundry pakaian Kakak hari ini. Kami siap melayani dengan sepenuh hati! 🧺
               </div>
 
               {/* Preview Bubble Pesan WA */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <span className="text-[11px] font-bold text-slate-600">Pratinjau Pesan WhatsApp:</span>
-                <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-[11px] text-slate-800 space-y-2 leading-relaxed">
-                  <p>
-                    Halo Kak <strong>{selectedCustomer.name}</strong>! 👋
-                  </p>
-                  <p>
-                    Sudah lama nih pakaian Kakak tidak mampir di <strong>{activeOutlet?.name || 'Well POS Laundry'}</strong> ({selectedCustomer.daysInactive} hari lalu terakhir berkunjung). Kami rindu memberikan cucian wangi &amp; rapi untuk Kakak! ✨
-                  </p>
-                  {customDiscountText.trim() && (
-                    <div className="p-2 bg-white rounded-xl border border-emerald-200 text-emerald-900 font-bold">
-                      🎁 Promo Spesial: {customDiscountText.trim()}
-                    </div>
-                  )}
-                  <p>Yuk laundry pakaian Kakak hari ini. Kami siap melayani dengan sepenuh hati! 🧺</p>
-                </div>
+                <WhatsAppChatPreview
+                  senderName={activeOutlet?.name || 'Well POS Laundry'}
+                  recipientLabel={selectedCustomer.name}
+                  recipientPhone={selectedCustomer.phone || undefined}
+                  message={winbackPreviewMessage}
+                  compact
+                />
               </div>
             </div>
 
@@ -485,20 +459,10 @@ Yuk laundry pakaian Kakak hari ini. Kami siap melayani dengan sepenuh hati! 🧺
               <button
                 type="button"
                 onClick={handleSendViaWebWa}
-                className="px-4 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
               >
-                <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Buka wa.me</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSendViaGateway}
-                disabled={sendingWinback}
-                className="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{sendingWinback ? 'Mengirim...' : 'Kirim via Gateway'}</span>
+                <MessageCircle className="w-4 h-4" />
+                <span>Kirim via WhatsApp</span>
               </button>
             </div>
           </div>

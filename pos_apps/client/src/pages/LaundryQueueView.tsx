@@ -38,6 +38,7 @@ import { LaundryLostAndFoundDrawer } from '../components/laundry/LaundryLostAndF
 import { LaundryTagScannerModal } from '../components/laundry/LaundryTagScannerModal';
 import { LaundryItemTrackingModal } from '../components/laundry/LaundryItemTrackingModal';
 import { NotificationAutomationModal } from '../components/laundry/NotificationAutomationModal';
+import { buildWhatsAppUrl } from '../utils/phone';
 
 interface LaundryQueueViewProps {
   activeOutlet: Outlet | null;
@@ -82,8 +83,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
   const [pickedUpByName, setPickedUpByName] = useState('');
   const [processingHandover, setProcessingHandover] = useState(false);
 
-  // State Pengiriman Notifikasi WhatsApp Gateway
-  const [sendingWaOrderId, setSendingWaOrderId] = useState<string | null>(null);
+  // State Notifikasi Toast WhatsApp Manual (wa.me)
   const [waToast, setWaToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // State Modal Tracking 11 Tahapan Produksi & QC
@@ -206,7 +206,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       setTargetOrderForRack(null);
       fetchOrders();
       setWaToast({
-        message: 'Status Siap Ambil tersimpan & WhatsApp notifikasi dikirimkan ke pelanggan!',
+        message: 'Status Siap Ambil & nomor rak tersimpan! Klik "Kirim WA Siap Ambil" untuk memberi tahu pelanggan.',
         type: 'success',
       });
       setTimeout(() => setWaToast(null), 4000);
@@ -230,7 +230,7 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
       setTargetOrderForHandover(null);
       fetchOrders();
       setWaToast({
-        message: 'Cucian telah diserahkan & WhatsApp ucapan terima kasih dikirim!',
+        message: 'Cucian berhasil diserahkan kepada pelanggan!',
         type: 'success',
       });
       setTimeout(() => setWaToast(null), 4000);
@@ -241,30 +241,40 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
     }
   };
 
-  const handleSendWhatsAppReady = async (order: LaundryQueueOrder) => {
+  const handleSendWhatsAppReady = (order: LaundryQueueOrder) => {
     if (!order.customerPhone) {
       setWaToast({ message: 'Nomor WhatsApp pelanggan tidak tercatat di nota ini', type: 'error' });
       setTimeout(() => setWaToast(null), 3500);
       return;
     }
 
-    try {
-      setSendingWaOrderId(order.orderId);
-      const res = await api.sendLaundryWhatsApp(order.orderId, { type: 'READY' });
-      if (res.status === 'success') {
-        setWaToast({ message: res.message || 'Notifikasi WhatsApp Siap Ambil berhasil dikirim!', type: 'success' });
-      } else {
-        setWaToast({
-          message: res.message || 'Gagal mengirim pesan WhatsApp via gateway',
-          type: res.isMock ? 'success' : 'error',
-        });
-      }
-    } catch {
-      setWaToast({ message: 'Terjadi gangguan jaringan saat memanggil WhatsApp Gateway', type: 'error' });
-    } finally {
-      setSendingWaOrderId(null);
-      setTimeout(() => setWaToast(null), 4000);
-    }
+    const outletName = activeOutlet?.name || 'Well POS Laundry';
+    const totalAmount = Number(order.grandTotal || 0);
+    const paidAmount = Number(order.paidAmount || 0);
+    const remaining = Math.max(0, totalAmount - paidAmount);
+    const isPaid = order.paymentStatus === 'PAID' || remaining <= 0;
+    const trackingUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/track/${encodeURIComponent(order.invoiceNumber)}`
+        : `https://wellpos.id/track/${encodeURIComponent(order.invoiceNumber)}`;
+
+    const message = [
+      `Halo Kak *${order.customerName || 'Pelanggan'}*,`,
+      `Cucian Anda di *${outletName}* sudah selesai dan *SIAP DIAMBIL* ✨`,
+      ``,
+      `• No. Nota: *${order.invoiceNumber}*`,
+      ...(order.rackCode ? [`• Lokasi Rak: *${order.rackCode}*`] : []),
+      `• Status Pembayaran: *${isPaid ? 'LUNAS' : `BELUM LUNAS (Sisa: Rp ${remaining.toLocaleString('id-ID')})`}*`,
+      ``,
+      `🔍 Pantau detail nota di:`,
+      trackingUrl,
+      ``,
+      `Terima kasih telah menggunakan layanan *${outletName}*!`,
+    ].join('\n');
+
+    window.open(buildWhatsAppUrl(order.customerPhone, message), '_blank', 'noopener,noreferrer');
+    setWaToast({ message: 'Membuka WhatsApp dengan pesan cucian Siap Ambil...', type: 'success' });
+    setTimeout(() => setWaToast(null), 3500);
   };
 
   // Evaluasi Status SLA Pesanan
@@ -732,12 +742,11 @@ export const LaundryQueueView: React.FC<LaundryQueueViewProps> = ({ activeOutlet
                             <button
                               type="button"
                               onClick={() => handleSendWhatsAppReady(item)}
-                              disabled={sendingWaOrderId === item.orderId}
-                              className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-emerald-200 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-                              title="Kirim ulang pesan WhatsApp bahwa cucian sudah di rak & siap diambil"
+                              className="w-full mt-1 min-h-[44px] sm:min-h-[36px] py-2 sm:py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold rounded-xl text-xs sm:text-[10px] flex items-center justify-center gap-1 border border-emerald-200 transition-all cursor-pointer active:scale-95"
+                              title="Buka WhatsApp dengan pesan cucian sudah di rak & siap diambil"
                             >
                               <Send className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{sendingWaOrderId === item.orderId ? 'Mengirim...' : 'Kirim WA Siap Ambil'}</span>
+                              <span>Kirim WA Siap Ambil</span>
                             </button>
                           )}
 

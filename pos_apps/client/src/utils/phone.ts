@@ -65,3 +65,25 @@ export const validateIndonesianWhatsApp = (rawInput: string): { isValid: boolean
 export const isValidIndonesianWhatsApp = (phone: string): boolean => {
   return validateIndonesianWhatsApp(phone).isValid;
 };
+
+/**
+ * Membangun tautan langsung WhatsApp (`https://wa.me/...`) dengan nomor berawalan 62.
+ * Jika nomor tidak valid/kurang dari 9 digit, kembalikan `https://wa.me/?text=...` agar user dapat memilih kontak manual.
+ */
+export const buildWhatsAppUrl = (
+  rawPhone: string | null | undefined,
+  message: string
+): string => {
+  let cleanPhone = String(rawPhone || '').replace(/\D/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = `62${cleanPhone.slice(1)}`;
+  } else if (cleanPhone.startsWith('8')) {
+    cleanPhone = `62${cleanPhone}`;
+  }
+
+  const encoded = encodeURIComponent(message || '');
+  if (cleanPhone.length >= 9) {
+    return `https://wa.me/${cleanPhone}?text=${encoded}`;
+  }
+  return `https://wa.me/?text=${encoded}`;
+};

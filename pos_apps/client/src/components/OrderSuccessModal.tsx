@@ -22,6 +22,7 @@ import { ReceiptPrintBody } from './pos/ReceiptPrintBody';
 import { WhatsAppReceiptView } from './pos/WhatsAppReceiptView';
 import { EmailReceiptView } from './pos/EmailReceiptView';
 import { useDialog } from '../context/DialogContext';
+import { buildWhatsAppUrl } from '../utils/phone';
 
 interface OrderSuccessModalProps {
   isOpen: boolean;
@@ -66,12 +67,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   const [cupAutoPrinted, setCupAutoPrinted] = useState(false);
 
   const showWatermark = order?.outlet?.receiptConfig?.showWatermark !== false;
-  const waConfig = order?.outlet?.receiptConfig?.whatsappConfig;
-  const hasGatewayActive = Boolean(
-    waConfig?.enabled &&
-    waConfig?.apiKey &&
-    waConfig.apiKey.trim().length > 0
-  );
+  // Gateway button temporarily disabled in UI; keep manual wa.me flow active
+  const hasGatewayActive = false;
 
   // Cup Label Config
   const rawReceiptConfig = order?.outlet?.receiptConfig || (order?.outlet as any)?.receipt_config;
@@ -281,15 +278,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
 
   const handleOpenWhatsAppReal = () => {
     const text = getWhatsAppText();
-    const cleanPhone = (waRecipientPhone || order.customerPhone || '').replace(/\D/g, '');
-    let waUrl = '';
-    if (cleanPhone) {
-      const formattedPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
-      waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
-    } else {
-      waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    }
-    window.open(waUrl, '_blank');
+    const targetPhone = waRecipientPhone || order.customerPhone;
+    window.open(buildWhatsAppUrl(targetPhone, text), '_blank', 'noopener,noreferrer');
   };
 
   const handleCopyWhatsAppText = () => {

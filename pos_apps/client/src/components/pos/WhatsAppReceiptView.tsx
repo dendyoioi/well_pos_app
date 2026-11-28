@@ -1,5 +1,5 @@
 import React from 'react';
-import { Store, ArrowLeft, X, Send, ExternalLink, Check, Copy, RefreshCw } from 'lucide-react';
+import { Store, ArrowLeft, X, Check, Copy, MessageCircle } from 'lucide-react';
 import type { Order } from '../../types/order';
 import { WhatsAppInput } from '../ui/WhatsAppInput';
 
@@ -9,11 +9,11 @@ interface WhatsAppReceiptViewProps {
   onClose: () => void;
   waRecipientPhone: string;
   setWaRecipientPhone: (val: string) => void;
-  hasGatewayActive: boolean;
-  sendingWa: boolean;
+  hasGatewayActive?: boolean;
+  sendingWa?: boolean;
   copiedWhatsApp: boolean;
   getWhatsAppText: () => string;
-  handleSendWhatsAppGateway: () => void;
+  handleSendWhatsAppGateway?: () => void;
   handleOpenWhatsAppReal: () => void;
   handleCopyWhatsAppText: () => void;
 }
@@ -24,11 +24,8 @@ export const WhatsAppReceiptView: React.FC<WhatsAppReceiptViewProps> = ({
   onClose,
   waRecipientPhone,
   setWaRecipientPhone,
-  hasGatewayActive,
-  sendingWa,
   copiedWhatsApp,
   getWhatsAppText,
-  handleSendWhatsAppGateway,
   handleOpenWhatsAppReal,
   handleCopyWhatsAppText,
 }) => {
@@ -97,70 +94,30 @@ export const WhatsAppReceiptView: React.FC<WhatsAppReceiptViewProps> = ({
           placeholder="81234567890"
         />
 
-        {hasGatewayActive ? (
-          <div className="space-y-2">
+        {/* Sementara nonaktifkan mode Gateway — arahkan selalu ke mode manual WA (wa.me) */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={handleSendWhatsAppGateway}
-              disabled={sendingWa || !waRecipientPhone}
-              className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-emerald-600/20 active:scale-[0.99]"
+              onClick={handleOpenWhatsAppReal}
+              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
             >
-              {sendingWa ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-200" />
-                  <span>Mengirim Struk via Gateway...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 text-emerald-100" />
-                  <span>Kirim Otomatis via Gateway (Fonnte)</span>
-                </>
-              )}
+              <MessageCircle className="w-4 h-4" />
+              <span>Kirim via WhatsApp</span>
             </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleOpenWhatsAppReal}
-                className="py-2 px-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <ExternalLink className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Buka wa.me</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleCopyWhatsAppText}
-                className="py-2 px-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-              >
-                {copiedWhatsApp ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                <span>{copiedWhatsApp ? 'Tersalin!' : 'Salin Teks'}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleCopyWhatsAppText}
+              className="py-2.5 px-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+            >
+              {copiedWhatsApp ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+              <span>{copiedWhatsApp ? 'Tersalin!' : 'Salin Teks'}</span>
+            </button>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleOpenWhatsAppReal}
-                className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>Buka wa.me</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleCopyWhatsAppText}
-                className="py-2.5 px-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-              >
-                {copiedWhatsApp ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
-                <span>{copiedWhatsApp ? 'Tersalin!' : 'Salin Teks'}</span>
-              </button>
-            </div>
-            <p className="text-[11px] text-center text-slate-500">
-              Membuka chat WhatsApp langsung ke nomor pelanggan dengan nota belanja otomatis.
-            </p>
-          </div>
-        )}
+          <p className="text-[11px] text-center text-slate-500">
+            Membuka chat WhatsApp langsung ke nomor pelanggan dengan nota belanja otomatis.
+          </p>
+        </div>
       </div>
     </div>
   );

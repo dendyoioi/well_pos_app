@@ -3,26 +3,24 @@ import {
   Printer,
   Smartphone,
   Monitor,
-  Share2,
   X,
   Archive,
   Clock,
-  Send,
-  CheckCircle2,
   Tag,
   Bluetooth,
   ExternalLink,
   Copy,
   Check,
   QrCode,
+  MessageCircle,
 } from 'lucide-react';
 import type { LaundryQueueOrder } from '../../types/laundry';
 import type { Outlet } from '../../types/outlet';
-import { api } from '../../services/api';
 import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 import { printElementViaThermalIframe } from '../../utils/thermalPrinter';
 import { buildLaundryProductionTagEscPos, buildReceiptEscPos } from '../../utils/escpos';
 import { useDialog } from '../../context/DialogContext';
+import { buildWhatsAppUrl } from '../../utils/phone';
 
 interface LaundryReceiptModalProps {
   isOpen: boolean;
@@ -42,8 +40,6 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   const dialog = useDialog();
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('58mm');
   const [activeTab, setActiveTab] = useState<'RECEIPT' | 'PRODUCTION_TAG'>(initialTab);
-  const [sendingGateway, setSendingGateway] = useState(false);
-  const [gatewayMessage, setGatewayMessage] = useState<string | null>(null);
   const [printStatusMsg, setPrintStatusMsg] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const receiptPrintRef = useRef<HTMLDivElement>(null);
@@ -257,9 +253,6 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
       return;
     }
 
-    let phone = order.customerPhone.replace(/[^0-9]/g, '');
-    if (phone.startsWith('0')) phone = '62' + phone.substring(1);
-
     const itemsSummary = order.items && order.items.length > 0
       ? order.items.map((it) => {
           let line = `• ${it.name} (${it.quantity} ${it.unit}): Rp ${it.subtotal.toLocaleString('id-ID')}`;
@@ -299,31 +292,7 @@ ${trackingUrl}
 
 Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
-  const handleSendViaGateway = async () => {
-    if (!order.customerPhone) {
-      dialog.toast('Nomor WhatsApp pelanggan tidak tercatat', 'error');
-      return;
-    }
-    try {
-      setSendingGateway(true);
-      setGatewayMessage(null);
-      const res = await api.sendLaundryWhatsApp(order.orderId, {
-        type: order.status === 'COMPLETED' ? 'COMPLETED' : 'READY',
-      });
-      if (res.status === 'success' || res.isMock) {
-        setGatewayMessage(res.message || 'Pesan notifikasi berhasil diproses gateway!');
-        setTimeout(() => setGatewayMessage(null), 3500);
-      } else {
-        dialog.toast(res.message || 'Gagal mengirim pesan via WhatsApp Gateway', 'error');
-      }
-    } catch {
-      dialog.toast('Gangguan koneksi ke WhatsApp Gateway', 'error');
-    } finally {
-      setSendingGateway(false);
-    }
+    window.open(buildWhatsAppUrl(order.customerPhone, message), '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -784,33 +753,15 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
           <span>Unduh QR</span>
         </button>
         {order.customerPhone && (
-          <>
-            <button
-              type="button"
-              onClick={handleShareWhatsApp}
-              className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              title="Buka WhatsApp Web / App langsung"
-            >
-              <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Buka wa.me</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleSendViaGateway}
-              disabled={sendingGateway}
-              className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-              title="Kirim pesan langsung via Fonnte Gateway Server"
-            >
-              <Send className="w-3.5 h-3.5 text-blue-700" />
-              <span>{sendingGateway ? 'Mengirim...' : 'Kirim via Gateway'}</span>
-            </button>
-          </>
-        )}
-        {gatewayMessage && (
-          <div className="hidden lg:flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{gatewayMessage}</span>
-          </div>
+          <button
+            type="button"
+            onClick={handleShareWhatsApp}
+            className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            title="Buka WhatsApp Web / App langsung dengan nota siap kirim"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>Kirim via WhatsApp</span>
+          </button>
         )}
       </div>
 

@@ -24,6 +24,7 @@ import { api, authStorage } from '../../services/api';
 import type { IncidentPayoutMethod, LaundryIncident } from '../../types/laundry';
 import { CurrencyInput } from '../ui/CurrencyInput';
 import { useDialog } from '../../context/DialogContext';
+import { buildWhatsAppUrl } from '../../utils/phone';
 
 interface LaundryIncidentManagementModalProps {
   isOpen: boolean;
@@ -43,14 +44,6 @@ const PAYOUT_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: 'Transfer Bank / Kas Pusat',
   CUSTOMER_WALLET: 'Saldo Deposit Pelanggan',
 };
-
-function formatWhatsAppPhone(raw?: string | null): string {
-  const digits = String(raw || '').replace(/\D/g, '');
-  if (!digits) return '';
-  if (digits.startsWith('0')) return `62${digits.slice(1)}`;
-  if (digits.startsWith('62')) return digits;
-  return `62${digits}`;
-}
 
 export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementModalProps> = ({
   isOpen,
@@ -198,17 +191,14 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
     const token = await ensureClaimToken(inc);
     if (!token || typeof window === 'undefined') return;
     const url = `${window.location.origin}/incident-claim/${token}`;
-    const phone = formatWhatsAppPhone(inc.customerClaimantPhone || inc.order?.customer?.phone);
+    const phone = inc.customerClaimantPhone || inc.order?.customer?.phone;
     const customerName = inc.customerClaimantName || inc.order?.customer?.name || 'Pelanggan';
     const message =
       `Halo Kak ${customerName},\n` +
       `Terkait penanganan insiden pada nota *${inc.order?.invoiceNumber || '-'}* (${inc.itemDescription}), ` +
       `silakan isi kronologi & unggah foto bukti dari pihak Kakak melalui tautan resmi berikut agar dapat segera kami tindak lanjuti:\n\n` +
       `${url}\n\nTerima kasih.`;
-    const waUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    window.open(buildWhatsAppUrl(phone, message), '_blank', 'noopener,noreferrer');
   };
 
   const handleSendSettlementWhatsApp = (inc: LaundryIncident) => {
@@ -216,7 +206,7 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
     const url = inc.customerClaimToken
       ? `${window.location.origin}/incident-claim/${inc.customerClaimToken}`
       : '';
-    const phone = formatWhatsAppPhone(inc.customerClaimantPhone || inc.order?.customer?.phone);
+    const phone = inc.customerClaimantPhone || inc.order?.customer?.phone;
     const customerName = inc.customerClaimantName || inc.order?.customer?.name || 'Pelanggan';
     const totalPayout = Number(inc.refundAmount || 0) + Number(inc.approvedCompensation || 0);
     const lines = [
@@ -235,10 +225,7 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
       ...(url ? [`\nLihat Berita Acara lengkap di:\n${url}`] : []),
     ];
     const message = lines.join('\n');
-    const waUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    window.open(buildWhatsAppUrl(phone, message), '_blank', 'noopener,noreferrer');
   };
 
   const handleMarkInvestigating = async () => {

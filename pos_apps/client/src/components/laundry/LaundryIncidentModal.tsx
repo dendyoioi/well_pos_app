@@ -17,6 +17,7 @@ import { api } from '../../services/api';
 import type { LaundryQueueOrder, LaundryMachine, LaundryIncident } from '../../types/laundry';
 import { CurrencyInput } from '../ui/CurrencyInput';
 import { useDialog } from '../../context/DialogContext';
+import { buildWhatsAppUrl } from '../../utils/phone';
 
 interface LaundryIncidentModalProps {
   isOpen: boolean;
@@ -246,23 +247,12 @@ export const LaundryIncidentModal: React.FC<LaundryIncidentModalProps> = ({
 
   const handleSendClaimWhatsApp = () => {
     if (!claimUrl || !order) return;
-    const rawPhone = String(order.customerPhone || '').replace(/\D/g, '');
-    const waPhone = rawPhone.startsWith('0')
-      ? `62${rawPhone.slice(1)}`
-      : rawPhone.startsWith('62')
-      ? rawPhone
-      : rawPhone
-      ? `62${rawPhone}`
-      : '';
     const message =
       `Halo Kak ${order.customerName || 'Pelanggan'},\n` +
       `Terkait laporan insiden pada nota *${order.invoiceNumber}* (${createdIncident?.itemDescription || itemDescription}), ` +
       `mohon bantuannya untuk mengisi form kronologi & mengunggah foto bukti dari pihak Kakak melalui tautan resmi berikut agar dapat segera kami tindak lanjuti:\n\n` +
       `${claimUrl}\n\nTerima kasih.`;
-    const waUrl = waPhone
-      ? `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    window.open(buildWhatsAppUrl(order.customerPhone, message), '_blank', 'noopener,noreferrer');
   };
 
   return (
