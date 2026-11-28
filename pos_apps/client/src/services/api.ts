@@ -3015,6 +3015,48 @@ export const api = {
   },
 
   // ----------------------------------------------------
+  // MANAJEMEN KATEGORI LAYANAN LAUNDRY (PIN, URUTAN & REASSIGN)
+  // ----------------------------------------------------
+  getLaundryCategories: async (): Promise<any> => {
+    const res = await fetch('/api/laundry/categories', {
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  updateLaundryCategories: async (
+    categories: Array<{ key: string; label: string; isPinned: boolean; sortOrder: number }>
+  ): Promise<any> => {
+    const res = await fetch('/api/laundry/categories', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ categories }),
+    });
+    return res.json();
+  },
+
+  reassignLaundryCategory: async (data: {
+    sourceCategory: string;
+    targetCategory: string;
+    targetLabel?: string;
+  }): Promise<any> => {
+    const res = await fetch('/api/laundry/categories/reassign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  deleteLaundryCategory: async (categoryKey: string): Promise<any> => {
+    const res = await fetch(`/api/laundry/categories/${encodeURIComponent(categoryKey)}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    });
+    return res.json();
+  },
+
+  // ----------------------------------------------------
   // SORTIR PAKAIAN & QUALITY CONTROL (QC)
   // ----------------------------------------------------
   uploadLaundryConditionPhoto: async (data: {

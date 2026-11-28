@@ -43,10 +43,12 @@ import {
   RefreshCw,
   Sliders,
   Menu,
+  Pin,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import type {
   LaundryService,
+  LaundryServiceCategory,
   LaundryQueueOrder,
   CustomerLaundryWallet,
   LaundryDeliveryConfig,
@@ -273,7 +275,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const [deliveryAddress, setDeliveryAddress] = useState<string>('');
   const [deliveryNotes, setDeliveryNotes] = useState<string>('');
 
-  // Ambil daftar layanan & konfigurasi antar-jemput dari API dengan fallback cache IndexedDB
+  // Kategori Layanan Terurut & Cache Offline
+  const [categoriesMeta, setCategoriesMeta] = useState<LaundryServiceCategory[]>([]);
+
+  // Ambil daftar layanan, kategori terurut & konfigurasi antar-jemput dari API dengan fallback cache IndexedDB
   const fetchServices = async () => {
     const catalogKey = `laundry_catalog:${activeOutlet?.id || 'default'}`;
 
@@ -281,10 +286,14 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
       const cached = await getOfflineCache<{
         services: LaundryService[];
         deliveryConfig: LaundryDeliveryConfig | null;
+        categories?: LaundryServiceCategory[];
       }>(catalogKey);
       if (cached?.data) {
         if (Array.isArray(cached.data.services)) {
           setServices(cached.data.services);
+        }
+        if (Array.isArray(cached.data.categories)) {
+          setCategoriesMeta(cached.data.categories);
         }
         if (cached.data.deliveryConfig) {
           setDeliveryConfig(cached.data.deliveryConfig);
@@ -298,12 +307,21 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
     try {
       setLoadingServices(true);
-      const [servRes, delRes] = await Promise.all([
+      const [servRes, delRes, catRes] = await Promise.all([
         api.getLaundryServices(activeOutlet?.id),
         activeOutlet?.id
           ? api.getLaundryDeliveryConfig(activeOutlet.id).catch(() => null)
           : Promise.resolve(null),
+        api.getLaundryCategories ? api.getLaundryCategories().catch(() => null) : Promise.resolve(null),
       ]);
+
+      const nextCategories =
+        catRes && catRes.status === 'success' && Array.isArray(catRes.data)
+          ? (catRes.data as LaundryServiceCategory[])
+          : categoriesMeta;
+      if (catRes && catRes.status === 'success' && Array.isArray(catRes.data)) {
+        setCategoriesMeta(catRes.data);
+      }
 
       if (servRes.status === 'success' && Array.isArray(servRes.data)) {
         const availableServices = servRes.data.filter((s: any) => s.isAvailableAtOutlet !== false);
@@ -321,6 +339,7 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         setOfflineCache(catalogKey, {
           services: availableServices,
           deliveryConfig: nextDeliveryConfig,
+          categories: nextCategories,
         });
         setLastCatalogSyncAt(new Date().toISOString());
       } else if ((servRes as any)?.offline === true || (typeof navigator !== 'undefined' && !navigator.onLine)) {
@@ -790,18 +809,52 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
     return services.filter((s) => s.category?.toUpperCase() === 'ADDON' && s.isActive);
   }, [services]);
 
-  // Kategori Dinamis diekstrak otomatis dari katalog layanan aktif (exclude ADDON agar tidak clutter tab utama)
+  const normalizeCategoryKey = (raw: string) =>
+    String(raw || '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+  // Kategori Dinamis mengikuti urutan pin & sortOrder dari Manajemen Kategori (exclude ADDON)
   const dynamicCategories = useMemo(() => {
-    const raw = services
-      .filter((s) => s.category?.toUpperCase() !== 'ADDON')
-      .map((s) => s.category?.toUpperCase())
-      .filter(Boolean);
-    const unique = Array.from(new Set(raw));
-    return ['ALL', ...unique];
-  }, [services]);
+    const activeServiceKeys = new Set(
+      services
+        .filter((s) => s.isActive && normalizeCategoryKey(s.category || '') !== 'ADDON')
+        .map((s) => normalizeCategoryKey(s.category || ''))
+        .filter((k) => Boolean(k) && k !== 'ALL' && k !== 'ADDON')
+    );
+
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+
+    for (const cat of categoriesMeta) {
+      const key = normalizeCategoryKey(cat.key);
+      if (!key || key === 'ALL' || key === 'ADDON' || seen.has(key)) continue;
+      if (!activeServiceKeys.has(key)) continue;
+      seen.add(key);
+      ordered.push(key);
+    }
+
+    for (const key of activeServiceKeys) {
+      if (!seen.has(key)) {
+        seen.add(key);
+        ordered.push(key);
+      }
+    }
+
+    return ['ALL', ...ordered];
+  }, [services, categoriesMeta]);
+
+  useEffect(() => {
+    if (activeCategory !== 'ALL' && !dynamicCategories.includes(activeCategory)) {
+      setActiveCategory('ALL');
+    }
+  }, [activeCategory, dynamicCategories]);
 
   const getCategoryLabel = (cat: string) => {
-    switch (cat) {
+    const normalized = normalizeCategoryKey(cat);
+    switch (normalized) {
       case 'ALL':
         return 'Semua Layanan';
       case 'KILOAN':
@@ -822,12 +875,15 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
         return '🍼 Boneka & Baby Gear';
       case 'TREATMENT':
         return '✨ Treatment';
+      case 'GORDEN_KARPET':
       case 'KARPET_GORDEN':
         return '🏠 Karpet & Gorden';
       case 'STROLLER':
         return '🍼 Stroller & Baby';
-      default:
-        return `🏷️ ${cat.replace(/_/g, ' ')}`;
+      default: {
+        const meta = categoriesMeta.find((c) => normalizeCategoryKey(c.key) === normalized);
+        return `🏷️ ${meta?.label || normalized.replace(/_/g, ' ')}`;
+      }
     }
   };
 
@@ -835,10 +891,10 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
       if (!s.isActive) return false;
-      if (s.category?.toUpperCase() === 'ADDON') return false;
+      if (normalizeCategoryKey(s.category || '') === 'ADDON') return false;
       const matchCat =
         activeCategory === 'ALL' ||
-        s.category.toUpperCase() === activeCategory.toUpperCase();
+        normalizeCategoryKey(s.category || '') === activeCategory;
       const matchQuery =
         !searchQuery.trim() ||
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2589,19 +2645,28 @@ export const LaundryPosTerminalView: React.FC<LaundryPosTerminalViewProps> = ({
 
             {/* Tab Kategori Dinamis */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-              {dynamicCategories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${activeCategory === cat
-                    ? 'bg-blue-900 text-white shadow-xs'
-                    : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                    }`}
-                >
-                  {getCategoryLabel(cat)}
-                </button>
-              ))}
+              {dynamicCategories.map((cat) => {
+                const catMeta = categoriesMeta.find((c) => normalizeCategoryKey(c.key) === cat);
+                const isPinned = Boolean(catMeta?.isPinned);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer inline-flex items-center gap-1 ${activeCategory === cat
+                      ? 'bg-blue-900 text-white shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+                      }`}
+                  >
+                    {isPinned && (
+                      <Pin
+                        className={`w-3 h-3 shrink-0 ${activeCategory === cat ? 'text-amber-300' : 'text-amber-600'}`}
+                      />
+                    )}
+                    <span>{getCategoryLabel(cat)}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

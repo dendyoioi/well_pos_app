@@ -26,13 +26,15 @@ import {
     Check,
     Tags,
     History,
+    Pin,
 } from 'lucide-react';
 import type { Outlet } from '../types/outlet';
 import { api } from '../services/api';
-import type { LaundryService, ProductionStageDefinition, LaundryPerfume } from '../types/laundry';
+import type { LaundryService, LaundryServiceCategory, ProductionStageDefinition, LaundryPerfume } from '../types/laundry';
 import { DEFAULT_PRODUCTION_STAGES } from '../types/laundry';
 import { TablePagination } from '../components/TablePagination';
 import { LaundryStageSettingsModal } from '../components/LaundryStageSettingsModal';
+import { LaundryCategoryManagerModal } from '../components/laundry/LaundryCategoryManagerModal';
 import { LaundryServiceBomModal } from '../components/laundry/LaundryServiceBomModal';
 import { OutletServicePricingModal } from '../components/laundry/OutletServicePricingModal';
 import { ServicePriceHistoryModal } from '../components/laundry/ServicePriceHistoryModal';
@@ -544,6 +546,10 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     const [showStageSettingsModal, setShowStageSettingsModal] = useState(false);
     const [storeStages, setStoreStages] = useState<ProductionStageDefinition[]>(DEFAULT_PRODUCTION_STAGES);
 
+    // Modal Manajemen Kategori Layanan
+    const [showCategoryManagerModal, setShowCategoryManagerModal] = useState(false);
+    const [categoriesMeta, setCategoriesMeta] = useState<LaundryServiceCategory[]>([]);
+
     // Modal BoM (Takaran Bahan Cuci)
     const [selectedBomService, setSelectedBomService] = useState<LaundryService | null>(null);
     const [showBomModal, setShowBomModal] = useState(false);
@@ -564,9 +570,10 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
     const fetchServices = async () => {
         try {
             setLoading(true);
-            const [res, stagesRes] = await Promise.all([
+            const [res, stagesRes, catRes] = await Promise.all([
                 api.getLaundryServices(activeOutlet?.id),
                 api.getLaundryStageSettings ? api.getLaundryStageSettings().catch(() => null) : Promise.resolve(null),
+                api.getLaundryCategories ? api.getLaundryCategories().catch(() => null) : Promise.resolve(null),
             ]);
 
             if (res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
@@ -577,6 +584,10 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
 
             if (stagesRes && stagesRes.status === 'success' && Array.isArray(stagesRes.data)) {
                 setStoreStages(stagesRes.data);
+            }
+
+            if (catRes && catRes.status === 'success' && Array.isArray(catRes.data)) {
+                setCategoriesMeta(catRes.data);
             }
         } catch {
             setServices(DEFAULT_LAUNDRY_SERVICES);
@@ -640,13 +651,46 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
         setShowModal(true);
     };
 
+    const normalizeCategoryKey = (raw: string) =>
+        String(raw || '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, '_')
+            .replace(/^_+|_+$/g, '');
+
+    const serviceFormCategoryOptions = useMemo(() => {
+        const defaultOpts = [
+            { key: 'KILOAN', label: '🧺 Cuci Kiloan' },
+            { key: 'SATUAN', label: '👔 Satuan / Dry Clean' },
+            { key: 'EXPRESS', label: '⚡ Kilat / Express' },
+            { key: 'SEPATU_TAS', label: '👟 Sepatu & Tas' },
+            { key: 'KARPET_GORDEN', label: '🏠 Karpet & Gorden (m²)' },
+            { key: 'STROLLER', label: '🍼 Stroller & Perlengkapan Bayi' },
+        ];
+        const map = new Map<string, { key: string; label: string }>();
+
+        // Prioritaskan urutan dari categoriesMeta (pin + sortOrder)
+        for (const cat of categoriesMeta) {
+            const k = normalizeCategoryKey(cat.key);
+            if (!k || k === 'ALL' || k === 'ADDON') continue;
+            map.set(k, { key: k, label: cat.label || k.replace(/_/g, ' ') });
+        }
+        for (const opt of defaultOpts) {
+            if (!map.has(opt.key)) {
+                map.set(opt.key, opt);
+            }
+        }
+        return Array.from(map.values());
+    }, [categoriesMeta]);
+
     // Buka Modal Edit Layanan
     const handleOpenEdit = (srv: LaundryService) => {
         setEditingService(srv);
         setFormName(srv.name);
-        const catUpper = srv.category?.toUpperCase() || 'KILOAN';
-        const isStandardCat = ['KILOAN', 'SATUAN', 'EXPRESS', 'SEPATU_TAS', 'KARPET_GORDEN', 'STROLLER', 'ADDON'].includes(catUpper);
-        setFormCategory(srv.category);
+        const catUpper = normalizeCategoryKey(srv.category || 'KILOAN');
+        const isStandardCat =
+            catUpper === 'ADDON' || serviceFormCategoryOptions.some((opt) => opt.key === catUpper);
+        setFormCategory(catUpper || 'KILOAN');
         setIsCustomCategory(!isStandardCat);
         setFormPrice(String(srv.price || 0));
         setFormUnit(srv.unit || 'Kg');
@@ -687,7 +731,7 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
             const isAddon = formCategory === 'ADDON';
             const payload = {
                 name: formName.trim(),
-                category: formCategory.trim() || (isAddon ? 'ADDON' : 'KILOAN'),
+                category: isAddon ? 'ADDON' : normalizeCategoryKey(formCategory) || 'KILOAN',
                 unit: formUnit.trim(),
                 price: Math.max(0, parseInt(String(formPrice).replace(/\D/g, ''), 10) || 0),
                 minOrderQty: isAddon ? 1 : formHasMinOrder ? parseFloat(formMinOrder) || 1 : 0,
@@ -761,15 +805,37 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
         }
     };
 
-    // Kategori Dinamis diekstrak dari Layanan Utama
+    // Kategori Dinamis mengikuti urutan pin & sortOrder dari API + kategori layanan aktif
     const dynamicCategories = useMemo(() => {
-        const raw = mainServices.map((s) => s.category?.toUpperCase()).filter(Boolean);
-        const unique = Array.from(new Set(raw));
-        return ['ALL', ...unique];
-    }, [mainServices]);
+        const orderedKeys: string[] = [];
+        const seen = new Set<string>();
+
+        for (const cat of categoriesMeta) {
+            const key = normalizeCategoryKey(cat.key);
+            if (!key || key === 'ALL' || key === 'ADDON' || seen.has(key)) continue;
+            seen.add(key);
+            orderedKeys.push(key);
+        }
+
+        for (const srv of mainServices) {
+            const key = normalizeCategoryKey(srv.category || '');
+            if (!key || key === 'ALL' || key === 'ADDON' || seen.has(key)) continue;
+            seen.add(key);
+            orderedKeys.push(key);
+        }
+
+        return ['ALL', ...orderedKeys];
+    }, [categoriesMeta, mainServices]);
+
+    useEffect(() => {
+        if (activeCategory !== 'ALL' && !dynamicCategories.includes(activeCategory)) {
+            setActiveCategory('ALL');
+        }
+    }, [activeCategory, dynamicCategories]);
 
     const getCategoryBadgeLabel = (cat: string) => {
-        switch (cat) {
+        const normalized = normalizeCategoryKey(cat);
+        switch (normalized) {
             case 'ALL':
                 return 'Semua';
             case 'KILOAN':
@@ -786,19 +852,22 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 return '👟 Sepatu & Tas';
             case 'BONEKA_BABY':
                 return '🍼 Boneka & Baby Gear';
+            case 'GORDEN_KARPET':
             case 'KARPET_GORDEN':
                 return '🏠 Karpet & Gorden';
             case 'STROLLER':
                 return '🍼 Stroller & Baby Gear';
-            default:
-                return `🏷️ ${cat.replace(/_/g, ' ')}`;
+            default: {
+                const meta = categoriesMeta.find((c) => normalizeCategoryKey(c.key) === normalized);
+                return `🏷️ ${meta?.label || normalized.replace(/_/g, ' ')}`;
+            }
         }
     };
 
     // Filter & Pengurutan Layanan Utama
     const filteredAndSortedServices = useMemo(() => {
         let result = mainServices.filter((s) => {
-            if (activeCategory !== 'ALL' && s.category?.toUpperCase() !== activeCategory.toUpperCase()) {
+            if (activeCategory !== 'ALL' && normalizeCategoryKey(s.category || '') !== activeCategory) {
                 return false;
             }
             if (statusFilter === 'ACTIVE' && !s.isActive) return false;
@@ -889,6 +958,15 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                     <span>Tarif Cabang</span>
                                 </button>
                             )}
+                            <button
+                                type="button"
+                                onClick={() => setShowCategoryManagerModal(true)}
+                                className="w-full sm:w-auto h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs sm:text-sm border border-slate-300 shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                                title="Kelola kategori layanan, pin prioritas di kasir, pindah layanan, dan hapus kategori"
+                            >
+                                <Layers className="w-4 h-4 text-slate-600" />
+                                <span>Kelola Kategori</span>
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setShowStageSettingsModal(true)}
@@ -995,18 +1073,25 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                 const count =
                                     cat === 'ALL'
                                         ? mainServices.length
-                                        : mainServices.filter((s) => s.category?.toUpperCase() === cat.toUpperCase()).length;
+                                        : mainServices.filter((s) => normalizeCategoryKey(s.category || '') === cat).length;
+                                const catMeta = categoriesMeta.find((c) => normalizeCategoryKey(c.key) === cat);
+                                const isPinned = Boolean(catMeta?.isPinned);
                                 return (
                                     <button
                                         key={cat}
                                         type="button"
                                         onClick={() => setActiveCategory(cat)}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === cat
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${activeCategory === cat
                                             ? 'bg-blue-900 text-white shadow-xs'
                                             : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
                                             }`}
                                     >
-                                        {getCategoryBadgeLabel(cat)} ({count})
+                                        {isPinned && (
+                                            <Pin
+                                                className={`w-3 h-3 shrink-0 ${activeCategory === cat ? 'text-amber-300' : 'text-amber-600'}`}
+                                            />
+                                        )}
+                                        <span>{getCategoryBadgeLabel(cat)} ({count})</span>
                                     </button>
                                 );
                             })}
@@ -2241,12 +2326,11 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                                                     }}
                                                     className="w-full px-3 py-2 pr-10 text-xs font-bold rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none appearance-none"
                                                 >
-                                                    <option value="KILOAN">🧺 Cuci Kiloan</option>
-                                                    <option value="SATUAN">👔 Satuan / Dry Clean</option>
-                                                    <option value="EXPRESS">⚡ Kilat / Express</option>
-                                                    <option value="SEPATU_TAS">👟 Sepatu &amp; Tas</option>
-                                                    <option value="KARPET_GORDEN">🏠 Karpet &amp; Gorden (m²)</option>
-                                                    <option value="STROLLER">🍼 Stroller &amp; Perlengkapan Bayi</option>
+                                                    {serviceFormCategoryOptions.map((opt) => (
+                                                        <option key={opt.key} value={opt.key}>
+                                                            {opt.label}
+                                                        </option>
+                                                    ))}
                                                 </select>
                                                 <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                                             </div>
@@ -2645,6 +2729,16 @@ export const LaundryServicesView: React.FC<LaundryServicesViewProps> = ({ active
                 onSaved={(updatedStages) => {
                     setStoreStages(updatedStages);
                     showToast('Pengaturan tahapan produksi toko berhasil diperbarui!');
+                }}
+            />
+
+            {/* Modal Manajemen Kategori Layanan Laundry */}
+            <LaundryCategoryManagerModal
+                isOpen={showCategoryManagerModal}
+                onClose={() => setShowCategoryManagerModal(false)}
+                initialCategories={categoriesMeta}
+                onSaved={() => {
+                    fetchServices();
                 }}
             />
 

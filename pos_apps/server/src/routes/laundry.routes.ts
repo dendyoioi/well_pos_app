@@ -69,6 +69,10 @@ import {
   getStaffPerformance,
   createStaffPerformanceReview,
   getStaffPerformanceReviews,
+  getLaundryCategories,
+  updateLaundryCategories,
+  reassignLaundryCategory,
+  deleteLaundryCategory,
 } from '../controllers/laundry.controller';
 
 const router = Router();
@@ -90,6 +94,10 @@ router.put('/stage-settings', updateLaundryStageSettings);
 router.post('/stage-settings/reset', resetLaundryStageSettings);
 
 // --- Master Layanan & Tarif Laundry ---
+router.get('/categories', getLaundryCategories);
+router.put('/categories', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), updateLaundryCategories);
+router.post('/categories/reassign', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), reassignLaundryCategory);
+router.delete('/categories/:categoryKey', authorize(Role.OWNER, Role.ADMIN, Role.SUPERVISOR), deleteLaundryCategory);
 router.get('/services', getLaundryServices);
 router.post('/services', createLaundryService);
 router.get('/services/:id/bom', getLaundryServiceBom);

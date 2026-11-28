@@ -8532,3 +8532,469 @@ export const getStaffPerformanceReviews = async (req: Request, res: Response) =>
     return res.status(500).json({ status: 'error', message: 'Gagal mengambil riwayat review performa' });
   }
 };
+
+// ==========================================
+// MANAJEMEN KATEGORI LAYANAN LAUNDRY
+// ==========================================
+
+interface StoredLaundryCategoryConfig {
+  key: string;
+  label: string;
+  isPinned: boolean;
+  sortOrder: number;
+}
+
+const FORBIDDEN_LAUNDRY_CATEGORY_KEYS = new Set(['ALL', 'ADDON']);
+
+const DEFAULT_LAUNDRY_CATEGORY_LABELS: Record<string, string> = {
+  KILOAN: 'Cuci Kiloan',
+  BEDDING: 'Bedding & Selimut',
+  PAKAIAN_SATUAN: 'Pakaian Satuan',
+  SATUAN: 'Satuan / Dry Clean',
+  DRY_CLEAN: 'Dry Clean',
+  EXPRESS: 'Kilat / Express',
+  SEPATU_TAS: 'Sepatu & Tas',
+  BONEKA_BABY: 'Boneka & Baby Gear',
+  TREATMENT: 'Treatment',
+  GORDEN_KARPET: 'Karpet & Gorden',
+  KARPET_GORDEN: 'Karpet & Gorden',
+  STROLLER: 'Stroller & Perlengkapan Bayi',
+};
+
+function normalizeLaundryCategoryKey(raw: string): string {
+  return String(raw || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function getDefaultLaundryCategoryLabel(key: string): string {
+  if (DEFAULT_LAUNDRY_CATEGORY_LABELS[key]) {
+    return DEFAULT_LAUNDRY_CATEGORY_LABELS[key];
+  }
+  return key
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function sortLaundryCategories<T extends StoredLaundryCategoryConfig>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
+    if (a.isPinned !== b.isPinned) {
+      return a.isPinned ? -1 : 1;
+    }
+    if (a.sortOrder !== b.sortOrder) {
+      return a.sortOrder - b.sortOrder;
+    }
+    return a.label.localeCompare(b.label, 'id');
+  });
+}
+
+function parseStoredLaundryCategories(raw: unknown): StoredLaundryCategoryConfig[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const result: StoredLaundryCategoryConfig[] = [];
+
+  raw.forEach((item: any, idx: number) => {
+    if (!item || typeof item !== 'object') return;
+    const key = normalizeLaundryCategoryKey(item.key || '');
+    if (!key || FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(key) || seen.has(key)) return;
+    seen.add(key);
+    const label = String(item.label || '').trim() || getDefaultLaundryCategoryLabel(key);
+    result.push({
+      key,
+      label,
+      isPinned: Boolean(item.isPinned),
+      sortOrder: typeof item.sortOrder === 'number' && Number.isFinite(item.sortOrder) ? Math.max(0, Math.floor(item.sortOrder)) : idx,
+    });
+  });
+
+  return result;
+}
+
+const laundryCategoryItemSchema = z.object({
+  key: z.string().min(1, 'Key kategori wajib diisi'),
+  label: z.string().min(1, 'Nama kategori wajib diisi').max(80, 'Nama kategori maksimal 80 karakter'),
+  isPinned: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+const updateLaundryCategoriesSchema = z.object({
+  categories: z.array(laundryCategoryItemSchema),
+});
+
+const reassignLaundryCategorySchema = z.object({
+  sourceCategory: z.string().min(1, 'Kategori asal wajib diisi'),
+  targetCategory: z.string().min(1, 'Kategori tujuan wajib diisi'),
+  targetLabel: z.string().optional(),
+});
+
+async function buildMergedLaundryCategories(tenantId: string) {
+  const [tenant, services] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { laundryCategories: true },
+    }),
+    prisma.laundryService.findMany({
+      where: { tenantId },
+      select: { category: true, isActive: true },
+    }),
+  ]);
+
+  const countsMap = new Map<string, { serviceCount: number; activeServiceCount: number }>();
+  for (const srv of services) {
+    const key = normalizeLaundryCategoryKey(srv.category || '');
+    if (!key || FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(key)) continue;
+    const prev = countsMap.get(key) || { serviceCount: 0, activeServiceCount: 0 };
+    prev.serviceCount += 1;
+    if (srv.isActive) {
+      prev.activeServiceCount += 1;
+    }
+    countsMap.set(key, prev);
+  }
+
+  const stored = parseStoredLaundryCategories(tenant?.laundryCategories);
+  const storedMap = new Map<string, StoredLaundryCategoryConfig>();
+  for (const item of stored) {
+    storedMap.set(item.key, item);
+  }
+
+  let nextSortOrder = stored.reduce((max, c) => Math.max(max, c.sortOrder), -1) + 1;
+  const merged: Array<StoredLaundryCategoryConfig & { serviceCount: number; activeServiceCount: number }> = [];
+
+  for (const item of stored) {
+    const counts = countsMap.get(item.key) || { serviceCount: 0, activeServiceCount: 0 };
+    merged.push({
+      ...item,
+      serviceCount: counts.serviceCount,
+      activeServiceCount: counts.activeServiceCount,
+    });
+  }
+
+  for (const [key, counts] of countsMap.entries()) {
+    if (!storedMap.has(key)) {
+      merged.push({
+        key,
+        label: getDefaultLaundryCategoryLabel(key),
+        isPinned: false,
+        sortOrder: nextSortOrder++,
+        serviceCount: counts.serviceCount,
+        activeServiceCount: counts.activeServiceCount,
+      });
+    }
+  }
+
+  return sortLaundryCategories(merged);
+}
+
+export const getLaundryCategories = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const categories = await buildMergedLaundryCategories(tenantId);
+    return res.status(200).json({
+      status: 'success',
+      data: categories,
+    });
+  } catch (error: any) {
+    console.error('Error getLaundryCategories:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengambil daftar kategori layanan laundry' });
+  }
+};
+
+export const updateLaundryCategories = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat mengubah kategori layanan',
+      });
+    }
+
+    const parseResult = updateLaundryCategoriesSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi daftar kategori gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const normalizedList: StoredLaundryCategoryConfig[] = [];
+    const seenKeys = new Set<string>();
+
+    for (const item of parseResult.data.categories) {
+      const key = normalizeLaundryCategoryKey(item.key);
+      if (!key || FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(key)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Key kategori '${item.key}' tidak valid atau dilarang (tidak boleh ALL atau ADDON).`,
+        });
+      }
+      if (seenKeys.has(key)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Key kategori duplikat terdeteksi: '${key}'.`,
+        });
+      }
+      seenKeys.add(key);
+      normalizedList.push({
+        key,
+        label: item.label.trim(),
+        isPinned: Boolean(item.isPinned),
+        sortOrder: item.sortOrder,
+      });
+    }
+
+    // Proteksi anti-bypass: kategori yang masih memiliki layanan tertaut wajib tetap ada
+    const existingServices = await prisma.laundryService.findMany({
+      where: { tenantId },
+      select: { category: true },
+    });
+    const activeServiceKeys = new Set<string>();
+    for (const srv of existingServices) {
+      const k = normalizeLaundryCategoryKey(srv.category || '');
+      if (k && !FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(k)) {
+        activeServiceKeys.add(k);
+      }
+    }
+
+    const missingKeys = Array.from(activeServiceKeys).filter((k) => !seenKeys.has(k));
+    if (missingKeys.length > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Kategori berikut masih memiliki layanan tertaut dan tidak dapat dihilangkan tanpa memindahkan layanannya terlebih dahulu: ${missingKeys.join(', ')}`,
+      });
+    }
+
+    const sortedAndIndexed = sortLaundryCategories(normalizedList).map((item, idx) => ({
+      ...item,
+      sortOrder: idx,
+    }));
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { laundryCategories: sortedAndIndexed as unknown as Prisma.InputJsonValue },
+    });
+
+    const data = await buildMergedLaundryCategories(tenantId);
+    return res.status(200).json({
+      status: 'success',
+      message: 'Konfigurasi kategori layanan laundry berhasil disimpan',
+      data,
+    });
+  } catch (error: any) {
+    console.error('Error updateLaundryCategories:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menyimpan konfigurasi kategori layanan' });
+  }
+};
+
+export const reassignLaundryCategory = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat memindahkan layanan antar kategori',
+      });
+    }
+
+    const parseResult = reassignLaundryCategorySchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi data pemindahan kategori gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const sourceKey = normalizeLaundryCategoryKey(parseResult.data.sourceCategory);
+    const targetKey = normalizeLaundryCategoryKey(parseResult.data.targetCategory);
+    const targetLabel = parseResult.data.targetLabel?.trim();
+
+    if (!sourceKey || !targetKey || FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(sourceKey) || FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(targetKey)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Kategori asal dan tujuan wajib diisi dan tidak boleh bernilai ALL atau ADDON.',
+      });
+    }
+
+    if (sourceKey === targetKey) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Kategori asal dan kategori tujuan tidak boleh sama.',
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const tenantServices = await tx.laundryService.findMany({
+        where: { tenantId },
+        select: { id: true, category: true },
+      });
+
+      const matchingIds = tenantServices
+        .filter((s) => normalizeLaundryCategoryKey(s.category || '') === sourceKey)
+        .map((s) => s.id);
+
+      let movedCount = 0;
+      if (matchingIds.length > 0) {
+        const updateRes = await tx.laundryService.updateMany({
+          where: {
+            tenantId,
+            id: { in: matchingIds },
+          },
+          data: { category: targetKey },
+        });
+        movedCount = updateRes.count;
+      }
+
+      const tenant = await tx.tenant.findUnique({
+        where: { id: tenantId },
+        select: { laundryCategories: true },
+      });
+
+      const currentStored = parseStoredLaundryCategories(tenant?.laundryCategories);
+      const hasTarget = currentStored.some((c) => c.key === targetKey);
+      const hasSource = currentStored.some((c) => c.key === sourceKey);
+      let maxSort = currentStored.reduce((max, c) => Math.max(max, c.sortOrder), -1);
+
+      const updatedStored = [...currentStored];
+      if (!hasSource) {
+        updatedStored.push({
+          key: sourceKey,
+          label: getDefaultLaundryCategoryLabel(sourceKey),
+          isPinned: false,
+          sortOrder: ++maxSort,
+        });
+      }
+      if (!hasTarget) {
+        updatedStored.push({
+          key: targetKey,
+          label: targetLabel || getDefaultLaundryCategoryLabel(targetKey),
+          isPinned: false,
+          sortOrder: ++maxSort,
+        });
+      }
+
+      if (!hasSource || !hasTarget) {
+        const sortedStored = sortLaundryCategories(updatedStored).map((item, idx) => ({
+          ...item,
+          sortOrder: idx,
+        }));
+        await tx.tenant.update({
+          where: { id: tenantId },
+          data: { laundryCategories: sortedStored as unknown as Prisma.InputJsonValue },
+        });
+      }
+
+      return {
+        movedCount,
+        sourceCategory: sourceKey,
+        targetCategory: targetKey,
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `${result.movedCount} layanan berhasil dipindahkan ke kategori ${result.targetCategory}`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error reassignLaundryCategory:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memindahkan layanan antar kategori' });
+  }
+};
+
+export const deleteLaundryCategory = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ status: 'error', message: 'Tenant ID tidak ditemukan' });
+    }
+
+    const role = (req.user?.role || '').toUpperCase();
+    if (!['OWNER', 'ADMIN', 'SUPERVISOR', 'SUPERADMIN'].includes(role)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Akses ditolak: Hanya Owner, Admin, atau Supervisor yang dapat menghapus kategori layanan',
+      });
+    }
+
+    let rawParam = req.params.categoryKey || '';
+    try {
+      rawParam = decodeURIComponent(rawParam);
+    } catch {
+      // keep rawParam if malformed URI component
+    }
+    const key = normalizeLaundryCategoryKey(rawParam);
+
+    if (!key || FORBIDDEN_LAUNDRY_CATEGORY_KEYS.has(key)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Key kategori tidak valid atau tidak dapat dihapus.',
+      });
+    }
+
+    const exactCount = await prisma.laundryService.count({
+      where: {
+        tenantId,
+        category: { equals: key, mode: 'insensitive' },
+      },
+    });
+
+    const tenantServices = await prisma.laundryService.findMany({
+      where: { tenantId },
+      select: { category: true },
+    });
+    const normalizedCount = tenantServices.filter((s) => normalizeLaundryCategoryKey(s.category || '') === key).length;
+    const count = Math.max(exactCount, normalizedCount);
+
+    if (count > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Kategori tidak dapat dihapus karena masih memiliki ${count} layanan tertaut. Pindahkan semua layanan ke kategori lain terlebih dahulu.`,
+      });
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { laundryCategories: true },
+    });
+
+    const currentStored = parseStoredLaundryCategories(tenant?.laundryCategories);
+    const remaining = sortLaundryCategories(currentStored.filter((c) => c.key !== key)).map((item, idx) => ({
+      ...item,
+      sortOrder: idx,
+    }));
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { laundryCategories: remaining as unknown as Prisma.InputJsonValue },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: `Kategori '${key}' berhasil dihapus`,
+      data: { deletedKey: key },
+    });
+  } catch (error: any) {
+    console.error('Error deleteLaundryCategory:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menghapus kategori layanan laundry' });
+  }
+};

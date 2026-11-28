@@ -46,6 +46,7 @@ model Tenant {
   enableBatchTracking  Boolean          @default(false) @map("enable_batch_tracking")
   enableRecipeTracking Boolean          @default(false) @map("enable_recipe_tracking")
   laundryStages        Json?            @map("laundry_stages")
+  laundryCategories    Json?            @map("laundry_categories")
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
 

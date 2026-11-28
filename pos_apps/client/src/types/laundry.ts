@@ -1,5 +1,14 @@
 export type LaundryCategory = 'KILOAN' | 'SATUAN' | 'EXPRESS' | 'SEPATU_TAS' | string;
 
+export interface LaundryServiceCategory {
+  key: string;
+  label: string;
+  isPinned: boolean;
+  sortOrder: number;
+  serviceCount: number;
+  activeServiceCount: number;
+}
+
 export type LaundryStatus =
   | 'RECEIVED'
   | 'WASHING_DRYING'

@@ -1527,6 +1527,13 @@ WHERE c.id = sub.customer_id AND (c.total_spent = 0 OR c.visit_count = 0 OR c.lo
       UPDATE "users" SET "role" = 'OWNER' WHERE LOWER("email") = 'owner.laundry@wellpos.id' AND "role" = 'ADMIN';
     `,
   },
+  {
+    id: '2026_11_28_add_tenant_laundry_categories',
+    description: 'Add laundry_categories JSONB column on tenants for custom laundry service category ordering and pinning',
+    sql: `
+      ALTER TABLE "tenants" ADD COLUMN IF NOT EXISTS "laundry_categories" JSONB;
+    `,
+  },
 ];
 
 const SCHEMA_PATCHER_LOCK_KEY = 88442211;
