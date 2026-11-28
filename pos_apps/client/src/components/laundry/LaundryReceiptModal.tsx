@@ -20,7 +20,7 @@ import { useThermalPrinterHub } from '../../hooks/useThermalPrinterHub';
 import { printElementViaThermalIframe } from '../../utils/thermalPrinter';
 import { buildLaundryProductionTagEscPos, buildReceiptEscPos } from '../../utils/escpos';
 import { useDialog } from '../../context/DialogContext';
-import { buildWhatsAppUrl } from '../../utils/phone';
+import { WhatsAppSendPreviewModal } from '../ui/WhatsAppSendPreviewModal';
 
 interface LaundryReceiptModalProps {
   isOpen: boolean;
@@ -42,6 +42,8 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   const [activeTab, setActiveTab] = useState<'RECEIPT' | 'PRODUCTION_TAG'>(initialTab);
   const [printStatusMsg, setPrintStatusMsg] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [waPreviewOpen, setWaPreviewOpen] = useState(false);
+  const [waPreviewMessage, setWaPreviewMessage] = useState('');
   const receiptPrintRef = useRef<HTMLDivElement>(null);
   const printerHub = useThermalPrinterHub();
 
@@ -252,11 +254,6 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
   };
 
   const handleShareWhatsApp = () => {
-    if (!order.customerPhone) {
-      dialog.toast('Nomor WhatsApp pelanggan tidak tercatat', 'error');
-      return;
-    }
-
     const itemsSummary = order.items && order.items.length > 0
       ? order.items.map((it) => {
           let line = `• ${it.name} (${it.quantity} ${it.unit}): Rp ${it.subtotal.toLocaleString('id-ID')}`;
@@ -299,10 +296,12 @@ ${complaintUrl}
 
 Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 
-    window.open(buildWhatsAppUrl(order.customerPhone, message), '_blank', 'noopener,noreferrer');
+    setWaPreviewMessage(message);
+    setWaPreviewOpen(true);
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-fadeIn">
       <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[94dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
@@ -759,17 +758,15 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
           <QrCode className="w-3.5 h-3.5 text-blue-900" />
           <span>Unduh QR</span>
         </button>
-        {order.customerPhone && (
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-            title="Buka WhatsApp Web / App langsung dengan nota siap kirim"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>Kirim via WhatsApp</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleShareWhatsApp}
+          className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          title="Pratinjau pesan nota sebelum dikirim via WhatsApp"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          <span>Kirim via WhatsApp</span>
+        </button>
       </div>
 
       <div className="flex items-center justify-end gap-2 flex-wrap">
@@ -816,5 +813,18 @@ Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
     </div>
       </div>
     </div>
+
+    <WhatsAppSendPreviewModal
+      isOpen={waPreviewOpen}
+      onClose={() => setWaPreviewOpen(false)}
+      title="Pratinjau Nota WhatsApp"
+      subtitle={`No. Nota ${order.invoiceNumber}`}
+      senderName={outlet?.name || 'WELL POS LAUNDRY'}
+      recipientName={order.customerName}
+      initialPhone={order.customerPhone}
+      initialMessage={waPreviewMessage}
+      onSent={() => dialog.toast('Membuka WhatsApp dengan nota siap kirim...', 'success')}
+    />
+    </>
   );
 };

@@ -24,7 +24,7 @@ import { api, authStorage } from '../../services/api';
 import type { IncidentPayoutMethod, LaundryIncident } from '../../types/laundry';
 import { CurrencyInput } from '../ui/CurrencyInput';
 import { useDialog } from '../../context/DialogContext';
-import { buildWhatsAppUrl } from '../../utils/phone';
+import { WhatsAppSendPreviewModal } from '../ui/WhatsAppSendPreviewModal';
 
 interface LaundryIncidentManagementModalProps {
   isOpen: boolean;
@@ -75,6 +75,13 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [waPreviewState, setWaPreviewState] = useState<{
+    title: string;
+    subtitle?: string;
+    recipientName?: string;
+    phone?: string | null;
+    message: string;
+  } | null>(null);
 
   const fetchIncidents = async (keepSelectedId?: string) => {
     if (!outletId) return;
@@ -198,7 +205,13 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
       `Terkait penanganan insiden pada nota *${inc.order?.invoiceNumber || '-'}* (${inc.itemDescription}), ` +
       `silakan isi kronologi & unggah foto bukti dari pihak Kakak melalui tautan resmi berikut agar dapat segera kami tindak lanjuti:\n\n` +
       `${url}\n\nTerima kasih.`;
-    window.open(buildWhatsAppUrl(phone, message), '_blank', 'noopener,noreferrer');
+    setWaPreviewState({
+      title: 'Pratinjau Form Klaim via WhatsApp',
+      subtitle: `Nota ${inc.order?.invoiceNumber || '-'}`,
+      recipientName: customerName,
+      phone,
+      message,
+    });
   };
 
   const handleSendSettlementWhatsApp = (inc: LaundryIncident) => {
@@ -225,7 +238,13 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
       ...(url ? [`\nLihat Berita Acara lengkap di:\n${url}`] : []),
     ];
     const message = lines.join('\n');
-    window.open(buildWhatsAppUrl(phone, message), '_blank', 'noopener,noreferrer');
+    setWaPreviewState({
+      title: 'Pratinjau Berita Acara via WhatsApp',
+      subtitle: `Nota ${inc.order?.invoiceNumber || '-'}`,
+      recipientName: customerName,
+      phone,
+      message,
+    });
   };
 
   const handleMarkInvestigating = async () => {
@@ -1178,6 +1197,18 @@ export const LaundryIncidentManagementModal: React.FC<LaundryIncidentManagementM
             </div>
           </div>
         )}
+        {/* Modal Pratinjau Simulasi Kirim WhatsApp */}
+        <WhatsAppSendPreviewModal
+          isOpen={Boolean(waPreviewState)}
+          onClose={() => setWaPreviewState(null)}
+          title={waPreviewState?.title}
+          subtitle={waPreviewState?.subtitle}
+          senderName={(currentUser as any)?.outlet?.name || 'WELL POS LAUNDRY'}
+          recipientName={waPreviewState?.recipientName}
+          initialPhone={waPreviewState?.phone}
+          initialMessage={waPreviewState?.message || ''}
+          onSent={() => dialog.toast('Membuka WhatsApp...', 'success')}
+        />
       </div>
     </div>
   );

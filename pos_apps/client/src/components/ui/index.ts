@@ -15,3 +15,4 @@ export * from './ToggleSwitch';
 export * from './WellPosLogo';
 export * from './SessionExpiredModal';
 export * from './WhatsAppChatPreview';
+export * from './WhatsAppSendPreviewModal';

@@ -13,11 +13,11 @@ import {
   MessageCircle,
   Link2,
 } from 'lucide-react';
-import { api } from '../../services/api';
+import { api, authStorage } from '../../services/api';
 import type { LaundryQueueOrder, LaundryMachine, LaundryIncident } from '../../types/laundry';
 import { CurrencyInput } from '../ui/CurrencyInput';
 import { useDialog } from '../../context/DialogContext';
-import { buildWhatsAppUrl } from '../../utils/phone';
+import { WhatsAppSendPreviewModal } from '../ui/WhatsAppSendPreviewModal';
 
 interface LaundryIncidentModalProps {
   isOpen: boolean;
@@ -51,6 +51,7 @@ export const LaundryIncidentModal: React.FC<LaundryIncidentModalProps> = ({
   onSuccess,
 }) => {
   const dialog = useDialog();
+  const currentUser = authStorage.getUser();
   const [incidentType, setIncidentType] = useState<string>('DAMAGED');
   const [itemDescription, setItemDescription] = useState('');
   const [stage, setStage] = useState('SORTING');
@@ -64,6 +65,8 @@ export const LaundryIncidentModal: React.FC<LaundryIncidentModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createdIncident, setCreatedIncident] = useState<LaundryIncident | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [waPreviewOpen, setWaPreviewOpen] = useState(false);
+  const [waPreviewMessage, setWaPreviewMessage] = useState('');
 
   // Dynamic machines & staff list
   const [machines, setMachines] = useState<LaundryMachine[]>([]);
@@ -73,6 +76,8 @@ export const LaundryIncidentModal: React.FC<LaundryIncidentModalProps> = ({
     if (!isOpen || !outletId) return;
     setCreatedIncident(null);
     setCopiedLink(false);
+    setWaPreviewOpen(false);
+    setWaPreviewMessage('');
     setErrorMessage(null);
     setItemDescription('');
     setNotes('');
@@ -252,10 +257,12 @@ export const LaundryIncidentModal: React.FC<LaundryIncidentModalProps> = ({
       `Terkait laporan insiden pada nota *${order.invoiceNumber}* (${createdIncident?.itemDescription || itemDescription}), ` +
       `mohon bantuannya untuk mengisi form kronologi & mengunggah foto bukti dari pihak Kakak melalui tautan resmi berikut agar dapat segera kami tindak lanjuti:\n\n` +
       `${claimUrl}\n\nTerima kasih.`;
-    window.open(buildWhatsAppUrl(order.customerPhone, message), '_blank', 'noopener,noreferrer');
+    setWaPreviewMessage(message);
+    setWaPreviewOpen(true);
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header Modal */}
@@ -561,5 +568,18 @@ export const LaundryIncidentModal: React.FC<LaundryIncidentModalProps> = ({
         )}
       </div>
     </div>
+
+    <WhatsAppSendPreviewModal
+      isOpen={waPreviewOpen}
+      onClose={() => setWaPreviewOpen(false)}
+      title="Pratinjau Form Klaim via WhatsApp"
+      subtitle={`Nota ${order.invoiceNumber}`}
+      senderName={(currentUser as any)?.outlet?.name || 'WELL POS LAUNDRY'}
+      recipientName={order.customerName || 'Pelanggan'}
+      initialPhone={order.customerPhone}
+      initialMessage={waPreviewMessage}
+      onSent={() => dialog.toast('Membuka WhatsApp dengan tautan form klaim...', 'success')}
+    />
+    </>
   );
 };
