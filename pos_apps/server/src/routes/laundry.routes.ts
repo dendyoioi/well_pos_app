@@ -71,6 +71,9 @@ import {
   getPublicIncidentClaim,
   uploadPublicIncidentClaimPhoto,
   submitPublicIncidentClaimEvidence,
+  getPublicOrderComplaint,
+  uploadPublicOrderComplaintPhoto,
+  submitPublicOrderComplaint,
   getStaffPerformance,
   createStaffPerformanceReview,
   getStaffPerformanceReviews,
@@ -89,6 +92,9 @@ router.patch('/public/track/:invoiceNumber/feedback/google-click', trackGoogleRe
 router.get('/public/incident-claim/:token', getPublicIncidentClaim);
 router.post('/public/incident-claim/:token/photo', uploadPublicIncidentClaimPhoto);
 router.post('/public/incident-claim/:token/evidence', submitPublicIncidentClaimEvidence);
+router.get('/public/complaint/:invoiceNumber', getPublicOrderComplaint);
+router.post('/public/complaint/:invoiceNumber/photo', uploadPublicOrderComplaintPhoto);
+router.post('/public/complaint/:invoiceNumber/submit', submitPublicOrderComplaint);
 
 // Proteksi seluruh endpoint operasional di bawah ini dengan Autentikasi & Multi-Tenant Isolation
 router.use(authenticate);

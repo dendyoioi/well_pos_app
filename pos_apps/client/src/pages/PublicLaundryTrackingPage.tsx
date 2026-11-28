@@ -852,6 +852,29 @@ export const PublicLaundryTrackingPage: React.FC<PublicLaundryTrackingPageProps>
                 </ol>
               )}
             </div>
+
+            {data.status === 'COMPLETED' && (
+              <div className="bg-blue-50/70 border border-blue-200 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white border border-blue-200 text-blue-900 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900">Ada Kendala dengan Hasil Cucian?</h4>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      Garansi cuci ulang & keluhan tersedia maksimal <strong>1x24 jam</strong> setelah cucian diserahkan.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={`/complaint/${encodeURIComponent(data.invoiceNumber)}`}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold transition-colors shrink-0"
+                >
+                  <span>Ajukan Keluhan / Garansi</span>
+                  <ChevronRight className="w-4 h-4" />
+                </a>
+              </div>
+            )}
           </div>
         )}
       </main>

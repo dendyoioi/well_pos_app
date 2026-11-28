@@ -253,6 +253,17 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       ? `*NOMOR ANTRIAN : #${String(order.queueNumber).padStart(2, '0')}*\n`
       : '';
 
+    const isLaundryOrder = Boolean(
+      (order as any).laundryDetail ||
+      order.orderType === 'LAUNDRY' ||
+      String(order.invoiceNumber || '').toUpperCase().startsWith('LND')
+    );
+
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://wellpos.id';
+    const laundryLinksText = isLaundryOrder
+      ? `\n\n🔍 *Pantau Status Cucian Live:*\n${origin}/track/${encodeURIComponent(order.invoiceNumber)}\n\n🛡️ *Form Keluhan & Garansi (Aktif 1x24 Jam setelah selesai):*\n${origin}/complaint/${encodeURIComponent(order.invoiceNumber)}`
+      : '';
+
     return `*${outletName.toUpperCase()}*\n` +
       `Bukti Pembayaran Digital (Well POS)\n` +
       `--------------------------------\n` +
@@ -273,6 +284,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       `PEMBAYARAN:\n${paymentsText}\n` +
       `--------------------------------\n` +
       `Terima kasih telah berbelanja di ${outletName}! Simpan struk ini sebagai bukti transaksi resmi.` +
+      laundryLinksText +
       (isFree ? `\n\n_Powered by Well POS_\n_wellpos.id_` : '');
   };
 

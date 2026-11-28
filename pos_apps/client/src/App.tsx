@@ -30,6 +30,9 @@ const PublicLaundryTrackingPage = lazy(() =>
 const PublicIncidentClaimPage = lazy(() =>
   import('./pages/PublicIncidentClaimPage').then((m) => ({ default: m.PublicIncidentClaimPage }))
 );
+const PublicOrderComplaintPage = lazy(() =>
+  import('./pages/PublicOrderComplaintPage').then((m) => ({ default: m.PublicOrderComplaintPage }))
+);
 const CustomerLaundryPortalPage = lazy(() =>
   import('./pages/CustomerLaundryPortalPage').then((m) => ({ default: m.CustomerLaundryPortalPage }))
 );
@@ -98,6 +101,28 @@ export const App: React.FC = () => {
     return '';
   });
 
+  const [complaintInvoice, setComplaintInvoice] = useState<string>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/complaint/')) {
+      const raw = path.replace('/complaint/', '').split('/')[0] || '';
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
+    const hash = window.location.hash;
+    if (hash.toLowerCase().startsWith('#complaint/')) {
+      const raw = hash.slice('#complaint/'.length).split('/')[0] || '';
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
+    return '';
+  });
+
   const [menuParams, setMenuParams] = useState<{ outletId: string; table: string }>(() => {
     const hash = window.location.hash;
     if (hash.startsWith('#menu')) {
@@ -124,13 +149,15 @@ export const App: React.FC = () => {
     return '';
   });
 
-  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track' | 'portal' | 'incident-claim'>(() => {
+  const [viewMode, setViewMode] = useState<'landing' | 'pos-login' | 'superadmin' | 'menu' | 'track' | 'portal' | 'incident-claim' | 'complaint'>(() => {
     if (typeof window !== 'undefined') {
       const search = new URLSearchParams(window.location.search);
+      if (window.location.pathname.startsWith('/complaint/')) return 'complaint';
       if (window.location.pathname.startsWith('/incident-claim/')) return 'incident-claim';
       if (search.has('portal')) return 'portal';
       if (search.has('track') || window.location.pathname.startsWith('/track')) return 'track';
       const hash = window.location.hash.toLowerCase();
+      if (hash.startsWith('#complaint/')) return 'complaint';
       if (hash.startsWith('#incident-claim/')) return 'incident-claim';
       if (hash.startsWith('#portal')) return 'portal';
       if (hash.startsWith('#track')) return 'track';
@@ -197,7 +224,15 @@ export const App: React.FC = () => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       const lower = hash.toLowerCase();
-      if (lower.startsWith('#incident-claim/')) {
+      if (lower.startsWith('#complaint/')) {
+        const raw = hash.slice('#complaint/'.length).split('/')[0] || '';
+        try {
+          setComplaintInvoice(decodeURIComponent(raw));
+        } catch {
+          setComplaintInvoice(raw);
+        }
+        setViewMode('complaint');
+      } else if (lower.startsWith('#incident-claim/')) {
         setIncidentClaimToken(hash.slice('#incident-claim/'.length).split('/')[0] || '');
         setViewMode('incident-claim');
       } else if (lower.startsWith('#portal')) {
@@ -495,8 +530,14 @@ export const App: React.FC = () => {
       <DialogProvider>
         <PullToRefresh>
           <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
-          {/* JIKA MODE PORTAL KLAIM & BUKTI INSIDEN PELANGGAN PUBLIK */}
-          {viewMode === 'incident-claim' ? (
+          {/* JIKA MODE PORTAL KELUHAN & GARANSI PELANGGAN 1x24 JAM */}
+          {viewMode === 'complaint' ? (
+            <div className="flex-1 flex flex-col">
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <PublicOrderComplaintPage invoiceNumber={complaintInvoice} />
+              </Suspense>
+            </div>
+          ) : viewMode === 'incident-claim' ? (
             <div className="flex-1 flex flex-col">
               <Suspense fallback={<ViewLoadingFallback />}>
                 <PublicIncidentClaimPage token={incidentClaimToken} />

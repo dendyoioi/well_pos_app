@@ -2350,7 +2350,13 @@ export const updateLaundryStatus = async (req: Request, res: Response) => {
     }
 
     if (status === 'COMPLETED') {
-      updatePayload.pickedUpAt = new Date();
+      const completedTime = new Date();
+      if (!detail.completedAt) {
+        updatePayload.completedAt = completedTime;
+      }
+      if (!detail.pickedUpAt) {
+        updatePayload.pickedUpAt = completedTime;
+      }
       if (pickedUpBy) {
         updatePayload.pickedUpBy = pickedUpBy.trim();
       }
@@ -9698,5 +9704,449 @@ export const deleteLaundryCategory = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error deleteLaundryCategory:', error);
     return res.status(500).json({ status: 'error', message: 'Gagal menghapus kategori layanan laundry' });
+  }
+};
+
+// ============================================================================
+// PUBLIC 24-HOUR POST-COMPLETION CUSTOMER COMPLAINT PORTAL (ANTI-FAKE)
+// ============================================================================
+
+const COMPLAINT_WINDOW_DURATION_MS = 24 * 60 * 60 * 1000;
+
+function normalizePhoneDigits62(raw?: string | null): string {
+  let digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) digits = `62${digits.slice(1)}`;
+  else if (digits.startsWith('8')) digits = `62${digits}`;
+  return digits;
+}
+
+function isClaimantPhoneMatched(orderPhone?: string | null, claimantPhone?: string | null): boolean {
+  const normalizedOrderPhone = normalizePhoneDigits62(orderPhone);
+  if (!normalizedOrderPhone) return true; // Walk-in order without registered customer phone
+  const normalizedClaimant = normalizePhoneDigits62(claimantPhone);
+  if (!normalizedClaimant) return false;
+  if (normalizedOrderPhone === normalizedClaimant) return true;
+  if (
+    normalizedOrderPhone.length >= 4 &&
+    normalizedClaimant.length >= 4 &&
+    normalizedOrderPhone.slice(-4) === normalizedClaimant.slice(-4)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function evaluateComplaintWindow(detail: {
+  status?: string | null;
+  pickedUpAt?: Date | null;
+  deliveredAt?: Date | null;
+  completedAt?: Date | null;
+  updatedAt?: Date | null;
+} | null | undefined): {
+  windowStatus: 'NOT_COMPLETED' | 'OPEN' | 'EXPIRED';
+  completedAt: Date | null;
+  expiresAt: Date | null;
+  remainingMs: number;
+} {
+  if (!detail || detail.status !== 'COMPLETED') {
+    return {
+      windowStatus: 'NOT_COMPLETED',
+      completedAt: null,
+      expiresAt: null,
+      remainingMs: 0,
+    };
+  }
+
+  const completedAt = detail.pickedUpAt || detail.deliveredAt || detail.completedAt || detail.updatedAt || null;
+  if (!completedAt) {
+    return {
+      windowStatus: 'NOT_COMPLETED',
+      completedAt: null,
+      expiresAt: null,
+      remainingMs: 0,
+    };
+  }
+
+  const expiresAt = new Date(completedAt.getTime() + COMPLAINT_WINDOW_DURATION_MS);
+  const remainingMs = expiresAt.getTime() - Date.now();
+  if (remainingMs <= 0) {
+    return {
+      windowStatus: 'EXPIRED',
+      completedAt,
+      expiresAt,
+      remainingMs: 0,
+    };
+  }
+
+  return {
+    windowStatus: 'OPEN',
+    completedAt,
+    expiresAt,
+    remainingMs,
+  };
+}
+
+function decodeComplaintInvoiceParam(rawParam?: string): string {
+  let decoded = String(rawParam || '').trim();
+  try {
+    decoded = decodeURIComponent(decoded).trim();
+  } catch {
+    // Keep original if malformed URI encoding
+  }
+  return decoded;
+}
+
+export const getPublicOrderComplaint = async (req: Request, res: Response) => {
+  try {
+    const invoiceNumber = decodeComplaintInvoiceParam(req.params.invoiceNumber);
+    if (!invoiceNumber) {
+      return res.status(400).json({ status: 'error', message: 'Nomor invoice tidak valid' });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        invoiceNumber: { equals: invoiceNumber, mode: 'insensitive' },
+        laundryDetail: { isNot: null },
+      },
+      include: {
+        outlet: {
+          select: { name: true, phone: true, address: true, receiptConfig: true },
+        },
+        customer: {
+          select: { name: true, phone: true },
+        },
+        laundryDetail: true,
+      },
+    });
+
+    if (!order || !order.laundryDetail) {
+      return res.status(404).json({ status: 'error', message: 'Nota laundry tidak ditemukan' });
+    }
+
+    if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'VOIDED') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nota ini sudah dibatalkan/di-void sehingga tidak dapat diajukan keluhan.',
+      });
+    }
+
+    const windowInfo = evaluateComplaintWindow(order.laundryDetail);
+    const existingIncident = await prisma.laundryIncident.findFirst({
+      where: { orderId: order.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        incidentType: true,
+        status: true,
+        customerClaimToken: true,
+        itemDescription: true,
+        createdAt: true,
+        settledAt: true,
+        rewashTriggered: true,
+        refundAmount: true,
+        approvedCompensation: true,
+      },
+    });
+
+    const receiptCfg = (order.outlet?.receiptConfig as Record<string, any> | null) || null;
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        invoiceNumber: order.invoiceNumber,
+        orderStatus: order.orderStatus || 'CONFIRMED',
+        laundryStatus: order.laundryDetail.status,
+        windowStatus: windowInfo.windowStatus,
+        completedAt: windowInfo.completedAt,
+        expiresAt: windowInfo.expiresAt,
+        remainingMs: windowInfo.remainingMs,
+        customerNameMasked: maskPublicCustomerName(order.customer?.name || null),
+        hasCustomerPhone: Boolean(order.customer?.phone),
+        outlet: {
+          name: order.outlet.name,
+          phone: order.outlet.phone,
+          address: order.outlet.address,
+          logoUrl: typeof receiptCfg?.logoUrl === 'string' ? receiptCfg.logoUrl : null,
+        },
+        existingIncident: existingIncident
+          ? {
+              id: existingIncident.id,
+              incidentType: existingIncident.incidentType,
+              status: existingIncident.status,
+              customerClaimToken: existingIncident.customerClaimToken,
+              itemDescription: existingIncident.itemDescription,
+              createdAt: existingIncident.createdAt,
+              settledAt: existingIncident.settledAt,
+              rewashTriggered: existingIncident.rewashTriggered,
+              refundAmount: Number(existingIncident.refundAmount || 0),
+              approvedCompensation: Number(existingIncident.approvedCompensation || 0),
+            }
+          : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getPublicOrderComplaint:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal memuat status portal keluhan pelanggan' });
+  }
+};
+
+export const uploadPublicOrderComplaintPhoto = async (req: Request, res: Response) => {
+  try {
+    const invoiceNumber = decodeComplaintInvoiceParam(req.params.invoiceNumber);
+    if (!invoiceNumber) {
+      return res.status(400).json({ status: 'error', message: 'Nomor invoice tidak valid' });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        invoiceNumber: { equals: invoiceNumber, mode: 'insensitive' },
+        laundryDetail: { isNot: null },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        orderStatus: true,
+        laundryDetail: true,
+      },
+    });
+
+    if (!order || !order.laundryDetail) {
+      return res.status(404).json({ status: 'error', message: 'Nota laundry tidak ditemukan' });
+    }
+
+    if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'VOIDED') {
+      return res.status(400).json({ status: 'error', message: 'Nota ini sudah dibatalkan/di-void.' });
+    }
+
+    const windowInfo = evaluateComplaintWindow(order.laundryDetail);
+    if (windowInfo.windowStatus === 'NOT_COMPLETED') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Form keluhan baru aktif setelah cucian selesai dan diserahkan kepada pelanggan.',
+      });
+    }
+    if (windowInfo.windowStatus === 'EXPIRED') {
+      return res.status(410).json({
+        status: 'error',
+        message: 'Batas waktu pengajuan keluhan (1x24 jam setelah cucian selesai) telah berakhir.',
+      });
+    }
+
+    const existingIncident = await prisma.laundryIncident.findFirst({
+      where: { orderId: order.id },
+      select: { id: true, customerClaimToken: true },
+    });
+    if (existingIncident) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Keluhan untuk nota ini sudah pernah diajukan sebelumnya.',
+        data: { customerClaimToken: existingIncident.customerClaimToken },
+      });
+    }
+
+    const { image } = req.body;
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Data foto (Base64 Data URL) wajib disertakan' });
+    }
+
+    const matches = image.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ status: 'error', message: 'Format Data URL gambar tidak valid' });
+    }
+
+    const rawSubtype = matches[1].toLowerCase();
+    const ALLOWED_MIME_EXTS: Record<string, string> = {
+      jpeg: 'jpg',
+      jpg: 'jpg',
+      png: 'png',
+      webp: 'webp',
+    };
+
+    if (!ALLOWED_MIME_EXTS[rawSubtype]) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Format gambar tidak didukung. Hanya file JPG, JPEG, PNG, dan WebP yang diizinkan.',
+      });
+    }
+
+    const ext = ALLOWED_MIME_EXTS[rawSubtype];
+    const buffer = Buffer.from(matches[2], 'base64');
+
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    if (buffer.length > MAX_FILE_SIZE) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Ukuran foto melebihi batas maksimal 2 MB (ukuran file: ${(buffer.length / (1024 * 1024)).toFixed(2)} MB)`,
+      });
+    }
+
+    const contentType = `image/${rawSubtype === 'jpg' ? 'jpeg' : rawSubtype}`;
+    const uploadResult = await storageService.uploadBuffer({
+      buffer,
+      contentType,
+      ext,
+      tenantId: order.tenantId,
+      module: 'laundry-incident-claims',
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Foto bukti keluhan berhasil diunggah',
+      data: {
+        url: uploadResult.url,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error uploadPublicOrderComplaintPhoto:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal mengunggah foto bukti keluhan' });
+  }
+};
+
+const publicOrderComplaintSchema = z.object({
+  incidentType: z.enum(['DAMAGED', 'LOST', 'STAIN_REMAINING', 'MIXED_UP'], {
+    errorMap: () => ({ message: 'Jenis kendala wajib dipilih secara valid.' }),
+  }),
+  itemDescription: z.string().trim().min(3, 'Nama/deskripsi barang bermasalah wajib diisi (minimal 3 karakter)').max(255),
+  claimantName: z.string().trim().min(2, 'Nama lengkap wajib diisi (minimal 2 karakter)').max(120),
+  claimantPhone: z.string().trim().min(8, 'Nomor WhatsApp tidak valid').max(40),
+  evidenceNotes: z.string().trim().min(10, 'Kronologi / keluhan wajib diisi minimal 10 karakter').max(2000),
+  photoUrls: z
+    .array(z.string().min(1))
+    .min(1, 'Minimal 1 foto bukti kondisi cucian wajib dilampirkan')
+    .max(3, 'Maksimal 3 foto bukti yang dapat dilampirkan'),
+  bankInfo: z
+    .object({
+      bankName: z.string().trim().min(2, 'Nama bank wajib diisi').max(60),
+      accountNumber: z.string().trim().min(4, 'Nomor rekening wajib diisi').max(40),
+      accountHolder: z.string().trim().min(2, 'Nama pemilik rekening wajib diisi').max(80),
+    })
+    .optional()
+    .nullable(),
+  agreedToTerms: z.literal(true, {
+    errorMap: () => ({ message: 'Anda wajib menyetujui pernyataan kebenaran bukti & klaim.' }),
+  }),
+});
+
+export const submitPublicOrderComplaint = async (req: Request, res: Response) => {
+  try {
+    const invoiceNumber = decodeComplaintInvoiceParam(req.params.invoiceNumber);
+    if (!invoiceNumber) {
+      return res.status(400).json({ status: 'error', message: 'Nomor invoice tidak valid' });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        invoiceNumber: { equals: invoiceNumber, mode: 'insensitive' },
+        laundryDetail: { isNot: null },
+      },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        laundryDetail: true,
+      },
+    });
+
+    if (!order || !order.laundryDetail) {
+      return res.status(404).json({ status: 'error', message: 'Nota laundry tidak ditemukan' });
+    }
+
+    if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'VOIDED') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nota ini sudah dibatalkan/di-void sehingga tidak dapat diajukan keluhan.',
+      });
+    }
+
+    const windowInfo = evaluateComplaintWindow(order.laundryDetail);
+    if (windowInfo.windowStatus === 'NOT_COMPLETED') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Form keluhan baru aktif setelah cucian berstatus Selesai dan diserahkan.',
+      });
+    }
+    if (windowInfo.windowStatus === 'EXPIRED') {
+      return res.status(410).json({
+        status: 'error',
+        message: 'Batas waktu pengajuan keluhan (1x24 jam setelah cucian selesai) telah berakhir.',
+      });
+    }
+
+    const existingIncident = await prisma.laundryIncident.findFirst({
+      where: { orderId: order.id },
+      select: { id: true, customerClaimToken: true },
+    });
+    if (existingIncident) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Keluhan untuk nota ini sudah pernah diajukan dan sedang ditangani pihak outlet.',
+        data: { customerClaimToken: existingIncident.customerClaimToken },
+      });
+    }
+
+    const parseResult = publicOrderComplaintSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validasi form keluhan pelanggan gagal',
+        errors: parseResult.error.flatten().fieldErrors,
+      });
+    }
+
+    const { incidentType, itemDescription, claimantName, claimantPhone, evidenceNotes, photoUrls, bankInfo } =
+      parseResult.data;
+
+    if (!isClaimantPhoneMatched(order.customer?.phone, claimantPhone)) {
+      return res.status(403).json({
+        status: 'error',
+        message:
+          'Nomor WhatsApp tidak cocok dengan data pelanggan yang terdaftar pada nota ini (verifikasi anti-komplain fiktif).',
+      });
+    }
+
+    const customerClaimToken = crypto.randomBytes(24).toString('hex');
+    const normalizedPhone = normalizePhoneDigits62(claimantPhone) || claimantPhone;
+    const now = new Date();
+
+    const incident = await prisma.laundryIncident.create({
+      data: {
+        tenantId: order.tenantId,
+        outletId: order.outletId,
+        orderId: order.id,
+        incidentType,
+        itemDescription,
+        stage: 'HANDOVER',
+        reportedById: order.userId,
+        notes: `[Keluhan Mandiri Pelanggan] ${evidenceNotes}`,
+        photoUrls,
+        estimatedCompensation: 0,
+        status: 'OPEN',
+        customerClaimToken,
+        customerClaimantName: claimantName,
+        customerClaimantPhone: normalizedPhone,
+        customerEvidenceNotes: evidenceNotes,
+        customerEvidencePhotos: photoUrls,
+        customerBankInfo: bankInfo ? (bankInfo as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        customerEvidenceSubmittedAt: now,
+        customerAcknowledgedAt: now,
+      },
+      select: {
+        id: true,
+        status: true,
+        customerClaimToken: true,
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Keluhan dan bukti foto Anda berhasil dikirim. Tim outlet akan segera meninjau laporan ini.',
+      data: {
+        incidentId: incident.id,
+        customerClaimToken: incident.customerClaimToken,
+        status: incident.status,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error submitPublicOrderComplaint:', error);
+    return res.status(500).json({ status: 'error', message: 'Gagal menyimpan pengajuan keluhan pelanggan' });
   }
 };

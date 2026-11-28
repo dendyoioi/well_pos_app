@@ -51,6 +51,10 @@ export const LaundryReceiptModal: React.FC<LaundryReceiptModalProps> = ({
     ? `${window.location.origin}/track/${encodeURIComponent(order.invoiceNumber)}`
     : `https://wellpos.id/track/${encodeURIComponent(order.invoiceNumber)}`;
 
+  const complaintUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/complaint/${encodeURIComponent(order.invoiceNumber)}`
+    : `https://wellpos.id/complaint/${encodeURIComponent(order.invoiceNumber)}`;
+
   const handleCopyLink = () => {
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(trackingUrl);
@@ -289,6 +293,9 @@ Status Pembayaran: *${isPaid ? 'LUNAS' : `BELUM LUNAS (Sisa: Rp ${remainingAmoun
 
 🔍 *Pantau Status Cucian Live:*
 ${trackingUrl}
+
+🛡️ *Form Keluhan & Garansi (Aktif 1x24 Jam setelah selesai):*
+${complaintUrl}
 
 Harap simpan pesan tanda terima ini saat pengambilan cucian. Terima kasih!`;
 

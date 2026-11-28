@@ -28,6 +28,8 @@ import type {
   StaffWorkSchedule,
   StaffPerformanceReview,
   StaffPerformanceItem,
+  PublicOrderComplaintData,
+  SubmitPublicOrderComplaintPayload,
 } from '../types/laundry';
 import type {
   BusinessItem,
@@ -3662,6 +3664,47 @@ export const api = {
       body: JSON.stringify(data),
     });
     return res.json();
+  },
+
+  // --- Endpoint Publik Portal Keluhan Pelanggan 1x24 Jam (Anti-Fiktif) ---
+  getPublicOrderComplaint: async (
+    invoiceNumber: string
+  ): Promise<{ status: string; data?: PublicOrderComplaintData; message?: string; httpStatus: number }> => {
+    const res = await fetch(`/api/laundry/public/complaint/${encodeURIComponent(invoiceNumber)}`);
+    const json = await res.json().catch(() => ({}));
+    return { ...json, httpStatus: res.status };
+  },
+
+  uploadPublicOrderComplaintPhoto: async (
+    invoiceNumber: string,
+    image: string
+  ): Promise<{ status: string; data?: { url: string }; message?: string; httpStatus: number }> => {
+    const res = await fetch(`/api/laundry/public/complaint/${encodeURIComponent(invoiceNumber)}/photo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image }),
+    });
+    const json = await res.json().catch(() => ({}));
+    return { ...json, httpStatus: res.status };
+  },
+
+  submitPublicOrderComplaint: async (
+    invoiceNumber: string,
+    payload: SubmitPublicOrderComplaintPayload
+  ): Promise<{
+    status: string;
+    data?: { incidentId: string; customerClaimToken: string; status: string };
+    message?: string;
+    errors?: Record<string, string[]>;
+    httpStatus: number;
+  }> => {
+    const res = await fetch(`/api/laundry/public/complaint/${encodeURIComponent(invoiceNumber)}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    return { ...json, httpStatus: res.status };
   },
 
   // --- Modul Evaluasi Performa Karyawan (Fase B) ---

@@ -849,3 +849,48 @@ export interface StaffPerformanceItem {
   metrics: StaffPerformanceMetrics;
   latestReview?: StaffPerformanceReview | null;
 }
+
+export type OrderComplaintWindowStatus = 'NOT_COMPLETED' | 'OPEN' | 'EXPIRED';
+
+export interface PublicOrderComplaintExistingIncident {
+  id: string;
+  incidentType: LaundryIncidentType | string;
+  status: LaundryIncidentStatus | string;
+  customerClaimToken?: string | null;
+  itemDescription: string;
+  createdAt: string;
+  settledAt?: string | null;
+  rewashTriggered?: boolean;
+  refundAmount?: number;
+  approvedCompensation?: number;
+}
+
+export interface PublicOrderComplaintData {
+  invoiceNumber: string;
+  orderStatus: string;
+  laundryStatus: string;
+  windowStatus: OrderComplaintWindowStatus;
+  completedAt?: string | null;
+  expiresAt?: string | null;
+  remainingMs: number;
+  customerNameMasked: string;
+  hasCustomerPhone: boolean;
+  outlet: {
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+    logoUrl?: string | null;
+  };
+  existingIncident: PublicOrderComplaintExistingIncident | null;
+}
+
+export interface SubmitPublicOrderComplaintPayload {
+  incidentType: LaundryIncidentType;
+  itemDescription: string;
+  claimantName: string;
+  claimantPhone: string;
+  evidenceNotes: string;
+  photoUrls: string[];
+  bankInfo?: IncidentCustomerBankInfo | null;
+  agreedToTerms: true;
+}
